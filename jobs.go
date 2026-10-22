@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -21,6 +22,8 @@ var takes = map[string][]string{
 	"verify":     {".nsp", ".nsz", ".xci", ".xcz"},
 	"convert":    {".xci", ".xcz"},
 	"recompress": {".nsz", ".xcz"},
+	"trim":       {".xci", ".nsp", ".nsz"},
+	"estimate":   {".nsp", ".xci"},
 	"split":      {".nsp", ".nsz", ".xci", ".xcz"},
 	"info":       {".nsp", ".nsz", ".xci", ".xcz"},
 }
@@ -35,6 +38,10 @@ func (o options) action() string {
 		return "convert"
 	case o.recompress:
 		return "recompress"
+	case o.trim:
+		return "trim"
+	case o.estimate:
+		return "estimate"
 	case o.split:
 		return "split"
 	case o.info:
@@ -187,6 +194,10 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		return convert(ctx, path, o, out)
 	case "recompress":
 		return recompress(ctx, path, o, threads, out)
+	case "trim":
+		return trim(ctx, path, o, out)
+	case "estimate":
+		return estimate(ctx, path, o, threads, out)
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
@@ -321,6 +332,126 @@ func recompress(ctx context.Context, path string, o options, threads int, out ou
 	return name, note, removeSource(o, path)
 }
 
+// trim takes away what installers do not use: the padding after the data of an XCI, or the
+// delta fragments of the updates of an NSP or NSZ. In place, or into the output folder.
+func trim(ctx context.Context, path string, o options, out output) (string, string, error) {
+	if extension := strings.ToLower(filepath.Ext(path)); extension == ".nsp" || extension == ".nsz" {
+		return stripDeltas(ctx, path, o, out)
+	}
+	name, err := target(o, path)
+	if err != nil {
+		return "", "", err
+	}
+	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
+	written := name
+	if !inPlace {
+		if err := free(o, name); err != nil {
+			return "", "", err
+		}
+		written = temporary(name)
+		defer os.Remove(written)
+	}
+	removed, err := switchfs.TrimXci(ctx, path, written, out.progress(path, "Trimming"))
+	if errors.Is(err, switchfs.ErrNothingToTrim) {
+		return "", "nothing to trim, it ends where its data ends", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	check, err := switchfs.VerifyFile(ctx, written, out.progress(path, "Verifying"))
+	if err != nil {
+		return "", "", err
+	}
+	if !inPlace {
+		if err := finish(o, written, name); err != nil {
+			return "", "", err
+		}
+	}
+	note := fmt.Sprintf("%s of padding taken away", size(removed))
+	if modified := modifiedNote(check); modified != "" {
+		note += ", " + modified
+	}
+	if inPlace {
+		return name, note, nil
+	}
+	return name, note, removeSource(o, path)
+}
+
+// stripDeltas writes an NSP or NSZ again without the delta fragments of its updates.
+func stripDeltas(ctx context.Context, path string, o options, out output) (string, string, error) {
+	deltas, err := switchfs.DeltaFragmentsSize(path)
+	if err != nil {
+		return "", "", err
+	}
+	if deltas == 0 {
+		return "", "nothing to trim, it holds no delta fragments", nil
+	}
+	name, err := target(o, path)
+	if err != nil {
+		return "", "", err
+	}
+	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
+	if !inPlace {
+		if err := free(o, name); err != nil {
+			return "", "", err
+		}
+	}
+	written := temporary(name)
+	defer os.Remove(written)
+	removed, check, err := switchfs.StripDeltasAndCheck(ctx, path, written, out.progress(path, "Trimming"))
+	if err != nil {
+		return "", "", err
+	}
+	if inPlace {
+		err = os.Rename(written, path)
+	} else {
+		err = finish(o, written, name)
+	}
+	if err != nil {
+		return "", "", err
+	}
+	note := fmt.Sprintf("%s of delta fragments taken away", size(removed))
+	if modified := modifiedNote(check); modified != "" {
+		note += ", " + modified
+	}
+	if inPlace {
+		return name, note, nil
+	}
+	return name, note, removeSource(o, path)
+}
+
+// how much of a game is compressed to tell its estimate
+const (
+	estimateSamples    = 8
+	estimateSampleSize = 16 << 20
+)
+
+// estimate tells the size and the time a compression would give, from samples of the game.
+func estimate(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
+	result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Estimating"),
+	}, estimateSamples, estimateSampleSize)
+	if errors.Is(err, switchfs.ErrNothingToMeasure) {
+		return "", "nothing in it can be compressed", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	return "", fmt.Sprintf("about %s -> %s, %s smaller, %s at level %d", size(result.InputSize), size(result.OutputSize),
+		percent(result.InputSize-result.OutputSize, result.InputSize), duration(result.Duration), o.level), nil
+}
+
+// duration tells a time for people, rounded.
+func duration(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%d s", max(1, int(d.Round(time.Second).Seconds())))
+	case d < time.Hour:
+		return fmt.Sprintf("%d min", int(d.Round(time.Minute).Minutes()))
+	}
+	return fmt.Sprintf("%d h %d min", int(d.Hours()), int(d.Round(time.Minute).Minutes())%60)
+}
+
 // split writes each title of a multi-title file (each game of a game card with several) to a
 // file of its own, named like the original with the title ID and version of the part.
 func split(ctx context.Context, path string, o options, out output) (string, string, error) {
@@ -397,7 +528,8 @@ func pack(ctx context.Context, o options, out output) error {
 	}
 	written := temporary(name)
 	defer os.Remove(written)
-	skipped, check, err := switchfs.MergeAndCheck(ctx, sources, written, true, out.progress(o.pack, "Packing"))
+	// of a title given twice (an update in a SuperNSP, and a newer one), the newest is kept
+	skipped, replaced, check, err := switchfs.MergeNewestAndCheck(ctx, sources, written, true, out.progress(o.pack, "Packing"))
 	if err == nil {
 		err = finish(o, written, name)
 	}
@@ -407,6 +539,9 @@ func pack(ctx context.Context, o options, out output) error {
 	note := fmt.Sprintf("%d files merged", len(sources))
 	if skipped > 0 {
 		note += fmt.Sprintf(", %s of delta fragments left out", size(skipped))
+	}
+	if len(replaced) > 0 {
+		note += ", newer versions in place of " + strings.Join(replaced, ", ")
 	}
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
@@ -446,11 +581,46 @@ func info(path string, out output) string {
 		}
 		lines = append(lines, line)
 	}
+	lines = append(lines, describe(path)...)
 	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	if len(titles) == 1 {
 		return "1 title"
 	}
 	return fmt.Sprintf("%d titles", len(titles))
+}
+
+// describe tells how a file is stored, what it works with, and what trimming takes away.
+func describe(path string) []string {
+	facts, err := switchfs.DescribeFile(path)
+	if err != nil {
+		return nil
+	}
+	lines := []string{}
+	switch {
+	case facts.Solid > 0 && facts.Blocks > 0:
+		lines = append(lines, fmt.Sprintf("%s, solid and in blocks: %s, %s uncompressed (%s smaller)", facts.Kind, size(facts.Size), size(facts.DecompressedSize), percent(facts.DecompressedSize-facts.Size, facts.DecompressedSize)))
+	case facts.Solid > 0:
+		lines = append(lines, fmt.Sprintf("%s, solid: %s, %s uncompressed (%s smaller)", facts.Kind, size(facts.Size), size(facts.DecompressedSize), percent(facts.DecompressedSize-facts.Size, facts.DecompressedSize)))
+	case facts.Blocks > 0:
+		lines = append(lines, fmt.Sprintf("%s, in blocks: %s, %s uncompressed (%s smaller)", facts.Kind, size(facts.Size), size(facts.DecompressedSize), percent(facts.DecompressedSize-facts.Size, facts.DecompressedSize)))
+	default:
+		lines = append(lines, fmt.Sprintf("%s, uncompressed: %s", facts.Kind, size(facts.Size)))
+	}
+	switch {
+	case facts.Solid > 0:
+		lines = append(lines, "works with: every installer (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators need it decompressed")
+	case facts.Blocks > 0:
+		lines = append(lines, "works with: every installer but Awoo; emulators that read NSZ run it as it is")
+	default:
+		lines = append(lines, "works with: every installer and emulator")
+	}
+	if facts.Padding > 0 {
+		lines = append(lines, fmt.Sprintf("padding: %s that trimming takes away", size(facts.Padding)))
+	}
+	if facts.DeltaFragments > 0 {
+		lines = append(lines, fmt.Sprintf("delta fragments: %s that trimming takes away", size(facts.DeltaFragments)))
+	}
+	return lines
 }
 
 func removeSource(o options, path string) error {

@@ -15,13 +15,27 @@ import (
 var version = "dev"
 
 func main() {
-	// with no arguments it is the window; started from the Explorer, the console Windows
-	// opened for it is closed
-	if len(os.Args) == 1 {
+	// with no arguments it is the window, and with only files or folders too: the ones dropped
+	// on NXPress, or sent to it from the Explorer. Started from the Explorer, the console
+	// Windows opened for it is closed
+	if len(os.Args) == 1 || onlyPaths(os.Args[1:]) {
 		hideConsole()
-		os.Exit(runWindow())
+		os.Exit(runWindow(os.Args[1:]))
 	}
 	os.Exit(run(os.Args[1:]))
+}
+
+// onlyPaths tells whether every argument is a file or folder there, none an option.
+func onlyPaths(args []string) bool {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			return false
+		}
+		if _, err := os.Stat(arg); err != nil {
+			return false
+		}
+	}
+	return len(args) > 0
 }
 
 func run(args []string) int {

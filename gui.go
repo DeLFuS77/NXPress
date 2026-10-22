@@ -21,14 +21,14 @@ import (
 //go:embed all:frontend
 var frontend embed.FS
 
-// runWindow opens the window, and gives the exit code once it is closed.
-func runWindow() int {
-	app := &App{}
+// runWindow opens the window with the files given, and gives the exit code once it is closed.
+func runWindow(files []string) int {
+	app := &App{files: files}
 	err := wails.Run(&wailsoptions.App{
 		Title:            "NXPress",
-		Width:            1040,
+		Width:            1120,
 		Height:           800,
-		MinWidth:         760,
+		MinWidth:         900,
 		MinHeight:        520,
 		BackgroundColour: &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255},
 		AssetServer:      &assetserver.Options{Assets: frontend},
@@ -50,6 +50,8 @@ type App struct {
 	mutex  sync.Mutex
 	keys   string
 	cancel context.CancelFunc
+	// the files NXPress was started with
+	files []string
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -68,15 +70,37 @@ type Setup struct {
 	Cpus     int    `json:"cpus"`
 	Level    int    `json:"level"`
 	MaxLevel int    `json:"maxLevel"`
+	// the files NXPress was started with, and the mode they suit
+	Files []string `json:"files"`
+	Mode  string   `json:"mode"`
+	// whether "Send to" can hold NXPress, and holds it
+	SendTo        bool `json:"sendTo"`
+	SendToEnabled bool `json:"sendToEnabled"`
 }
 
 func (a *App) Setup() Setup {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	return Setup{
+	setup := Setup{
 		Version: version, Keys: a.keys, Threads: max(1, min(8, runtime.NumCPU()/2)), Cpus: runtime.NumCPU(),
-		Level: defaultLevel, MaxLevel: maxLevel,
+		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, SendTo: sendToFolder() != "",
 	}
+	setup.SendToEnabled = setup.SendTo && sendToEnabled()
+	if len(a.files) > 0 {
+		setup.Mode = "decompress"
+		if files, _ := inputs(a.files, []string{".nsp", ".xci"}); len(files) > 0 {
+			setup.Mode = "compress"
+		}
+	}
+	return setup
+}
+
+// SetSendTo puts NXPress in the "Send to" menu of the Explorer, or takes it away.
+func (a *App) SetSendTo(on bool) error {
+	if on {
+		return enableSendTo()
+	}
+	return disableSendTo()
 }
 
 // ChooseKeys asks for a prod.keys or a keys.txt, and makes it active.
@@ -194,6 +218,10 @@ func (a *App) Start(request Request) error {
 		o.convert = true
 	case "recompress":
 		o.recompress = true
+	case "trim":
+		o.trim = true
+	case "estimate":
+		o.estimate = true
 	case "split":
 		o.split = true
 	case "info":
@@ -280,6 +308,10 @@ func (w *window) progress(path string, step string) func(done int64, total int64
 
 func (w *window) done(path string, output string, note string, err error) {
 	result := map[string]any{"file": path, "output": output, "note": note}
+	// the size of the new file, for the savings the page adds up
+	if info, err := os.Stat(output); output != "" && err == nil {
+		result["size"] = info.Size()
+	}
 	if err != nil {
 		result["error"] = err.Error()
 		if errors.Is(err, context.Canceled) {

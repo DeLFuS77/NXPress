@@ -8,68 +8,124 @@
 </head>
 <body>
 <header>
-  <div class="brand">NXPress <span id="version"></span></div>
-  <nav id="modes"></nav>
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8"/><text x="16" y="21.5" text-anchor="middle">NX</text></svg>
+    <span>NXPress</span><small id="version"></small>
+  </div>
   <div class="right">
     <button id="keys" class="chip"></button>
-    <button id="language" class="chip"></button>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu">⋯</summary>
+      <div class="menu-body">
+        <div class="theme"><span data-t="theme"></span>
+          <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+        </div>
+        <div class="theme"><span data-t="language"></span>
+          <div class="segmented"><button data-language="es">Español</button><button data-language="en">English</button></div>
+        </div>
+        <hr>
+        <button id="send-to"></button>
+      </div>
+    </details>
   </div>
 </header>
 
 <main>
-  <section id="list">
-    <div class="toolbar">
+  <nav id="modes" aria-label="Modes"></nav>
+
+  <section id="work">
+    <div class="page-head">
+      <h1 id="title"></h1>
+      <p id="about" class="muted"></p>
+    </div>
+
+    <div id="keys-banner" class="banner" hidden>
+      <span data-t="keysMissing"></span>
+      <button id="keys-choose" class="primary small" data-t="keysChoose"></button>
+    </div>
+
+    <div class="toolbar" id="toolbar" hidden>
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
-      <span id="count" class="muted"></span>
     </div>
+
     <div id="drop">
-      <div id="empty"><div class="big" data-t="dropHere"></div><div class="muted" id="takes"></div></div>
+      <div id="empty">
+        <svg class="empty-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 30v8h24v-8M24 8v22M16 22l8 8 8-8"/></svg>
+        <div class="big" data-t="dropHere"></div>
+        <div class="muted" data-t="orChoose"></div>
+        <div class="empty-buttons">
+          <button id="empty-files" class="outline" data-t="addFiles"></button>
+          <button id="empty-folder" data-t="addFolder"></button>
+        </div>
+        <div class="types" id="takes"></div>
+      </div>
       <table id="files" hidden>
         <thead><tr><th data-t="file"></th><th class="size" data-t="size"></th><th class="state" data-t="state"></th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
     <pre id="log" hidden></pre>
+
+    <div class="actions">
+      <div class="summary">
+        <div id="summary-text"></div>
+        <div class="bar total" id="total-bar" hidden><div></div></div>
+        <div id="status" class="muted"></div>
+      </div>
+      <button id="estimate" class="secondary" data-t="estimateButton" data-for="compress"></button>
+      <button id="start" class="primary big"></button>
+    </div>
   </section>
 
   <aside id="settings">
-    <p id="about" class="muted"></p>
-    <div class="field" data-for="compress recompress">
-      <label><span data-t="level"></span> <b id="level-value"></b></label>
-      <input id="level" type="range" min="1" max="19">
-      <div class="presets"><button data-level="3" data-t="fast"></button><button data-level="12" data-t="balanced"></button><button data-level="18" data-t="small"></button></div>
-      <p class="muted" id="level-hint"></p>
-    </div>
-    <div class="field" data-for="compress recompress">
-      <label data-t="target"></label>
-      <label class="choice"><input type="radio" name="target" value="solid" id="target-solid"><span><b data-t="forInstallers"></b><small class="muted" data-t="forInstallersHint"></small></span></label>
-      <label class="choice"><input type="radio" name="target" value="block" id="target-block"><span><b data-t="forEmulators"></b><small class="muted" data-t="forEmulatorsHint"></small></span></label>
-      <p class="muted" data-t="xczBlock"></p>
-    </div>
-    <div class="field" data-for="pack">
-      <label data-t="packFile"></label>
+    <section class="block" data-for="compress recompress">
+      <h2 data-t="compression"></h2>
+      <div class="field">
+        <div class="level-head"><span data-t="level"></span><b id="level-value"></b></div>
+        <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
+        <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
+        <div class="segmented"><button data-level="3" data-t="light"></button><button data-level="12" data-t="medium"></button><button data-level="19" data-t="maximum"></button></div>
+        <p class="hint" id="level-hint"></p>
+      </div>
+      <div class="field" role="radiogroup">
+        <div class="label" data-t="target"></div>
+        <label class="choice"><input type="radio" name="target" value="solid" id="target-solid">
+          <span><b data-t="forInstallers"></b><small data-t="forInstallersHint"></small>
+          <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="yes">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="no" data-t="tagEmulators"></i></span></span></label>
+        <label class="choice"><input type="radio" name="target" value="block" id="target-block">
+          <span><b data-t="forEmulators"></b><small data-t="forEmulatorsHint"></small>
+          <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
+        <p class="hint" data-t="xczBlock"></p>
+      </div>
+    </section>
+
+    <section class="block" data-for="pack">
+      <h2 data-t="packFile"></h2>
       <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
-    </div>
-    <div class="field row" data-for="compress recompress">
-      <label data-t="threads"></label><input id="threads" type="number" min="1" max="64">
-    </div>
-    <div class="field row" data-for="compress decompress recompress verify convert split">
-      <label data-t="multi"></label><input id="multi" type="number" min="1" max="16">
-    </div>
-    <div class="field" data-for="compress decompress recompress convert split">
-      <label data-t="output"></label>
-      <div class="path"><span id="output" class="muted"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet" title="">✕</button></div>
-    </div>
-    <div class="field" data-for="compress decompress recompress convert split pack">
+    </section>
+
+    <section class="block" data-for="compress decompress recompress trim convert split pack">
+      <h2 data-t="result"></h2>
+      <div class="field" data-for="compress decompress recompress trim convert split">
+        <div class="label" data-t="output"></div>
+        <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon">✕</button></div>
+      </div>
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
-      <label class="check"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
-    </div>
-    <div class="go">
-      <button id="start" class="primary"></button>
-      <p id="status" class="muted"></p>
-    </div>
+      <label class="check danger"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
+      <p class="warning" id="remove-warning" data-t="removeWarning" hidden></p>
+    </section>
+
+    <details class="block advanced" data-for="compress decompress recompress trim verify convert split" id="advanced">
+      <summary data-t="advanced"></summary>
+      <div class="field row" data-for="compress recompress">
+        <label for="threads" data-t="threads"></label><input id="threads" type="number" min="1" max="64">
+      </div>
+      <div class="field row">
+        <label for="multi" data-t="multi"></label><input id="multi" type="number" min="1" max="16">
+      </div>
+    </details>
   </aside>
 </main>
 <script src="app.js"></script>

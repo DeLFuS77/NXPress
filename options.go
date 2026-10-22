@@ -18,6 +18,8 @@ type options struct {
 	info       bool
 	convert    bool
 	recompress bool
+	trim       bool
+	estimate   bool
 	split      bool
 	pack       string
 	level      int
@@ -104,6 +106,10 @@ func parseOptions(args []string) (options, error) {
 			o.convert = true
 		case "--recompress":
 			o.recompress = true
+		case "--trim":
+			o.trim = true
+		case "--estimate":
+			o.estimate = true
 		case "--split":
 			o.split = true
 		case "--minimal-output":
@@ -161,13 +167,13 @@ func (o *options) set(what string, name string, value string) error {
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.split, o.pack != "", o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --split and --pack")
 	}
 	if actions == 0 && !o.verify {
 		return errors.New("nothing to do: use -C to compress, -D to decompress or -V to check (see nxpress --help)")
@@ -205,6 +211,8 @@ Usage: nxpress [options] file or folder...
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
   -i, --info          show the titles a file holds
+  --estimate          tell the size and the time a compression would give, with -l, -t
+                      and -B, from samples of each NSP and XCI: nothing is written
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
   --minimal-output    print only "<percentage>%% <step>"
@@ -215,9 +223,14 @@ Usage: nxpress [options] file or folder...
   --recompress        write NSZ and XCZ files again, solid (-S) or in blocks (-B), at the
                       level of -l: no NSP in between and no keys needed; a file is replaced
                       once its new copy is checked, unless -o gives another folder
+  --trim              take away what installers do not use: the padding after the data
+                      of XCI files, as game cards are dumped, and the delta fragments of
+                      updates in NSP and NSZ files; in place, or into the folder of -o
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
-                      NSP when they are all NSP, an NSZ when one of them is an NSZ
+                      NSP when they are all NSP, an NSZ when one of them is an NSZ; of a
+                      title given twice, the newest version is kept (a SuperNSP and a
+                      newer update of its game give the SuperNSP with the new update)
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted

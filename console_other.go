@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -20,3 +21,12 @@ func showFile(path string) {
 	}
 	exec.Command("xdg-open", filepath.Dir(path)).Start()
 }
+
+// sendToFolder is empty: only the Explorer of Windows has a "Send to" menu.
+func sendToFolder() string { return "" }
+
+func sendToEnabled() bool { return false }
+
+func enableSendTo() error { return errors.New("only Windows has a Send to menu") }
+
+func disableSendTo() error { return nil }
