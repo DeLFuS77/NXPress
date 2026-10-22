@@ -192,6 +192,8 @@ func (a *App) Start(request Request) error {
 		o.decompress = true
 	case "convert":
 		o.convert = true
+	case "recompress":
+		o.recompress = true
 	case "split":
 		o.split = true
 	case "info":
@@ -209,7 +211,7 @@ func (a *App) Start(request Request) error {
 	}
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.keys == "" {
+	if a.keys == "" && !o.recompress {
 		return errors.New("no prod.keys: choose one")
 	}
 	if a.cancel != nil {

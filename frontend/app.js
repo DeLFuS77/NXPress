@@ -2,9 +2,10 @@
 
 const texts = {
   en: {
-    compress: "Compress", decompress: "Decompress", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Info",
+    compress: "Compress", decompress: "Decompress", recompress: "Recompress", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Info",
     aboutCompress: "NSP and XCI to NSZ and XCZ. Every file is checked before it gets its name.",
     aboutDecompress: "NSZ to NSP and XCZ to XCI, checked against the hashes of the game.",
+    aboutRecompress: "Writes NSZ and XCZ files again, solid or in blocks, at another level: no NSP in between and no keys needed. Each file is replaced once its new copy is checked, unless you choose another folder.",
     aboutVerify: "Checks NSP, NSZ, XCI and XCZ files against the hashes of their content.",
     aboutConvert: "XCI and XCZ to NSP and NSZ.",
     aboutSplit: "Writes each title of a multi-title file (SuperNSP) to a file of its own.",
@@ -23,7 +24,7 @@ const texts = {
     threads: "Threads per file", multi: "Files at once", output: "Save to", nextTo: "Next to each file",
     choose: "Choose", overwrite: "Replace files already there", remove: "Delete originals once checked",
     packFile: "New file", noPack: "None chosen",
-    start: m => ({ compress: "Compress", decompress: "Decompress", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Show titles" })[m],
+    start: m => ({ compress: "Compress", decompress: "Decompress", recompress: "Recompress", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Show titles" })[m],
     cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", cancelled: "Cancelled", show: "Show",
     keys: k => k ? "Keys: " + k.split(/[\\/]/).pop() : "No prod.keys", needKeys: "Choose your prod.keys first.",
     needFiles: "Add some files first.", needPack: "Choose the name of the new file.",
@@ -31,9 +32,10 @@ const texts = {
     stopped: "Cancelled.",
   },
   es: {
-    compress: "Comprimir", decompress: "Descomprimir", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Info",
+    compress: "Comprimir", decompress: "Descomprimir", recompress: "Recomprimir", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Info",
     aboutCompress: "NSP y XCI a NSZ y XCZ. Cada archivo se comprueba antes de darle su nombre.",
     aboutDecompress: "NSZ a NSP y XCZ a XCI, comprobado con los hashes del juego.",
+    aboutRecompress: "Vuelve a escribir archivos NSZ y XCZ, sólidos o por bloques, con otro nivel: sin pasar por NSP y sin claves. Cada archivo se sustituye cuando su copia nueva está comprobada, salvo que elijas otra carpeta.",
     aboutVerify: "Comprueba archivos NSP, NSZ, XCI y XCZ con los hashes de su contenido.",
     aboutConvert: "XCI y XCZ a NSP y NSZ.",
     aboutSplit: "Escribe cada título de un archivo multi-título (SuperNSP) en un archivo propio.",
@@ -52,7 +54,7 @@ const texts = {
     threads: "Hilos por archivo", multi: "Archivos a la vez", output: "Guardar en", nextTo: "Junto a cada archivo",
     choose: "Elegir", overwrite: "Reemplazar archivos existentes", remove: "Borrar originales tras comprobar",
     packFile: "Archivo nuevo", noPack: "Sin elegir",
-    start: m => ({ compress: "Comprimir", decompress: "Descomprimir", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Ver títulos" })[m],
+    start: m => ({ compress: "Comprimir", decompress: "Descomprimir", recompress: "Recomprimir", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Ver títulos" })[m],
     cancel: "Cancelar", waiting: "En espera", ok: "OK", failed: "Error", cancelled: "Cancelado", show: "Mostrar",
     keys: k => k ? "Claves: " + k.split(/[\\/]/).pop() : "Sin prod.keys", needKeys: "Elige antes tu prod.keys.",
     needFiles: "Añade antes algún archivo.", needPack: "Elige el nombre del archivo nuevo.",
@@ -60,9 +62,9 @@ const texts = {
     stopped: "Cancelado.",
   },
 };
-const modes = ["compress", "decompress", "verify", "convert", "split", "pack", "info"];
+const modes = ["compress", "decompress", "recompress", "verify", "convert", "split", "pack", "info"];
 const steps = {
-  es: { Compressing: "Comprimiendo", Verifying: "Verificando", Decompressing: "Descomprimiendo", Converting: "Convirtiendo", Packing: "Juntando", Splitting: "Dividiendo" },
+  es: { Recompressing: "Recomprimiendo", Compressing: "Comprimiendo", Verifying: "Verificando", Decompressing: "Descomprimiendo", Converting: "Convirtiendo", Packing: "Juntando", Splitting: "Dividiendo" },
 };
 
 const $ = id => document.getElementById(id);
@@ -92,7 +94,7 @@ function size(bytes) {
 const notes = {
   en: [[/ \(use -w to replace it\)/, " (tick “Replace files already there”)"]],
   es: [
-    [/ smaller/g, " menos"], [/(\d+) NCA rewritten by a tool, their data checked/, "$1 NCA reescritos por una herramienta, sus datos comprobados"],
+    [/ smaller/g, " menos"], [/^solid, /, "sólido, "], [/^in blocks, /, "por bloques, "], [/(\d+) NCA rewritten by a tool, their data checked/, "$1 NCA reescritos por una herramienta, sus datos comprobados"],
     [/^nothing in it can be compressed, it is left as it is$/, "No hay nada que comprimir: se queda como está"],
     [/^it holds one title, nothing to split$/, "Tiene un solo título: no hay nada que dividir"],
     [/^(\d+) files: /, "$1 archivos: "], [/; some of its files are in no part, so it is kept/, "; algunos de sus archivos no van en ninguna parte, así que se conserva"],
@@ -123,7 +125,7 @@ function render() {
   }
   document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
-  $("takes").textContent = { compress: "NSP · XCI", decompress: "NSZ · XCZ", verify: "NSP · NSZ · XCI · XCZ", convert: "XCI · XCZ", split: "NSP · NSZ · XCI · XCZ", pack: "NSP · NSZ", info: "NSP · NSZ · XCI · XCZ" }[state.mode];
+  $("takes").textContent = { compress: "NSP · XCI", decompress: "NSZ · XCZ", recompress: "NSZ · XCZ", verify: "NSP · NSZ · XCI · XCZ", convert: "XCI · XCZ", split: "NSP · NSZ · XCI · XCZ", pack: "NSP · NSZ", info: "NSP · NSZ · XCI · XCZ" }[state.mode];
   $("language").textContent = state.language === "en" ? "Español" : "English";
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
@@ -235,7 +237,7 @@ function settings() {
 
 async function start() {
   if (state.busy) { app().Cancel(); return; }
-  if (!state.keys) { $("status").textContent = t("needKeys"); return; }
+  if (!state.keys && state.mode !== "recompress") { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t("needFiles"); return; }
   if (state.mode === "pack" && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();

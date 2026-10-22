@@ -17,6 +17,7 @@ type options struct {
 	verify     bool
 	info       bool
 	convert    bool
+	recompress bool
 	split      bool
 	pack       string
 	level      int
@@ -101,6 +102,8 @@ func parseOptions(args []string) (options, error) {
 			o.info = true
 		case "--convert":
 			o.convert = true
+		case "--recompress":
+			o.recompress = true
 		case "--split":
 			o.split = true
 		case "--minimal-output":
@@ -158,13 +161,13 @@ func (o *options) set(what string, name string, value string) error {
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.split, o.pack != "", o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --split and --pack")
 	}
 	if actions == 0 && !o.verify {
 		return errors.New("nothing to do: use -C to compress, -D to decompress or -V to check (see nxpress --help)")
@@ -209,6 +212,9 @@ Usage: nxpress [options] file or folder...
   --version           show the version
 
   --convert           turn XCI and XCZ files into NSP and NSZ
+  --recompress        write NSZ and XCZ files again, solid (-S) or in blocks (-B), at the
+                      level of -l: no NSP in between and no keys needed; a file is replaced
+                      once its new copy is checked, unless -o gives another folder
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ

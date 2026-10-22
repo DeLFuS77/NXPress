@@ -36,13 +36,13 @@
 
   <aside id="settings">
     <p id="about" class="muted"></p>
-    <div class="field" data-for="compress">
+    <div class="field" data-for="compress recompress">
       <label><span data-t="level"></span> <b id="level-value"></b></label>
       <input id="level" type="range" min="1" max="19">
       <div class="presets"><button data-level="3" data-t="fast"></button><button data-level="12" data-t="balanced"></button><button data-level="18" data-t="small"></button></div>
       <p class="muted" id="level-hint"></p>
     </div>
-    <div class="field" data-for="compress">
+    <div class="field" data-for="compress recompress">
       <label data-t="target"></label>
       <label class="choice"><input type="radio" name="target" value="solid" id="target-solid"><span><b data-t="forInstallers"></b><small class="muted" data-t="forInstallersHint"></small></span></label>
       <label class="choice"><input type="radio" name="target" value="block" id="target-block"><span><b data-t="forEmulators"></b><small class="muted" data-t="forEmulatorsHint"></small></span></label>
@@ -52,17 +52,17 @@
       <label data-t="packFile"></label>
       <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
     </div>
-    <div class="field row" data-for="compress">
+    <div class="field row" data-for="compress recompress">
       <label data-t="threads"></label><input id="threads" type="number" min="1" max="64">
     </div>
-    <div class="field row" data-for="compress decompress verify convert split">
+    <div class="field row" data-for="compress decompress recompress verify convert split">
       <label data-t="multi"></label><input id="multi" type="number" min="1" max="16">
     </div>
-    <div class="field" data-for="compress decompress convert split">
+    <div class="field" data-for="compress decompress recompress convert split">
       <label data-t="output"></label>
       <div class="path"><span id="output" class="muted"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet" title="">✕</button></div>
     </div>
-    <div class="field" data-for="compress decompress convert split pack">
+    <div class="field" data-for="compress decompress recompress convert split pack">
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
       <label class="check"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
     </div>

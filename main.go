@@ -45,7 +45,8 @@ func run(args []string) int {
 	for _, ignored := range o.ignored {
 		out.say("note: %s has no effect in NXPress", ignored)
 	}
-	if _, err := loadKeys(o.keys); err != nil {
+	// recompressing needs no keys: the NCZ hold their data decrypted, with their keys
+	if _, err := loadKeys(o.keys); err != nil && !o.recompress {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
 		return 2
 	}

@@ -20,6 +20,7 @@ var takes = map[string][]string{
 	"decompress": {".nsz", ".xcz"},
 	"verify":     {".nsp", ".nsz", ".xci", ".xcz"},
 	"convert":    {".xci", ".xcz"},
+	"recompress": {".nsz", ".xcz"},
 	"split":      {".nsp", ".nsz", ".xci", ".xcz"},
 	"info":       {".nsp", ".nsz", ".xci", ".xcz"},
 }
@@ -32,6 +33,8 @@ func (o options) action() string {
 		return "decompress"
 	case o.convert:
 		return "convert"
+	case o.recompress:
+		return "recompress"
 	case o.split:
 		return "split"
 	case o.info:
@@ -182,6 +185,8 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		return decompress(ctx, path, o, out)
 	case "convert":
 		return convert(ctx, path, o, out)
+	case "recompress":
+		return recompress(ctx, path, o, threads, out)
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
@@ -267,6 +272,53 @@ func convert(ctx context.Context, path string, o options, out output) (string, s
 		return "", "", err
 	}
 	return name, modifiedNote(check), removeSource(o, path)
+}
+
+// recompress writes an NSZ or XCZ again, solid or in blocks, at another level. Without an output
+// folder the file is replaced, once its new copy is checked.
+func recompress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
+	name, err := target(o, path)
+	if err != nil {
+		return "", "", err
+	}
+	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
+	if !inPlace {
+		if err := free(o, name); err != nil {
+			return "", "", err
+		}
+	}
+	written := temporary(name)
+	defer os.Remove(written)
+	result, err := switchfs.RecompressGame(ctx, path, written, switchfs.CompressOptions{
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Recompressing"),
+	})
+	if err != nil {
+		return "", "", err
+	}
+	check, err := switchfs.VerifyFile(ctx, written, out.progress(path, "Verifying"))
+	if err != nil {
+		return "", "", err
+	}
+	if inPlace {
+		err = os.Rename(written, path)
+	} else {
+		err = finish(o, written, name)
+	}
+	if err != nil {
+		return "", "", err
+	}
+	mode := "solid"
+	if o.block || strings.EqualFold(filepath.Ext(path), ".xcz") {
+		mode = "in blocks"
+	}
+	note := fmt.Sprintf("%s, %s -> %s", mode, size(result.InputSize), size(result.OutputSize))
+	if modified := modifiedNote(check); modified != "" {
+		note += ", " + modified
+	}
+	if inPlace {
+		return name, note, nil
+	}
+	return name, note, removeSource(o, path)
 }
 
 // split writes each title of a multi-title file (each game of a game card with several) to a
