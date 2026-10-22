@@ -15,12 +15,18 @@ import (
 var version = "dev"
 
 func main() {
+	// with no arguments it is the window; started from the Explorer, the console Windows
+	// opened for it is closed
+	if len(os.Args) == 1 {
+		hideConsole()
+		os.Exit(runWindow())
+	}
 	os.Exit(run(os.Args[1:]))
 }
 
 func run(args []string) int {
 	o, err := parseOptions(args)
-	if err == nil && (o.help || len(args) == 0) {
+	if err == nil && o.help {
 		fmt.Printf(usage, version)
 		return 0
 	}
@@ -39,7 +45,7 @@ func run(args []string) int {
 	for _, ignored := range o.ignored {
 		out.say("note: %s has no effect in NXPress", ignored)
 	}
-	if err := loadKeys(o.keys); err != nil {
+	if _, err := loadKeys(o.keys); err != nil {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
 		return 2
 	}
@@ -53,14 +59,15 @@ func run(args []string) int {
 	return 0
 }
 
-// loadKeys makes the keys active: the ones given, else a prod.keys or a keys.txt next to
-// NXPress, in the working folder or in ~/.switch, the folder nsz and hactool use too.
-func loadKeys(given string) error {
+// loadKeys makes the keys active, and gives the file they were read from: the ones given, else
+// a prod.keys or a keys.txt next to NXPress, in the working folder or in ~/.switch, the folder
+// nsz and hactool use too.
+func loadKeys(given string) (string, error) {
 	if given != "" {
 		if err := settings.UseSwitchKeys(given); err != nil {
-			return fmt.Errorf("the keys %s cannot be read: %w", given, err)
+			return "", fmt.Errorf("the keys %s cannot be read: %w", given, err)
 		}
-		return nil
+		return given, nil
 	}
 	folders := []string{"."}
 	if executable, err := os.Executable(); err == nil {
@@ -73,9 +80,12 @@ func loadKeys(given string) error {
 		for _, name := range []string{"prod.keys", "keys.txt"} {
 			path := filepath.Join(folder, name)
 			if _, err := os.Stat(path); err == nil && settings.UseSwitchKeys(path) == nil {
-				return nil
+				if absolute, err := filepath.Abs(path); err == nil {
+					path = absolute
+				}
+				return path, nil
 			}
 		}
 	}
-	return fmt.Errorf("no prod.keys or keys.txt found (looked in %s): give one with --keys", strings.Join(folders, ", "))
+	return "", fmt.Errorf("no prod.keys or keys.txt found (looked in %s): give one with --keys", strings.Join(folders, ", "))
 }

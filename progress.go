@@ -9,9 +9,20 @@ import (
 	"time"
 )
 
-// reporter prints the progress and the results of the files, from several at once: as lines
-// for people, as "<percentage>% <step>" (--minimal-output) or as one JSON object per line
-// (--machine-readable) for other programs.
+// output takes the progress and the results of the files, from several at once: the console,
+// or the window.
+type output interface {
+	// progress gives the function a step calls with its bytes done and total, for one file
+	progress(path string, step string) func(done int64, total int64)
+	// done tells how a file ended: its new file, a note, or what went wrong
+	done(path string, output string, note string, err error)
+	// say tells something for people
+	say(format string, args ...any)
+}
+
+// reporter prints the progress and the results of the files: as lines for people, as
+// "<percentage>% <step>" (--minimal-output) or as one JSON object per line (--machine-readable)
+// for other programs.
 type reporter struct {
 	mutex   sync.Mutex
 	out     io.Writer

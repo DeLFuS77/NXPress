@@ -43,7 +43,7 @@ func (o options) action() string {
 }
 
 // runJobs does the action on every file, several at once with -m, and gives how many failed.
-func runJobs(ctx context.Context, o options, out *reporter) int {
+func runJobs(ctx context.Context, o options, out output) int {
 	action := o.action()
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
@@ -174,7 +174,7 @@ func free(o options, path string) error {
 	return nil
 }
 
-func doJob(ctx context.Context, action string, path string, o options, threads int, out *reporter) (string, string, error) {
+func doJob(ctx context.Context, action string, path string, o options, threads int, out output) (string, string, error) {
 	switch action {
 	case "compress":
 		return compress(ctx, path, o, threads, out)
@@ -191,7 +191,7 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	return "", modifiedNote(check), err
 }
 
-func compress(ctx context.Context, path string, o options, threads int, out *reporter) (string, string, error) {
+func compress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
 	name, err := target(o, switchfs.CompressedPath(path))
 	if err == nil {
 		err = free(o, name)
@@ -229,7 +229,7 @@ func compress(ctx context.Context, path string, o options, threads int, out *rep
 	return name, note, removeSource(o, path)
 }
 
-func decompress(ctx context.Context, path string, o options, out *reporter) (string, string, error) {
+func decompress(ctx context.Context, path string, o options, out output) (string, string, error) {
 	if strings.EqualFold(filepath.Ext(path), ".xcz") {
 		return "", "", errors.New("XCZ to XCI is not supported yet: --convert turns it into an NSZ, and -D then into an NSP")
 	}
@@ -252,7 +252,7 @@ func decompress(ctx context.Context, path string, o options, out *reporter) (str
 	return name, modifiedNote(check), removeSource(o, path)
 }
 
-func convert(ctx context.Context, path string, o options, out *reporter) (string, string, error) {
+func convert(ctx context.Context, path string, o options, out output) (string, string, error) {
 	name, err := target(o, switchfs.ConvertedPath(path))
 	if err == nil {
 		err = free(o, name)
@@ -274,7 +274,7 @@ func convert(ctx context.Context, path string, o options, out *reporter) (string
 
 // split writes each title of a multi-title file (each game of a game card with several) to a
 // file of its own, named like the original with the title ID and version of the part.
-func split(ctx context.Context, path string, o options, out *reporter) (string, string, error) {
+func split(ctx context.Context, path string, o options, out output) (string, string, error) {
 	plan, err := switchfs.PlanSplit(path)
 	if err != nil {
 		return "", "", err
@@ -322,7 +322,7 @@ func split(ctx context.Context, path string, o options, out *reporter) (string, 
 
 // pack merges the files given into one multi-title file (a SuperNSP), checked as it is
 // written; the delta fragments of the updates are left out, as installers do not need them.
-func pack(ctx context.Context, o options, out *reporter) error {
+func pack(ctx context.Context, o options, out output) error {
 	sources, missing := inputs(o.files, []string{".nsp", ".nsz"})
 	if len(missing) > 0 {
 		return fmt.Errorf("not found: %s", strings.Join(missing, ", "))
@@ -363,7 +363,7 @@ func pack(ctx context.Context, o options, out *reporter) error {
 }
 
 // info tells the titles a file holds.
-func info(path string, out *reporter) string {
+func info(path string, out output) string {
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
@@ -389,6 +389,9 @@ func info(path string, out *reporter) string {
 		lines = append(lines, line)
 	}
 	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
+	if len(titles) == 1 {
+		return "1 title"
+	}
 	return fmt.Sprintf("%d titles", len(titles))
 }
 

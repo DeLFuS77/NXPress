@@ -2,7 +2,7 @@
 
 Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, multi-title files (SuperNSP) included. It writes standard NSZ and XCZ, the same format nsz writes, so installers read them as usual.
 
-It is one program with no Python or other dependencies. It takes the same options as nsz, so it can replace it in scripts and in tools that call nsz.
+It is one program with no Python or other dependencies. Opened with no arguments it shows a window: drop files or folders on it, choose what to do and start. With arguments it is a command line that takes the same options as nsz, so it can replace it in scripts and in tools that call nsz.
 
 Work in progress: there are no downloads yet.
 
@@ -21,6 +21,14 @@ nxpress --convert game.xci          turn an XCI into an NSP
 Every new file is written under a hidden name, checked, and only then given its name. With `--rm-source` the original is deleted only once its new file passed the check.
 
 The keys are read from `--keys`, or from a `prod.keys` or `keys.txt` next to NXPress, in the working folder or in `~/.switch`.
+
+## Building
+
+NXPress needs Go and a C compiler (for zstd). The window uses [Wails](https://wails.io): WebView2 on Windows, WebKitGTK on Linux.
+
+```
+go build -tags desktop,production -ldflags "-s -w" .
+```
 
 ## License
 

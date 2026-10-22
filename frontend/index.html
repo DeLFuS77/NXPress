@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NXPress</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">NXPress <span id="version"></span></div>
+  <nav id="modes"></nav>
+  <div class="right">
+    <button id="keys" class="chip"></button>
+    <button id="language" class="chip"></button>
+  </div>
+</header>
+
+<main>
+  <section id="list">
+    <div class="toolbar">
+      <button id="add-files" data-t="addFiles"></button>
+      <button id="add-folder" data-t="addFolder"></button>
+      <button id="clear" class="quiet" data-t="clear"></button>
+      <span id="count" class="muted"></span>
+    </div>
+    <div id="drop">
+      <div id="empty"><div class="big" data-t="dropHere"></div><div class="muted" id="takes"></div></div>
+      <table id="files" hidden>
+        <thead><tr><th data-t="file"></th><th class="size" data-t="size"></th><th class="state" data-t="state"></th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <pre id="log" hidden></pre>
+  </section>
+
+  <aside id="settings">
+    <p id="about" class="muted"></p>
+    <div class="field" data-for="compress">
+      <label><span data-t="level"></span> <b id="level-value"></b></label>
+      <input id="level" type="range" min="1" max="19">
+      <div class="presets"><button data-level="3" data-t="fast"></button><button data-level="12" data-t="balanced"></button><button data-level="18" data-t="small"></button></div>
+      <p class="muted" id="level-hint"></p>
+    </div>
+    <div class="field" data-for="compress">
+      <label class="check"><input id="block" type="checkbox"><span data-t="block"></span></label>
+      <p class="muted" data-t="blockHint"></p>
+    </div>
+    <div class="field" data-for="pack">
+      <label data-t="packFile"></label>
+      <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
+    </div>
+    <div class="field row" data-for="compress">
+      <label data-t="threads"></label><input id="threads" type="number" min="1" max="64">
+    </div>
+    <div class="field row" data-for="compress decompress verify convert split">
+      <label data-t="multi"></label><input id="multi" type="number" min="1" max="16">
+    </div>
+    <div class="field" data-for="compress decompress convert split">
+      <label data-t="output"></label>
+      <div class="path"><span id="output" class="muted"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet" title="">✕</button></div>
+    </div>
+    <div class="field" data-for="compress decompress convert split pack">
+      <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
+      <label class="check"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
+    </div>
+    <div class="go">
+      <button id="start" class="primary"></button>
+      <p id="status" class="muted"></p>
+    </div>
+  </aside>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
