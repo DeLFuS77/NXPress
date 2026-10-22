@@ -27,7 +27,7 @@ func runWindow() int {
 	err := wails.Run(&wailsoptions.App{
 		Title:            "NXPress",
 		Width:            1040,
-		Height:           720,
+		Height:           800,
 		MinWidth:         760,
 		MinHeight:        520,
 		BackgroundColour: &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255},

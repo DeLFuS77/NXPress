@@ -230,9 +230,6 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 }
 
 func decompress(ctx context.Context, path string, o options, out output) (string, string, error) {
-	if strings.EqualFold(filepath.Ext(path), ".xcz") {
-		return "", "", errors.New("XCZ to XCI is not supported yet: --convert turns it into an NSZ, and -D then into an NSP")
-	}
 	name, err := target(o, switchfs.DecompressedPath(path))
 	if err == nil {
 		err = free(o, name)

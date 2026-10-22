@@ -75,6 +75,11 @@ aside { width: 300px; border-left: 1px solid var(--line); padding: 14px 16px; ov
 .field.row label { margin: 0; }
 .field p { margin: 4px 0 0; font-size: 12px; }
 label.check { display: flex; align-items: center; cursor: pointer; margin: 4px 0; }
+label.choice { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; margin: 6px 0 0; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+label.choice:has(input:checked) { border-color: var(--accent); }
+label.choice input { margin: 3px 0 0; accent-color: var(--accent); }
+label.choice b { display: block; font-weight: 600; }
+label.choice small { display: block; font-size: 12px; margin-top: 2px; }
 .presets { display: flex; gap: 6px; margin-top: 4px; }
 .presets button { flex: 1; font-size: 12px; padding: 4px; }
 .path { display: flex; gap: 6px; align-items: center; }

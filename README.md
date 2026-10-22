@@ -11,12 +11,14 @@ Work in progress: there are no downloads yet.
 ```
 nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
-nxpress -D game.nsz                 decompress to game.nsp
+nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress --split super.nsp           split a multi-title file into one file per title
 nxpress --pack super.nsp a.nsp b.nsp
 nxpress --convert game.xci          turn an XCI into an NSP
 ```
+
+Solid or in blocks: a solid NSZ (the default) is the smallest and every installer takes it (DBI, Tinfoil, Awoo, CyberFoil, Sphaira). With `-B` it is written in blocks, which emulators that read NSZ can run as it is, without installing it; every installer but Awoo takes it too. XCZ files are always in blocks, as nsz writes them.
 
 Every new file is written under a hidden name, checked, and only then given its name. With `--rm-source` the original is deleted only once its new file passed the check.
 

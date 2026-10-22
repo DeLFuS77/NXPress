@@ -4,7 +4,7 @@ const texts = {
   en: {
     compress: "Compress", decompress: "Decompress", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Info",
     aboutCompress: "NSP and XCI to NSZ and XCZ. Every file is checked before it gets its name.",
-    aboutDecompress: "NSZ to NSP, checked against the hashes of the game.",
+    aboutDecompress: "NSZ to NSP and XCZ to XCI, checked against the hashes of the game.",
     aboutVerify: "Checks NSP, NSZ, XCI and XCZ files against the hashes of their content.",
     aboutConvert: "XCI and XCZ to NSP and NSZ.",
     aboutSplit: "Writes each title of a multi-title file (SuperNSP) to a file of its own.",
@@ -14,8 +14,12 @@ const texts = {
     file: "File", size: "Size", state: "State", files: n => n === 1 ? "1 file" : `${n} files`,
     level: "Level", fast: "Fast", balanced: "Balanced", small: "Smallest",
     levelHint: l => l >= 18 ? "Smallest files, slowest." : l >= 10 ? "A good middle." : "Quick, files a bit larger.",
-    block: "Block compression (for emulators)",
-    blockHint: "Emulators can read block files directly; solid ones are a little smaller. XCZ is always block.",
+    target: "Made for",
+    forInstallers: "Installers",
+    forInstallersHint: "Solid: the smallest, and every installer takes it (DBI, Tinfoil, Awoo, CyberFoil, Sphaira).",
+    forEmulators: "Emulators and installers",
+    forEmulatorsHint: "In blocks: emulators that read NSZ run it as it is, without installing it. Every installer takes it but Awoo.",
+    xczBlock: "XCZ files are always in blocks, as nsz writes them.",
     threads: "Threads per file", multi: "Files at once", output: "Save to", nextTo: "Next to each file",
     choose: "Choose", overwrite: "Replace files already there", remove: "Delete originals once checked",
     packFile: "New file", noPack: "None chosen",
@@ -29,7 +33,7 @@ const texts = {
   es: {
     compress: "Comprimir", decompress: "Descomprimir", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Info",
     aboutCompress: "NSP y XCI a NSZ y XCZ. Cada archivo se comprueba antes de darle su nombre.",
-    aboutDecompress: "NSZ a NSP, comprobado con los hashes del juego.",
+    aboutDecompress: "NSZ a NSP y XCZ a XCI, comprobado con los hashes del juego.",
     aboutVerify: "Comprueba archivos NSP, NSZ, XCI y XCZ con los hashes de su contenido.",
     aboutConvert: "XCI y XCZ a NSP y NSZ.",
     aboutSplit: "Escribe cada título de un archivo multi-título (SuperNSP) en un archivo propio.",
@@ -39,8 +43,12 @@ const texts = {
     file: "Archivo", size: "Tamaño", state: "Estado", files: n => n === 1 ? "1 archivo" : `${n} archivos`,
     level: "Nivel", fast: "Rápido", balanced: "Equilibrado", small: "Mínimo",
     levelHint: l => l >= 18 ? "Archivos más pequeños, más lento." : l >= 10 ? "Un buen término medio." : "Rápido, archivos algo mayores.",
-    block: "Compresión por bloques (para emuladores)",
-    blockHint: "Los emuladores leen directamente los archivos por bloques; los sólidos ocupan un poco menos. XCZ siempre va por bloques.",
+    target: "Pensado para",
+    forInstallers: "Instaladores",
+    forInstallersHint: "Sólido: el más pequeño, y lo aceptan todos los instaladores (DBI, Tinfoil, Awoo, CyberFoil, Sphaira).",
+    forEmulators: "Emuladores e instaladores",
+    forEmulatorsHint: "Por bloques: los emuladores que leen NSZ lo ejecutan tal cual, sin instalarlo. Lo aceptan todos los instaladores salvo Awoo.",
+    xczBlock: "Los XCZ siempre van por bloques, como los escribe nsz.",
     threads: "Hilos por archivo", multi: "Archivos a la vez", output: "Guardar en", nextTo: "Junto a cada archivo",
     choose: "Elegir", overwrite: "Reemplazar archivos existentes", remove: "Borrar originales tras comprobar",
     packFile: "Archivo nuevo", noPack: "Sin elegir",
@@ -115,7 +123,7 @@ function render() {
   }
   document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
-  $("takes").textContent = { compress: "NSP · XCI", decompress: "NSZ", verify: "NSP · NSZ · XCI · XCZ", convert: "XCI · XCZ", split: "NSP · NSZ · XCI · XCZ", pack: "NSP · NSZ", info: "NSP · NSZ · XCI · XCZ" }[state.mode];
+  $("takes").textContent = { compress: "NSP · XCI", decompress: "NSZ · XCZ", verify: "NSP · NSZ · XCI · XCZ", convert: "XCI · XCZ", split: "NSP · NSZ · XCI · XCZ", pack: "NSP · NSZ", info: "NSP · NSZ · XCI · XCZ" }[state.mode];
   $("language").textContent = state.language === "en" ? "Español" : "English";
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
@@ -220,7 +228,7 @@ function rowOf(file) {
 
 function settings() {
   return {
-    level: +$("level").value, block: $("block").checked, threads: +$("threads").value, multi: +$("multi").value,
+    level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output,
   };
 }
@@ -286,7 +294,7 @@ async function main() {
   $("version").textContent = state.setup.version;
   $("level").max = state.setup.maxLevel;
   $("level").value = chosen.level || state.setup.level;
-  $("block").checked = !!chosen.block;
+  $(chosen.block ? "target-block" : "target-solid").checked = true;
   $("threads").value = chosen.threads || state.setup.threads;
   $("threads").max = state.setup.cpus;
   $("multi").value = chosen.multi || 1;

@@ -43,8 +43,10 @@
       <p class="muted" id="level-hint"></p>
     </div>
     <div class="field" data-for="compress">
-      <label class="check"><input id="block" type="checkbox"><span data-t="block"></span></label>
-      <p class="muted" data-t="blockHint"></p>
+      <label data-t="target"></label>
+      <label class="choice"><input type="radio" name="target" value="solid" id="target-solid"><span><b data-t="forInstallers"></b><small class="muted" data-t="forInstallersHint"></small></span></label>
+      <label class="choice"><input type="radio" name="target" value="block" id="target-block"><span><b data-t="forEmulators"></b><small class="muted" data-t="forEmulatorsHint"></small></span></label>
+      <p class="muted" data-t="xczBlock"></p>
     </div>
     <div class="field" data-for="pack">
       <label data-t="packFile"></label>

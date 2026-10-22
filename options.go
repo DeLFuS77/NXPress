@@ -187,13 +187,15 @@ const usage = `NXPress %s, compresses and decompresses Nintendo Switch NSP and X
 Usage: nxpress [options] file or folder...
 
   -C                  compress NSP and XCI files to NSZ and XCZ
-  -D                  decompress NSZ files to NSP
+  -D                  decompress NSZ and XCZ files to NSP and XCI
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
   -l, --level N       compression level, 1 to 19 (default 18)
-  -B, --block         block compression (the default for XCZ)
-  -S, --solid         solid compression (the default for NSZ)
+  -B, --block         block compression (always for XCZ): emulators that read NSZ run it
+                      as it is; every installer takes it but Awoo
+  -S, --solid         solid compression (the default for NSZ): the smallest, and every
+                      installer takes it
   -t, --threads N     threads per file (default: half the processors, at most 8)
   -m, --multi N       files at once (default 1)
   -o, --output DIR    folder of the new files (default: next to each file)
