@@ -36,7 +36,8 @@ The keys are read from `--keys`, or from a `prod.keys` or `keys.txt` next to NXP
 NXPress needs Go and a C compiler (for zstd). The window uses [Wails](https://wails.io): WebView2 on Windows, WebKitGTK on Linux.
 
 ```
-go build -tags desktop,production -ldflags "-s -w" .
+go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres/winres.json --arch amd64   # Windows: icon and manifest
+go build -tags desktop,production -ldflags "-s -w" .                                # add webkit2_41 to the tags on Linux
 ```
 
 ## License

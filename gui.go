@@ -15,11 +15,18 @@ import (
 	"github.com/wailsapp/wails/v2"
 	wailsoptions "github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend
 var frontend embed.FS
+
+// the icon of the window on Linux; Windows takes it from the resources of the program, macOS
+// from its app
+//
+//go:embed build/appicon.png
+var appIcon []byte
 
 // runWindow opens the window with the files given, and gives the exit code once it is closed.
 func runWindow(files []string) int {
@@ -36,6 +43,7 @@ func runWindow(files []string) int {
 		OnShutdown:       func(context.Context) { app.Cancel() },
 		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
 		Bind:             []any{app},
+		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)

@@ -1,3 +1,5 @@
 *.exe
+# the resources of the Windows program, made by go-winres from build/winres
+*.syso
 *.nxpress
 /out/

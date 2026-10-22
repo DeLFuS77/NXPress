@@ -12,6 +12,7 @@ app="$3/NXPress.app"
 rm -rf "${app}"
 mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
 cp "${program}" "${app}/Contents/MacOS/nxpress"
+cp "$(dirname "$0")/../../build/icon.icns" "${app}/Contents/Resources/icon.icns"
 cat > "${app}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -21,6 +22,7 @@ cat > "${app}/Contents/Info.plist" <<PLIST
 	<key>CFBundleDisplayName</key><string>NXPress</string>
 	<key>CFBundleIdentifier</key><string>io.github.delfus77.nxpress</string>
 	<key>CFBundleExecutable</key><string>nxpress</string>
+	<key>CFBundleIconFile</key><string>icon</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleVersion</key><string>${version}</string>
 	<key>CFBundleShortVersionString</key><string>${version}</string>

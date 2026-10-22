@@ -1,13 +1,17 @@
 name: Build
 
 # Builds NXPress for every system on a machine of that system: the window (Wails) needs the
-# webview of each one (WebView2, WebKitGTK, WebKit), and cgo its C compiler for zstd. The
-# programs are kept as artifacts of the run; nothing is published.
+# webview of each one (WebView2, WebKitGTK, WebKit), and cgo its C compiler for zstd. Each
+# program opens its window once, to show it starts there, with a screenshot kept. The
+# programs are kept as artifacts of the run; for a version tag (1.2.3), the release is made
+# with them and the matching section of CHANGELOG.md.
 
 on:
   push:
     branches:
       - main
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
   workflow_dispatch:
 
@@ -53,7 +57,27 @@ jobs:
           echo "set man-db/auto-update false" | sudo debconf-communicate
           sudo dpkg-reconfigure man-db
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb imagemagick dbus-x11
+
+      # the version tag, or "dev-" and the commit
+      - name: Version
+        run: |
+          version="dev-${GITHUB_SHA::7}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+          fi
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      # the icon, the manifest and the version of the Windows program
+      - name: Windows resources
+        if: runner.os == 'Windows'
+        run: |
+          numbers="0.0.0"
+          if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            numbers="${VERSION}"
+          fi
+          go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres/winres.json --arch amd64 \
+            --file-version "${numbers}.0" --product-version "${VERSION}"
 
       - name: Build
         env:
@@ -74,23 +98,37 @@ jobs:
             exe="nxpress.exe"
           fi
           go vet -tags "${tags}" ./...
-          go build -tags "${tags}" -trimpath -ldflags "-s -w -X main.version=dev-${GITHUB_SHA::7}" -o "build/${exe}" .
-          ./build/${exe} --version
-          ./build/${exe} --help > /dev/null
+          go test -tags "${tags}" ./...
+          go build -tags "${tags}" -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "out/${exe}" .
+          ./out/${exe} --version
+          ./out/${exe} --help > /dev/null
 
       - name: Package
         run: |
           mkdir -p dist
           case "${RUNNER_OS}" in
             Windows)
-              cp build/nxpress.exe "dist/nxpress-${{ matrix.name }}.exe" ;;
+              cp out/nxpress.exe "dist/nxpress-${{ matrix.name }}.exe" ;;
             macOS)
-              bash .github/scripts/macos_app.sh build/nxpress "dev-${GITHUB_SHA::7}" build
-              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C build NXPress.app ;;
+              bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app ;;
             *)
-              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C build nxpress ;;
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out nxpress ;;
           esac
           ls -l dist
+
+      # the window opens, and is still open after a while: a screenshot of it is kept
+      - name: Open the window
+        run: bash .github/scripts/open_window.sh "${{ matrix.name }}"
+
+      - name: Keep the screenshot
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: window-${{ matrix.name }}
+          path: window-*.png
+          if-no-files-found: warn
+          retention-days: 14
 
       # the archives keep the programs runnable: the artifacts lose the permissions of the files
       - name: Keep the program
@@ -100,3 +138,89 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      # signed provenance of the programs (Sigstore), checked with "gh attestation verify"
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Extract release notes
+        run: |
+          # the section between "## <tag>" and the next "## " heading
+          awk -v version="${GITHUB_REF_NAME}" '
+            $0 == "## " version { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No section for ${GITHUB_REF_NAME} in CHANGELOG.md" >&2
+            exit 1
+          fi
+
+      - name: Get the programs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: nxpress-*
+          path: dist
+          merge-multiple: true
+
+      - name: Name them after the version
+        run: |
+          cd dist
+          for file in nxpress-*; do
+            mv "${file}" "${file/nxpress-/nxpress-${GITHUB_REF_NAME}-}"
+          done
+          sha256sum nxpress-* > SHA256SUMS.txt
+          ls -l
+
+      # proof that each file was built by this workflow from this tag
+      - name: Attest the programs
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/nxpress-*
+
+      - name: Keep the provenance with the release
+        run: cp "${{ steps.attest.outputs.bundle-path }}" "dist/nxpress-${GITHUB_REF_NAME}.intoto.jsonl"
+
+      - name: Add how to download
+        run: |
+          cat >> release-notes.md <<EOF
+
+          ### Downloads
+
+          | System | File |
+          |---|---|
+          | Windows | \`nxpress-${GITHUB_REF_NAME}-windows-x64.exe\` |
+          | macOS with Apple chip (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple.tar.gz\` |
+          | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
+          | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
+          | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |
+
+          Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`).
+          It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
+          On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in
+          System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have.
+          \`SHA256SUMS.txt\` has the checksums of the files, and
+          \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here.
+          EOF
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "NXPress ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            dist/nxpress-* dist/SHA256SUMS.txt
