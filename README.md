@@ -4,7 +4,9 @@ Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, mu
 
 It is one program with no Python or other dependencies. Opened with no arguments it shows a window: drop files or folders on it, choose what to do and start. With arguments it is a command line that takes the same options as nsz, so it can replace it in scripts and in tools that call nsz.
 
-Work in progress: there are no downloads yet.
+## Download
+
+The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI.
 
 ## Usage
 

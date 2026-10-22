@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0
 
 The first version of NXPress: a compressor for Nintendo Switch games in one program, with a window and a command line compatible with nsz.
 
