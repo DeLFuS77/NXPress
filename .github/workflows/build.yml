@@ -55,9 +55,14 @@ jobs:
       - name: Build
         env:
           CGO_ENABLED: "1"
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
+          # the oldest macOS Go supports
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
         run: |
           tags="desktop,production"
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            # the file dialogs of Wails use UTType, a framework Wails does not link itself
+            export CGO_LDFLAGS="-framework UniformTypeIdentifiers"
+          fi
           if [ "${RUNNER_OS}" = "Linux" ]; then
             tags="${tags},webkit2_41"
           fi
