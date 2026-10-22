@@ -2,7 +2,7 @@ module github.com/DeLFuS77/NXPress
 
 go 1.27.0
 
-replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261022164245-9920dd23927b
+replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261022165837-541a029f1a46
 
 require (
 	github.com/dtrunk90/switch-library-manager-web v0.0.0-00010101000000-000000000000

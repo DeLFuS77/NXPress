@@ -10,7 +10,7 @@ const texts = {
     aboutVerify: "Checks NSP, NSZ, XCI and XCZ files against the hashes of their content.",
     aboutConvert: "XCI and XCZ to NSP and NSZ.",
     aboutSplit: "Writes each title of a multi-title file (SuperNSP) to a file of its own.",
-    aboutPack: "Merges a game, its update and its DLC into one multi-title file (SuperNSP): an NSP, uncompressed, when they are all NSP; an NSZ when one of them is an NSZ. Of a title given twice the newest is kept: add a SuperNSP and a newer update to get it updated.",
+    aboutPack: "Merges a game, its update and its DLC into one multi-title file (SuperNSP): an NSP, uncompressed, when they are all NSP; an NSZ when one of them is an NSZ. Of a title given twice the newest is kept: add a SuperNSP and a newer update to get it updated. With an XCI among them, its updates and DLC go into the game card: an XCI with everything.",
     aboutInfo: "The titles a file holds, how it is stored and what it works with.",
     addFiles: "Add files", addFolder: "Add folder", clear: "Clear list", dropHere: "Drop files or folders here", orChoose: "or choose them",
     compression: "Compression", result: "New files", advanced: "Advanced",
@@ -24,7 +24,7 @@ const texts = {
     levelHint: l => l >= 18 ? "Maximum compression: the smallest files, the slowest." : l >= 10 ? "Medium compression: a good middle." : "Light compression: quick, files a bit larger.",
     groupSpace: "Space", groupOrganize: "Organize", groupCheck: "Check",
     hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "solid ↔ blocks, level", hintTrim: "padding and deltas",
-    hintPack: "several → one SuperNSP", hintSplit: "SuperNSP → one per title", hintConvert: "XCI → NSP", hintVerify: "check the hashes", hintInfo: "titles and format",
+    hintPack: "several → one SuperNSP or XCI", hintSplit: "SuperNSP → one per title", hintConvert: "XCI → NSP", hintVerify: "check the hashes", hintInfo: "titles and format",
     target: "Made for",
     forInstallers: "Installers",
     forInstallersHint: "Solid: the smallest files.",
@@ -36,6 +36,8 @@ const texts = {
     packFile: "New file", noPack: "None chosen",
     start: m => ({ compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Show details" })[m],
     estimateButton: "Estimate", estimating: "Estimating",
+    datTitle: "Compare with a DAT", noDat: "None: the hashes of the content only",
+    datHint: "A DAT of No-Intro or others lists the size and the hashes of each known dump: each file is told whether it is one of them.",
     language: "Language", theme: "Theme", themeAuto: "Auto", themeLight: "Light", themeDark: "Dark", showFolder: "Show in folder",
     sendToOn: "Add NXPress to “Send to” in the Explorer", sendToOff: "Take NXPress out of “Send to”", languageOther: "Español",
     cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", cancelled: "Cancelled", show: "Show",
@@ -53,7 +55,7 @@ const texts = {
     aboutVerify: "Comprueba archivos NSP, NSZ, XCI y XCZ con los hashes de su contenido.",
     aboutConvert: "XCI y XCZ a NSP y NSZ.",
     aboutSplit: "Escribe cada título de un archivo multi-título (SuperNSP) en un archivo propio.",
-    aboutPack: "Junta un juego, su actualización y sus DLC en un solo archivo multi-título (SuperNSP): un NSP sin comprimir si todos son NSP; un NSZ si alguno es NSZ. Si un título aparece dos veces se queda el más nuevo: añade un SuperNSP y una actualización nueva para ponerlo al día.",
+    aboutPack: "Junta un juego, su actualización y sus DLC en un solo archivo multi-título (SuperNSP): un NSP sin comprimir si todos son NSP; un NSZ si alguno es NSZ. Si un título aparece dos veces se queda el más nuevo: añade un SuperNSP y una actualización nueva para ponerlo al día. Con un XCI entre ellos, sus actualizaciones y DLC van dentro del cartucho: un XCI con todo.",
     aboutInfo: "Los títulos que tiene un archivo, cómo está guardado y con qué funciona.",
     addFiles: "Añadir archivos", addFolder: "Añadir carpeta", clear: "Vaciar lista", dropHere: "Suelta aquí archivos o carpetas", orChoose: "o elígelos",
     compression: "Compresión", result: "Archivos nuevos", advanced: "Avanzado",
@@ -67,7 +69,7 @@ const texts = {
     levelHint: l => l >= 18 ? "Compresión máxima: los archivos más pequeños, lo más lento." : l >= 10 ? "Compresión media: un buen término medio." : "Compresión ligera: rápido, archivos algo mayores.",
     groupSpace: "Espacio", groupOrganize: "Organizar", groupCheck: "Revisar",
     hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "sólido ↔ bloques, nivel", hintTrim: "relleno y deltas",
-    hintPack: "varios → un SuperNSP", hintSplit: "SuperNSP → uno por título", hintConvert: "XCI → NSP", hintVerify: "comprobar los hashes", hintInfo: "títulos y formato",
+    hintPack: "varios → un SuperNSP o XCI", hintSplit: "SuperNSP → uno por título", hintConvert: "XCI → NSP", hintVerify: "comprobar los hashes", hintInfo: "títulos y formato",
     target: "Pensado para",
     forInstallers: "Instaladores",
     forInstallersHint: "Sólido: los archivos más pequeños.",
@@ -79,6 +81,8 @@ const texts = {
     packFile: "Archivo nuevo", noPack: "Sin elegir",
     start: m => ({ compress: "Comprimir", decompress: "Descomprimir", recompress: "Recomprimir", trim: "Recortar", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Ver detalles" })[m],
     estimateButton: "Calcular ahorro", estimating: "Calculando",
+    datTitle: "Comparar con un DAT", noDat: "Ninguno: solo los hashes del contenido",
+    datHint: "Un DAT de No-Intro u otros da el tamaño y los hashes de cada volcado conocido: de cada archivo se dice si es uno de ellos.",
     language: "Idioma", theme: "Tema", themeAuto: "Auto", themeLight: "Claro", themeDark: "Oscuro", showFolder: "Mostrar en la carpeta",
     sendToOn: "Añadir NXPress a «Enviar a» del Explorador", sendToOff: "Quitar NXPress de «Enviar a»", languageOther: "English",
     cancel: "Cancelar", waiting: "En espera", ok: "OK", failed: "Error", cancelled: "Cancelado", show: "Mostrar",
@@ -96,7 +100,7 @@ const groups = [
   ["groupCheck", ["verify", "info"]],
 ];
 const steps = {
-  es: { Estimating: "Calculando", Trimming: "Recortando", Recompressing: "Recomprimiendo", Compressing: "Comprimiendo", Verifying: "Verificando", Decompressing: "Descomprimiendo", Converting: "Convirtiendo", Packing: "Juntando", Splitting: "Dividiendo" },
+  es: { Comparing: "Comparando", Estimating: "Calculando", Trimming: "Recortando", Recompressing: "Recomprimiendo", Compressing: "Comprimiendo", Verifying: "Verificando", Decompressing: "Descomprimiendo", Converting: "Convirtiendo", Packing: "Juntando", Splitting: "Dividiendo" },
 };
 
 const $ = id => document.getElementById(id);
@@ -126,7 +130,7 @@ function size(bytes) {
 const notes = {
   en: [[/ \(use -w to replace it\)/, " (tick “Replace files already there”)"]],
   es: [
-    [/ smaller/g, " menos"], [/^solid, /, "sólido, "], [/, solid and in blocks: /g, ", sólido y por bloques: "], [/, solid: /g, ", sólido: "], [/, in blocks: /g, ", por bloques: "], [/, uncompressed: /g, ", sin comprimir: "], [/ uncompressed \(/g, " sin comprimir ("], [/works with: every installer \(DBI, Tinfoil, Awoo, CyberFoil, Sphaira\); emulators need it decompressed/g, "funciona con: todos los instaladores (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); los emuladores lo necesitan descomprimido"], [/works with: every installer but Awoo; emulators that read NSZ run it as it is/g, "funciona con: todos los instaladores salvo Awoo; los emuladores que leen NSZ lo ejecutan tal cual"], [/works with: every installer and emulator/g, "funciona con: todos los instaladores y emuladores"], [/padding: (.+?) that trimming takes away/g, "relleno: $1 que Recortar quita"], [/delta fragments: (.+?) that trimming takes away/g, "fragmentos delta: $1 que Recortar quita"], [/^about /, "unos "], [/, (\S+ \S+) at level (\d+)$/, ", $1 con nivel $2"], [/^nothing in it can be compressed$/, "No hay nada que comprimir"], [/ of padding taken away/, " de relleno quitados"], [/^nothing to trim, it ends where its data ends$/, "Nada que recortar: acaba donde acaban sus datos"], [/^nothing to trim, it holds no delta fragments$/, "Nada que recortar: no tiene fragmentos delta"], [/ of delta fragments taken away/, " de fragmentos delta quitados"], [/data follows the last partition: it is not padding, the XCI is left as it is/, "hay datos tras la última partición: no es relleno, el XCI se deja como está"], [/^in blocks, /, "por bloques, "], [/(\d+) NCA rewritten by a tool, their data checked/, "$1 NCA reescritos por una herramienta, sus datos comprobados"],
+    [/ smaller/g, " menos"], [/^solid, /, "sólido, "], [/in the DAT: /g, "en el DAT: "], [/not en el DAT: no dump of its size/g, "no está en el DAT: ningún volcado de su tamaño"], [/not en el DAT: (\d+) dumps of its size, with other hashes/g, "no está en el DAT: $1 volcados de su tamaño, con otros hashes"], [/, solid and in blocks: /g, ", sólido y por bloques: "], [/, solid: /g, ", sólido: "], [/, in blocks: /g, ", por bloques: "], [/, uncompressed: /g, ", sin comprimir: "], [/ uncompressed \(/g, " sin comprimir ("], [/works with: every installer \(DBI, Tinfoil, Awoo, CyberFoil, Sphaira\); emulators need it decompressed/g, "funciona con: todos los instaladores (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); los emuladores lo necesitan descomprimido"], [/works with: every installer but Awoo; emulators that read NSZ run it as it is/g, "funciona con: todos los instaladores salvo Awoo; los emuladores que leen NSZ lo ejecutan tal cual"], [/works with: every installer and emulator/g, "funciona con: todos los instaladores y emuladores"], [/padding: (.+?) that trimming takes away/g, "relleno: $1 que Recortar quita"], [/delta fragments: (.+?) that trimming takes away/g, "fragmentos delta: $1 que Recortar quita"], [/^about /, "unos "], [/, (\S+ \S+) at level (\d+)$/, ", $1 con nivel $2"], [/^nothing in it can be compressed$/, "No hay nada que comprimir"], [/ of padding taken away/, " de relleno quitados"], [/^nothing to trim, it ends where its data ends$/, "Nada que recortar: acaba donde acaban sus datos"], [/^nothing to trim, it holds no delta fragments$/, "Nada que recortar: no tiene fragmentos delta"], [/ of delta fragments taken away/, " de fragmentos delta quitados"], [/data follows the last partition: it is not padding, the XCI is left as it is/, "hay datos tras la última partición: no es relleno, el XCI se deja como está"], [/^in blocks, /, "por bloques, "], [/(\d+) NCA rewritten by a tool, their data checked/, "$1 NCA reescritos por una herramienta, sus datos comprobados"],
     [/^nothing in it can be compressed, it is left as it is$/, "No hay nada que comprimir: se queda como está"],
     [/^it holds one title, nothing to split$/, "Tiene un solo título: no hay nada que dividir"],
     [/^(\d+) files: /, "$1 archivos: "], [/; some of its files are in no part, so it is kept/, "; algunos de sus archivos no van en ninguna parte, así que se conserva"],
@@ -167,7 +171,7 @@ function render() {
   $("title").textContent = t(state.mode);
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
-  for (const type of { compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ", split: "NSP NSZ XCI XCZ", pack: "NSP NSZ", info: "NSP NSZ XCI XCZ" }[state.mode].split(" ")) {
+  for (const type of { compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ", split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ" }[state.mode].split(" ")) {
     const tag = document.createElement("i");
     tag.textContent = type;
     $("takes").append(tag);
@@ -192,6 +196,9 @@ function render() {
   $("output").title = state.output;
   $("reset-output").hidden = !state.output;
   $("pack").textContent = state.pack || t("noPack");
+  $("dat").textContent = state.dat || t("noDat");
+  $("dat").title = state.dat;
+  $("reset-dat").hidden = !state.dat;
   $("pack").title = state.pack;
   $("start").textContent = state.busy ? t("cancel") : t("start")(state.mode);
   $("start").className = "primary big" + (state.busy ? " stop" : "");
@@ -321,7 +328,7 @@ function rowOf(file) {
 function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
-    overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output,
+    overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
   };
 }
 
@@ -404,6 +411,7 @@ async function main() {
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   state.output = chosen.output || "";
+  state.dat = chosen.dat || "";
 
   $("level").oninput = render;
   document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; render(); }; });
@@ -423,6 +431,8 @@ async function main() {
   $("clear").onclick = () => { clearList(); render(); };
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); };
   $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); };
+  $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
+  $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
   $("choose-pack").onclick = async () => { const path = await app().ChoosePack(); if (path) state.pack = path; render(); };
   $("send-to").onclick = async () => {
     try {

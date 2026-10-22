@@ -30,6 +30,8 @@ type options struct {
 	overwrite  bool
 	rmSource   bool
 	keys       string
+	dat        string
+	datFile    *dat
 	minimal    bool
 	machine    bool
 	version    bool
@@ -47,7 +49,7 @@ const (
 // the options that take a value, by every name they have
 var valued = map[string]string{
 	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--depth": "depth",
+	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--depth": "depth", "--dat": "dat",
 }
 
 // the options of nsz that NXPress accepts and has no use for
@@ -156,6 +158,8 @@ func (o *options) set(what string, name string, value string) error {
 		o.output = value
 	case "keys":
 		o.keys = value
+	case "dat":
+		o.dat = value
 	case "pack":
 		o.pack = value
 	case "bs", "depth":
@@ -174,6 +178,12 @@ func (o *options) check() error {
 	}
 	if actions > 1 {
 		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --split and --pack")
+	}
+	if o.dat != "" && actions > 0 {
+		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
+	}
+	if o.dat != "" {
+		o.verify = true
 	}
 	if actions == 0 && !o.verify {
 		return errors.New("nothing to do: use -C to compress, -D to decompress or -V to check (see nxpress --help)")
@@ -200,6 +210,8 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
+  --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of
+                      Logiqx, as No-Intro publishes them), by its size and hashes
   -l, --level N       compression level, 1 to 19 (default 18)
   -B, --block         block compression (always for XCZ): emulators that read NSZ run it
                       as it is; every installer takes it but Awoo
@@ -230,7 +242,9 @@ Usage: nxpress [options] file or folder...
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ; of a
                       title given twice, the newest version is kept (a SuperNSP and a
-                      newer update of its game give the SuperNSP with the new update)
+                      newer update of its game give the SuperNSP with the new update);
+                      with an XCI or XCZ among them, its updates and DLC go into the game
+                      card, and the pack is an XCI (or an XCZ)
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted

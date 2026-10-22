@@ -70,6 +70,14 @@ func runJobs(ctx context.Context, o options, out output) int {
 		out.say("no file to %s among the ones given", action)
 		return len(missing)
 	}
+	if o.dat != "" && o.datFile == nil {
+		loaded, err := loadDat(o.dat)
+		if err != nil {
+			out.done(o.dat, "", "", err)
+			return len(files) + len(missing)
+		}
+		o.datFile = loaded
+	}
 	threads := switchfs.LimitThreads(strconv.Itoa(o.level), o.threads, o.multi)
 	var (
 		mutex  sync.Mutex
@@ -204,7 +212,15 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		return "", info(path, out), nil
 	}
 	check, err := switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying"))
-	return "", modifiedNote(check), err
+	note := modifiedNote(check)
+	if err != nil || o.datFile == nil {
+		return "", note, err
+	}
+	found, err := o.datFile.match(ctx, path, out.progress(path, "Comparing"))
+	if note != "" {
+		found = note + "; " + found
+	}
+	return "", found, err
 }
 
 func compress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
@@ -503,20 +519,42 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 // pack merges the files given into one multi-title file (a SuperNSP), checked as it is
 // written; the delta fragments of the updates are left out, as installers do not need them.
 func pack(ctx context.Context, o options, out output) error {
-	sources, missing := inputs(o.files, []string{".nsp", ".nsz"})
+	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
 	if len(missing) > 0 {
 		return fmt.Errorf("not found: %s", strings.Join(missing, ", "))
 	}
 	if len(sources) < 2 {
-		return errors.New("a pack needs at least two NSP or NSZ files")
+		return errors.New("a pack needs at least two files")
+	}
+	// a game card among them: its updates and DLC go into it, and the pack is a game card
+	cards := []string{}
+	others := []string{}
+	for _, source := range sources {
+		if extension := strings.ToLower(filepath.Ext(source)); extension == ".xci" || extension == ".xcz" {
+			cards = append(cards, source)
+		} else {
+			others = append(others, source)
+		}
+	}
+	if len(cards) > 1 {
+		return errors.New("only one game card can be packed: give its updates and DLC as NSP or NSZ")
 	}
 	// a pack of NSP files is an NSP, uncompressed; one with an NSZ among them holds NCZ, an NSZ
-	compressed, err := switchfs.PackHasCompressedFiles(sources)
-	if err != nil {
-		return err
+	compressed := false
+	for _, source := range sources {
+		if facts, err := switchfs.DescribeFile(source); err != nil {
+			return err
+		} else if facts.Solid+facts.Blocks > 0 {
+			compressed = true
+		}
 	}
 	extension := ".nsp"
-	if compressed {
+	switch {
+	case len(cards) == 1 && compressed:
+		extension = ".xcz"
+	case len(cards) == 1:
+		extension = ".xci"
+	case compressed:
 		extension = ".nsz"
 	}
 	name, err := target(o, strings.TrimSuffix(o.pack, filepath.Ext(o.pack))+extension)
@@ -529,7 +567,16 @@ func pack(ctx context.Context, o options, out output) error {
 	written := temporary(name)
 	defer os.Remove(written)
 	// of a title given twice (an update in a SuperNSP, and a newer one), the newest is kept
-	skipped, replaced, check, err := switchfs.MergeNewestAndCheck(ctx, sources, written, true, out.progress(o.pack, "Packing"))
+	var (
+		skipped  int64
+		replaced []string
+		check    switchfs.FileCheck
+	)
+	if len(cards) == 1 {
+		replaced, check, err = switchfs.PackIntoCard(ctx, cards[0], others, written, out.progress(o.pack, "Packing"))
+	} else {
+		skipped, replaced, check, err = switchfs.MergeNewestAndCheck(ctx, sources, written, true, out.progress(o.pack, "Packing"))
+	}
 	if err == nil {
 		err = finish(o, written, name)
 	}

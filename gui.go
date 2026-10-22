@@ -131,7 +131,7 @@ type Item struct {
 // extensions are the files a mode takes.
 func extensions(mode string) []string {
 	if mode == "pack" {
-		return []string{".nsp", ".nsz"}
+		return []string{".nsp", ".nsz", ".xci", ".xcz"}
 	}
 	return takes[mode]
 }
@@ -183,8 +183,15 @@ func (a *App) ChooseOutput() (string, error) {
 // ChoosePack asks for the name of the multi-title file a pack writes.
 func (a *App) ChoosePack() (string, error) {
 	return wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
-		DefaultFilename: "SuperNSP.nsp",
-		Filters:         []wailsruntime.FileFilter{{DisplayName: "NSP", Pattern: "*.nsp"}},
+		DefaultFilename: "Pack.nsp",
+		Filters:         []wailsruntime.FileFilter{{DisplayName: "NSP, NSZ, XCI, XCZ", Pattern: "*.nsp;*.nsz;*.xci;*.xcz"}},
+	})
+}
+
+// ChooseDat asks for a DAT file.
+func (a *App) ChooseDat() (string, error) {
+	return wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Filters: []wailsruntime.FileFilter{{DisplayName: "DAT (*.dat, *.xml)", Pattern: "*.dat;*.xml"}},
 	})
 }
 
@@ -200,6 +207,7 @@ type Request struct {
 	Overwrite    bool     `json:"overwrite"`
 	RemoveSource bool     `json:"removeSource"`
 	Pack         string   `json:"pack"`
+	Dat          string   `json:"dat"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -208,6 +216,9 @@ func (a *App) Start(request Request) error {
 	o := options{
 		level: request.Level, block: request.Block, threads: request.Threads, multi: max(1, request.Multi),
 		output: request.Output, overwrite: request.Overwrite, rmSource: request.RemoveSource, files: request.Files,
+	}
+	if request.Mode == "verify" {
+		o.dat = request.Dat
 	}
 	switch request.Mode {
 	case "compress":
