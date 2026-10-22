@@ -1,111 +1,24 @@
 "use strict";
 
-const texts = {
-  en: {
-    compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Details",
-    aboutCompress: "NSP and XCI to NSZ and XCZ. Every file is checked before it gets its name.",
-    aboutDecompress: "NSZ to NSP and XCZ to XCI, checked against the hashes of the game.",
-    aboutRecompress: "Writes NSZ and XCZ files again, solid or in blocks, at another level: no NSP in between and no keys needed. Each file is replaced once its new copy is checked, unless you choose another folder.",
-    aboutTrim: "Takes away what installers do not use: the padding after the data of an XCI, as game cards are dumped, and the delta fragments of updates in NSP and NSZ files. The file stays what it was, smaller, and works where it worked.",
-    aboutVerify: "Checks NSP, NSZ, XCI and XCZ files against the hashes of their content.",
-    aboutConvert: "XCI and XCZ to NSP and NSZ.",
-    aboutSplit: "Writes each title of a multi-title file (SuperNSP) to a file of its own.",
-    aboutPack: "Merges a game, its update and its DLC into one multi-title file (SuperNSP): an NSP, uncompressed, when they are all NSP; an NSZ when one of them is an NSZ. Of a title given twice the newest is kept: add a SuperNSP and a newer update to get it updated. With an XCI among them, its updates and DLC go into the game card: an XCI with everything.",
-    aboutInfo: "The titles a file holds, how it is stored and what it works with.",
-    addFiles: "Add files", addFolder: "Add folder", clear: "Clear list", dropHere: "Drop files or folders here", orChoose: "or choose them",
-    compression: "Compression", result: "New files", advanced: "Advanced",
-    keysMissing: "NXPress needs your prod.keys to read the games.", keysChoose: "Choose prod.keys",
-    tagEmulators: "emulators", removeWarning: "Each original is deleted for good once its new file is checked.",
-    selected: (n, bytes) => `${n === 1 ? "1 file" : n + " files"} · ${size(bytes)}`, nothing: "No files yet",
-    working: (done, n, share) => `${done} of ${n} done · ${share}%`,
-    saved: bytes => `${size(bytes)} saved`,
-    file: "File", size: "Size", state: "State", files: n => n === 1 ? "1 file" : `${n} files`,
-    level: "Compression level", light: "Light", medium: "Medium", maximum: "Maximum", faster: "faster", smaller: "smaller files",
-    levelHint: l => l >= 18 ? "Maximum compression: the smallest files, the slowest." : l >= 10 ? "Medium compression: a good middle." : "Light compression: quick, files a bit larger.",
-    groupSpace: "Space", groupOrganize: "Organize", groupCheck: "Check",
-    hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "solid ↔ blocks, level", hintTrim: "padding and deltas",
-    hintPack: "several → one SuperNSP or XCI", hintSplit: "SuperNSP → one per title", hintConvert: "XCI → NSP", hintVerify: "check the hashes", hintInfo: "titles and format",
-    target: "Made for",
-    forInstallers: "Installers",
-    forInstallersHint: "Solid: the smallest files.",
-    forEmulators: "Emulators and installers",
-    forEmulatorsHint: "In blocks: emulators that read NSZ run them as they are.",
-    xczBlock: "XCZ files are always in blocks, as nsz writes them.",
-    threads: "Threads per file", multi: "Files at once", output: "Save to", nextTo: "Next to each file",
-    choose: "Choose", overwrite: "Replace files already there", remove: "Delete originals once checked",
-    packFile: "New file", noPack: "None chosen",
-    start: m => ({ compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Show details" })[m],
-    estimateButton: "Estimate", estimating: "Estimating",
-    datTitle: "Compare with a DAT", noDat: "None: the hashes of the content only",
-    datHint: "A DAT of No-Intro or others lists the size and the hashes of each known dump: each file is told whether it is one of them.",
-    language: "Language", theme: "Theme", themeAuto: "Auto", themeLight: "Light", themeDark: "Dark", showFolder: "Show in folder",
-    sendToOn: "Add NXPress to “Send to” in the Explorer", sendToOff: "Take NXPress out of “Send to”", languageOther: "Español",
-    cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", cancelled: "Cancelled", show: "Show",
-    keys: k => k ? "Keys: " + k.split(/[\\/]/).pop() : "No prod.keys", needKeys: "Choose your prod.keys first.",
-    needFiles: "Add some files first.", needPack: "Choose the name of the new file.",
-    finished: (n, f, s) => `${n - f} of ${n} done` + (f ? `, ${f} failed` : "") + ` in ${time(s)}.`,
-    stopped: "Cancelled.",
-  },
-  es: {
-    compress: "Comprimir", decompress: "Descomprimir", recompress: "Recomprimir", trim: "Recortar", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Detalles",
-    aboutCompress: "NSP y XCI a NSZ y XCZ. Cada archivo se comprueba antes de darle su nombre.",
-    aboutDecompress: "NSZ a NSP y XCZ a XCI, comprobado con los hashes del juego.",
-    aboutRecompress: "Vuelve a escribir archivos NSZ y XCZ, sólidos o por bloques, con otro nivel: sin pasar por NSP y sin claves. Cada archivo se sustituye cuando su copia nueva está comprobada, salvo que elijas otra carpeta.",
-    aboutTrim: "Quita lo que los instaladores no usan: el relleno tras los datos de un XCI, como se vuelcan los cartuchos, y los fragmentos delta de las actualizaciones en NSP y NSZ. El archivo sigue siendo el mismo tipo, más pequeño, y funciona donde funcionaba.",
-    aboutVerify: "Comprueba archivos NSP, NSZ, XCI y XCZ con los hashes de su contenido.",
-    aboutConvert: "XCI y XCZ a NSP y NSZ.",
-    aboutSplit: "Escribe cada título de un archivo multi-título (SuperNSP) en un archivo propio.",
-    aboutPack: "Junta un juego, su actualización y sus DLC en un solo archivo multi-título (SuperNSP): un NSP sin comprimir si todos son NSP; un NSZ si alguno es NSZ. Si un título aparece dos veces se queda el más nuevo: añade un SuperNSP y una actualización nueva para ponerlo al día. Con un XCI entre ellos, sus actualizaciones y DLC van dentro del cartucho: un XCI con todo.",
-    aboutInfo: "Los títulos que tiene un archivo, cómo está guardado y con qué funciona.",
-    addFiles: "Añadir archivos", addFolder: "Añadir carpeta", clear: "Vaciar lista", dropHere: "Suelta aquí archivos o carpetas", orChoose: "o elígelos",
-    compression: "Compresión", result: "Archivos nuevos", advanced: "Avanzado",
-    keysMissing: "NXPress necesita tu prod.keys para leer los juegos.", keysChoose: "Elegir prod.keys",
-    tagEmulators: "emuladores", removeWarning: "Cada original se borra definitivamente cuando su archivo nuevo está comprobado.",
-    selected: (n, bytes) => `${n === 1 ? "1 archivo" : n + " archivos"} · ${size(bytes)}`, nothing: "Aún no hay archivos",
-    working: (done, n, share) => `${done} de ${n} hechos · ${share}%`,
-    saved: bytes => `${size(bytes)} ahorrados`,
-    file: "Archivo", size: "Tamaño", state: "Estado", files: n => n === 1 ? "1 archivo" : `${n} archivos`,
-    level: "Nivel de compresión", light: "Ligera", medium: "Media", maximum: "Máxima", faster: "más rápido", smaller: "más pequeño",
-    levelHint: l => l >= 18 ? "Compresión máxima: los archivos más pequeños, lo más lento." : l >= 10 ? "Compresión media: un buen término medio." : "Compresión ligera: rápido, archivos algo mayores.",
-    groupSpace: "Espacio", groupOrganize: "Organizar", groupCheck: "Revisar",
-    hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "sólido ↔ bloques, nivel", hintTrim: "relleno y deltas",
-    hintPack: "varios → un SuperNSP o XCI", hintSplit: "SuperNSP → uno por título", hintConvert: "XCI → NSP", hintVerify: "comprobar los hashes", hintInfo: "títulos y formato",
-    target: "Pensado para",
-    forInstallers: "Instaladores",
-    forInstallersHint: "Sólido: los archivos más pequeños.",
-    forEmulators: "Emuladores e instaladores",
-    forEmulatorsHint: "Por bloques: los emuladores que leen NSZ los ejecutan tal cual.",
-    xczBlock: "Los XCZ siempre van por bloques, como los escribe nsz.",
-    threads: "Hilos por archivo", multi: "Archivos a la vez", output: "Guardar en", nextTo: "Junto a cada archivo",
-    choose: "Elegir", overwrite: "Reemplazar archivos existentes", remove: "Borrar originales tras comprobar",
-    packFile: "Archivo nuevo", noPack: "Sin elegir",
-    start: m => ({ compress: "Comprimir", decompress: "Descomprimir", recompress: "Recomprimir", trim: "Recortar", verify: "Verificar", convert: "Convertir", split: "Dividir", pack: "Juntar", info: "Ver detalles" })[m],
-    estimateButton: "Calcular ahorro", estimating: "Calculando",
-    datTitle: "Comparar con un DAT", noDat: "Ninguno: solo los hashes del contenido",
-    datHint: "Un DAT de No-Intro u otros da el tamaño y los hashes de cada volcado conocido: de cada archivo se dice si es uno de ellos.",
-    language: "Idioma", theme: "Tema", themeAuto: "Auto", themeLight: "Claro", themeDark: "Oscuro", showFolder: "Mostrar en la carpeta",
-    sendToOn: "Añadir NXPress a «Enviar a» del Explorador", sendToOff: "Quitar NXPress de «Enviar a»", languageOther: "English",
-    cancel: "Cancelar", waiting: "En espera", ok: "OK", failed: "Error", cancelled: "Cancelado", show: "Mostrar",
-    keys: k => k ? "Claves: " + k.split(/[\\/]/).pop() : "Sin prod.keys", needKeys: "Elige antes tu prod.keys.",
-    needFiles: "Añade antes algún archivo.", needPack: "Elige el nombre del archivo nuevo.",
-    finished: (n, f, s) => `${n - f} de ${n} hechos` + (f ? `, ${f} con error` : "") + ` en ${time(s)}.`,
-    stopped: "Cancelado.",
-  },
-};
-const modes = ["compress", "decompress", "recompress", "trim", "verify", "convert", "split", "pack", "info"];
+const modes = ["compress", "decompress", "recompress", "trim", "verify", "convert", "split", "pack", "info", "fat32", "rename"];
 // the menu, by what the modes are for
 const groups = [
   ["groupSpace", ["compress", "decompress", "recompress", "trim"]],
-  ["groupOrganize", ["pack", "split", "convert"]],
+  ["groupOrganize", ["pack", "split", "fat32", "convert", "rename"]],
   ["groupCheck", ["verify", "info"]],
 ];
-const steps = {
-  es: { Comparing: "Comparando", Estimating: "Calculando", Trimming: "Recortando", Recompressing: "Recomprimiendo", Compressing: "Comprimiendo", Verifying: "Verificando", Decompressing: "Descomprimiendo", Converting: "Convirtiendo", Packing: "Juntando", Splitting: "Dividiendo" },
+// what each mode takes, to show it
+const takesShown = {
+  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
 
 const $ = id => document.getElementById(id);
 const app = () => window.go.main.App;
-const state = { theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", setup: null };
+const state = {
+  theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
+  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "",
+};
 
 function load(name, fallback) {
   try { const value = localStorage.getItem("nxpress." + name); return value === null ? fallback : JSON.parse(value); } catch { return fallback; }
@@ -113,7 +26,8 @@ function load(name, fallback) {
 function save(name, value) {
   try { localStorage.setItem("nxpress." + name, JSON.stringify(value)); } catch { }
 }
-const t = key => texts[state.language][key];
+// a text of the language chosen, else the English one
+const t = key => (texts[state.language] && texts[state.language][key] !== undefined ? texts[state.language] : texts.en)[key];
 
 function time(seconds) {
   if (seconds < 60) return seconds + " s";
@@ -126,24 +40,18 @@ function size(bytes) {
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
   return value.toFixed(unit ? 1 : 0) + " " + units[unit];
 }
-// the notes of the results come in English; the usual ones are told in Spanish too
-const notes = {
-  en: [[/ \(use -w to replace it\)/, " (tick “Replace files already there”)"]],
-  es: [
-    [/ smaller/g, " menos"], [/^solid, /, "sólido, "], [/in the DAT: /g, "en el DAT: "], [/not en el DAT: no dump of its size/g, "no está en el DAT: ningún volcado de su tamaño"], [/not en el DAT: (\d+) dumps of its size, with other hashes/g, "no está en el DAT: $1 volcados de su tamaño, con otros hashes"], [/, solid and in blocks: /g, ", sólido y por bloques: "], [/, solid: /g, ", sólido: "], [/, in blocks: /g, ", por bloques: "], [/, uncompressed: /g, ", sin comprimir: "], [/ uncompressed \(/g, " sin comprimir ("], [/works with: every installer \(DBI, Tinfoil, Awoo, CyberFoil, Sphaira\); emulators need it decompressed/g, "funciona con: todos los instaladores (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); los emuladores lo necesitan descomprimido"], [/works with: every installer but Awoo; emulators that read NSZ run it as it is/g, "funciona con: todos los instaladores salvo Awoo; los emuladores que leen NSZ lo ejecutan tal cual"], [/works with: every installer and emulator/g, "funciona con: todos los instaladores y emuladores"], [/padding: (.+?) that trimming takes away/g, "relleno: $1 que Recortar quita"], [/delta fragments: (.+?) that trimming takes away/g, "fragmentos delta: $1 que Recortar quita"], [/^about /, "unos "], [/, (\S+ \S+) at level (\d+)$/, ", $1 con nivel $2"], [/^nothing in it can be compressed$/, "No hay nada que comprimir"], [/ of padding taken away/, " de relleno quitados"], [/^nothing to trim, it ends where its data ends$/, "Nada que recortar: acaba donde acaban sus datos"], [/^nothing to trim, it holds no delta fragments$/, "Nada que recortar: no tiene fragmentos delta"], [/ of delta fragments taken away/, " de fragmentos delta quitados"], [/data follows the last partition: it is not padding, the XCI is left as it is/, "hay datos tras la última partición: no es relleno, el XCI se deja como está"], [/^in blocks, /, "por bloques, "], [/(\d+) NCA rewritten by a tool, their data checked/, "$1 NCA reescritos por una herramienta, sus datos comprobados"],
-    [/^nothing in it can be compressed, it is left as it is$/, "No hay nada que comprimir: se queda como está"],
-    [/^it holds one title, nothing to split$/, "Tiene un solo título: no hay nada que dividir"],
-    [/^(\d+) files: /, "$1 archivos: "], [/; some of its files are in no part, so it is kept/, "; algunos de sus archivos no van en ninguna parte, así que se conserva"],
-    [/^(\d+) files merged/, "$1 archivos juntados"], [/, newer versions in place of /, ", versiones nuevas en lugar de "], [/ of delta fragments left out/, " de fragmentos delta descartados"],
-    [/^1 title$/, "1 título"], [/^(\d+) titles$/, "$1 títulos"], [/ is already there \(use -w to replace it\)/, " ya existe (marca «Reemplazar archivos existentes»)"],
-  ],
-};
+// the notes of the results, which come in English, in the language chosen
 function noteText(note) {
-  for (const [pattern, replacement] of notes[state.language] || []) note = note.replace(pattern, replacement);
+  const own = texts[state.language] && texts[state.language].notes || {};
+  const english = texts.en.notes || {};
+  for (const [pattern, key] of noteRules) {
+    const replacement = own[key] !== undefined ? own[key] : english[key];
+    if (replacement !== undefined) note = note.replace(pattern, replacement);
+  }
   return note;
 }
 function stepText(step) {
-  const table = steps[state.language] || {};
+  const table = texts[state.language] && texts[state.language].steps || {};
   const [first, ...rest] = step.split(" ");
   return [table[first] || first, ...rest].join(" ");
 }
@@ -151,6 +59,7 @@ function stepText(step) {
 function render() {
   document.documentElement.lang = state.language;
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
+  document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
   $("modes").innerHTML = "";
   for (const [group, members] of groups) {
     const title = document.createElement("div");
@@ -171,14 +80,15 @@ function render() {
   $("title").textContent = t(state.mode);
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
-  for (const type of { compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ", split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ" }[state.mode].split(" ")) {
+  for (const type of takesShown[state.mode].split(" ")) {
     const tag = document.createElement("i");
     tag.textContent = type;
     $("takes").append(tag);
   }
-  for (const button of document.querySelectorAll("[data-language]")) button.classList.toggle("on", button.dataset.language === state.language);
+  $("language-select").value = state.language;
+  if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
-  $("keys-banner").hidden = !!state.keys || state.mode === "recompress";
+  $("keys-banner").hidden = !!state.keys || state.mode === "recompress" || state.mode === "fat32";
   $("toolbar").hidden = state.items.length === 0;
   $("drop").classList.toggle("filled", state.items.length > 0);
   // the level falls in light (1 to 6), medium (7 to 14) or maximum (15 to 19)
@@ -186,30 +96,37 @@ function render() {
   const band = level <= 6 ? "3" : level <= 14 ? "12" : "19";
   for (const button of document.querySelectorAll("[data-level]")) button.classList.toggle("on", button.dataset.level === band);
   $("remove-warning").hidden = !$("remove").checked;
-  summary();
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "chip" + (state.keys ? "" : " bad");
   $("level-value").textContent = $("level").value;
-  $("level-hint").textContent = t("levelHint")(+$("level").value);
+  $("level-hint").textContent = t("levelHint")(level);
   $("output").textContent = state.output || t("nextTo");
   $("output").title = state.output;
   $("reset-output").hidden = !state.output;
+  $("reset-output").title = t("nextTo");
   $("pack").textContent = state.pack || t("noPack");
+  $("pack").title = state.pack;
   $("dat").textContent = state.dat || t("noDat");
   $("dat").title = state.dat;
   $("reset-dat").hidden = !state.dat;
-  $("pack").title = state.pack;
-  $("start").textContent = state.busy ? t("cancel") : t("start")(state.mode);
+  const watching = state.busy && state.lastRun && state.lastRun.watch;
+  $("start").textContent = state.busy ? (watching ? t("stop") : t("cancel")) : t("start")(state.mode);
   $("start").className = "primary big" + (state.busy ? " stop" : "");
   $("start").disabled = !state.busy && state.items.length === 0;
   $("estimate").disabled = state.busy || state.items.length === 0;
+  $("compare-levels").disabled = state.busy || state.items.length === 0;
+  $("pause").hidden = !state.busy;
+  $("pause").textContent = state.paused ? t("resume") : t("pause");
+  $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => row.status === "ok" || row.status === "failed");
+  $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
   $("send-to").hidden = !state.setup.sendTo;
-  $("reset-output").title = t("nextTo");
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
   $("empty").hidden = state.items.length > 0;
   $("files").hidden = state.items.length === 0;
   document.body.classList.toggle("busy", state.busy);
+  renderPresets();
+  summary();
   for (const row of state.rows.values()) paint(row);
 }
 
@@ -223,7 +140,8 @@ function summary() {
   if (state.busy) {
     const done = rows.filter(row => row.status === "ok" || row.status === "failed").length;
     const share = rows.reduce((sum, row) => sum + (row.status === "ok" || row.status === "failed" ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, rows.length);
-    text.textContent = t("working")(done, rows.length, Math.floor(share * 100));
+    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, rows.length, Math.floor(share * 100));
+    if (state.lastRun && state.lastRun.watch) text.textContent = t("watching") + " · " + text.textContent;
     bar.hidden = false;
     bar.firstElementChild.style.width = (share * 100).toFixed(1) + "%";
     return;
@@ -247,20 +165,25 @@ function setMode(mode) {
   state.mode = mode;
   save("mode", mode);
   // the files the new mode does not take leave the list
-  refill(state.items.map(item => item.path), true);
+  refill(state.sources.length ? state.sources : state.items.map(item => item.path), true);
   render();
 }
 
+// refill adds what the paths given hold for the mode; the folders are kept, to watch them.
 async function refill(paths, replace) {
   const items = paths.length ? await app().Expand(paths, state.mode) : [];
   if (replace) clearList();
+  for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
   for (const item of items) add(item);
+  if (state.mode === "rename") previewNames();
   render();
 }
 
 function clearList() {
   state.items = [];
   state.rows.clear();
+  state.sources = [];
+  state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
   $("log").textContent = "";
   $("log").hidden = true;
@@ -271,9 +194,9 @@ function add(item) {
   if (state.rows.has(item.path)) return;
   state.items.push(item);
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="name"><div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
-  tr.querySelector(".name div").textContent = item.name;
-  tr.querySelector(".name div").title = item.path;
+  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  tr.querySelector(".title").textContent = item.name;
+  tr.querySelector(".title").title = item.path;
   tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
   tr.querySelector(".remove button").onclick = () => {
     if (state.busy) return;
@@ -283,18 +206,50 @@ function add(item) {
     render();
   };
   $("files").tBodies[0].append(tr);
-  const row = { item, tr, status: "", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 };
+  const row = { item, tr, status: "", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0, game: null, preview: "" };
   state.rows.set(item.path, row);
+  describe(row);
   paint(row);
+}
+
+// the name and the icon of the game of each row, read a few at a time
+const describeQueue = [];
+let describing = 0;
+function describe(row) {
+  if (!state.keys) return;
+  describeQueue.push(row);
+  pumpDescribe();
+}
+function pumpDescribe() {
+  while (describing < 2 && describeQueue.length) {
+    const row = describeQueue.shift();
+    if (!state.rows.has(row.item.path)) continue;
+    describing++;
+    app().Describe(row.item.path).then(game => { row.game = game; paint(row); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
+  }
 }
 
 function paint(row) {
   const cell = row.tr.querySelector(".state");
   const note = row.tr.querySelector(".note");
+  const title = row.tr.querySelector(".title");
+  const file = row.tr.querySelector(".file");
+  const icon = row.tr.querySelector(".icon");
+  if (row.game && row.game.name) {
+    title.textContent = row.game.name;
+    file.textContent = `${row.game.titleId} · v${row.game.version} · ${row.game.type} · ${row.item.name}`;
+  } else {
+    title.textContent = row.item.name;
+    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : "";
+  }
+  if (row.game && row.game.icon) {
+    icon.src = row.game.icon;
+    icon.hidden = false;
+  }
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
     cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
-    cell.querySelector(".step").textContent = `${stepText(row.step)} · ${Math.floor(share * 100)}%`;
+    cell.querySelector(".step").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${Math.floor(share * 100)}%`;
     cell.querySelector(".bar div").style.width = (share * 100).toFixed(1) + "%";
   } else if (row.status === "waiting") {
     cell.innerHTML = `<span class="badge waiting"></span>`;
@@ -310,6 +265,9 @@ function paint(row) {
   }
   note.className = "note" + (row.status === "failed" ? " bad" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
+  if (!row.status && state.mode === "rename" && row.preview && row.preview !== row.item.name) {
+    note.textContent = "→ " + row.preview;
+  }
   if (row.output) {
     if (note.textContent) note.append(" · ");
     const link = document.createElement("a");
@@ -325,33 +283,101 @@ function rowOf(file) {
   return state.rows.get(file);
 }
 
+// the new names of the files, for the template written
+let previewTimer = 0;
+function previewNames() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const paths = state.items.map(item => item.path);
+    if (!paths.length || !state.keys) return;
+    const names = await app().NewNames(paths, state.template);
+    paths.forEach((path, i) => { const row = state.rows.get(path); if (row) { row.preview = names[i]; paint(row); } });
+  }, 300);
+}
+
 function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
+    watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template,
   };
 }
 
-async function start(mode) {
+// presets: the settings of a compression kept with a name
+const builtinPresets = () => [
+  { name: t("presetInstallers"), level: 18, block: false, builtin: true },
+  { name: t("presetEmulators"), level: 18, block: true, builtin: true },
+  { name: t("presetFast"), level: 3, block: false, builtin: true },
+];
+function renderPresets() {
+  const select = $("preset");
+  const chosen = select.value;
+  select.innerHTML = "";
+  const none = new Option(t("presetNone"), "");
+  select.append(none);
+  [...builtinPresets(), ...load("presets", [])].forEach((preset, i) => select.append(new Option(preset.name, String(i))));
+  select.value = chosen;
+  const all = [...builtinPresets(), ...load("presets", [])];
+  $("preset-delete").hidden = !select.value || all[+select.value].builtin;
+  $("preset-name").placeholder = t("presetName");
+}
+function applyPreset() {
+  const preset = [...builtinPresets(), ...load("presets", [])][+$("preset").value];
+  if (!preset) return;
+  $("level").value = preset.level;
+  $(preset.block ? "target-block" : "target-solid").checked = true;
+  if (preset.threads) $("threads").value = preset.threads;
+  if (preset.multi) $("multi").value = preset.multi;
+  save("settings", settings());
+  render();
+}
+
+async function start(mode, extra) {
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
-  if (!state.keys && state.mode !== "recompress") { $("status").textContent = t("needKeys"); $("keys-banner").scrollIntoView(); return; }
+  if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t("needFiles"); return; }
   if (state.mode === "pack" && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
+  const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
+  // a watch looks at the folders added; the files alone are taken too
+  const files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
   for (const row of state.rows.values()) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
+  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, ...(extra || {}) };
   try {
-    await app().Start({ mode, files: state.items.map(item => item.path), pack: state.pack, ...chosen });
+    await app().Start(request);
     state.busy = true;
+    state.paused = false;
+    state.lastRun = { mode, request, started: Date.now(), watch };
+    // the files left are kept, to go on with them after a close
+    if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   } catch (error) {
     for (const row of state.rows.values()) row.status = "";
     $("status").textContent = String(error);
   }
   render();
+}
+
+// the report of the last work, to paste in an issue or a thread
+function report() {
+  const run = state.lastRun || {};
+  const r = run.request || {};
+  const lines = [
+    `NXPress ${state.setup.version} · ${state.setup.platform}`,
+    `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
+    run.status || "",
+    "",
+  ];
+  for (const row of state.rows.values()) {
+    const game = row.game ? ` [${row.game.titleId} v${row.game.version} ${row.game.type}${row.game.titles > 1 ? ", " + row.game.titles + " titles" : ""}]` : "";
+    lines.push(`- ${row.item.name} (${size(row.item.size)})${game}: ${row.status || "-"}` + (row.error ? ` — ${row.error}` : row.note ? ` — ${row.note}` : ""));
+  }
+  if ($("log").textContent) lines.push("", $("log").textContent.trim());
+  return lines.join("\n");
 }
 
 function listen() {
@@ -369,6 +395,20 @@ function listen() {
     }
     const row = rowOf(event.file);
     Object.assign(row, { status: event.error ? "failed" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
+    // a file renamed keeps its row, under its new name and path
+    if (state.mode === "rename" && row.output && !event.error) {
+      const old = row.item.path;
+      row.item.name = row.output.split(/[\\/]/).pop();
+      row.item.path = row.output;
+      state.rows.delete(old);
+      state.rows.set(row.output, row);
+      state.sources = state.sources.map(path => path === old ? row.output : path);
+    }
+    const pending = load("pending", null);
+    if (pending && !event.error) {
+      pending.request.files = pending.request.files.filter(path => path !== event.file);
+      save("pending", pending.request.files.length ? pending : null);
+    }
     paint(row);
     summary();
   });
@@ -379,18 +419,49 @@ function listen() {
   });
   events.EventsOn("finished", event => {
     state.busy = false;
+    state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; }
     const total = state.mode === "pack" ? 1 : state.items.length;
-    $("status").textContent = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds);
+    const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds);
+    $("status").textContent = status;
+    if (state.lastRun) state.lastRun.status = status;
+    if (event.cancelled || !event.failed) save("pending", null);
+    // long work tells it is done, and turns the computer off when asked
+    if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
+    if (!event.cancelled && !event.failed && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
     render();
   });
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
+// the turning off, with 60 seconds to keep the computer on
+let shutdownTimer = 0;
+function startShutdown() {
+  app().ShutDownIn(60);
+  state.shutdownAt = Date.now() + 60000;
+  $("shutdown-banner").hidden = false;
+  const tick = () => {
+    const left = Math.max(0, Math.round((state.shutdownAt - Date.now()) / 1000));
+    $("shutdown-text").textContent = t("shutdownIn")(left);
+    if (left > 0) shutdownTimer = setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+async function checkUpdate() {
+  if (!$("updates").checked) return;
+  const update = await app().CheckUpdate();
+  if (!update || !update.version || load("dismissedUpdate", "") === update.version) return;
+  $("update-text").textContent = t("updateFound")(update.version);
+  $("update-get").onclick = () => app().OpenURL(update.url);
+  $("update-close").onclick = () => { save("dismissedUpdate", update.version); $("update-banner").hidden = true; };
+  $("update-banner").hidden = false;
+}
+
 async function main() {
   state.setup = await app().Setup();
   state.keys = state.setup.keys;
-  // the theme: the one of Windows, or the one chosen
+  // the theme: the one of the system, or the one chosen
   state.theme = load("theme", "auto");
   const theme = () => {
     if (state.theme === "auto") document.documentElement.removeAttribute("data-theme");
@@ -398,7 +469,12 @@ async function main() {
   };
   theme();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
-  state.language = load("language", navigator.language.toLowerCase().startsWith("es") ? "es" : "en");
+  // the language: the one chosen, else the one of the system when NXPress has it
+  const system = navigator.language.toLowerCase().slice(0, 2);
+  state.language = load("language", texts[system] ? system : "en");
+  if (!texts[state.language]) state.language = "en";
+  for (const [code, name] of languages) if (texts[code]) $("language-select").append(new Option(name, code));
+  $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); };
   state.mode = modes.includes(load("mode", "")) ? load("mode", "") : "compress";
   const chosen = load("settings", {});
   $("version").textContent = state.setup.version;
@@ -410,23 +486,37 @@ async function main() {
   $("multi").value = chosen.multi || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
+  $("watch").checked = !!chosen.watch;
+  $("no-cache").checked = !!chosen.noCache;
+  $("updates").checked = load("updates", true);
   state.output = chosen.output || "";
   state.dat = chosen.dat || "";
+  state.template = chosen.template || await app().DefaultTemplate();
+  $("template").value = state.template;
 
-  $("level").oninput = render;
-  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; render(); }; });
-  for (const button of document.querySelectorAll("[data-language]")) button.onclick = () => { state.language = button.dataset.language; save("language", state.language); render(); };
+  $("level").oninput = () => { $("preset").value = ""; render(); };
+  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; render(); }; });
   $("keys").onclick = async () => {
-    try { const path = await app().ChooseKeys(); if (path) state.keys = path; } catch (error) { $("status").textContent = String(error); }
+    try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
     render();
   };
-  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); render(); };
-  const addFolder = async () => { for (const item of await app().ChooseFolder(state.mode) || []) add(item); render(); };
+  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); if (state.mode === "rename") previewNames(); render(); };
+  const addFolder = async () => {
+    const items = await app().ChooseFolder(state.mode) || [];
+    for (const item of items) add(item);
+    // the folder itself, to watch it, from where its files are
+    if (items.length) {
+      const folder = items[0].path.replace(/[\\/][^\\/]+$/, "");
+      if (!state.sources.includes(folder)) state.sources.push(folder);
+    }
+    if (state.mode === "rename") previewNames();
+    render();
+  };
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = () => $("keys").click();
   $("remove").onchange = render;
-  // the menu closes once used, or on a click elsewhere
+  // the menu closes on a click elsewhere
   document.addEventListener("click", event => { if (!$("menu").contains(event.target)) $("menu").open = false; });
   $("clear").onclick = () => { clearList(); render(); };
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); };
@@ -442,15 +532,58 @@ async function main() {
     $("menu").open = false;
     render();
   };
+  $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");
+  $("compare-levels").onclick = () => start("estimate", { levels: true });
+  $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
+  $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
+  $("shutdown-cancel").onclick = () => { app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };
+  $("preset").onchange = applyPreset;
+  $("preset-save").onclick = () => {
+    const name = $("preset-name").value.trim();
+    if (!name) { $("preset-name").focus(); return; }
+    const presets = load("presets", []).filter(preset => preset.name !== name);
+    const now = settings();
+    presets.push({ name, level: now.level, block: now.block, threads: now.threads, multi: now.multi });
+    save("presets", presets);
+    $("preset-name").value = "";
+    render();
+    $("preset").value = String(builtinPresets().length + presets.length - 1);
+    render();
+  };
+  $("preset-delete").onclick = () => {
+    const index = +$("preset").value - builtinPresets().length;
+    const presets = load("presets", []);
+    if (index >= 0) { presets.splice(index, 1); save("presets", presets); }
+    $("preset").value = "";
+    render();
+  };
+  $("template").oninput = () => { state.template = $("template").value; save("settings", settings()); previewNames(); };
+  $("template-reset").onclick = async () => { state.template = await app().DefaultTemplate(); $("template").value = state.template; save("settings", settings()); previewNames(); };
   listen();
+
+  // the files left unfinished last time
+  const pending = load("pending", null);
+  if (pending && pending.request && pending.request.files && pending.request.files.length) {
+    state.pendingCount = pending.request.files.length;
+    $("resume-banner").hidden = false;
+    $("resume-go").onclick = async () => {
+      $("resume-banner").hidden = true;
+      state.pendingCount = 0;
+      state.mode = pending.mode;
+      await refill(pending.request.files, true);
+      render();
+    };
+    $("resume-drop").onclick = () => { save("pending", null); state.pendingCount = 0; $("resume-banner").hidden = true; };
+  }
   // the files NXPress was started with: dropped on it, or sent to it
   if (state.setup.files && state.setup.files.length) {
     state.mode = state.setup.mode;
     await refill(state.setup.files, true);
   }
   render();
+  checkUpdate();
 }
 
 main();

@@ -82,3 +82,13 @@ func makeShortcut(path string, target string) error {
 	}
 	return nil
 }
+
+// archiveBit sets the archive bit of a folder: on a microSD card in FAT32 it makes the
+// console read the parts in it as one file.
+func archiveBit(path string) error {
+	name, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	return syscall.SetFileAttributes(name, syscall.FILE_ATTRIBUTE_DIRECTORY|syscall.FILE_ATTRIBUTE_ARCHIVE)
+}

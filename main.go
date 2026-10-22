@@ -59,8 +59,9 @@ func run(args []string) int {
 	for _, ignored := range o.ignored {
 		out.say("note: %s has no effect in NXPress", ignored)
 	}
-	// recompressing needs no keys: the NCZ hold their data decrypted, with their keys
-	if _, err := loadKeys(o.keys); err != nil && !o.recompress {
+	// recompressing needs no keys (the NCZ hold their data decrypted, with their keys), nor do
+	// files split for FAT32 or joined
+	if _, err := loadKeys(o.keys); err != nil && !o.recompress && !o.fat32 {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
 		return 2
 	}
@@ -68,7 +69,11 @@ func run(args []string) int {
 	// Ctrl+C stops the files at work; their half written files are removed
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	if failed := runJobs(ctx, o, out); failed > 0 {
+	jobs := runJobs
+	if o.watch {
+		jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
+	}
+	if failed := jobs(ctx, o, out); failed > 0 {
 		return 1
 	}
 	return 0

@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v2"
@@ -60,10 +61,16 @@ type App struct {
 	cancel context.CancelFunc
 	// the files NXPress was started with
 	files []string
+	// the work waits while paused
+	paused atomic.Bool
+	// the turning off asked for once the files are done, until it is cancelled
+	shutdown *time.Timer
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// the notices of the system, to tell when long work is done
+	wailsruntime.InitializeNotifications(ctx)
 	// the keys of the usual places are read at once, as the command line does
 	if path, err := loadKeys(""); err == nil {
 		a.keys = path
@@ -78,6 +85,8 @@ type Setup struct {
 	Cpus     int    `json:"cpus"`
 	Level    int    `json:"level"`
 	MaxLevel int    `json:"maxLevel"`
+	// the system and its processor, for reports
+	Platform string `json:"platform"`
 	// the files NXPress was started with, and the mode they suit
 	Files []string `json:"files"`
 	Mode  string   `json:"mode"`
@@ -91,7 +100,7 @@ func (a *App) Setup() Setup {
 	defer a.mutex.Unlock()
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: max(1, min(8, runtime.NumCPU()/2)), Cpus: runtime.NumCPU(),
-		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, SendTo: sendToFolder() != "",
+		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
 	}
 	setup.SendToEnabled = setup.SendTo && sendToEnabled()
 	if len(a.files) > 0 {
@@ -196,6 +205,30 @@ func (a *App) ChoosePack() (string, error) {
 	})
 }
 
+// Describe gives the main title of a file, with its icon, to show it in the list.
+func (a *App) Describe(path string) (gameTitle, error) {
+	if _, ok := splitContainer(path); ok {
+		return gameTitle{}, errors.New("a file in parts")
+	}
+	return readTitle(path, true)
+}
+
+// NewNames gives the names the files would get by a template, "" for a file that cannot be read.
+func (a *App) NewNames(paths []string, template string) []string {
+	names := make([]string, len(paths))
+	for i, path := range paths {
+		if title, err := readTitle(path, false); err == nil {
+			names[i] = newName(path, title, template)
+		}
+	}
+	return names
+}
+
+// DefaultTemplate is the template of names offered first.
+func (a *App) DefaultTemplate() string {
+	return defaultTemplate
+}
+
 // ChooseDat asks for a DAT file.
 func (a *App) ChooseDat() (string, error) {
 	return wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
@@ -216,6 +249,10 @@ type Request struct {
 	RemoveSource bool     `json:"removeSource"`
 	Pack         string   `json:"pack"`
 	Dat          string   `json:"dat"`
+	Template     string   `json:"template"`
+	Watch        bool     `json:"watch"`
+	NoCache      bool     `json:"noCache"`
+	Levels       bool     `json:"levels"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -228,6 +265,9 @@ func (a *App) Start(request Request) error {
 	if request.Mode == "verify" {
 		o.dat = request.Dat
 	}
+	o.watch = request.Watch
+	o.noCache = request.NoCache
+	o.levels = request.Levels
 	switch request.Mode {
 	case "compress":
 		o.compress = true
@@ -241,6 +281,13 @@ func (a *App) Start(request Request) error {
 		o.trim = true
 	case "estimate":
 		o.estimate = true
+	case "fat32":
+		o.fat32 = true
+	case "rename":
+		o.template = request.Template
+		if o.template == "" {
+			o.template = defaultTemplate
+		}
 	case "split":
 		o.split = true
 	case "info":
@@ -258,7 +305,7 @@ func (a *App) Start(request Request) error {
 	}
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.keys == "" && !o.recompress {
+	if a.keys == "" && !o.recompress && !o.fat32 {
 		return errors.New("no prod.keys: choose one")
 	}
 	if a.cancel != nil {
@@ -268,7 +315,12 @@ func (a *App) Start(request Request) error {
 	a.cancel = cancel
 	go func() {
 		started := time.Now()
-		failed := runJobs(ctx, o, &window{ctx: a.ctx})
+		a.paused.Store(false)
+		jobs := runJobs
+		if o.watch {
+			jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
+		}
+		failed := jobs(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
 		a.mutex.Lock()
 		a.cancel = nil
 		a.mutex.Unlock()
@@ -285,7 +337,44 @@ func (a *App) Cancel() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if a.cancel != nil {
+		a.paused.Store(false)
 		a.cancel()
+	}
+}
+
+// SetPaused stops the work where it is, or lets it go on.
+func (a *App) SetPaused(paused bool) {
+	a.paused.Store(paused)
+}
+
+// Notify shows a notice of the system, with the texts of the page.
+func (a *App) Notify(title string, body string) {
+	if wailsruntime.IsNotificationAvailable(a.ctx) {
+		wailsruntime.SendNotification(a.ctx, wailsruntime.NotificationOptions{ID: "nxpress-done", Title: title, Body: body})
+	}
+}
+
+// ShutDownIn turns the computer off in the seconds given, unless CancelShutDown comes first.
+func (a *App) ShutDownIn(seconds int) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.shutdown != nil {
+		a.shutdown.Stop()
+	}
+	a.shutdown = time.AfterFunc(time.Duration(seconds)*time.Second, func() {
+		if err := shutDown(); err != nil {
+			wailsruntime.EventsEmit(a.ctx, "say", "the computer could not be turned off: "+err.Error())
+		}
+	})
+}
+
+// CancelShutDown keeps the computer on.
+func (a *App) CancelShutDown() {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.shutdown != nil {
+		a.shutdown.Stop()
+		a.shutdown = nil
 	}
 }
 
@@ -297,6 +386,9 @@ func (a *App) ShowFile(path string) {
 // window sends the progress and the results of the files to the page.
 type window struct {
 	ctx context.Context
+	// the work, and the app that pauses it
+	job context.Context
+	app *App
 }
 
 // how often the progress of a file is sent at most, unless its percentage changes
@@ -309,6 +401,10 @@ func (w *window) progress(path string, step string) func(done int64, total int64
 		lastShare = int64(-1)
 	)
 	return func(done int64, total int64) {
+		// paused, the work waits here, where every step tells its progress
+		for w.app != nil && w.app.paused.Load() && w.job.Err() == nil {
+			time.Sleep(200 * time.Millisecond)
+		}
 		share := int64(0)
 		if total > 0 {
 			share = done * 1000 / total
@@ -342,4 +438,9 @@ func (w *window) done(path string, output string, note string, err error) {
 
 func (w *window) say(format string, args ...any) {
 	wailsruntime.EventsEmit(w.ctx, "say", fmt.Sprintf(format, args...))
+}
+
+// openURL opens a page in the browser of the system.
+func openURL(ctx context.Context, url string) {
+	wailsruntime.BrowserOpenURL(ctx, url)
 }

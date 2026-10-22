@@ -30,3 +30,6 @@ func sendToEnabled() bool { return false }
 func enableSendTo() error { return errors.New("only Windows has a Send to menu") }
 
 func disableSendTo() error { return nil }
+
+// archiveBit cannot be set here: FAT32 attributes are set on the card itself.
+func archiveBit(path string) error { return errors.New("no archive bit here") }

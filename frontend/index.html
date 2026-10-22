@@ -20,15 +20,22 @@
         <div class="theme"><span data-t="theme"></span>
           <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
         </div>
-        <div class="theme"><span data-t="language"></span>
-          <div class="segmented"><button data-language="es">Español</button><button data-language="en">English</button></div>
+        <div class="theme"><label for="language-select" data-t="language"></label>
+          <select id="language-select"></select>
         </div>
         <hr>
+        <label class="check menu-check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
         <button id="send-to"></button>
       </div>
     </details>
   </div>
 </header>
+
+<div id="update-banner" class="topbar" hidden>
+  <span id="update-text"></span>
+  <button id="update-get" class="primary small" data-t="updateGet"></button>
+  <button id="update-close" class="quiet icon" data-t-title="dismiss">✕</button>
+</div>
 
 <main>
   <nav id="modes" aria-label="Modes"></nav>
@@ -39,9 +46,22 @@
       <p id="about" class="muted"></p>
     </div>
 
-    <div id="keys-banner" class="banner" hidden>
+    <div id="keys-banner" class="banner bad" hidden>
       <span data-t="keysMissing"></span>
       <button id="keys-choose" class="primary small" data-t="keysChoose"></button>
+    </div>
+
+    <div id="resume-banner" class="banner" hidden>
+      <span id="resume-text"></span>
+      <span class="banner-buttons">
+        <button id="resume-go" class="primary small" data-t="resumeGo"></button>
+        <button id="resume-drop" class="quiet" data-t="resumeDrop"></button>
+      </span>
+    </div>
+
+    <div id="shutdown-banner" class="banner bad" hidden>
+      <span id="shutdown-text"></span>
+      <button id="shutdown-cancel" class="primary small" data-t="shutdownCancel"></button>
     </div>
 
     <div class="toolbar" id="toolbar" hidden>
@@ -74,6 +94,9 @@
         <div class="bar total" id="total-bar" hidden><div></div></div>
         <div id="status" class="muted"></div>
       </div>
+      <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
+      <button id="report" class="secondary" data-t="report" hidden></button>
+      <button id="pause" class="secondary" hidden></button>
       <button id="estimate" class="secondary" data-t="estimateButton" data-for="compress"></button>
       <button id="start" class="primary big"></button>
     </div>
@@ -83,11 +106,24 @@
     <section class="block" data-for="compress recompress">
       <h2 data-t="compression"></h2>
       <div class="field">
+        <div class="label" data-t="presets"></div>
+        <div class="presets-row">
+          <select id="preset"></select>
+          <button id="preset-delete" class="quiet icon" data-t-title="presetDelete">🗑</button>
+        </div>
+        <div class="presets-row" id="preset-new">
+          <input id="preset-name" type="text" maxlength="40">
+          <button id="preset-save" data-t="presetSave"></button>
+        </div>
+      </div>
+      <div class="field">
         <div class="level-head"><span data-t="level"></span><b id="level-value"></b></div>
         <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
         <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
         <div class="segmented"><button data-level="3" data-t="light"></button><button data-level="12" data-t="medium"></button><button data-level="19" data-t="maximum"></button></div>
         <p class="hint" id="level-hint"></p>
+        <button id="compare-levels" class="link" data-t="compareLevels"></button>
+        <p class="hint" data-t="compareHint"></p>
       </div>
       <div class="field" role="radiogroup">
         <div class="label" data-t="target"></div>
@@ -101,10 +137,26 @@
       </div>
     </section>
 
+    <section class="block" data-for="rename">
+      <h2 data-t="template"></h2>
+      <div class="presets-row">
+        <input id="template" type="text">
+        <button id="template-reset" class="quiet" data-t="templateReset"></button>
+      </div>
+      <p class="hint" data-t="templateHint"></p>
+    </section>
+
+    <section class="block" data-for="fat32">
+      <h2>FAT32</h2>
+      <p class="hint" data-t="fat32Hint"></p>
+    </section>
+
     <section class="block" data-for="verify">
       <h2 data-t="datTitle"></h2>
       <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon">✕</button></div>
       <p class="hint" data-t="datHint"></p>
+      <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
+      <p class="hint" data-t="noCacheHint"></p>
     </section>
 
     <section class="block" data-for="pack">
@@ -112,18 +164,24 @@
       <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
     </section>
 
-    <section class="block" data-for="compress decompress recompress trim convert split pack">
+    <section class="block" data-for="compress decompress recompress trim convert split pack fat32">
       <h2 data-t="result"></h2>
-      <div class="field" data-for="compress decompress recompress trim convert split">
+      <div class="field" data-for="compress decompress recompress trim convert split fat32">
         <div class="label" data-t="output"></div>
         <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon">✕</button></div>
       </div>
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
-      <label class="check danger"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
+      <label class="check danger" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
       <p class="warning" id="remove-warning" data-t="removeWarning" hidden></p>
     </section>
 
-    <details class="block advanced" data-for="compress decompress recompress trim verify convert split" id="advanced">
+    <section class="block" data-for="compress decompress recompress trim verify">
+      <h2 data-t="auto"></h2>
+      <label class="check"><input id="watch" type="checkbox"><span data-t="watch"></span></label>
+      <p class="hint" data-t="watchHint"></p>
+    </section>
+
+    <details class="block advanced" data-for="compress decompress recompress trim verify convert split fat32" id="advanced">
       <summary data-t="advanced"></summary>
       <div class="field row" data-for="compress recompress">
         <label for="threads" data-t="threads"></label><input id="threads" type="number" min="1" max="64">
@@ -134,6 +192,18 @@
     </details>
   </aside>
 </main>
+<script src="i18n/base.js"></script>
+<script src="i18n/en.js"></script>
+<script src="i18n/es.js"></script>
+<script src="i18n/fr.js"></script>
+<script src="i18n/de.js"></script>
+<script src="i18n/it.js"></script>
+<script src="i18n/pt.js"></script>
+<script src="i18n/nl.js"></script>
+<script src="i18n/ru.js"></script>
+<script src="i18n/ja.js"></script>
+<script src="i18n/ko.js"></script>
+<script src="i18n/zh.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

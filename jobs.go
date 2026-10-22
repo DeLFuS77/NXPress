@@ -24,8 +24,11 @@ var takes = map[string][]string{
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
 	"estimate":   {".nsp", ".xci"},
-	"split":      {".nsp", ".nsz", ".xci", ".xcz"},
-	"info":       {".nsp", ".nsz", ".xci", ".xcz"},
+	"rename":     {".nsp", ".nsz", ".xci", ".xcz"},
+	// with the files in parts, to make them whole
+	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
+	"split": {".nsp", ".nsz", ".xci", ".xcz"},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz"},
 }
 
 func (o options) action() string {
@@ -42,6 +45,10 @@ func (o options) action() string {
 		return "trim"
 	case o.estimate:
 		return "estimate"
+	case o.fat32:
+		return "fat32"
+	case o.template != "":
+		return "rename"
 	case o.split:
 		return "split"
 	case o.info:
@@ -54,6 +61,8 @@ func (o options) action() string {
 
 // runJobs does the action on every file, several at once with -m, and gives how many failed.
 func runJobs(ctx context.Context, o options, out output) int {
+	// the computer does not go to sleep while files are at work
+	defer keepAwake()()
 	action := o.action()
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
@@ -91,6 +100,10 @@ func runJobs(ctx context.Context, o options, out output) int {
 			defer wait.Done()
 			for path := range work {
 				output, note, err := doJob(ctx, action, path, o, threads, out)
+				// every new file is checked before it gets its name: it need not be read again
+				if err == nil && output != "" && action != "rename" {
+					checked.keep(output, "")
+				}
 				out.done(path, output, note, err)
 				if err != nil {
 					mutex.Lock()
@@ -111,15 +124,30 @@ func runJobs(ctx context.Context, o options, out output) int {
 	return failed
 }
 
+// splitFiles, among the extensions taken, takes the files in parts too: a folder of parts, or
+// the first part of name.ns0, name.ns1...
+const splitFiles = "parts"
+
 // inputs are the files given and the ones in the folders given (and in their folders), of the
-// extensions taken, each once and in order of name; missing are the paths not found.
+// extensions taken, each once and in order of name; missing are the paths not found. A folder
+// of parts is one file, taken only with splitFiles.
 func inputs(paths []string, extensions []string) (files []string, missing []string) {
 	seen := map[string]bool{}
+	withParts := false
+	for _, taken := range extensions {
+		withParts = withParts || taken == splitFiles
+	}
 	takes := func(path string) bool {
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			return false
+		}
+		if _, ok := splitContainer(path); ok {
+			return withParts
+		}
 		extension := strings.ToLower(filepath.Ext(path))
 		for _, taken := range extensions {
 			if extension == taken {
-				return !strings.HasPrefix(filepath.Base(path), ".")
+				return true
 			}
 		}
 		return false
@@ -139,7 +167,7 @@ func inputs(paths []string, extensions []string) (files []string, missing []stri
 			missing = append(missing, path)
 			continue
 		}
-		if !info.IsDir() {
+		if _, ok := splitContainer(path); !info.IsDir() || ok {
 			if takes(path) {
 				add(path)
 			}
@@ -147,7 +175,20 @@ func inputs(paths []string, extensions []string) (files []string, missing []stri
 		}
 		found := []string{}
 		filepath.WalkDir(path, func(walked string, entry os.DirEntry, err error) error {
-			if err == nil && !entry.IsDir() && takes(walked) {
+			if err != nil {
+				return nil
+			}
+			if entry.IsDir() {
+				// a folder of parts is one file: its parts are not looked into
+				if _, ok := splitContainer(walked); ok && walked != path {
+					if takes(walked) {
+						found = append(found, walked)
+					}
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if takes(walked) {
 				found = append(found, walked)
 			}
 			return nil
@@ -206,13 +247,28 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		return trim(ctx, path, o, out)
 	case "estimate":
 		return estimate(ctx, path, o, threads, out)
+	case "fat32":
+		return fat32(ctx, path, o, out)
+	case "rename":
+		return rename(ctx, path, o, out)
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
 		return "", info(path, out), nil
 	}
+	// a file checked before and not changed since is not read again, unless asked
+	if entry, ok := checked.find(path); ok && !o.noCache && o.datFile == nil {
+		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
+		if entry.Note != "" {
+			note += "; " + entry.Note
+		}
+		return "", note, nil
+	}
 	check, err := switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying"))
 	note := modifiedNote(check)
+	if err == nil {
+		checked.keep(path, note)
+	}
 	if err != nil || o.datFile == nil {
 		return "", note, err
 	}
@@ -442,8 +498,12 @@ const (
 	estimateSampleSize = 16 << 20
 )
 
-// estimate tells the size and the time a compression would give, from samples of the game.
+// estimate tells the size and the time a compression would give, from samples of the game; with
+// --levels, at several levels, to choose one.
 func estimate(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
+	if o.levels {
+		return compareLevels(ctx, path, o, threads, out)
+	}
 	result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
 		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Estimating"),
 	}, estimateSamples, estimateSampleSize)
@@ -455,6 +515,31 @@ func estimate(ctx context.Context, path string, o options, threads int, out outp
 	}
 	return "", fmt.Sprintf("about %s -> %s, %s smaller, %s at level %d", size(result.InputSize), size(result.OutputSize),
 		percent(result.InputSize-result.OutputSize, result.InputSize), duration(result.Duration), o.level), nil
+}
+
+// the levels compared, from light to maximum
+var comparedLevels = []int{3, 9, 12, 15, 18, 19}
+
+// compareLevels tells the size and the time of a compression at several levels.
+func compareLevels(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
+	lines := []string{}
+	progress := out.progress(path, "Estimating")
+	for i, level := range comparedLevels {
+		result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
+			Level: strconv.Itoa(level), Workers: threads, Blocks: o.block,
+		}, estimateSamples/2, estimateSampleSize)
+		if errors.Is(err, switchfs.ErrNothingToMeasure) {
+			return "", "nothing in it can be compressed", nil
+		}
+		if err != nil {
+			return "", "", err
+		}
+		progress(int64(i+1), int64(len(comparedLevels)))
+		lines = append(lines, fmt.Sprintf("level %d: about %s, %s smaller, %s", level, size(result.OutputSize),
+			percent(result.InputSize-result.OutputSize, result.InputSize), duration(result.Duration)))
+	}
+	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
+	return "", fmt.Sprintf("%d levels compared", len(comparedLevels)), nil
 }
 
 // duration tells a time for people, rounded.

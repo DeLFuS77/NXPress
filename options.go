@@ -20,6 +20,11 @@ type options struct {
 	recompress bool
 	trim       bool
 	estimate   bool
+	fat32      bool
+	template   string
+	watch      bool
+	noCache    bool
+	levels     bool
 	split      bool
 	pack       string
 	level      int
@@ -49,7 +54,7 @@ const (
 // the options that take a value, by every name they have
 var valued = map[string]string{
 	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--depth": "depth", "--dat": "dat",
+	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--depth": "depth", "--dat": "dat", "--rename": "rename",
 }
 
 // the options of nsz that NXPress accepts and has no use for
@@ -112,6 +117,14 @@ func parseOptions(args []string) (options, error) {
 			o.trim = true
 		case "--estimate":
 			o.estimate = true
+		case "--fat32":
+			o.fat32 = true
+		case "--watch":
+			o.watch = true
+		case "--no-cache":
+			o.noCache = true
+		case "--levels":
+			o.levels = true
 		case "--split":
 			o.split = true
 		case "--minimal-output":
@@ -160,6 +173,8 @@ func (o *options) set(what string, name string, value string) error {
 		o.keys = value
 	case "dat":
 		o.dat = value
+	case "rename":
+		o.template = value
 	case "pack":
 		o.pack = value
 	case "bs", "depth":
@@ -171,13 +186,13 @@ func (o *options) set(what string, name string, value string) error {
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --fat32, --rename, --split and --pack")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -210,6 +225,8 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
+  --no-cache          with -V, check every file again, also the ones checked before and not
+                      changed since (NXPress remembers them, and every file it writes)
   --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of
                       Logiqx, as No-Intro publishes them), by its size and hashes
   -l, --level N       compression level, 1 to 19 (default 18)
@@ -220,11 +237,14 @@ Usage: nxpress [options] file or folder...
   -t, --threads N     threads per file (default: half the processors, at most 8)
   -m, --multi N       files at once (default 1)
   -o, --output DIR    folder of the new files (default: next to each file)
+  --watch             keep looking at the folders given and work on each new file once it
+                      is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
   -i, --info          show the titles a file holds
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
+  --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
   --minimal-output    print only "<percentage>%% <step>"
@@ -238,6 +258,12 @@ Usage: nxpress [options] file or folder...
   --trim              take away what installers do not use: the padding after the data
                       of XCI files, as game cards are dumped, and the delta fragments of
                       updates in NSP and NSZ files; in place, or into the folder of -o
+  --fat32             files bigger than FAT32 holds (4 GiB) to a folder of parts with the
+                      archive bit, which the console reads as one file; and files in parts
+                      (such a folder, or name.ns0, name.ns1...) back to one file
+  --rename TEMPLATE   rename files by what they hold: {name}, {id}, {version} and {type} of
+                      their main title, {titles} how many they hold; for example
+                      "{name} [{id}][v{version}]"
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ; of a

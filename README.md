@@ -23,9 +23,14 @@ nxpress --trim game.xci update.nsp  take away the padding of an XCI and the delt
 nxpress --estimate -l 19 game.nsp   tell the size and the time a compression would give
 nxpress -i game.nsz                 show its titles, how it is stored and what it works with
 nxpress -V --dat switch.dat games   tell which files are dumps a DAT (No-Intro) lists
+nxpress --fat32 game.nsp            a file over 4 GB to a folder of parts for a FAT32 microSD (and back)
+nxpress --rename "{name} [{id}][v{version}]" games   rename files by what they hold
+nxpress -C --watch -o out inbox     compress every new file copied into inbox, until Ctrl+C
 ```
 
-In the window, files and folders can be dropped on it, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. It follows the light or dark theme of the system, or the one chosen in its menu.
+In the window, files and folders can be dropped on it, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. It follows the light or dark theme of the system, or the one chosen in its menu, and speaks 11 languages. It shows the name and the icon of each game, can pause, keeps the computer awake while it works, tells when long work is done and can turn the computer off after.
+
+NXPress goes on the internet for one thing only: the window asks GitHub whether a new version is out. It can be turned off in its menu; the command line never does it.
 
 Solid or in blocks: a solid NSZ (the default) is the smallest and every installer takes it (DBI, Tinfoil, Awoo, CyberFoil, Sphaira). With `-B` it is written in blocks, which emulators that read NSZ can run as it is, without installing it; every installer but Awoo takes it too. XCZ files are always in blocks, as nsz writes them.
 
