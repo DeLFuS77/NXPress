@@ -93,9 +93,11 @@
         <div id="summary-text"></div>
         <div class="bar total" id="total-bar" hidden><div></div></div>
         <div id="status" class="muted"></div>
+        <div class="summary-extra">
+          <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
+          <button id="report" class="link small-link" data-t="report" hidden></button>
+        </div>
       </div>
-      <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
-      <button id="report" class="secondary" data-t="report" hidden></button>
       <button id="pause" class="secondary" hidden></button>
       <button id="estimate" class="secondary" data-t="estimateButton" data-for="compress"></button>
       <button id="start" class="primary big"></button>

@@ -57,7 +57,7 @@ jobs:
           echo "set man-db/auto-update false" | sudo debconf-communicate
           sudo dpkg-reconfigure man-db
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb imagemagick dbus-x11
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb imagemagick dbus-x11 desktop-file-utils
 
       # the version tag, or "dev-" and the commit
       - name: Version
@@ -113,9 +113,30 @@ jobs:
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
               tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app ;;
             *)
-              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out nxpress ;;
+              # the program, its icon, its entry in the menu and install.sh, which puts them in place
+              mkdir -p out/NXPress
+              cp out/nxpress build/linux/nxpress.desktop build/linux/nxpress.png build/linux/install.sh out/NXPress/
+              chmod 755 out/NXPress/nxpress out/NXPress/install.sh
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress ;;
           esac
           ls -l dist
+
+      # install.sh puts the program, its icon and its entry in the menu in place, and takes
+      # them away again
+      - name: Install on Linux
+        if: runner.os == 'Linux'
+        run: |
+          desktop-file-validate build/linux/nxpress.desktop
+          home=$(mktemp -d)
+          HOME="$home" sh out/NXPress/install.sh
+          test -x "$home/.local/bin/nxpress"
+          test -f "$home/.local/share/icons/hicolor/256x256/apps/nxpress.png"
+          desktop-file-validate "$home/.local/share/applications/nxpress.desktop"
+          grep -q "^Exec=$home/.local/bin/nxpress %F$" "$home/.local/share/applications/nxpress.desktop"
+          "$home/.local/bin/nxpress" --version
+          HOME="$home" sh out/NXPress/install.sh --uninstall
+          test ! -e "$home/.local/bin/nxpress"
+          test ! -e "$home/.local/share/applications/nxpress.desktop"
 
       # the window opens, and is still open after a while: a screenshot of it is kept
       - name: Open the window
@@ -210,7 +231,8 @@ jobs:
           Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`).
           It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
           On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in
-          System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have.
+          System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have;
+          unpack it and run \`install.sh\` to put NXPress in the menu of applications with its icon.
           \`SHA256SUMS.txt\` has the checksums of the files, and
           \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here.
           EOF

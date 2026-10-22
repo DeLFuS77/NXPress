@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -82,6 +83,9 @@ func readTitle(path string, withIcon bool) (gameTitle, error) {
 	return result, nil
 }
 
+// trailingTags are the [tags] at the end of a name, such as [0100...][v0][US].
+var trailingTags = regexp.MustCompile(`(\s*\[[^\]]*\])+$`)
+
 // defaultTemplate is the name a file gets when no template is given.
 const defaultTemplate = "{name} [{id}][v{version}]"
 
@@ -93,7 +97,8 @@ func newName(path string, title gameTitle, template string) string {
 	}
 	name := title.Name
 	if name == "" {
-		name = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		// the name of the file, without the [title ID][version] tags the template adds again
+		name = strings.TrimSpace(trailingTags.ReplaceAllString(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), ""))
 	}
 	replacer := strings.NewReplacer("{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(title.Version),
 		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles))

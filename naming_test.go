@@ -14,6 +14,10 @@ func TestNewName(t *testing.T) {
 			t.Fatalf("%q: %q, want %q", template, got, want)
 		}
 	}
+	// without a name, the name of the file without its tags
+	if got := newName("C:/games/Game (Pack)[0100000000011001][v65536].nsp", gameTitle{TitleID: "0100000000011001", Version: 65536}, ""); got != "Game (Pack) [0100000000011001][v65536].nsp" {
+		t.Fatal(got)
+	}
 	// without a name, the name of the file
 	if got := newName("C:/games/old name.nsp", gameTitle{TitleID: "0100000000010800", Version: 1}, "{name} [{id}]"); got != "old name [0100000000010800].nsp" {
 		t.Fatal(got)

@@ -15,6 +15,7 @@
 - Files already checked, or written by NXPress, are not read again while they do not change (`--no-cache` to check them all)
 - Copy report: the version, the system, the settings and the result of each file, to paste in an issue or a thread
 - A notice in the window when a new version is out, from GitHub; it can be turned off in the menu, and it is the only time NXPress goes on the internet
+- On Linux, install.sh puts NXPress in the menu of applications with its icon (`install.sh --uninstall` takes it away)
 - The window in 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese
 
 ## 1.0.0

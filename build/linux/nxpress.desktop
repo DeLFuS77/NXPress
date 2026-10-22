@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=NXPress
+GenericName=Game file compressor
+Comment=Compress and decompress NSP and XCI files to NSZ and XCZ
+Exec=nxpress %F
+Icon=nxpress
+Terminal=false
+Categories=Utility;Archiving;Compression;
+Keywords=nsp;nsz;xci;xcz;switch;compress;
+StartupWMClass=nxpress

@@ -140,10 +140,13 @@ td.remove button { padding: 2px 8px; }
 .badge.ok { color: var(--ok); background: var(--ok-soft); }
 .badge.failed { color: var(--bad); background: var(--bad-soft); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
-#log { margin: 0 20px 12px; max-height: 160px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; user-select: text; -webkit-user-select: text; }
+#log { margin: 0 20px 12px; max-height: 160px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 
 .actions { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--panel); }
+.actions > button { flex: none; }
 .summary { flex: 1; min-width: 0; }
+.summary-extra { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+button.link.small-link { margin: 0; font-size: 12px; }
 #summary-text { font-weight: 600; }
 #summary-text .saved { color: var(--ok); }
 .bar.total { height: 8px; max-width: 420px; }
