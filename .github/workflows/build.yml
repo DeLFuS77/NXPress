@@ -1,0 +1,94 @@
+name: Build
+
+# Builds NXPress for every system on a machine of that system: the window (Wails) needs the
+# webview of each one (WebView2, WebKitGTK, WebKit), and cgo its C compiler for zstd. The
+# programs are kept as artifacts of the run; nothing is published.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            runner: windows-2025
+          - name: linux-x64
+            runner: ubuntu-24.04
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+          - name: macos-apple
+            runner: macos-15
+          - name: macos-intel
+            runner: macos-15-intel
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install WebKitGTK
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          tags="desktop,production"
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            tags="${tags},webkit2_41"
+          fi
+          exe="nxpress"
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            exe="nxpress.exe"
+          fi
+          go vet -tags "${tags}" ./...
+          go build -tags "${tags}" -trimpath -ldflags "-s -w -X main.version=dev-${GITHUB_SHA::7}" -o "build/${exe}" .
+          ./build/${exe} --version
+          ./build/${exe} --help > /dev/null
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          case "${RUNNER_OS}" in
+            Windows)
+              cp build/nxpress.exe "dist/nxpress-${{ matrix.name }}.exe" ;;
+            macOS)
+              bash .github/scripts/macos_app.sh build/nxpress "dev-${GITHUB_SHA::7}" build
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C build NXPress.app ;;
+            *)
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C build nxpress ;;
+          esac
+          ls -l dist
+
+      # the archives keep the programs runnable: the artifacts lose the permissions of the files
+      - name: Keep the program
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nxpress-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
