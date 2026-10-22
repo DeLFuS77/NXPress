@@ -210,7 +210,8 @@ Usage: nxpress [options] file or folder...
 
   --convert           turn XCI and XCZ files into NSP and NSZ
   --split             split multi-title files (SuperNSP) into one file per title
-  --pack FILE         merge the files given into one multi-title file (SuperNSP)
+  --pack FILE         merge the files given into one multi-title file (SuperNSP): an
+                      NSP when they are all NSP, an NSZ when one of them is an NSZ
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted

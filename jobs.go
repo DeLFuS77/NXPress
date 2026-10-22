@@ -327,7 +327,16 @@ func pack(ctx context.Context, o options, out output) error {
 	if len(sources) < 2 {
 		return errors.New("a pack needs at least two NSP or NSZ files")
 	}
-	name, err := target(o, o.pack)
+	// a pack of NSP files is an NSP, uncompressed; one with an NSZ among them holds NCZ, an NSZ
+	compressed, err := switchfs.PackHasCompressedFiles(sources)
+	if err != nil {
+		return err
+	}
+	extension := ".nsp"
+	if compressed {
+		extension = ".nsz"
+	}
+	name, err := target(o, strings.TrimSuffix(o.pack, filepath.Ext(o.pack))+extension)
 	if err == nil {
 		err = free(o, name)
 	}
