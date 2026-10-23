@@ -116,6 +116,10 @@ function render() {
   $("start").disabled = !state.busy && state.items.length === 0;
   $("estimate").disabled = state.busy || state.items.length === 0;
   $("compare-levels").disabled = state.busy || state.items.length === 0;
+  $("measure").disabled = state.busy || state.items.length === 0;
+  // the computer is named as its system names it
+  const system = (state.setup.platform || "").split("/")[0];
+  $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
   $("pause").hidden = !state.busy;
   $("pause").textContent = state.paused ? t("resume") : t("pause");
   $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => row.status === "ok" || row.status === "failed");
@@ -342,8 +346,14 @@ async function start(mode, extra) {
   save("settings", chosen);
   const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
   // a watch looks at the folders added; the files alone are taken too
-  const files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
-  for (const row of state.rows.values()) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
+  let files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
+  // the measure tries its settings on the first game alone
+  if (mode === "measure") {
+    const game = state.items.find(item => /\.(nsp|xci)$/i.test(item.path));
+    if (!game) { $("status").textContent = t("measureNeedsGame"); return; }
+    files = [game.path];
+  }
+  for (const row of state.rows.values()) if (files.includes(row.item.path) || watch) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
@@ -417,11 +427,18 @@ function listen() {
     $("log").textContent += noteText(text) + "\n";
     $("log").scrollTop = $("log").scrollHeight;
   });
+  // a measure puts the setting it chose in the fields, kept with the settings
+  events.EventsOn("measured", event => {
+    $("threads").value = event.threads;
+    $("multi").value = event.multi;
+    $("preset").value = "";
+    save("settings", settings());
+  });
   events.EventsOn("finished", event => {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; }
-    const total = state.mode === "pack" ? 1 : state.items.length;
+    const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
@@ -536,6 +553,7 @@ async function main() {
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");
   $("compare-levels").onclick = () => start("estimate", { levels: true });
+  $("measure").onclick = () => start("measure");
   $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
   $("shutdown-cancel").onclick = () => { app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };

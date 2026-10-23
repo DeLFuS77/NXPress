@@ -48,6 +48,8 @@ texts.nl = {
   presets: "Opgeslagen instellingen", presetNone: "Kiezen…", presetSave: "Opslaan", presetDelete: "Verwijderen", presetName: "Naam van deze instellingen",
   presetInstallers: "Voor installers", presetEmulators: "Voor emulators", presetFast: "Snel",
   compareLevels: "Niveaus vergelijken op deze computer", compareHint: "Comprimeert stukjes van de bestanden op elk niveau om grootte en tijd van elk te geven: er wordt niets geschreven.",
+  measurePc: "Deze pc meten", measureMac: "Deze Mac meten", measureComputer: "Deze computer meten",
+  measureHint: "Comprimeert een paar seconden van het eerste spel in de lijst met meerdere threads en bestanden tegelijk, op het gekozen niveau en type, en zet het snelste in deze velden. Duurt 1 tot 3 minuten.", measureNeedsGame: "Voeg een NSP of XCI toe om mee te meten.",
   auto: "Automatisch", watch: "Toegevoegde mappen in de gaten houden", watchHint: "Nieuwe bestanden die erin gekopieerd worden, worden vanzelf verwerkt, tot je op Stoppen drukt.",
   watchNeedsFolder: "Voeg een map toe om die in de gaten te houden.", watching: "Wacht op nieuwe bestanden", stop: "Stoppen",
   noCache: "Al gecontroleerde bestanden opnieuw controleren", noCacheHint: "NXPress onthoudt de bestanden die het controleerde of schreef, en leest ze niet opnieuw zolang ze niet veranderen.",
@@ -58,11 +60,12 @@ texts.nl = {
   needFiles: "Voeg eerst bestanden toe.", needPack: "Kies de naam van het nieuwe bestand.",
   finished: (n, f, s) => `${n - f} van ${n} klaar` + (f ? `, ${f} mislukt` : "") + ` in ${time(s)}.`,
   stopped: "Geannuleerd.",
-  steps: {
+  steps: { Measuring: "Meten",
     Comparing: "Vergelijken", Estimating: "Schatten", Trimming: "Inkorten", Recompressing: "Opnieuw comprimeren", Compressing: "Comprimeren",
     Verifying: "Controleren", Decompressing: "Uitpakken", Converting: "Omzetten", Packing: "Samenvoegen", Splitting: "Splitsen", Joining: "Samenvoegen",
   },
   notes: {
+    measureHead: "$1 processors, niveau $2 (threads × bestanden tegelijk):", measureBest: "het beste: threads $1, bestanden tegelijk $2, $3 MB/s, ongeveer $4 voor 10 GB (toegepast)", notMeasurable: "niets te comprimeren: meet met een ander spel",
     alreadyThere: " bestaat al (vink „Bestaande bestanden vervangen” aan)",
     notCompressible: "Niets te comprimeren: het blijft zoals het is", nothingToCompress: "Niets te comprimeren",
     oneTitle: "Het heeft één titel: niets op te splitsen",

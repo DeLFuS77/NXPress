@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New
+
+- Measure this PC (this Mac, this computer): tries several threads and files at once on a few seconds of the first game of the list, at the level and kind chosen, and puts the fastest in the fields under Advanced; `--measure` on the command line tells the `-t` and `-m` to give. Each trial gives every thread whole pieces of work, so many threads are not measured as slower than they are
+
 ### Improvements
 
 - Block compression, and every XCZ, now uses the zstd library in C at the level chosen, as solid compression already did: smaller files at the same level. The estimate uses it too, so it matches what a compression gives

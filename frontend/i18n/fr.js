@@ -48,6 +48,8 @@ texts.fr = {
   presets: "Réglages enregistrés", presetNone: "Choisir…", presetSave: "Enregistrer", presetDelete: "Supprimer", presetName: "Nom de ces réglages",
   presetInstallers: "Pour installeurs", presetEmulators: "Pour émulateurs", presetFast: "Rapide",
   compareLevels: "Comparer les niveaux sur cet ordinateur", compareHint: "Compresse des échantillons des fichiers à chaque niveau pour indiquer la taille et le temps de chacun : rien n'est écrit.",
+  measurePc: "Mesurer ce PC", measureMac: "Mesurer ce Mac", measureComputer: "Mesurer cet ordinateur",
+  measureHint: "Compresse quelques secondes du premier jeu de la liste avec plusieurs threads et fichiers à la fois, au niveau et au type choisis, et met le plus rapide dans ces champs. Cela prend 1 à 3 minutes.", measureNeedsGame: "Ajoutez un NSP ou XCI pour mesurer.",
   auto: "Automatique", watch: "Surveiller les dossiers ajoutés", watchHint: "Les nouveaux fichiers copiés dedans sont traités tout seuls, jusqu'à ce que vous appuyiez sur Arrêter.",
   watchNeedsFolder: "Ajoutez un dossier pour le surveiller.", watching: "Surveillance des nouveaux fichiers", stop: "Arrêter",
   noCache: "Revérifier les fichiers déjà vérifiés", noCacheHint: "NXPress retient les fichiers qu'il a vérifiés ou écrits, et ne les relit pas tant qu'ils ne changent pas.",
@@ -58,11 +60,12 @@ texts.fr = {
   needFiles: "Ajoutez d'abord des fichiers.", needPack: "Choisissez le nom du nouveau fichier.",
   finished: (n, f, s) => `${n - f} sur ${n} terminés` + (f ? `, ${f} en échec` : "") + ` en ${time(s)}.`,
   stopped: "Annulé.",
-  steps: {
+  steps: { Measuring: "Mesure",
     Comparing: "Comparaison", Estimating: "Estimation", Trimming: "Allègement", Recompressing: "Recompression", Compressing: "Compression",
     Verifying: "Vérification", Decompressing: "Décompression", Converting: "Conversion", Packing: "Regroupement", Splitting: "Découpage", Joining: "Réunion",
   },
   notes: {
+    measureHead: "$1 processeurs, niveau $2 (threads × fichiers à la fois) :", measureBest: "le meilleur : threads $1, fichiers à la fois $2, $3 Mo/s, environ $4 pour 10 Go (appliqué)", notMeasurable: "rien à compresser : mesurez avec un autre jeu",
     alreadyThere: " existe déjà (cochez « Remplacer les fichiers existants »)",
     notCompressible: "Rien à compresser : il reste tel quel", nothingToCompress: "Rien à compresser",
     oneTitle: "Il n'a qu'un titre : rien à séparer",

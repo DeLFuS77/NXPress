@@ -48,6 +48,8 @@ texts.de = {
   presets: "Gespeicherte Einstellungen", presetNone: "Wählen…", presetSave: "Speichern", presetDelete: "Löschen", presetName: "Name dieser Einstellungen",
   presetInstallers: "Für Installer", presetEmulators: "Für Emulatoren", presetFast: "Schnell",
   compareLevels: "Stufen auf diesem Computer vergleichen", compareHint: "Komprimiert Proben der Dateien mit jeder Stufe, um Größe und Zeit jeder zu nennen: es wird nichts geschrieben.",
+  measurePc: "Diesen PC messen", measureMac: "Diesen Mac messen", measureComputer: "Diesen Computer messen",
+  measureHint: "Komprimiert einige Sekunden des ersten Spiels der Liste mit mehreren Threads und Dateien gleichzeitig, mit der gewählten Stufe und Art, und trägt das Schnellste in diese Felder ein. Dauert 1 bis 3 Minuten.", measureNeedsGame: "Füge eine NSP oder XCI zum Messen hinzu.",
   auto: "Automatisch", watch: "Hinzugefügte Ordner überwachen", watchHint: "Neue Dateien, die hineinkopiert werden, werden von selbst bearbeitet, bis du Stopp drückst.",
   watchNeedsFolder: "Füge einen Ordner hinzu, um ihn zu überwachen.", watching: "Überwache neue Dateien", stop: "Stopp",
   noCache: "Bereits geprüfte Dateien erneut prüfen", noCacheHint: "NXPress merkt sich die Dateien, die es geprüft oder geschrieben hat, und liest sie nicht erneut, solange sie sich nicht ändern.",
@@ -58,11 +60,12 @@ texts.de = {
   needFiles: "Füge zuerst Dateien hinzu.", needPack: "Wähle den Namen der neuen Datei.",
   finished: (n, f, s) => `${n - f} von ${n} fertig` + (f ? `, ${f} mit Fehler` : "") + ` in ${time(s)}.`,
   stopped: "Abgebrochen.",
-  steps: {
+  steps: { Measuring: "Messe",
     Comparing: "Vergleiche", Estimating: "Schätze", Trimming: "Verkleinere", Recompressing: "Komprimiere neu", Compressing: "Komprimiere",
     Verifying: "Prüfe", Decompressing: "Entpacke", Converting: "Wandle um", Packing: "Fasse zusammen", Splitting: "Teile", Joining: "Verbinde",
   },
   notes: {
+    measureHead: "$1 Prozessoren, Stufe $2 (Threads × Dateien gleichzeitig):", measureBest: "am besten: Threads $1, Dateien gleichzeitig $2, $3 MB/s, etwa $4 für 10 GB (übernommen)", notMeasurable: "nichts zu komprimieren: miss mit einem anderen Spiel",
     alreadyThere: " gibt es schon (kreuze „Vorhandene Dateien ersetzen“ an)",
     notCompressible: "Nichts zu komprimieren: sie bleibt, wie sie ist", nothingToCompress: "Nichts zu komprimieren",
     oneTitle: "Sie hat nur einen Titel: nichts aufzuteilen",

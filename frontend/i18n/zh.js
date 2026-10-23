@@ -48,6 +48,8 @@ texts.zh = {
   presets: "已保存的设置", presetNone: "选择…", presetSave: "保存", presetDelete: "删除", presetName: "这组设置的名称",
   presetInstallers: "适合安装器", presetEmulators: "适合模拟器", presetFast: "快速",
   compareLevels: "在这台电脑上比较各等级", compareHint: "用每个等级压缩文件样本，给出各自的大小和用时：不会写入任何文件。",
+  measurePc: "测试这台电脑", measureMac: "测试这台 Mac", measureComputer: "测试这台计算机",
+  measureHint: "以所选级别和方式，用不同的线程数和同时处理的文件数压缩列表中第一个游戏的几秒钟数据，并把最快的组合填入这些栏。需要 1 到 3 分钟。", measureNeedsGame: "请添加一个 NSP 或 XCI 用于测试。",
   auto: "自动", watch: "监视已添加的文件夹", watchHint: "复制进这些文件夹的新文件会自动处理，直到你按下“停止”。",
   watchNeedsFolder: "请添加一个要监视的文件夹。", watching: "正在等待新文件", stop: "停止",
   noCache: "重新校验已校验过的文件", noCacheHint: "NXPress 会记住已校验或写入的文件，文件没有变化时不再重新读取。",
@@ -58,11 +60,12 @@ texts.zh = {
   needFiles: "请先添加文件。", needPack: "请选择新文件的名称。",
   finished: (n, f, s) => `已完成 ${n - f}/${n}` + (f ? `，${f} 个失败` : "") + `，用时 ${time(s)}。`,
   stopped: "已取消。",
-  steps: {
+  steps: { Measuring: "测试中",
     Comparing: "比对中", Estimating: "估算中", Trimming: "精简中", Recompressing: "重新压缩中", Compressing: "压缩中",
     Verifying: "校验中", Decompressing: "解压中", Converting: "转换中", Packing: "合并中", Splitting: "分片中", Joining: "合并分片中",
   },
   notes: {
+    measureHead: "$1 个处理器，级别 $2（线程 × 同时文件数）：", measureBest: "最快：线程 $1，同时文件数 $2，$3 MB/s，10 GB 约需 $4（已应用）", notMeasurable: "没有可压缩的内容：请换一个游戏测试",
     alreadyThere: " 已存在（勾选“替换已有文件”）",
     notCompressible: "没有可压缩的内容：保持原样", nothingToCompress: "没有可压缩的内容",
     oneTitle: "只有一个标题：无需拆分",

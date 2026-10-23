@@ -54,6 +54,7 @@ nxpress --recompress -B game.nsz    write an NSZ again in blocks (or -S, solid),
 nxpress --trim game.xci update.nsp  take away the padding of an XCI and the delta fragments of an update
 nxpress --estimate -l 19 game.nsp   tell the size and the time a compression would give
 nxpress --estimate --levels game.nsp  the same at the levels 3 to 19, to choose one
+nxpress --measure -l 18 game.nsp   try threads and files at once here, and tell the fastest for -t and -m
 nxpress -i game.nsz                 show its titles, how it is stored and what it works with
 nxpress -V --dat switch.dat games   tell which files are dumps a DAT (No-Intro) lists
 nxpress --fat32 game.nsp            a file over 4 GB to a folder of parts for a FAT32 microSD (and back)

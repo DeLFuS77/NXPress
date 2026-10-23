@@ -20,6 +20,7 @@ type options struct {
 	recompress bool
 	trim       bool
 	estimate   bool
+	measure    bool
 	fat32      bool
 	template   string
 	watch      bool
@@ -117,6 +118,8 @@ func parseOptions(args []string) (options, error) {
 			o.trim = true
 		case "--estimate":
 			o.estimate = true
+		case "--measure":
+			o.measure = true
 		case "--fat32":
 			o.fat32 = true
 		case "--watch":
@@ -186,13 +189,13 @@ func (o *options) set(what string, name string, value string) error {
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --fat32, --rename, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split and --pack")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -245,6 +248,8 @@ Usage: nxpress [options] file or folder...
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one
+  --measure           try threads and files at once on a few seconds of the first NSP or
+                      XCI, at the level of -l (and -B), and tell the fastest for -t and -m
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
   --minimal-output    print only "<percentage>%% <step>"
