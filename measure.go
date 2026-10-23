@@ -27,8 +27,9 @@ type trial struct {
 	speed   int
 }
 
-// measureTrials are the settings tried, the lightest first: half the processors and all of
-// them, on one, two and four files at once, each only when its threads fit in the memory.
+// measureTrials are the settings tried, the lightest first: half the processors and all the
+// usable ones (see usableProcessors), on one, two and four files at once, each only when its
+// threads fit in the memory.
 func measureTrials(processors int, level string) []trial {
 	trials := []trial{}
 	seen := map[[2]int]bool{}
@@ -71,7 +72,7 @@ type measured interface {
 // reads its own part of the game, so none finds the data already in memory.
 func measure(ctx context.Context, path string, o options, out output) (string, string, error) {
 	level := strconv.Itoa(o.level)
-	trials := measureTrials(runtime.NumCPU(), level)
+	trials := measureTrials(usableProcessors(), level)
 	places := 0
 	for _, t := range trials {
 		places += t.files

@@ -186,6 +186,24 @@ func (o *options) set(what string, name string, value string) error {
 	return err
 }
 
+// usableProcessors are the processors NXPress works on: all but an eighth of them, at least
+// one, so the computer stays responsive while it compresses (4 of 3, 16 of 14, 32 of 28).
+func usableProcessors() int {
+	processors := runtime.NumCPU()
+	if processors <= 1 {
+		return 1
+	}
+	return processors - max(1, processors/8)
+}
+
+// defaultThreads are the threads of each file when none are asked: the usable processors,
+// shared among the files worked on at once. The zstd library in C compresses one file on all
+// of them (24 threads compressed 38 % faster than 12 on a processor of 24); the memory sets
+// fewer when it is short (switchfs.LimitThreads).
+func defaultThreads(files int) int {
+	return max(1, usableProcessors()/max(1, files))
+}
+
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
@@ -214,7 +232,7 @@ func (o *options) check() error {
 		o.level = maxLevel
 	}
 	if o.threads == 0 {
-		o.threads = max(1, min(8, runtime.NumCPU()/2))
+		o.threads = defaultThreads(o.multi)
 	}
 	return nil
 }
@@ -237,7 +255,9 @@ Usage: nxpress [options] file or folder...
                       as it is; every installer takes it but Awoo
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
-  -t, --threads N     threads per file (default: half the processors, at most 8)
+  -t, --threads N     threads per file (default: every processor but an eighth, shared among
+                      the files of -m; fewer when the memory is short; --measure tells the
+                      fastest)
   -m, --multi N       files at once (default 1)
   -o, --output DIR    folder of the new files (default: next to each file)
   --watch             keep looking at the folders given and work on each new file once it

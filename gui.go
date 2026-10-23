@@ -99,7 +99,7 @@ func (a *App) Setup() Setup {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	setup := Setup{
-		Version: version, Keys: a.keys, Threads: max(1, min(8, runtime.NumCPU()/2)), Cpus: runtime.NumCPU(),
+		Version: version, Keys: a.keys, Threads: defaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
 	}
 	setup.SendToEnabled = setup.SendTo && sendToEnabled()

@@ -1,8 +1,11 @@
 package main
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
-// The settings tried use half the processors and all of them, on one, two and four files,
+// The settings tried use half the processors and all the usable ones, on one, two and four files,
 // each once, the lightest first; the fastest wins only when it is clearly faster.
 func TestMeasureTrials(t *testing.T) {
 	trials := measureTrials(8, "3")
@@ -21,5 +24,15 @@ func TestMeasureTrials(t *testing.T) {
 	chosen := chooseTrial([]trial{{threads: 4, files: 1, speed: 100}, {threads: 8, files: 1, speed: 105}, {threads: 4, files: 2, speed: 120}})
 	if chosen != (trial{threads: 4, files: 2, speed: 120}) {
 		t.Fatalf("chosen %v", chosen)
+	}
+}
+
+// A margin of the processors is left to the rest of the computer, at least one.
+func TestUsableProcessorsLeaveAMargin(t *testing.T) {
+	if n := usableProcessors(); runtime.NumCPU() > 1 && (n >= runtime.NumCPU() || n < runtime.NumCPU()*7/8-1) {
+		t.Fatalf("%d of %d processors", n, runtime.NumCPU())
+	}
+	if threads := defaultThreads(2); threads != max(1, usableProcessors()/2) {
+		t.Fatalf("%d threads for each of two files", threads)
 	}
 }
