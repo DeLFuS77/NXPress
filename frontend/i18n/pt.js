@@ -48,6 +48,8 @@ texts.pt = {
   presets: "Ajustes salvos", presetNone: "Escolher…", presetSave: "Salvar", presetDelete: "Apagar", presetName: "Nome destes ajustes",
   presetInstallers: "Para instaladores", presetEmulators: "Para emuladores", presetFast: "Rápido",
   compareLevels: "Comparar os níveis neste computador", compareHint: "Comprime amostras dos arquivos em cada nível para dizer o tamanho e o tempo de cada um: nada é gravado.",
+  measurePc: "Medir este PC", measureMac: "Medir este Mac", measureComputer: "Medir este computador",
+  measureHint: "Comprime alguns segundos do primeiro jogo da lista com vários threads e arquivos ao mesmo tempo, no nível e tipo escolhidos, e coloca o mais rápido nestes campos. Leva de 1 a 3 minutos.", measureNeedsGame: "Adicione um NSP ou XCI para medir.",
   auto: "Automático", watch: "Vigiar as pastas adicionadas", watchHint: "Arquivos novos copiados para elas são processados sozinhos, até você clicar em Parar.",
   watchNeedsFolder: "Adicione uma pasta para vigiá-la.", watching: "Vigiando arquivos novos", stop: "Parar",
   noCache: "Verificar de novo arquivos já verificados", noCacheHint: "O NXPress lembra os arquivos que verificou ou gravou, e não os lê de novo enquanto não mudarem.",
@@ -58,11 +60,12 @@ texts.pt = {
   needFiles: "Adicione antes algum arquivo.", needPack: "Escolha o nome do arquivo novo.",
   finished: (n, f, s) => `${n - f} de ${n} concluídos` + (f ? `, ${f} com erro` : "") + ` em ${time(s)}.`,
   stopped: "Cancelado.",
-  steps: {
+  steps: { Measuring: "Medindo",
     Comparing: "Comparando", Estimating: "Estimando", Trimming: "Aparando", Recompressing: "Recomprimindo", Compressing: "Comprimindo",
     Verifying: "Verificando", Decompressing: "Descomprimindo", Converting: "Convertendo", Packing: "Juntando", Splitting: "Dividindo", Joining: "Unindo",
   },
   notes: {
+    measureHead: "$1 processadores, nível $2 (threads × arquivos ao mesmo tempo):", measureBest: "o melhor: threads $1, arquivos ao mesmo tempo $2, $3 MB/s, cerca de $4 por 10 GB (aplicado)", notMeasurable: "nada para comprimir: meça com outro jogo",
     alreadyThere: " já existe (marque «Substituir arquivos existentes»)",
     notCompressible: "Nada para comprimir: fica como está", nothingToCompress: "Nada para comprimir",
     oneTitle: "Tem um só título: nada para separar",

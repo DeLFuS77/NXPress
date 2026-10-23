@@ -48,6 +48,8 @@ texts.ja = {
   presets: "保存した設定", presetNone: "選択…", presetSave: "保存", presetDelete: "削除", presetName: "この設定の名前",
   presetInstallers: "インストーラー向け", presetEmulators: "エミュレーター向け", presetFast: "高速",
   compareLevels: "このコンピューターでレベルを比較", compareHint: "各レベルでファイルのサンプルを圧縮し、サイズと時間を表示します。何も書き込みません。",
+  measurePc: "この PC を測定", measureMac: "この Mac を測定", measureComputer: "このコンピューターを測定",
+  measureHint: "リストの最初のゲームを数秒間、選んだレベルと種類で、スレッド数と同時ファイル数を変えて圧縮し、最も速い組み合わせをこの欄に入れます。1〜3分かかります。", measureNeedsGame: "測定に使う NSP か XCI を追加してください。",
   auto: "自動", watch: "追加したフォルダーを監視", watchHint: "フォルダーにコピーされた新しいファイルを自動で処理します。「停止」を押すまで続きます。",
   watchNeedsFolder: "監視するフォルダーを追加してください。", watching: "新しいファイルを待機中", stop: "停止",
   noCache: "検証済みのファイルも再検証", noCacheHint: "NXPress は検証または書き込んだファイルを記憶し、変更がない限り読み直しません。",
@@ -58,11 +60,12 @@ texts.ja = {
   needFiles: "先にファイルを追加してください。", needPack: "新しいファイルの名前を選んでください。",
   finished: (n, f, s) => `${n} 個中 ${n - f} 個完了` + (f ? `、${f} 個失敗` : "") + `（${time(s)}）。`,
   stopped: "キャンセルしました。",
-  steps: {
+  steps: { Measuring: "測定中",
     Comparing: "照合中", Estimating: "見積もり中", Trimming: "スリム化中", Recompressing: "再圧縮中", Compressing: "圧縮中",
     Verifying: "検証中", Decompressing: "展開中", Converting: "変換中", Packing: "まとめ中", Splitting: "分割中", Joining: "結合中",
   },
   notes: {
+    measureHead: "$1 プロセッサ、レベル $2（スレッド × 同時ファイル数）:", measureBest: "最速: スレッド $1、同時ファイル数 $2、$3 MB/s、10 GB で約 $4（適用済み）", notMeasurable: "圧縮できるものがありません: 別のゲームで測定してください",
     alreadyThere: " は既にあります（「既存のファイルを置き換える」をオン）",
     notCompressible: "圧縮できる部分がありません：そのままです", nothingToCompress: "圧縮できる部分がありません",
     oneTitle: "タイトルが 1 つだけなので分割できません",

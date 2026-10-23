@@ -99,7 +99,7 @@ func (a *App) Setup() Setup {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	setup := Setup{
-		Version: version, Keys: a.keys, Threads: max(1, min(8, runtime.NumCPU()/2)), Cpus: runtime.NumCPU(),
+		Version: version, Keys: a.keys, Threads: defaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
 	}
 	setup.SendToEnabled = setup.SendTo && sendToEnabled()
@@ -281,6 +281,8 @@ func (a *App) Start(request Request) error {
 		o.trim = true
 	case "estimate":
 		o.estimate = true
+	case "measure":
+		o.measure = true
 	case "fat32":
 		o.fat32 = true
 	case "rename":
@@ -438,6 +440,11 @@ func (w *window) done(path string, output string, note string, err error) {
 
 func (w *window) say(format string, args ...any) {
 	wailsruntime.EventsEmit(w.ctx, "say", fmt.Sprintf(format, args...))
+}
+
+// measured gives the page the setting a measure chose, to put in its fields.
+func (w *window) measured(threads int, files int) {
+	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{"threads": threads, "multi": files})
 }
 
 // openURL opens a page in the browser of the system.

@@ -48,6 +48,8 @@ texts.en = {
   presets: "Saved settings", presetNone: "Choose…", presetSave: "Save", presetDelete: "Delete", presetName: "Name of these settings",
   presetInstallers: "For installers", presetEmulators: "For emulators", presetFast: "Quick",
   compareLevels: "Compare the levels on this computer", compareHint: "Compresses samples of the files at each level, to tell the size and the time of each: nothing is written.",
+  measurePc: "Measure this PC", measureMac: "Measure this Mac", measureComputer: "Measure this computer",
+  measureHint: "Compresses a few seconds of the first game of the list with several threads and files at once, at the level and kind chosen, and puts the fastest in these fields. It takes 1 to 3 minutes.", measureNeedsGame: "Add an NSP or XCI to measure with.",
   auto: "Automatic", watch: "Watch the folders added", watchHint: "New files copied into them are worked on by themselves, until you press Stop.",
   watchNeedsFolder: "Add a folder to watch it.", watching: "Watching for new files", stop: "Stop",
   noCache: "Check again files already checked", noCacheHint: "NXPress remembers the files it checked or wrote, and does not read them again while they do not change.",
@@ -58,6 +60,7 @@ texts.en = {
   needFiles: "Add some files first.", needPack: "Choose the name of the new file.",
   finished: (n, f, s) => `${n - f} of ${n} done` + (f ? `, ${f} failed` : "") + ` in ${time(s)}.`,
   stopped: "Cancelled.",
-  steps: {},
-  notes: { alreadyThere: " is already there (tick “Replace files already there”)" },
+  steps: { Measuring: "Measuring",},
+  notes: {
+    measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", alreadyThere: " is already there (tick “Replace files already there”)" },
 };

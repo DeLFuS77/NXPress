@@ -20,6 +20,7 @@ type options struct {
 	recompress bool
 	trim       bool
 	estimate   bool
+	measure    bool
 	fat32      bool
 	template   string
 	watch      bool
@@ -117,6 +118,8 @@ func parseOptions(args []string) (options, error) {
 			o.trim = true
 		case "--estimate":
 			o.estimate = true
+		case "--measure":
+			o.measure = true
 		case "--fat32":
 			o.fat32 = true
 		case "--watch":
@@ -183,16 +186,34 @@ func (o *options) set(what string, name string, value string) error {
 	return err
 }
 
+// usableProcessors are the processors NXPress works on: all but an eighth of them, at least
+// one, so the computer stays responsive while it compresses (4 of 3, 16 of 14, 32 of 28).
+func usableProcessors() int {
+	processors := runtime.NumCPU()
+	if processors <= 1 {
+		return 1
+	}
+	return processors - max(1, processors/8)
+}
+
+// defaultThreads are the threads of each file when none are asked: the usable processors,
+// shared among the files worked on at once. The zstd library in C compresses one file on all
+// of them (24 threads compressed 38 % faster than 12 on a processor of 24); the memory sets
+// fewer when it is short (switchfs.LimitThreads).
+func defaultThreads(files int) int {
+	return max(1, usableProcessors()/max(1, files))
+}
+
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --fat32, --rename, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split and --pack")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -211,7 +232,7 @@ func (o *options) check() error {
 		o.level = maxLevel
 	}
 	if o.threads == 0 {
-		o.threads = max(1, min(8, runtime.NumCPU()/2))
+		o.threads = defaultThreads(o.multi)
 	}
 	return nil
 }
@@ -234,7 +255,9 @@ Usage: nxpress [options] file or folder...
                       as it is; every installer takes it but Awoo
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
-  -t, --threads N     threads per file (default: half the processors, at most 8)
+  -t, --threads N     threads per file (default: every processor but an eighth, shared among
+                      the files of -m; fewer when the memory is short; --measure tells the
+                      fastest)
   -m, --multi N       files at once (default 1)
   -o, --output DIR    folder of the new files (default: next to each file)
   --watch             keep looking at the folders given and work on each new file once it
@@ -245,6 +268,8 @@ Usage: nxpress [options] file or folder...
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one
+  --measure           try threads and files at once on a few seconds of the first NSP or
+                      XCI, at the level of -l (and -B), and tell the fastest for -t and -m
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
   --minimal-output    print only "<percentage>%% <step>"

@@ -24,6 +24,7 @@ var takes = map[string][]string{
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
 	"estimate":   {".nsp", ".xci"},
+	"measure":    {".nsp", ".xci"},
 	"rename":     {".nsp", ".nsz", ".xci", ".xcz"},
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
@@ -45,6 +46,8 @@ func (o options) action() string {
 		return "trim"
 	case o.estimate:
 		return "estimate"
+	case o.measure:
+		return "measure"
 	case o.fat32:
 		return "fat32"
 	case o.template != "":
@@ -77,6 +80,15 @@ func runJobs(ctx context.Context, o options, out output) int {
 	}
 	if len(files) == 0 {
 		out.say("no file to %s among the ones given", action)
+		return len(missing)
+	}
+	// the measure tries its settings on the first game alone
+	if action == "measure" {
+		output, note, err := measure(ctx, files[0], o, out)
+		out.done(files[0], output, note, err)
+		if err != nil {
+			return len(missing) + 1
+		}
 		return len(missing)
 	}
 	if o.dat != "" && o.datFile == nil {
