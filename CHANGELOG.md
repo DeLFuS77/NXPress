@@ -9,6 +9,7 @@
 ### Improvements
 
 - Block compression, and every XCZ, now uses the zstd library in C at the level chosen, as solid compression already did: smaller files at the same level. The estimate uses it too, so it matches what a compression gives
+- Decompressing and verifying is faster, from about 1.5 to 3 times: the zstd stream is decoded on several threads and ahead of the decryption, the blocks of NSZ in blocks and of XCZ several at once, and what is written is hashed beside the writing
 
 ## 1.1.0
 
