@@ -466,7 +466,7 @@ func trim(ctx context.Context, path string, o options, out output) (string, stri
 	}
 	removed, err := switchfs.TrimXci(ctx, path, written, out.progress(path, "Trimming"))
 	if errors.Is(err, switchfs.ErrNothingToTrim) {
-		return "", "nothing to trim, it ends where its data ends", nil
+		return "", "", skipped("nothing to trim, it ends where its data ends")
 	}
 	if err != nil {
 		return "", "", err
@@ -497,7 +497,7 @@ func stripDeltas(ctx context.Context, path string, o options, out output) (strin
 		return "", "", err
 	}
 	if deltas == 0 {
-		return "", "nothing to trim, it holds no delta fragments", nil
+		return "", "", skipped("nothing to trim, it holds no delta fragments: only updates have them")
 	}
 	name, err := target(o, path)
 	if err != nil {

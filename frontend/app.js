@@ -103,12 +103,16 @@ function render() {
   $("level-hint").textContent = t("levelHint")(level);
   $("output").textContent = state.output || t("nextTo");
   $("output").title = state.output;
+  // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
+  $("output").classList.toggle("empty", !state.output);
   $("reset-output").hidden = !state.output;
   $("reset-output").title = t("nextTo");
   $("pack").textContent = state.pack || t("noPack");
   $("pack").title = state.pack;
+  $("pack").classList.toggle("empty", !state.pack);
   $("dat").textContent = state.dat || t("noDat");
   $("dat").title = state.dat;
+  $("dat").classList.toggle("empty", !state.dat);
   $("reset-dat").hidden = !state.dat;
   const watching = state.busy && state.lastRun && state.lastRun.watch;
   $("start").textContent = state.busy ? (watching ? t("stop") : t("cancel")) : t("start")(state.mode);
@@ -125,6 +129,8 @@ function render() {
   $("pause").textContent = state.paused ? t("resume") : t("pause");
   $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
+  $("shutdown-force-option").hidden = $("shutdown-option").hidden || !$("shutdown").checked;
+  $("shutdown-force-option").title = t("shutdownForceHint");
   $("send-to").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
   $("empty").hidden = state.items.length > 0;
@@ -319,17 +325,31 @@ const builtinPresets = () => [
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
   { name: t("presetFast"), level: 3, block: false, builtin: true },
 ];
+// the preset chosen is kept by what it is, not by its place in the list, which changes when one
+// is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
+// for the others
+function presetKey(all, index) {
+  const preset = all[index];
+  return !preset ? "" : preset.builtin ? "builtin:" + index : preset.name;
+}
+
 function renderPresets() {
   const select = $("preset");
-  const chosen = select.value;
+  const all = [...builtinPresets(), ...load("presets", [])];
+  // when NXPress opens, the preset last chosen is shown again
+  let chosen = select.value;
+  if (state.restorePreset !== undefined) {
+    chosen = String(all.findIndex((preset, i) => presetKey(all, i) === state.restorePreset));
+    delete state.restorePreset;
+  }
   select.innerHTML = "";
   const none = new Option(t("presetNone"), "");
   select.append(none);
-  [...builtinPresets(), ...load("presets", [])].forEach((preset, i) => select.append(new Option(preset.name, String(i))));
-  select.value = chosen;
-  const all = [...builtinPresets(), ...load("presets", [])];
+  all.forEach((preset, i) => select.append(new Option(preset.name, String(i))));
+  select.value = chosen === "-1" ? "" : chosen;
   $("preset-delete").hidden = !select.value || all[+select.value].builtin;
   $("preset-name").placeholder = t("presetName");
+  save("preset", select.value === "" ? "" : presetKey(all, +select.value));
 }
 function applyPreset() {
   const preset = [...builtinPresets(), ...load("presets", [])][+$("preset").value];
@@ -429,10 +449,12 @@ function listen() {
   events.EventsOn("done", event => {
     if (state.mode === "pack") {
       // a pack is one result for all its files
-      for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok" });
+      for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: state.lastRun && state.lastRun.started });
     }
     const row = rowOf(event.file);
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
+    // the files this work went through, for its report
+    row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
     if (state.mode === "rename" && row.output && !event.error) {
@@ -475,26 +497,97 @@ function listen() {
   events.EventsOn("finished", event => {
     state.busy = false;
     state.paused = false;
-    for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; }
+    for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
+    keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
     const skippedRows = state.mode === "pack" || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
+    keepReportStatus(status);
     if (event.cancelled || !event.failed) save("pending", null);
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
-    if (!event.cancelled && !event.failed && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
+    if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
     render();
   });
+  // the computer did not turn off: told in the window and by a notice, with what can help
+  events.EventsOn("shutdownFailed", reason => {
+    $("shutdown-banner").hidden = true;
+    const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
+    $("status").textContent = text;
+    app().Notify("NXPress", text);
+  });
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
+}
+
+// the report of the last work is kept, so what happened can be read again later: above all after
+// the computer was turned off when it was done, when it shows by itself the next time
+function keepReport(event) {
+  const run = state.lastRun && state.lastRun.started;
+  const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "skipped"].includes(row.status)).map(row => ({
+    name: row.game && row.game.name ? `${row.game.name} · ${row.item.name}` : row.item.name,
+    status: row.status === "failed" && row.error === "cancelled" ? "cancelled" : row.status,
+    note: noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note),
+  }));
+  save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
+}
+function keepReportStatus(status) {
+  const kept = load("lastReport", null);
+  if (!kept) return;
+  kept.status = status;
+  kept.text = report();
+  save("lastReport", kept);
+}
+function showReport() {
+  const kept = load("lastReport", null);
+  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : t(kept.mode) || kept.mode}` : "";
+  $("report-status").textContent = kept ? kept.status : t("noReport");
+  $("report-copy").hidden = !kept;
+  // a long report: how many of each, the problems first, and only them when there are some
+  const all = kept ? kept.rows : [];
+  const order = { failed: 0, cancelled: 1, skipped: 2, ok: 3 };
+  const counts = {};
+  for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
+  const problems = all.length - (counts.ok || 0);
+  $("report-counts").innerHTML = "";
+  for (const status of ["ok", "skipped", "failed", "cancelled"]) {
+    if (!counts[status]) continue;
+    const badge = document.createElement("span");
+    badge.className = "badge " + (status === "cancelled" ? "waiting" : status);
+    badge.textContent = `${t(status)} ${counts[status]}`;
+    $("report-counts").append(badge);
+  }
+  $("report-problems-option").hidden = !problems || problems === all.length;
+  $("report-problems").checked = problems > 0 && problems < all.length;
+  $("report-problems").onchange = () => paintReport(all, order);
+  paintReport(all, order);
+  $("report-dialog").showModal();
+}
+function paintReport(all, order) {
+  const onlyProblems = $("report-problems").checked;
+  const rows = $("report-rows");
+  rows.innerHTML = "";
+  const shown = all.filter(row => !onlyProblems || row.status !== "ok").sort((a, b) => order[a.status] - order[b.status]);
+  for (const row of shown) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><div class="report-name"></div><div class="report-note"></div></td><td class="state"><span class="badge"></span></td>`;
+    tr.querySelector(".report-name").textContent = row.name;
+    tr.querySelector(".report-note").textContent = row.note;
+    const badge = tr.querySelector(".badge");
+    badge.classList.add(row.status === "cancelled" ? "waiting" : row.status);
+    badge.textContent = t(row.status);
+    rows.append(tr);
+  }
 }
 
 // the turning off, with 60 seconds to keep the computer on
 let shutdownTimer = 0;
 function startShutdown() {
-  app().ShutDownIn(60);
+  // the report shows by itself the next time NXPress opens
+  save("showReport", true);
+  app().ShutDownIn(60, $("shutdown-force").checked);
   state.shutdownAt = Date.now() + 60000;
   $("shutdown-banner").hidden = false;
   const tick = () => {
@@ -539,6 +632,14 @@ async function main() {
   $("level").value = chosen.level || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;
   $("threads").value = chosen.threads || state.setup.threads;
+  state.restorePreset = load("preset", "");
+  if (load("showReport", false)) {
+    save("showReport", false);
+    setTimeout(showReport, 300);
+  }
+  // Advanced is open unless it was closed, and stays as it was left
+  $("advanced").open = load("advancedOpen", true);
+  $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
   $("threads").max = state.setup.cpus;
   $("multi").value = chosen.multi || 1;
   $("overwrite").checked = !!chosen.overwrite;
@@ -595,9 +696,14 @@ async function main() {
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
   $("measure-close").onclick = () => $("measure-dialog").close();
+  $("last-report").onclick = () => { $("menu").open = false; showReport(); };
+  $("report-close").onclick = () => $("report-dialog").close();
+  $("report-copy").onclick = () => { const kept = load("lastReport", null); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
   $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
-  $("shutdown-cancel").onclick = () => { app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };
+  $("shutdown").onchange = () => render();
+  $("shutdown-cancel").onclick = () => {
+    save("showReport", false); app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };
   $("preset").onchange = applyPreset;
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();

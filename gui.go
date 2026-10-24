@@ -32,15 +32,20 @@ var appIcon []byte
 // runWindow opens the window with the files given, and gives the exit code once it is closed.
 func runWindow(files []string) int {
 	app := &App{files: files}
+	// the window opens where it was left and as big (see windowplace.go)
+	place, _ := loadWindowPlace()
 	err := wails.Run(&wailsoptions.App{
 		Title:            "NXPress",
-		Width:            1120,
-		Height:           720,
-		MinWidth:         900,
-		MinHeight:        520,
+		Width:            place.Width,
+		Height:           place.Height,
+		MinWidth:         windowMinWidth,
+		MinHeight:        windowMinHeight,
+		StartHidden:      true,
 		BackgroundColour: &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255},
 		AssetServer:      &assetserver.Options{Assets: frontend},
 		OnStartup:        app.startup,
+		OnDomReady:       placeWindow,
+		OnBeforeClose:    func(ctx context.Context) bool { keepWindowPlace(ctx); return false },
 		OnShutdown:       func(context.Context) { app.Cancel() },
 		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
 		Bind:             []any{app},
@@ -356,17 +361,25 @@ func (a *App) Notify(title string, body string) {
 	}
 }
 
-// ShutDownIn turns the computer off in the seconds given, unless CancelShutDown comes first.
-func (a *App) ShutDownIn(seconds int) {
+// shutdownWait is how long the computer has to turn off once asked: NXPress still running after
+// it means something kept it on, a program with work not saved most often.
+const shutdownWait = 90 * time.Second
+
+// ShutDownIn turns the computer off in the seconds given, unless CancelShutDown comes first;
+// forced, the programs left open are closed without saving. When it does not turn off, the page
+// is told ("shutdownFailed"), to say so.
+func (a *App) ShutDownIn(seconds int, force bool) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if a.shutdown != nil {
 		a.shutdown.Stop()
 	}
 	a.shutdown = time.AfterFunc(time.Duration(seconds)*time.Second, func() {
-		if err := shutDown(); err != nil {
-			wailsruntime.EventsEmit(a.ctx, "say", "the computer could not be turned off: "+err.Error())
+		if err := shutDown(force); err != nil {
+			wailsruntime.EventsEmit(a.ctx, "shutdownFailed", err.Error())
+			return
 		}
+		time.AfterFunc(shutdownWait, func() { wailsruntime.EventsEmit(a.ctx, "shutdownFailed", "") })
 	})
 }
 

@@ -26,6 +26,7 @@
         <hr>
         <label class="check menu-check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
         <button id="send-to"></button>
+        <button id="last-report" data-t="lastReport"></button>
       </div>
     </details>
   </div>
@@ -95,6 +96,7 @@
         <div id="status" class="muted"></div>
         <div class="summary-extra">
           <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
+          <label class="check small-check" id="shutdown-force-option" hidden><input id="shutdown-force" type="checkbox"><span data-t="shutdownForce"></span></label>
           <button id="report" class="link small-link" data-t="report" hidden></button>
         </div>
       </div>
@@ -208,6 +210,17 @@
   <p id="measure-result"></p>
   <p class="hint" data-t="measureChange"></p>
   <div class="dialog-actions"><button id="measure-close" class="primary" data-t="close"></button></div>
+</dialog>
+<dialog id="report-dialog" aria-labelledby="report-title">
+  <h2 id="report-title" data-t="lastReport"></h2>
+  <p id="report-when" class="muted"></p>
+  <p id="report-status"></p>
+  <div class="report-tools">
+    <div id="report-counts" class="report-counts"></div>
+    <label class="check small-check" id="report-problems-option"><input id="report-problems" type="checkbox"><span data-t="reportProblems"></span></label>
+  </div>
+  <div class="report-files"><table class="measure-table"><tbody id="report-rows"></tbody></table></div>
+  <div class="dialog-actions"><button id="report-copy" data-t="report"></button><button id="report-close" class="primary" data-t="close"></button></div>
 </dialog>
 <script src="i18n/base.js"></script>
 <script src="i18n/en.js"></script>

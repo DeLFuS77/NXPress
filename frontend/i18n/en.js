@@ -41,9 +41,11 @@ texts.en = {
   sendToOn: "Add NXPress to “Send to” in the Explorer", sendToOff: "Take NXPress out of “Send to”",
   updates: "Look for new versions on GitHub",
   updateFound: v => `NXPress ${v} is out.`, updateGet: "Download", dismiss: "Close",
-  report: "Copy report", reportCopied: "Report copied: paste it in a GitHub issue or in the thread.",
+  report: "Copy report", reportCopied: "Report copied: paste it in a GitHub issue or in the thread.", lastReport: "Last report", noReport: "No work has been done yet.", reportProblems: "Only with problems",
   pause: "Pause", resume: "Resume", paused: "Paused",
   shutdownWhenDone: "Turn off when done", shutdownIn: s => `The computer turns off in ${s} s.`, shutdownCancel: "Keep it on",
+  shutdownForce: "Force it", shutdownForceHint: "Closes the programs left open without saving, which can else keep the computer on.",
+  shutdownFailed: forced => `The computer did not turn off: ${forced ? "something kept it on" : "a program kept it on, probably with work not saved. Tick “Force it” to close such programs without saving"}.`,
   resumeFound: n => n === 1 ? "1 file was left unfinished last time." : `${n} files were left unfinished last time.`, resumeGo: "Resume them", resumeDrop: "Forget them",
   presets: "Saved settings", presetNone: "Choose…", presetSave: "Save", presetDelete: "Delete", presetName: "Name of these settings",
   presetInstallers: "For installers", presetEmulators: "For emulators", presetFast: "Quick",
@@ -66,6 +68,7 @@ texts.en = {
   stopped: "Cancelled.",
   steps: { Measuring: "Measuring",},
   notes: {
+    trimOnlyUpdates: ": only updates have them",
     notCompressibleWhy: "nothing to compress in it, left as it is", sparseWhy: "it uses sparse storage, which no compressor reads yet", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
     measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", notMeasurableAny: "nothing in the games of the list can be compressed: add another game to measure with", alreadyThere: " is already there (tick “Replace files already there”)" },
 };
