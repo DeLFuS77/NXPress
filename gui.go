@@ -445,9 +445,18 @@ func (w *window) say(format string, args ...any) {
 	wailsruntime.EventsEmit(w.ctx, "say", fmt.Sprintf(format, args...))
 }
 
-// measured gives the page the setting a measure chose, to put in its fields.
-func (w *window) measured(threads int, files int) {
-	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{"threads": threads, "multi": files})
+// measured gives the page what a measure found: the setting chosen, to put in its fields, and
+// every setting tried, to show them.
+func (w *window) measured(report measureReport) {
+	trials := []map[string]any{}
+	for _, t := range report.trials {
+		trials = append(trials, map[string]any{"threads": t.threads, "multi": t.files, "speed": t.speed, "best": t == report.best})
+	}
+	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{
+		"threads": report.best.threads, "multi": report.best.files, "speed": report.best.speed,
+		"processors": report.processors, "level": report.level, "block": report.block,
+		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials,
+	})
 }
 
 // openURL opens a page in the browser of the system.

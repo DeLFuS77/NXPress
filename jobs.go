@@ -83,10 +83,15 @@ func runJobs(ctx context.Context, o options, out output) int {
 		return len(missing)
 	}
 	// the measure tries its settings on the first game alone
+	// the measure tries its settings on the first game that can be compressed
 	if action == "measure" {
-		output, note, err := measure(ctx, files[0], o, out)
-		out.done(files[0], output, note, err)
-		if err != nil {
+		path, err := measurableGame(ctx, files, o)
+		output, note := "", ""
+		if err == nil {
+			output, note, err = measure(ctx, path, o, out)
+		}
+		out.done(path, output, note, err)
+		if err != nil && !isSkipped(err) {
 			return len(missing) + 1
 		}
 		return len(missing)

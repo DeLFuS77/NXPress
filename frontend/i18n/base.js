@@ -37,6 +37,7 @@ const noteRules = [
   [/^(\d+) processors, level (\d+) \(threads × files at once\):/, "measureHead"],
   [/^best: -t (\d+) -m (\d+), (\d+) MB\/s, about (.+?) for 10 GB$/, "measureBest"],
   [/^nothing in it can be compressed, it cannot be measured with$/, "notMeasurable"],
+  [/^nothing in the games of the list can be compressed, none can be measured with$/, "notMeasurableAny"],
   [/level (\d+): about /g, "levelAbout"],
   [/^watching for new files$/, "watchingLog"],
   [/not in the DAT: no dump of its size/g, "datNoSize"],

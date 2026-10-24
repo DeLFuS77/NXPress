@@ -116,7 +116,8 @@ function render() {
   $("start").disabled = !state.busy && state.items.length === 0;
   $("estimate").disabled = state.busy || state.items.length === 0;
   $("compare-levels").disabled = state.busy || state.items.length === 0;
-  $("measure").disabled = state.busy || state.items.length === 0;
+  // with no file it still answers, telling what it needs
+  $("measure").disabled = state.busy;
   // the computer is named as its system names it
   const system = (state.setup.platform || "").split("/")[0];
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
@@ -345,20 +346,21 @@ async function start(mode, extra) {
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
   if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
-  if (!state.items.length) { $("status").textContent = t("needFiles"); return; }
+  if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
   if (state.mode === "pack" && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
   const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
   // a watch looks at the folders added; the files alone are taken too
   let files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
-  // the measure tries its settings on the first game alone
-  if (mode === "measure") {
-    const game = state.items.find(item => /\.(nsp|xci)$/i.test(item.path));
-    if (!game) { $("status").textContent = t("measureNeedsGame"); return; }
-    files = [game.path];
+  // the measure takes the first game it can compress among the NSP and XCI of the list; the
+  // one it takes shows its progress, the others keep their state
+  const measuring = mode === "measure";
+  if (measuring) {
+    files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
+    if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
   }
-  for (const row of state.rows.values()) if (files.includes(row.item.path) || watch) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
+  for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
@@ -367,7 +369,7 @@ async function start(mode, extra) {
     await app().Start(request);
     state.busy = true;
     state.paused = false;
-    state.lastRun = { mode, request, started: Date.now(), watch };
+    state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
     // the files left are kept, to go on with them after a close
     if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   } catch (error) {
@@ -375,6 +377,27 @@ async function start(mode, extra) {
     $("status").textContent = String(error);
   }
   render();
+}
+
+// showMeasure tells what a measure found in a dialog: every setting tried, as fast as it went,
+// and the one applied
+function showMeasure(report) {
+  $("measure-intro").textContent = t("measureIntro")(report.processors, report.level, report.block);
+  const rows = $("measure-rows");
+  rows.innerHTML = "";
+  const fastest = Math.max(1, ...report.trials.map(trial => trial.speed));
+  for (const trial of report.trials) {
+    const tr = document.createElement("tr");
+    if (trial.best) tr.className = "best";
+    tr.innerHTML = `<td></td><td></td><td><div class="speed"><span></span><div class="bar"><div></div></div></div></td>`;
+    tr.cells[0].textContent = trial.threads;
+    tr.cells[1].textContent = trial.multi;
+    tr.querySelector(".speed span").textContent = `${trial.speed} MB/s` + (trial.best ? ` · ${t("measureApplied")}` : "");
+    tr.querySelector(".bar div").style.width = (trial.speed / fastest * 100).toFixed(1) + "%";
+    rows.append(tr);
+  }
+  $("measure-result").textContent = t("measureResult")(report.threads, report.multi, report.speed, time(report.seconds10GB));
+  $("measure-dialog").showModal();
 }
 
 // the report of the last work, to paste in an issue or a thread
@@ -409,6 +432,7 @@ function listen() {
       for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok" });
     }
     const row = rowOf(event.file);
+    if (event.skipped && state.lastRun) state.lastRun.skipped++;
     Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
     if (state.mode === "rename" && row.output && !event.error) {
@@ -438,13 +462,23 @@ function listen() {
     $("multi").value = event.multi;
     $("preset").value = "";
     save("settings", settings());
+    // the fields changed are shown: Advanced opens, and they light up for a moment
+    $("advanced").open = true;
+    $("threads").scrollIntoView({ block: "center", behavior: "smooth" });
+    for (const field of [$("threads"), $("multi")]) {
+      field.classList.remove("changed");
+      void field.offsetWidth;
+      field.classList.add("changed");
+    }
+    showMeasure(event);
   });
   events.EventsOn("finished", event => {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; }
     const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
-    const skippedRows = state.mode === "pack" ? 0 : [...state.rows.values()].filter(row => row.status === "skipped").length;
+    // the files skipped by this work, not the ones left so by the work before
+    const skippedRows = state.mode === "pack" || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
@@ -560,6 +594,7 @@ async function main() {
   $("estimate").onclick = () => start("estimate");
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
+  $("measure-close").onclick = () => $("measure-dialog").close();
   $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
   $("shutdown-cancel").onclick = () => { app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };

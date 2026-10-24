@@ -61,9 +61,21 @@ func chooseTrial(trials []trial) trial {
 	return best
 }
 
-// measured is told to the window once a measure chose its setting, to apply it.
+// measureReport is what a measure found: every setting tried and the one chosen, which the
+// window applies and shows.
+type measureReport struct {
+	processors int
+	level      int
+	block      bool
+	trials     []trial
+	best       trial
+	// how long 10 GB of games take with the setting chosen
+	per10GB time.Duration
+}
+
+// measured is told to the window once a measure chose its setting, to apply and show it.
 type measured interface {
-	measured(threads int, files int)
+	measured(report measureReport)
 }
 
 // measure tries settings of the compression on part of a game, as a compression reads,
@@ -82,7 +94,6 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 	if o.output != "" {
 		folder = o.output
 	}
-	progress := out.progress(path, "Measuring")
 	place := 0
 	for i := range trials {
 		var (
@@ -91,6 +102,10 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 			wait  sync.WaitGroup
 			first error
 		)
+		// each trial tells it starts, "Measuring 2/6", as one takes from a few seconds to half
+		// a minute: the file does not look left waiting meanwhile
+		progress := out.progress(path, fmt.Sprintf("Measuring %d/%d", i+1, len(trials)))
+		progress(int64(i), int64(len(trials)))
 		start := time.Now()
 		for f := 0; f < trials[i].files; f++ {
 			wait.Add(1)
@@ -108,7 +123,7 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 		}
 		wait.Wait()
 		if errors.Is(first, switchfs.ErrNothingToMeasure) {
-			return "", "nothing in it can be compressed, it cannot be measured with", nil
+			return "", "", skipped("nothing in it can be compressed, it cannot be measured with")
 		}
 		if first != nil {
 			return "", "", first
@@ -122,11 +137,40 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 		lines = append(lines, fmt.Sprintf("%d × %d: %d MB/s", t.threads, t.files, t.speed))
 	}
 	out.say("%d processors, level %d (threads × files at once):\n  %s", runtime.NumCPU(), o.level, strings.Join(lines, "\n  "))
+	per10GB := time.Duration(float64(10<<10) / float64(max(1, best.speed)) * float64(time.Second))
 	if window, ok := out.(measured); ok {
-		window.measured(best.threads, best.files)
+		window.measured(measureReport{processors: runtime.NumCPU(), level: o.level, block: o.block, trials: trials, best: best, per10GB: per10GB})
 	}
-	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.threads, best.files, best.speed,
-		duration(time.Duration(float64(10<<10)/float64(max(1, best.speed))*float64(time.Second)))), nil
+	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.threads, best.files, best.speed, duration(per10GB)), nil
+}
+
+// measurableGame is the first of the games given that a measure can compress, read without
+// compressing anything. When none can, the first one is skipped with why; when one could not
+// be read at all (damaged, no keys for it), that error is told instead.
+func measurableGame(ctx context.Context, files []string, o options) (string, error) {
+	options := switchfs.CompressOptions{Level: strconv.Itoa(o.level), Workers: 1, Blocks: o.block}
+	var failed error
+	failedPath := ""
+	for _, path := range files {
+		_, err := switchfs.MeasureCompression(ctx, path, 0, options, 0, io.Discard)
+		if err == nil {
+			return path, nil
+		}
+		if ctx.Err() != nil {
+			return path, ctx.Err()
+		}
+		if !errors.Is(err, switchfs.ErrNothingToMeasure) && failed == nil {
+			failed, failedPath = err, path
+		}
+	}
+	if failed != nil {
+		return failedPath, failed
+	}
+	reason := "nothing in it can be compressed, it cannot be measured with"
+	if len(files) > 1 {
+		reason = "nothing in the games of the list can be compressed, none can be measured with"
+	}
+	return files[0], skipped(reason)
 }
 
 // measureOne compresses a part of the game for a trial into a hidden file in folder, and

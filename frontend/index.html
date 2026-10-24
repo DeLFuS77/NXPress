@@ -198,6 +198,17 @@
     </details>
   </aside>
 </main>
+<dialog id="measure-dialog" aria-labelledby="measure-title">
+  <h2 id="measure-title" data-t="measureTitle"></h2>
+  <p id="measure-intro" class="muted"></p>
+  <table class="measure-table">
+    <thead><tr><th data-t="threads"></th><th data-t="multi"></th><th data-t="measureSpeed"></th></tr></thead>
+    <tbody id="measure-rows"></tbody>
+  </table>
+  <p id="measure-result"></p>
+  <p class="hint" data-t="measureChange"></p>
+  <div class="dialog-actions"><button id="measure-close" class="primary" data-t="close"></button></div>
+</dialog>
 <script src="i18n/base.js"></script>
 <script src="i18n/en.js"></script>
 <script src="i18n/es.js"></script>
