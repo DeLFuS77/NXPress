@@ -387,7 +387,7 @@ function settings() {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template,
-    packGames: $("pack-games").checked, packTemplate: state.packTemplate,
+    lowPriority: $("low-priority").checked,
   };
 }
 
@@ -769,6 +769,7 @@ async function main() {
   $("remove").checked = !!chosen.removeSource;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  $("low-priority").checked = !!chosen.lowPriority;
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);

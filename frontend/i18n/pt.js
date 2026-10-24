@@ -64,6 +64,7 @@ texts.pt = {
   auto: "Automático", watch: "Vigiar as pastas adicionadas", watchHint: "Arquivos novos copiados para elas são processados sozinhos, até você clicar em Parar.",
   watchNeedsFolder: "Adicione uma pasta para vigiá-la.", watching: "Vigiando arquivos novos", stop: "Parar",
   noCache: "Verificar de novo arquivos já verificados", noCacheHint: "O NXPress lembra os arquivos que verificou ou gravou, e não os lê de novo enquanto não mudarem.",
+  lowPriority: "Prioridade baixa", lowPriorityHint: "O NXPress fica atrás dos outros programas, para que o computador continue a responder enquanto trabalha em muitos arquivos; fica um pouco mais lento quando eles precisam do processador. No Linux, desativá-la só vale da próxima vez que abrir o NXPress.",
   template: "Modelo do nome", templateHint: "Campos: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, ou como os escreve o Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... A extensão mantém-se.", templateReset: "Padrão",
   fat32Hint: "No microSD, se o console mostrar a pasta como pasta, ative o bit de arquivo dela (Hekate: Tools, Archive bit). No Windows o NXPress já faz isso.",
   cancel: "Cancelar", waiting: "Aguardando", ok: "OK", failed: "Erro", skipped: "Ignorado", cancelled: "Cancelado",

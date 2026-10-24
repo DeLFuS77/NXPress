@@ -64,6 +64,7 @@ texts.zh = {
   auto: "自动", watch: "监视已添加的文件夹", watchHint: "复制进这些文件夹的新文件会自动处理，直到你按下“停止”。",
   watchNeedsFolder: "请添加一个要监视的文件夹。", watching: "正在等待新文件", stop: "停止",
   noCache: "重新校验已校验过的文件", noCacheHint: "NXPress 会记住已校验或写入的文件，文件没有变化时不再重新读取。",
+  lowPriority: "低优先级", lowPriorityHint: "NXPress 会让位于其他程序，处理大量文件时电脑仍能流畅响应；其他程序需要处理器时会稍慢一些。在 Linux 上，关闭后要到下次打开 NXPress 才生效。",
   template: "名称模板", templateHint: "字段:{name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb},或 Switch Library Manager 的写法:{TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}…… 扩展名保持不变。", templateReset: "默认",
   fat32Hint: "如果主机在 microSD 上把文件夹显示为文件夹，请设置它的归档属性（Hekate: Tools, Archive bit）。在 Windows 上 NXPress 已自动设置。",
   cancel: "取消", waiting: "等待中", ok: "完成", failed: "失败", skipped: "已跳过", cancelled: "已取消",

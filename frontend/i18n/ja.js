@@ -64,6 +64,7 @@ texts.ja = {
   auto: "自動", watch: "追加したフォルダーを監視", watchHint: "フォルダーにコピーされた新しいファイルを自動で処理します。「停止」を押すまで続きます。",
   watchNeedsFolder: "監視するフォルダーを追加してください。", watching: "新しいファイルを待機中", stop: "停止",
   noCache: "検証済みのファイルも再検証", noCacheHint: "NXPress は検証または書き込んだファイルを記憶し、変更がない限り読み直しません。",
+  lowPriority: "低い優先度", lowPriorityHint: "NXPress をほかのプログラムより後回しにして、多くのファイルを処理している間もコンピューターが快適に動くようにします。ほかのプログラムがプロセッサを使うときは少し遅くなります。Linux では、オフにすると次に NXPress を開いたときから反映されます。",
   template: "名前のテンプレート", templateHint: "フィールド: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}、または Switch Library Manager の書き方: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... 拡張子はそのままです。", templateReset: "既定",
   fat32Hint: "microSD 上でフォルダーがフォルダーとして表示される場合は、アーカイブビットを設定してください（Hekate: Tools, Archive bit）。Windows では NXPress が設定します。",
   cancel: "キャンセル", waiting: "待機中", ok: "OK", failed: "失敗", skipped: "スキップ", cancelled: "キャンセル済み",

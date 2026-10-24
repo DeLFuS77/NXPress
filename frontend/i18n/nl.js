@@ -64,6 +64,7 @@ texts.nl = {
   auto: "Automatisch", watch: "Toegevoegde mappen in de gaten houden", watchHint: "Nieuwe bestanden die erin gekopieerd worden, worden vanzelf verwerkt, tot je op Stoppen drukt.",
   watchNeedsFolder: "Voeg een map toe om die in de gaten te houden.", watching: "Wacht op nieuwe bestanden", stop: "Stoppen",
   noCache: "Al gecontroleerde bestanden opnieuw controleren", noCacheHint: "NXPress onthoudt de bestanden die het controleerde of schreef, en leest ze niet opnieuw zolang ze niet veranderen.",
+  lowPriority: "Lage prioriteit", lowPriorityHint: "NXPress loopt achter de andere programma's aan, zodat de computer reageert terwijl het veel bestanden verwerkt; het gaat wat trager als die de processor nodig hebben. Op Linux werkt uitzetten pas bij de volgende start van NXPress.",
   template: "Naamsjabloon", templateHint: "Velden: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, of zoals Switch Library Manager ze schrijft: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... De extensie blijft.", templateReset: "Standaard",
   fat32Hint: "Als de console de map op de microSD als map toont, zet dan zijn archiefbit (Hekate: Tools, Archive bit). Op Windows doet NXPress dat al.",
   cancel: "Annuleren", waiting: "Wacht", ok: "OK", failed: "Mislukt", skipped: "Overgeslagen", cancelled: "Geannuleerd",

@@ -64,6 +64,7 @@ texts.it = {
   auto: "Automatico", watch: "Controlla le cartelle aggiunte", watchHint: "I nuovi file copiati al loro interno vengono elaborati da soli, finché non premi Ferma.",
   watchNeedsFolder: "Aggiungi una cartella per controllarla.", watching: "In attesa di nuovi file", stop: "Ferma",
   noCache: "Verifica di nuovo i file già verificati", noCacheHint: "NXPress ricorda i file che ha verificato o scritto, e non li rilegge finché non cambiano.",
+  lowPriority: "Priorità bassa", lowPriorityHint: "NXPress va dietro agli altri programmi, così il computer resta reattivo mentre lavora su molti file; va un po' più lento quando loro usano il processore. Su Linux, disattivarla ha effetto alla prossima apertura di NXPress.",
   template: "Modello del nome", templateHint: "Campi: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, o come li scrive Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... L'estensione resta.", templateReset: "Predefinito",
   fat32Hint: "Sulla microSD, se la console mostra la cartella come cartella, imposta il suo bit di archivio (Hekate: Tools, Archive bit). Su Windows NXPress lo imposta già.",
   cancel: "Annulla", waiting: "In attesa", ok: "OK", failed: "Errore", skipped: "Saltato", cancelled: "Annullato",

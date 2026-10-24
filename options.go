@@ -12,39 +12,40 @@ import (
 // can take its place in scripts and in the tools that call it; a few of them have no use
 // here and are accepted without effect.
 type options struct {
-	compress   bool
-	decompress bool
-	verify     bool
-	info       bool
-	convert    bool
-	recompress bool
-	trim       bool
-	estimate   bool
-	measure    bool
-	fat32      bool
-	template   string
-	watch      bool
-	noCache    bool
-	levels     bool
-	split      bool
-	pack       string
-	packGames  bool
-	packName   string
-	level      int
-	block      bool
-	threads    int
-	multi      int
-	output     string
-	overwrite  bool
-	rmSource   bool
-	keys       string
-	dat        string
-	datFile    *dat
-	minimal    bool
-	machine    bool
-	version    bool
-	help       bool
-	files      []string
+	compress    bool
+	decompress  bool
+	verify      bool
+	info        bool
+	convert     bool
+	recompress  bool
+	trim        bool
+	estimate    bool
+	measure     bool
+	fat32       bool
+	template    string
+	watch       bool
+	noCache     bool
+	levels      bool
+	split       bool
+	pack        string
+	packGames   bool
+	packName    string
+	level       int
+	block       bool
+	lowPriority bool
+	threads     int
+	multi       int
+	output      string
+	overwrite   bool
+	rmSource    bool
+	keys        string
+	dat         string
+	datFile     *dat
+	minimal     bool
+	machine     bool
+	version     bool
+	help        bool
+	files       []string
 	// the options of nsz accepted without effect, told once
 	ignored []string
 }
@@ -104,6 +105,8 @@ func parseOptions(args []string) (options, error) {
 			o.verify = true
 		case "-B", "--block":
 			o.block = true
+		case "--low-priority":
+			o.lowPriority = true
 		case "-S", "--solid":
 			o.block = false
 		case "-w", "--overwrite":
@@ -264,6 +267,8 @@ Usage: nxpress [options] file or folder...
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)
+  --low-priority      run below the normal priority of the processor, so the computer stays
+                      responsive while NXPress works
   -m, --multi N       files at once (default 1)
   -o, --output DIR    folder of the new files (default: next to each file)
   --watch             keep looking at the folders given and work on each new file once it

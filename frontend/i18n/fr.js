@@ -64,6 +64,7 @@ texts.fr = {
   auto: "Automatique", watch: "Surveiller les dossiers ajoutés", watchHint: "Les nouveaux fichiers copiés dedans sont traités tout seuls, jusqu'à ce que vous appuyiez sur Arrêter.",
   watchNeedsFolder: "Ajoutez un dossier pour le surveiller.", watching: "Surveillance des nouveaux fichiers", stop: "Arrêter",
   noCache: "Revérifier les fichiers déjà vérifiés", noCacheHint: "NXPress retient les fichiers qu'il a vérifiés ou écrits, et ne les relit pas tant qu'ils ne changent pas.",
+  lowPriority: "Priorité basse", lowPriorityHint: "NXPress passe après les autres programmes, pour que l'ordinateur reste réactif pendant qu'il traite beaucoup de fichiers ; il va un peu moins vite quand ils ont besoin du processeur. Sous Linux, la désactiver prend effet au prochain lancement de NXPress.",
   template: "Modèle de nom", templateHint: "Champs : {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, ou comme les écrit Switch Library Manager : {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... L'extension est conservée.", templateReset: "Par défaut",
   fat32Hint: "Sur la microSD, si la console affiche le dossier comme un dossier, activez son bit d'archive (Hekate : Tools, Archive bit). Sous Windows, NXPress le fait déjà.",
   cancel: "Annuler", waiting: "En attente", ok: "OK", failed: "Échec", skipped: "Ignoré", cancelled: "Annulé",

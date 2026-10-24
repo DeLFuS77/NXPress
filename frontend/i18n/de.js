@@ -64,6 +64,7 @@ texts.de = {
   auto: "Automatisch", watch: "Hinzugefügte Ordner überwachen", watchHint: "Neue Dateien, die hineinkopiert werden, werden von selbst bearbeitet, bis du Stopp drückst.",
   watchNeedsFolder: "Füge einen Ordner hinzu, um ihn zu überwachen.", watching: "Überwache neue Dateien", stop: "Stopp",
   noCache: "Bereits geprüfte Dateien erneut prüfen", noCacheHint: "NXPress merkt sich die Dateien, die es geprüft oder geschrieben hat, und liest sie nicht erneut, solange sie sich nicht ändern.",
+  lowPriority: "Niedrige Priorität", lowPriorityHint: "NXPress läuft hinter den anderen Programmen, damit der Computer reaktionsfähig bleibt, während es viele Dateien bearbeitet; es wird etwas langsamer, wenn sie den Prozessor brauchen. Unter Linux wirkt das Ausschalten erst beim nächsten Start von NXPress.",
   template: "Namensvorlage", templateHint: "Felder: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, oder wie Switch Library Manager sie schreibt: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... Die Endung bleibt.", templateReset: "Standard",
   fat32Hint: "Wenn die Konsole den Ordner auf der microSD als Ordner zeigt, setze sein Archivbit (Hekate: Tools, Archive bit). Unter Windows setzt NXPress es schon.",
   cancel: "Abbrechen", waiting: "Wartet", ok: "OK", failed: "Fehler", skipped: "Übersprungen", cancelled: "Abgebrochen",

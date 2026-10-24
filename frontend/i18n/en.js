@@ -64,6 +64,7 @@ texts.en = {
   auto: "Automatic", watch: "Watch the folders added", watchHint: "New files copied into them are worked on by themselves, until you press Stop.",
   watchNeedsFolder: "Add a folder to watch it.", watching: "Watching for new files", stop: "Stop",
   noCache: "Check again files already checked", noCacheHint: "NXPress remembers the files it checked or wrote, and does not read them again while they do not change.",
+  lowPriority: "Low priority", lowPriorityHint: "NXPress runs below the other programs, so the computer stays responsive while it works on many files; it goes a little slower when they need the processor. On Linux, once turned off it takes effect when NXPress opens again.",
   template: "Name template", templateHint: "Fields: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb}, or as Switch Library Manager writes them: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... The extension is kept.", templateReset: "Default",
   fat32Hint: "On the microSD card, if the console shows the folder as a folder, set its archive bit (Hekate: Tools, Archive bit). On Windows NXPress sets it already.",
   cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", skipped: "Skipped", cancelled: "Cancelled",

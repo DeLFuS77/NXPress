@@ -66,6 +66,12 @@ func run(args []string) int {
 		return 2
 	}
 
+	if o.lowPriority {
+		if err := setLowPriority(true); err != nil {
+			out.say("note: the priority could not be lowered: %v", err)
+		}
+	}
+
 	// Ctrl+C stops the files at work; their half written files are removed
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

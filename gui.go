@@ -303,6 +303,7 @@ type Request struct {
 	Watch        bool     `json:"watch"`
 	NoCache      bool     `json:"noCache"`
 	Levels       bool     `json:"levels"`
+	LowPriority  bool     `json:"lowPriority"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -318,6 +319,11 @@ func (a *App) Start(request Request) error {
 	o.watch = request.Watch
 	o.noCache = request.NoCache
 	o.levels = request.Levels
+	// below the normal priority when asked, normal again when not (Linux may refuse to raise
+	// it back: NXPress then stays low until it is opened again)
+	if err := setLowPriority(request.LowPriority); err != nil && request.LowPriority {
+		wailsruntime.EventsEmit(a.ctx, "say", "the priority could not be lowered: "+err.Error())
+	}
 	switch request.Mode {
 	case "compress":
 		o.compress = true

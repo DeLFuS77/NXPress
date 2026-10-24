@@ -4,6 +4,7 @@
 
 ### New
 
+- Low priority, under Advanced (`--low-priority`): NXPress runs below the other programs, so the computer stays responsive while it works on many files (thanks @NikoMuffin, #10)
 - Pack a SuperNSP per game: give Pack a whole collection, and each game goes with its updates and DLC into a file of its own, found by the title IDs inside the files, not by their names, and named by a template, by default "{name} [{id}][v{version}] ({contents})": Game [0100...][v65536] (1G+1U+2D).nsp. A game with one file only is SKIPPED. One file with everything stays as a choice; on the command line, `--pack-games` and `--pack-name` (thanks @NikoMuffin, #3)
 - New fields for Rename and for the packs: {version_txt}, the version as the game shows it (1.0.5), read from the control data of its update or of the game (#18); {contents}, the titles of each kind a file holds (1G+1U+2D), and {size_gb} and {size_mb} (#19). The fields as Switch Library Manager writes them work too ({TITLE_NAME}, {TITLE_ID}, {VERSION}, {VERSION_TXT}, {TYPE}, {PACKAGE_CONTENTS}, {SIZE_GB}, {SIZE_MB}), and brackets left empty are taken away. For a game with its updates, {version} is the version of the newest update (thanks @NikoMuffin, #18, #19)
 - Packs by game and names with these fields were already in Switch Library Manager Web, which this program comes from: they are brought here
