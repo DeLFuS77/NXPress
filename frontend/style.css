@@ -208,6 +208,9 @@ label.choice small { display: block; font-size: 12px; color: var(--muted); margi
 .path { display: flex; gap: 6px; align-items: center; }
 .presets-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
 .presets-row:first-of-type { margin-top: 0; }
+/* a template is longer than the panel is wide: it wraps, whole, with its button under it */
+textarea.template { display: block; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.template-row { display: flex; justify-content: flex-end; margin-top: 4px; }
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }

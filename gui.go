@@ -233,6 +233,11 @@ func (a *App) NewNames(paths []string, template string) []string {
 	return names
 }
 
+// DefaultPackTemplate is the name of the pack of each game when none is chosen.
+func (a *App) DefaultPackTemplate() string {
+	return defaultPackTemplate
+}
+
 // DefaultTemplate is the template of names offered first.
 func (a *App) DefaultTemplate() string {
 	return defaultTemplate
@@ -291,6 +296,8 @@ type Request struct {
 	Overwrite    bool     `json:"overwrite"`
 	RemoveSource bool     `json:"removeSource"`
 	Pack         string   `json:"pack"`
+	PackGames    bool     `json:"packGames"`
+	PackTemplate string   `json:"packTemplate"`
 	Dat          string   `json:"dat"`
 	Template     string   `json:"template"`
 	Watch        bool     `json:"watch"`
@@ -338,6 +345,11 @@ func (a *App) Start(request Request) error {
 	case "info":
 		o.info = true
 	case "pack":
+		// a SuperNSP per game, named by its template; else one file with everything
+		if request.PackGames {
+			o.packGames, o.packName = true, request.PackTemplate
+			break
+		}
 		if request.Pack == "" {
 			return errors.New("choose the name of the new file")
 		}

@@ -28,6 +28,8 @@ type options struct {
 	levels     bool
 	split      bool
 	pack       string
+	packGames  bool
+	packName   string
 	level      int
 	block      bool
 	threads    int
@@ -55,7 +57,7 @@ const (
 // the options that take a value, by every name they have
 var valued = map[string]string{
 	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--depth": "depth", "--dat": "dat", "--rename": "rename",
+	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename",
 }
 
 // the options of nsz that NXPress accepts and has no use for
@@ -130,6 +132,8 @@ func parseOptions(args []string) (options, error) {
 			o.levels = true
 		case "--split":
 			o.split = true
+		case "--pack-games":
+			o.packGames = true
 		case "--minimal-output":
 			o.minimal = true
 		case "--machine-readable":
@@ -180,6 +184,8 @@ func (o *options) set(what string, name string, value string) error {
 		o.template = value
 	case "pack":
 		o.pack = value
+	case "packName":
+		o.packName = value
 	case "bs", "depth":
 		o.ignored = append(o.ignored, name)
 	}
@@ -207,13 +213,13 @@ func defaultThreads(files int) int {
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.packGames, o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split and --pack")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack and --pack-games")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -286,9 +292,12 @@ Usage: nxpress [options] file or folder...
   --fat32             files bigger than FAT32 holds (4 GiB) to a folder of parts with the
                       archive bit, which the console reads as one file; and files in parts
                       (such a folder, or name.ns0, name.ns1...) back to one file
-  --rename TEMPLATE   rename files by what they hold: {name}, {id}, {version} and {type} of
-                      their main title, {titles} how many they hold; for example
-                      "{name} [{id}][v{version}]"
+  --rename TEMPLATE   rename files by what they hold: {name}, {id}, {version} (of the newest
+                      update, for a game with its updates), {version_txt} (as the game
+                      shows it: 1.0.5), {type}, {titles}, {contents} (1G+1U+2D),
+                      {size_gb} and {size_mb}; the fields of Switch Library Manager
+                      ({TITLE_NAME}, {VERSION_TXT}, {PACKAGE_CONTENTS}...) work too. For
+                      example "{name} [{id}][v{version}]"
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ; of a
@@ -296,6 +305,11 @@ Usage: nxpress [options] file or folder...
                       newer update of its game give the SuperNSP with the new update);
                       with an XCI or XCZ among them, its updates and DLC go into the game
                       card, and the pack is an XCI (or an XCZ)
+  --pack-games        pack the files given by game: each game with its updates and DLC in a
+                      SuperNSP of its own, next to its files (or in -o); a game with one
+                      file only is left as it is
+  --pack-name T       the name of each pack of --pack-games, by the fields of --rename
+                      (default "{name} [{id}][v{version}] ({contents})")
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted

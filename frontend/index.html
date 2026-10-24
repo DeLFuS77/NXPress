@@ -145,10 +145,8 @@
 
     <section class="block" data-for="rename">
       <h2 data-t="template"></h2>
-      <div class="presets-row">
-        <input id="template" type="text">
-        <button id="template-reset" class="quiet" data-t="templateReset"></button>
-      </div>
+      <textarea id="template" class="template" rows="1" spellcheck="false"></textarea>
+      <div class="template-row"><button id="template-reset" class="quiet" data-t="templateReset"></button></div>
       <p class="hint" data-t="templateHint"></p>
     </section>
 
@@ -166,13 +164,27 @@
     </section>
 
     <section class="block" data-for="pack">
-      <h2 data-t="packFile"></h2>
-      <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
+      <div class="field" role="radiogroup">
+        <label class="choice"><input type="radio" name="pack-kind" value="games" id="pack-games">
+          <span><b data-t="packGames"></b><small data-t="packGamesHint"></small></span></label>
+        <label class="choice"><input type="radio" name="pack-kind" value="one" id="pack-one">
+          <span><b data-t="packOne"></b><small data-t="packOneHint"></small></span></label>
+      </div>
+      <div id="pack-one-fields">
+        <h2 data-t="packFile"></h2>
+        <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
+      </div>
+      <div id="pack-games-fields">
+        <h2 data-t="packTemplate"></h2>
+        <textarea id="pack-template" class="template" rows="1" spellcheck="false"></textarea>
+        <div class="template-row"><button id="pack-template-reset" class="quiet" data-t="templateReset"></button></div>
+        <p class="hint" data-t="templateHint"></p>
+      </div>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim convert split pack fat32">
       <h2 data-t="result"></h2>
-      <div class="field" data-for="compress decompress recompress trim convert split fat32">
+      <div class="field" id="output-field" data-for="compress decompress recompress trim convert split fat32 pack">
         <div class="label" data-t="output"></div>
         <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon">✕</button></div>
       </div>

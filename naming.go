@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -22,27 +23,60 @@ type gameTitle struct {
 	Version int    `json:"version"`
 	Type    string `json:"type"`
 	Titles  int    `json:"titles"`
+	// what a name tells of the file: the version of its newest update when it holds the game
+	// and its updates (its own version else), the version as the game shows it, the titles of
+	// each kind it holds and its size
+	Latest     int    `json:"latest"`
+	VersionTxt string `json:"versionTxt"`
+	Bases      int    `json:"bases"`
+	Updates    int    `json:"updates"`
+	Dlcs       int    `json:"dlcs"`
+	Size       int64  `json:"size"`
 	// the icon of the game, as a data URL, when asked for
 	Icon string `json:"icon,omitempty"`
 }
 
-// readTitle reads the main title of a game file; withIcon adds its icon.
-func readTitle(path string, withIcon bool) (gameTitle, error) {
+// readTitles reads the titles a game file holds.
+func readTitles(path string) ([]*switchfs.ContentMetaAttributes, error) {
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
 	}
 	titles, err := read(path)
 	if err != nil {
-		return gameTitle{}, err
+		return nil, err
 	}
 	if len(titles) == 0 {
-		return gameTitle{}, errors.New("it holds no title")
+		return nil, errors.New("it holds no title")
 	}
 	all := make([]*switchfs.ContentMetaAttributes, 0, len(titles))
 	for _, title := range titles {
 		all = append(all, title)
 	}
+	return all, nil
+}
+
+// readTitle reads the main title of a game file; withIcon adds its icon.
+func readTitle(path string, withIcon bool) (gameTitle, error) {
+	all, err := readTitles(path)
+	if err != nil {
+		return gameTitle{}, err
+	}
+	result := describeTitles(all)
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		result.Size = info.Size()
+	}
+	if withIcon {
+		if icon, err := switchfs.ExtractIcon(path); err == nil && len(icon) > 0 {
+			result.Icon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
+		}
+	}
+	return result, nil
+}
+
+// describeTitles tells what titles tell together: the main one (the game, else its update,
+// else a DLC), its name, its versions and how many of each kind there are.
+func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 	order := map[string]int{"BASE": 0, "UPD": 1, "DLC": 2}
 	sort.Slice(all, func(i, j int) bool {
 		if order[all[i].Type] != order[all[j].Type] {
@@ -51,7 +85,30 @@ func readTitle(path string, withIcon bool) (gameTitle, error) {
 		return all[i].TitleId < all[j].TitleId
 	})
 	main := all[0]
-	result := gameTitle{TitleID: strings.ToUpper(main.TitleId), Version: main.Version, Type: main.Type, Titles: len(all)}
+	result := gameTitle{TitleID: strings.ToUpper(main.TitleId), Version: main.Version, Type: main.Type, Titles: len(all), Latest: main.Version}
+	// the version a name tells: the newest update of the game when the file holds it, else
+	// the version of the main title; as the game shows it, from its control data (a DLC has
+	// none: 1.0.0 for its first version)
+	shown := main
+	for _, title := range all {
+		switch title.Type {
+		case "BASE":
+			result.Bases++
+		case "UPD":
+			result.Updates++
+			if main.Type == "BASE" && title.Version > result.Latest {
+				result.Latest, shown = title.Version, title
+			}
+		case "DLC":
+			result.Dlcs++
+		}
+	}
+	if shown.Ncap != nil {
+		result.VersionTxt = strings.TrimSpace(shown.Ncap.DisplayVersion)
+	}
+	if result.VersionTxt == "" && main.Type == "DLC" && main.Version == 0 {
+		result.VersionTxt = "1.0.0"
+	}
 	// the name of the game: the main title, else another title of the file that has one
 	for _, title := range all {
 		if title.Ncap == nil {
@@ -75,22 +132,53 @@ func readTitle(path string, withIcon bool) (gameTitle, error) {
 			break
 		}
 	}
-	if withIcon {
-		if icon, err := switchfs.ExtractIcon(path); err == nil && len(icon) > 0 {
-			result.Icon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
-		}
-	}
-	return result, nil
+	return result
 }
 
-// trailingTags are the [tags] at the end of a name, such as [0100...][v0][US].
-var trailingTags = regexp.MustCompile(`(\s*\[[^\]]*\])+$`)
+// baseTitleID is the title ID of the game a title belongs to: an update is the game with 0x800
+// added, a DLC the game with 0x1000 and its number added.
+func baseTitleID(title *switchfs.ContentMetaAttributes) uint64 {
+	id, _ := strconv.ParseUint(title.TitleId, 16, 64)
+	switch title.Type {
+	case "UPD":
+		return id &^ 0xFFF
+	case "DLC":
+		return id&^0xFFF - 0x1000
+	}
+	return id
+}
+
+// trailingTags are the tags at the end of a name the templates write, so a name taken from the
+// file does not get them twice: [0100...][v0][US], (v65536), (v1.0.5), (1G+1U+2D), 2.7GB, 600MB
+var trailingTags = regexp.MustCompile(`(\s*(\[[^\]]*\]|\(v[0-9.]*\)|\([0-9]+[GUD](\+[0-9]+[GUD])*\)|[0-9]+(\.[0-9])?[GM]B))+$`)
 
 // defaultTemplate is the name a file gets when no template is given.
 const defaultTemplate = "{name} [{id}][v{version}]"
 
-// newName is the name of a file by a template: {name}, {id}, {version} and {type} of its main
-// title, and {titles}, how many it holds. Its extension is kept.
+// contents tells the titles of each kind a file holds, as Switch Library Manager writes it:
+// 1G+1U+2D for a game, its update and two DLC; the kinds it has none of are left out.
+func (title gameTitle) contents() string {
+	parts := []string{}
+	for _, kind := range []struct {
+		count  int
+		letter string
+	}{{title.Bases, "G"}, {title.Updates, "U"}, {title.Dlcs, "D"}} {
+		if kind.count > 0 {
+			parts = append(parts, fmt.Sprintf("%d%s", kind.count, kind.letter))
+		}
+	}
+	return strings.Join(parts, "+")
+}
+
+// emptyPairs are brackets left with nothing in them, a field that had no value
+var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
+
+// newName is the name of a file by a template. Its fields, in lower case or as Switch Library
+// Manager writes them: {name} {TITLE_NAME}, {id} {TITLE_ID}, {version} {VERSION} (of the newest
+// update for a game with its updates), {version_txt} {VERSION_TXT} (as the game shows it,
+// 1.0.5), {type} {TYPE}, {titles}, {contents} {PACKAGE_CONTENTS} (1G+1U+2D), {size_gb}
+// {SIZE_GB} and {size_mb} {SIZE_MB}. {REGION} and {DLC_NAME}, which that program takes from
+// its database of titles, are left empty, as brackets left with nothing. Its extension is kept.
 func newName(path string, title gameTitle, template string) string {
 	if template == "" {
 		template = defaultTemplate
@@ -100,9 +188,32 @@ func newName(path string, title gameTitle, template string) string {
 		// the name of the file, without the [title ID][version] tags the template adds again
 		name = strings.TrimSpace(trailingTags.ReplaceAllString(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), ""))
 	}
-	replacer := strings.NewReplacer("{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(title.Version),
-		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles))
-	result := replacer.Replace(template)
+	sizeGB, sizeMB := "", ""
+	if title.Size > 0 {
+		// decimal units, rounded half up, as Switch Library Manager writes them
+		tenths := (title.Size + 50_000_000) / 100_000_000
+		sizeGB = fmt.Sprintf("%d.%dGB", tenths/10, tenths%10)
+		sizeMB = fmt.Sprintf("%dMB", (title.Size+500_000)/1_000_000)
+	}
+	fields := []string{
+		"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
+		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", title.contents(),
+		"{size_gb}", sizeGB, "{size_mb}", sizeMB,
+	}
+	// the same fields as Switch Library Manager writes them, added after the ones above
+	lower := len(fields)
+	for i := 0; i < lower; i += 2 {
+		upper := map[string]string{"{name}": "{TITLE_NAME}", "{id}": "{TITLE_ID}", "{contents}": "{PACKAGE_CONTENTS}"}[fields[i]]
+		if upper == "" {
+			upper = strings.ToUpper(fields[i])
+		}
+		if upper != "{TITLES}" {
+			fields = append(fields, upper, fields[i+1])
+		}
+	}
+	fields = append(fields, "{REGION}", "", "{region}", "", "{DLC_NAME}", "", "{dlc_name}", "")
+	result := strings.NewReplacer(fields...).Replace(template)
+	result = emptyPairs.ReplaceAllString(result, "")
 	// what file systems do not take in a name
 	result = strings.Map(func(r rune) rune {
 		if strings.ContainsRune(`<>:"/\|?*`, r) || r < 32 {

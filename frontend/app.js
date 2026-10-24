@@ -107,6 +107,12 @@ function render() {
   $("output").classList.toggle("empty", !state.output);
   $("reset-output").hidden = !state.output;
   $("reset-output").title = t("nextTo");
+  // a SuperNSP per game, or one file with everything
+  $("pack-one-fields").hidden = $("pack-games").checked;
+  $("pack-games-fields").hidden = !$("pack-games").checked;
+  for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
+  // one file with everything is saved where it is chosen; a pack per game where Save in says
+  if (state.mode === "pack" && !$("pack-games").checked) $("output-field").hidden = true;
   $("pack").textContent = state.pack || t("noPack");
   $("pack").title = state.pack;
   $("pack").classList.toggle("empty", !state.pack);
@@ -317,6 +323,7 @@ function settings() {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template,
+    packGames: $("pack-games").checked, packTemplate: state.packTemplate,
   };
 }
 
@@ -332,6 +339,13 @@ const builtinPresets = () => [
 function presetKey(all, index) {
   const preset = all[index];
   return !preset ? "" : preset.builtin ? "builtin:" + index : preset.name;
+}
+
+// a template field is as tall as its text, which wraps; a new line is no part of a name
+function fitTemplate(field) {
+  if (/[\r\n]/.test(field.value)) field.value = field.value.replace(/\s*[\r\n]+\s*/g, " ");
+  field.style.height = "auto";
+  field.style.height = field.scrollHeight + 2 + "px";
 }
 
 function renderPresets() {
@@ -368,7 +382,7 @@ async function start(mode, extra) {
   mode = typeof mode === "string" ? mode : state.mode;
   if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
-  if (state.mode === "pack" && !state.pack) { $("status").textContent = t("needPack"); return; }
+  if (state.mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
   const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
@@ -448,7 +462,7 @@ function listen() {
     summary();
   });
   events.EventsOn("done", event => {
-    if (state.mode === "pack") {
+    if (state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames)) {
       // a pack is one result for all its files
       for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: state.lastRun && state.lastRun.started });
     }
@@ -499,10 +513,11 @@ function listen() {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
-    const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
+    const onePack = state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames);
+    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
     keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
-    const skippedRows = state.mode === "pack" || !state.lastRun ? 0 : state.lastRun.skipped;
+    const skippedRows = onePack || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
@@ -693,6 +708,10 @@ async function main() {
   state.dat = chosen.dat || "";
   state.template = chosen.template || await app().DefaultTemplate();
   $("template").value = state.template;
+  // a pack per game unless one file with everything was chosen last
+  $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
+  state.packTemplate = chosen.packTemplate || await app().DefaultPackTemplate();
+  $("pack-template").value = state.packTemplate;
 
   $("level").oninput = () => { $("preset").value = ""; render(); };
   document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; render(); }; });
@@ -723,6 +742,13 @@ async function main() {
   $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); };
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
+  for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); };
+  for (const field of [$("template"), $("pack-template")]) {
+    field.addEventListener("input", () => fitTemplate(field));
+    field.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });
+  }
+  $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); };
+  $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
   $("choose-pack").onclick = async () => { const path = await app().ChoosePack(); if (path) state.pack = path; render(); };
   $("send-to").onclick = async () => {
     try {
