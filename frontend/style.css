@@ -127,6 +127,7 @@ td.name { word-break: break-word; }
 .game .file { font-size: 11px; color: var(--muted); }
 td.name .note { font-size: 12px; color: var(--muted); margin-top: 3px; user-select: text; -webkit-user-select: text; }
 td.name .note.bad { color: var(--bad); }
+td.name .note.warn { color: var(--warn); }
 td.name .note a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
 td.name .note a:hover { text-decoration: underline; }
 .size, td.size { width: 90px; text-align: right; white-space: nowrap; color: var(--muted); }
@@ -139,6 +140,7 @@ td.remove button { padding: 2px 8px; }
 .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
 .badge.ok { color: var(--ok); background: var(--ok-soft); }
 .badge.failed { color: var(--bad); background: var(--bad-soft); }
+.badge.skipped { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 #log { margin: 0 20px 12px; max-height: 160px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 

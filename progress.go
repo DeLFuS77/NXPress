@@ -72,13 +72,18 @@ func (r *reporter) done(path string, output string, note string, err error) {
 		if note != "" {
 			result["note"] = note
 		}
-		if err != nil {
+		switch {
+		case isSkipped(err):
+			result["result"], result["note"] = "skipped", err.Error()
+		case err != nil:
 			result["result"], result["error"] = "error", err.Error()
 		}
 		r.json(result)
 		return
 	}
 	switch {
+	case isSkipped(err):
+		fmt.Fprintf(r.out, "SKIPPED %s (%v)\n", filepath.Base(path), err)
 	case err != nil:
 		fmt.Fprintf(r.out, "FAILED %s: %v\n", filepath.Base(path), err)
 	case output != "" && note != "":

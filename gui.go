@@ -429,7 +429,10 @@ func (w *window) done(path string, output string, note string, err error) {
 	if info, err := os.Stat(output); output != "" && err == nil {
 		result["size"] = info.Size()
 	}
-	if err != nil {
+	switch {
+	case isSkipped(err):
+		result["skipped"], result["note"] = true, err.Error()
+	case err != nil:
 		result["error"] = err.Error()
 		if errors.Is(err, context.Canceled) {
 			result["error"] = "cancelled"

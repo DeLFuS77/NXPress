@@ -15,6 +15,12 @@ const languages = [
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
+  [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
+  [/it uses sparse storage, which cannot be compressed yet/g, "sparseWhy"],
+  [/its sections use an encryption the app does not read/g, "encryptionWhy"],
+  [/it holds no game data(?= \()/g, "noGameDataWhy"],
+  [/it is compressed already \(it holds NCZ files\), an NSZ or XCZ under another name/g, "alreadyCompressedWhy"],
+  [/it holds no NCA file but metadata/g, "onlyMetaWhy"],
   [/^nothing in it can be compressed$/, "nothingToCompress"],
   [/^it holds one title, nothing to split$/, "oneTitle"],
   [/^nothing to trim, it ends where its data ends$/, "trimNoPadding"],

@@ -122,7 +122,7 @@ function render() {
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
   $("pause").hidden = !state.busy;
   $("pause").textContent = state.paused ? t("resume") : t("pause");
-  $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => row.status === "ok" || row.status === "failed");
+  $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
   $("send-to").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
@@ -142,8 +142,9 @@ function summary() {
   text.textContent = "";
   bar.hidden = true;
   if (state.busy) {
-    const done = rows.filter(row => row.status === "ok" || row.status === "failed").length;
-    const share = rows.reduce((sum, row) => sum + (row.status === "ok" || row.status === "failed" ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, rows.length);
+    const ended = row => ["ok", "failed", "skipped"].includes(row.status);
+    const done = rows.filter(ended).length;
+    const share = rows.reduce((sum, row) => sum + (ended(row) ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, rows.length);
     text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, rows.length, Math.floor(share * 100));
     if (state.lastRun && state.lastRun.watch) text.textContent = t("watching") + " · " + text.textContent;
     bar.hidden = false;
@@ -261,13 +262,17 @@ function paint(row) {
   } else if (row.status === "ok") {
     cell.innerHTML = `<span class="badge ok"></span>`;
     cell.firstChild.textContent = t("ok");
+  } else if (row.status === "skipped") {
+    // left as it is, with why: neither done nor failed
+    cell.innerHTML = `<span class="badge skipped"></span>`;
+    cell.firstChild.textContent = t("skipped");
   } else if (row.status === "failed") {
     cell.innerHTML = `<span class="badge ${row.error === "cancelled" ? "waiting" : "failed"}"></span>`;
     cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : t("failed");
   } else {
     cell.innerHTML = "";
   }
-  note.className = "note" + (row.status === "failed" ? " bad" : "");
+  note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
   if (!row.status && state.mode === "rename" && row.preview && row.preview !== row.item.name) {
     note.textContent = "→ " + row.preview;
@@ -404,7 +409,7 @@ function listen() {
       for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok" });
     }
     const row = rowOf(event.file);
-    Object.assign(row, { status: event.error ? "failed" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
+    Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
     if (state.mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
@@ -439,7 +444,8 @@ function listen() {
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; }
     const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
-    const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds);
+    const skippedRows = state.mode === "pack" ? 0 : [...state.rows.values()].filter(row => row.status === "skipped").length;
+    const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
     if (event.cancelled || !event.failed) save("pending", null);

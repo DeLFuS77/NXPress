@@ -117,7 +117,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 					checked.keep(output, "")
 				}
 				out.done(path, output, note, err)
-				if err != nil {
+				if err != nil && !isSkipped(err) {
 					mutex.Lock()
 					failed++
 					mutex.Unlock()
@@ -134,6 +134,25 @@ func runJobs(ctx context.Context, o options, out output) int {
 	close(work)
 	wait.Wait()
 	return failed
+}
+
+// skippedError is a file left as it is, with why: not done, and not failed either, so it
+// is told apart from both (SKIPPED, and in yellow in the window).
+type skippedError struct {
+	reason string
+}
+
+func (e skippedError) Error() string {
+	return e.reason
+}
+
+func skipped(reason string) error {
+	return skippedError{reason: reason}
+}
+
+func isSkipped(err error) bool {
+	var s skippedError
+	return errors.As(err, &s)
 }
 
 // splitFiles, among the extensions taken, takes the files in parts too: a folder of parts, or
@@ -305,7 +324,12 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Compressing"),
 	})
 	if errors.Is(err, switchfs.ErrNotCompressible) {
-		return "", "nothing in it can be compressed, it is left as it is", nil
+		// why: what the library tells after its sentence, when it tells more
+		reason := "nothing in it can be compressed, it is left as it is"
+		if detail := strings.TrimPrefix(err.Error(), switchfs.ErrNotCompressible.Error()+": "); detail != err.Error() {
+			reason += ": " + detail
+		}
+		return "", "", skipped(reason)
 	}
 	if err != nil {
 		return "", "", err
