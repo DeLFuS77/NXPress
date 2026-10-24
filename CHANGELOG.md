@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- The program for Windows is published as nxpress.exe, without the version in its name: a new version replaces the old one without breaking its shortcuts or asking the firewall again. The version is in its properties (thanks @NikoMuffin, #2)
+- "Go on" is now "Resume" (thanks @NikoMuffin, #11)
+- The window opens where it was left, as big, and maximised when it was (thanks @NikoMuffin, #4)
+- Advanced is open, and stays as it was left; the saved settings chosen last are chosen again when NXPress opens (thanks @NikoMuffin, #13, #14)
+- Last report, in the menu: the files of the last work, how each ended and why, with the problems first and how many of each. After NXPress turned the computer off, it shows by itself the next time
+
+### Fixes
+
+- Turn off when done did not turn the computer off when a file had failed, and said nothing: it now turns it off once the work is done, failed files or not. When a program keeps the computer on, NXPress tells it, and Force it, beside it, closes such programs without saving (thanks @NikoMuffin, #8)
+- The box of the DAT cut its sentence at the start when none was chosen ("…e hashes of the content only"): the sentence shows whole, and only paths are cut (thanks @NikoMuffin, #7)
+- Trim marked an NSP or NSZ with nothing to trim OK in green: it is SKIPPED, and says that only updates have delta fragments (thanks @NikoMuffin, #12)
+- Measure this PC looked as if it did nothing: the game stayed "Waiting" for the half minute of the first trial, the button did nothing with an empty list, and the threads it set were hidden in Advanced. Each trial now tells it starts ("Measuring 2/6"), the button says it needs an NSP or XCI, Advanced opens on the fields it changed, which light up, and a window shows every setting tried, how fast it went and the one applied. It measures with the first NSP or XCI of the list that can be compressed, and when none can it is SKIPPED with why (thanks @NikoMuffin, #6)
+- A file with nothing to compress was marked OK in green with a general sentence: it is now SKIPPED, in yellow, with why (an NCA in sparse storage, sections with an encryption NXPress does not read, NCA files with no game data, or an NSZ named as an NSP), and it is not counted as done. With `--machine-readable` its result is "skipped" (thanks @NikoMuffin, #15)
+
 ## 1.2.0
 
 ### New
