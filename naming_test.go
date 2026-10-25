@@ -1,10 +1,6 @@
 package main
 
-import (
-	"testing"
-
-	"github.com/dtrunk90/switch-library-manager-web/switchfs"
-)
+import "testing"
 
 func TestNewName(t *testing.T) {
 	title := gameTitle{Name: "Some: Game?", TitleID: "0100000000010000", Version: 65536, Type: "BASE", Titles: 2}
@@ -65,24 +61,6 @@ func TestNewer(t *testing.T) {
 	}{{"1.0.1", "1.0.0", true}, {"1.1.0", "1.0.9", true}, {"2.0.0", "10.0.0", false}, {"1.0.0", "1.0.0", false}, {"1.0.0", "dev-abc", false}} {
 		if got := newer(c.a, c.b); got != c.want {
 			t.Fatalf("newer(%s, %s) = %v", c.a, c.b, got)
-		}
-	}
-}
-
-// The game a title belongs to: an update is the game with 0x800, a DLC the game with 0x1000 and
-// its number.
-func TestBaseTitleID(t *testing.T) {
-	for _, c := range []struct {
-		id, kind string
-		want     uint64
-	}{
-		{"0100BFC002B4E000", "BASE", 0x0100BFC002B4E000},
-		{"0100BFC002B4E800", "UPD", 0x0100BFC002B4E000},
-		{"0100B6400CA57088", "DLC", 0x0100B6400CA56000},
-		{"0100B6400CA57001", "DLC", 0x0100B6400CA56000},
-	} {
-		if got := baseTitleID(&switchfs.ContentMetaAttributes{TitleId: c.id, Type: c.kind}); got != c.want {
-			t.Errorf("%s %s: %016X", c.id, c.kind, got)
 		}
 	}
 }

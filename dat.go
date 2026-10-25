@@ -155,28 +155,3 @@ func (d *dat) match(ctx context.Context, path string, progress func(done int64, 
 	}
 	return fmt.Sprintf("not in the DAT: %d dumps of its size, with other hashes", len(candidates)), nil
 }
-
-// copyWithProgress copies size bytes, telling the progress.
-func copyWithProgress(ctx context.Context, output io.Writer, input io.Reader, size int64, progress func(done int64, total int64)) error {
-	buffer := make([]byte, 4<<20)
-	var done int64
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		n, err := input.Read(buffer)
-		if n > 0 {
-			output.Write(buffer[:n])
-			done += int64(n)
-			if progress != nil {
-				progress(done, size)
-			}
-		}
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-	}
-}

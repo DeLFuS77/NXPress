@@ -711,7 +711,7 @@ func packGames(ctx context.Context, o options, out output) int {
 		id := uint64(0)
 		for _, title := range titles {
 			if strings.EqualFold(title.TitleId, main.TitleID) {
-				id = baseTitleID(title)
+				id, _ = switchfs.GameTitleID(title.TitleId, title.Type)
 			}
 		}
 		if _, ok := groups[id]; !ok {

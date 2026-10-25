@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
 // options are what the command line asks for. The options of nsz work the same, so NXPress
@@ -195,22 +196,12 @@ func (o *options) set(what string, name string, value string) error {
 	return err
 }
 
-// usableProcessors are the processors NXPress works on: all but an eighth of them, at least
-// one, so the computer stays responsive while it compresses (4 of 3, 16 of 14, 32 of 28).
-func usableProcessors() int {
-	processors := runtime.NumCPU()
-	if processors <= 1 {
-		return 1
-	}
-	return processors - max(1, processors/8)
-}
-
 // defaultThreads are the threads of each file when none are asked: the usable processors,
 // shared among the files worked on at once. The zstd library in C compresses one file on all
 // of them (24 threads compressed 38 % faster than 12 on a processor of 24); the memory sets
 // fewer when it is short (switchfs.LimitThreads).
 func defaultThreads(files int) int {
-	return max(1, usableProcessors()/max(1, files))
+	return max(1, switchfs.UsableProcessors()/max(1, files))
 }
 
 // check tells an impossible request, and settles the values left to choose.

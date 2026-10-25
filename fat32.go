@@ -119,7 +119,7 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 		if err != nil {
 			return "", "", err
 		}
-		err = copyPart(ctx, io.MultiWriter(part, sum), io.NewSectionReader(input, done, length), length, func(n int64) { progress(done+n, size) })
+		err = copyWithProgress(ctx, io.MultiWriter(part, sum), io.NewSectionReader(input, done, length), length, func(n int64, _ int64) { progress(done+n, size) })
 		if closeErr := part.Close(); err == nil {
 			err = closeErr
 		}
@@ -189,7 +189,7 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 	}
 	sum := sha256.New()
 	progress := out.progress(path, "Joining")
-	err = copyPart(ctx, io.MultiWriter(output, sum), io.NewSectionReader(reader, 0, size), size, func(n int64) { progress(n, size) })
+	err = copyWithProgress(ctx, io.MultiWriter(output, sum), io.NewSectionReader(reader, 0, size), size, progress)
 	if closeErr := output.Close(); err == nil {
 		err = closeErr
 	}
@@ -267,7 +267,8 @@ func removeParts(path string) error {
 	}
 }
 
-func copyPart(ctx context.Context, output io.Writer, input io.Reader, size int64, progress func(int64)) error {
+// copyWithProgress copies size bytes, telling the progress when asked.
+func copyWithProgress(ctx context.Context, output io.Writer, input io.Reader, size int64, progress func(done int64, total int64)) error {
 	buffer := make([]byte, 4<<20)
 	var done int64
 	for done < size {
@@ -280,7 +281,9 @@ func copyPart(ctx context.Context, output io.Writer, input io.Reader, size int64
 				return werr
 			}
 			done += int64(n)
-			progress(done)
+			if progress != nil {
+				progress(done, size)
+			}
 		}
 		if err != nil {
 			return err
@@ -297,7 +300,7 @@ func checkSum(ctx context.Context, path string, size int64, want []byte, progres
 	}
 	defer reader.Close()
 	sum := sha256.New()
-	if err := copyPart(ctx, sum, io.NewSectionReader(reader, 0, size), size, func(n int64) { progress(n, size) }); err != nil {
+	if err := copyWithProgress(ctx, sum, io.NewSectionReader(reader, 0, size), size, progress); err != nil {
 		return err
 	}
 	if !bytes.Equal(sum.Sum(nil), want) {

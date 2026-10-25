@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -135,40 +134,12 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 	return result
 }
 
-// baseTitleID is the title ID of the game a title belongs to: an update is the game with 0x800
-// added, a DLC the game with 0x1000 and its number added.
-func baseTitleID(title *switchfs.ContentMetaAttributes) uint64 {
-	id, _ := strconv.ParseUint(title.TitleId, 16, 64)
-	switch title.Type {
-	case "UPD":
-		return id &^ 0xFFF
-	case "DLC":
-		return id&^0xFFF - 0x1000
-	}
-	return id
-}
-
 // trailingTags are the tags at the end of a name the templates write, so a name taken from the
 // file does not get them twice: [0100...][v0][US], (v65536), (v1.0.5), (1G+1U+2D), 2.7GB, 600MB
 var trailingTags = regexp.MustCompile(`(\s*(\[[^\]]*\]|\(v[0-9.]*\)|\([0-9]+[GUD](\+[0-9]+[GUD])*\)|[0-9]+(\.[0-9])?[GM]B))+$`)
 
 // defaultTemplate is the name a file gets when no template is given.
 const defaultTemplate = "{name} [{id}][v{version}]"
-
-// contents tells the titles of each kind a file holds, as Switch Library Manager writes it:
-// 1G+1U+2D for a game, its update and two DLC; the kinds it has none of are left out.
-func (title gameTitle) contents() string {
-	parts := []string{}
-	for _, kind := range []struct {
-		count  int
-		letter string
-	}{{title.Bases, "G"}, {title.Updates, "U"}, {title.Dlcs, "D"}} {
-		if kind.count > 0 {
-			parts = append(parts, fmt.Sprintf("%d%s", kind.count, kind.letter))
-		}
-	}
-	return strings.Join(parts, "+")
-}
 
 // emptyPairs are brackets left with nothing in them, a field that had no value
 var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
@@ -188,16 +159,10 @@ func newName(path string, title gameTitle, template string) string {
 		// the name of the file, without the [title ID][version] tags the template adds again
 		name = strings.TrimSpace(trailingTags.ReplaceAllString(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), ""))
 	}
-	sizeGB, sizeMB := "", ""
-	if title.Size > 0 {
-		// decimal units, rounded half up, as Switch Library Manager writes them
-		tenths := (title.Size + 50_000_000) / 100_000_000
-		sizeGB = fmt.Sprintf("%d.%dGB", tenths/10, tenths%10)
-		sizeMB = fmt.Sprintf("%dMB", (title.Size+500_000)/1_000_000)
-	}
+	sizeGB, sizeMB := switchfs.SizeGB(title.Size), switchfs.SizeMB(title.Size)
 	fields := []string{
 		"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
-		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", title.contents(),
+		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
 		"{size_gb}", sizeGB, "{size_mb}", sizeMB,
 	}
 	// the same fields as Switch Library Manager writes them, added after the ones above

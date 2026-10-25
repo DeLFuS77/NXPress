@@ -100,7 +100,7 @@ func TestDescribeTitles(t *testing.T) {
 		t.Fatalf("pack: %+v", pack)
 	}
 	dlc := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100000000011001", Type: "DLC"}})
-	if dlc.VersionTxt != "1.0.0" || dlc.Name != "" || dlc.Dlcs != 1 || dlc.contents() != "1D" {
+	if dlc.VersionTxt != "1.0.0" || dlc.Name != "" || dlc.Dlcs != 1 || switchfs.PackageContents(dlc.Bases, dlc.Updates, dlc.Dlcs) != "1D" {
 		t.Fatalf("a DLC: %+v", dlc)
 	}
 	other := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100000000010000", Type: "BASE", Ncap: control("", map[string]string{"Korean": "게임"})}})
