@@ -17,6 +17,7 @@
 - Trim marked an NSP or NSZ with nothing to trim OK in green: it is SKIPPED, and says that only updates have delta fragments (thanks @NikoMuffin, #12)
 - Measure this PC looked as if it did nothing: the game stayed "Waiting" for the half minute of the first trial, the button did nothing with an empty list, and the threads it set were hidden in Advanced. Each trial now tells it starts ("Measuring 2/6"), the button says it needs an NSP or XCI, Advanced opens on the fields it changed, which light up, and a window shows every setting tried, how fast it went and the one applied. It measures with the first NSP or XCI of the list that can be compressed, and when none can it is SKIPPED with why (thanks @NikoMuffin, #6)
 - A file with nothing to compress was marked OK in green with a general sentence: it is now SKIPPED, in yellow, with why (an NCA in sparse storage, sections with an encryption NXPress does not read, NCA files with no game data, or an NSZ named as an NSP), and it is not counted as done. With `--machine-readable` its result is "skipped" (thanks @NikoMuffin, #15)
+- FAT32 on Windows: a file split in its own folder (without -o) could not give way to its folder of parts, as NXPress still had it open, so the split failed once its parts were written and checked; with --rm-source into another folder, the original stayed, with an error. It is closed first now
 
 ## 1.2.0
 

@@ -18,10 +18,10 @@ import (
 // A file bigger than FAT32 holds (4 GiB) goes to a microSD card in parts: a folder with the
 // name of the file and the archive bit, holding 00, 01... The console reads such a folder as
 // one file. Parts of 4 GiB less 64 KiB, as the tools that dump games write them.
-const (
-	fat32Limit = 1<<32 - 1
-	fat32Part  = 0xFFFF0000
-)
+const fat32Limit = 1<<32 - 1
+
+// fat32Part is the size of each part (a variable, so the tests split small files)
+var fat32Part int64 = 0xFFFF0000
 
 // splitContainer tells whether path is a file in parts: a folder of a game file holding 00,
 // or the first part of one split as name.ns0 (or .nz0, .xc0, .xz0). It gives the name of the
@@ -114,7 +114,7 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	var done int64
 	parts := 0
 	for done < size {
-		length := min(int64(fat32Part), size-done)
+		length := min(fat32Part, size-done)
 		part, err := os.Create(filepath.Join(written, fmt.Sprintf("%02d", parts)))
 		if err != nil {
 			return "", "", err
@@ -133,6 +133,8 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	if err := checkSum(ctx, filepath.Join(written, "00"), size, sum.Sum(nil), out.progress(path, "Verifying")); err != nil {
 		return "", "", err
 	}
+	// Windows deletes no file still open
+	input.Close()
 	if inPlace {
 		// the folder takes the name of the file: the file goes first
 		if err := os.Remove(path); err != nil {
