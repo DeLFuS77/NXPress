@@ -30,7 +30,7 @@ jobs:
             runner: ubuntu-24.04
           - name: linux-arm64
             runner: ubuntu-24.04-arm
-          - name: macos-apple
+          - name: macos-apple-silicon
             runner: macos-15
           - name: macos-intel
             runner: macos-15-intel
@@ -229,7 +229,7 @@ jobs:
           | System | File |
           |---|---|
           | Windows | \`nxpress.exe\` |
-          | macOS with Apple chip (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple.tar.gz\` |
+          | macOS with Apple silicon (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
           | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
           | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |

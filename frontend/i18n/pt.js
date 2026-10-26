@@ -45,6 +45,8 @@ texts.pt = {
   pause: "Pausar", resume: "Continuar", paused: "Em pausa",
   shutdownWhenDone: "Desligar ao terminar", shutdownIn: s => `O computador desliga em ${s} s.`, shutdownCancel: "Manter ligado",
   shutdownForce: "Forçar", shutdownForceHint: "Fecha sem guardar os programas que ficaram abertos, que de outro modo podem impedir o desligar.",
+  soundWhenDone: "Tocar um som ao terminar", soundChime: "Som do NXPress", soundChoose: "Escolher…", soundPlay: "Ouvir",
+  soundDefault: "Padrão", soundFailed: "não foi possível tocar o som escolhido",
   shutdownFailed: forced => `O computador não desligou: ${forced ? "algo o impediu" : "um programa o impediu, provavelmente com trabalho por guardar. Marque «Forçar» para fechar esses programas sem guardar"}.`,
   resumeFound: n => n === 1 ? "Da última vez 1 arquivo ficou por terminar." : `Da última vez ${n} arquivos ficaram por terminar.`, resumeGo: "Continuar com eles", resumeDrop: "Esquecer",
   presets: "Ajustes salvos", presetNone: "Escolher…", presetSave: "Salvar", presetDelete: "Apagar", presetName: "Nome destes ajustes",

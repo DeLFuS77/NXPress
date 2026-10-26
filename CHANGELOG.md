@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- A sound when the work is done, turned on in the menu: a chime of NXPress, or a sound file of your own (WAV, MP3, OGG or M4A, up to 5 MB), with a button to try it and one to go back to the chime (thanks @NikoMuffin, #32)
+
+### Improvements
+
+- The download for Macs with an Apple chip is named macos-apple-silicon (thanks @NikoMuffin, #25)
+
 ## 1.2.1
 
 ### Improvements

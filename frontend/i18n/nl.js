@@ -45,6 +45,8 @@ texts.nl = {
   pause: "Pauzeren", resume: "Doorgaan", paused: "Gepauzeerd",
   shutdownWhenDone: "Uitschakelen als klaar", shutdownIn: s => `De computer gaat over ${s} s uit.`, shutdownCancel: "Aan laten",
   shutdownForce: "Forceren", shutdownForceHint: "Sluit open programma's zonder op te slaan, die anders het uitschakelen kunnen tegenhouden.",
+  soundWhenDone: "Geluid afspelen als het klaar is", soundChime: "NXPress-geluid", soundChoose: "Kiezen…", soundPlay: "Afspelen",
+  soundDefault: "Standaard", soundFailed: "het gekozen geluid kon niet worden afgespeeld",
   shutdownFailed: forced => `De computer is niet uitgeschakeld: ${forced ? "iets hield het tegen" : "een programma hield het tegen, waarschijnlijk met niet-opgeslagen werk. Vink ‘Forceren’ aan om zulke programma's zonder opslaan te sluiten"}.`,
   resumeFound: n => n === 1 ? "Vorige keer bleef 1 bestand onafgemaakt." : `Vorige keer bleven ${n} bestanden onafgemaakt.`, resumeGo: "Ermee doorgaan", resumeDrop: "Vergeten",
   presets: "Opgeslagen instellingen", presetNone: "Kiezen…", presetSave: "Opslaan", presetDelete: "Verwijderen", presetName: "Naam van deze instellingen",

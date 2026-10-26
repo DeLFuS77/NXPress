@@ -137,6 +137,7 @@ function render() {
   $("files").hidden = state.items.length === 0;
   document.body.classList.toggle("busy", state.busy);
   renderPresets();
+  renderSound();
   summary();
   for (const row of state.rows.values()) paint(row);
 }
@@ -509,6 +510,7 @@ function listen() {
     if (event.cancelled || !event.failed) save("pending", null);
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
+    if (!event.cancelled && $("sound").checked) playSound();
     if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
     render();
   });
@@ -583,6 +585,45 @@ function paintReport(all, order) {
 }
 
 // the turning off, with 60 seconds to keep the computer on
+// the sound when the work is done (#32): a chime of NXPress, or a sound file chosen in the menu,
+// which NXPress reads since the page cannot open the files of the computer
+let soundKept = { path: "", url: "" };
+async function playSound() {
+  const path = load("soundFile", "");
+  if (path) {
+    try {
+      if (soundKept.path !== path) soundKept = { path, url: await app().Sound(path) };
+      await new Audio(soundKept.url).play();
+      return;
+    } catch {
+      $("status").textContent += ($("status").textContent ? " · " : "") + t("soundFailed");
+    }
+  }
+  chime();
+}
+// two short notes, made here rather than kept as a file
+function chime() {
+  const audio = new AudioContext();
+  for (const [frequency, at] of [[880, 0], [1318.5, 0.16]]) {
+    const note = audio.createOscillator(), volume = audio.createGain();
+    note.frequency.value = frequency;
+    volume.gain.setValueAtTime(0.0001, audio.currentTime + at);
+    volume.gain.exponentialRampToValueAtTime(0.25, audio.currentTime + at + 0.02);
+    volume.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + at + 0.6);
+    note.connect(volume).connect(audio.destination);
+    note.start(audio.currentTime + at);
+    note.stop(audio.currentTime + at + 0.65);
+  }
+  setTimeout(() => audio.close(), 1500);
+}
+function renderSound() {
+  const path = load("soundFile", "");
+  $("sound-row").hidden = !$("sound").checked;
+  $("sound-name").textContent = path ? path.split(/[\\/]/).pop() : t("soundChime");
+  $("sound-name").title = path;
+  $("sound-default").hidden = !path;
+}
+
 let shutdownTimer = 0;
 function startShutdown() {
   // the report shows by itself the next time NXPress opens
@@ -647,6 +688,7 @@ async function main() {
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
   $("updates").checked = load("updates", true);
+  $("sound").checked = load("sound", false);
   state.output = chosen.output || "";
   state.dat = chosen.dat || "";
   state.template = chosen.template || await app().DefaultTemplate();
@@ -691,6 +733,10 @@ async function main() {
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
+  $("sound").onchange = () => { save("sound", $("sound").checked); renderSound(); };
+  $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
+  $("sound-play").onclick = playSound;
+  $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");
   $("compare-levels").onclick = () => start("estimate", { levels: true });

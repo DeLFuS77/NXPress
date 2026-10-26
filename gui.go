@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -239,6 +240,40 @@ func (a *App) ChooseDat() (string, error) {
 	return wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Filters: []wailsruntime.FileFilter{{DisplayName: "DAT (*.dat, *.xml)", Pattern: "*.dat;*.xml"}},
 	})
+}
+
+// ChooseSound asks for the sound played when the work is done.
+func (a *App) ChooseSound() (string, error) {
+	return wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Sound (*.wav, *.mp3, *.ogg, *.m4a)", Pattern: "*.wav;*.mp3;*.ogg;*.m4a"}},
+	})
+}
+
+// maxSoundSize keeps the sound chosen short: the page gets it whole.
+const maxSoundSize = 5 << 20
+
+// soundTypes are the sound files the page plays, by their extension.
+var soundTypes = map[string]string{".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".m4a": "audio/mp4"}
+
+// Sound gives a sound file as a data URL the page can play, since the page cannot open the files
+// of the computer itself.
+func (a *App) Sound(path string) (string, error) {
+	kind := soundTypes[strings.ToLower(filepath.Ext(path))]
+	if kind == "" {
+		return "", errors.New("not a sound NXPress plays")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if info.Size() > maxSoundSize {
+		return "", fmt.Errorf("the sound is bigger than %d MB", maxSoundSize>>20)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
 // Request is the work the page asks for.

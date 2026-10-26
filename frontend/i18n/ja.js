@@ -45,6 +45,8 @@ texts.ja = {
   pause: "一時停止", resume: "再開", paused: "一時停止中",
   shutdownWhenDone: "完了後に電源を切る", shutdownIn: s => `${s} 秒後にコンピューターの電源が切れます。`, shutdownCancel: "電源を切らない",
   shutdownForce: "強制する", shutdownForceHint: "開いたままのプログラムを保存せずに閉じます。閉じないと電源が切れないことがあります。",
+  soundWhenDone: "完了時に音を鳴らす", soundChime: "NXPress のチャイム", soundChoose: "選択…", soundPlay: "再生",
+  soundDefault: "既定", soundFailed: "選んだ音を再生できませんでした",
   shutdownFailed: forced => `コンピューターの電源が切れませんでした: ${forced ? "何かが妨げました" : "保存していない作業があるプログラムが妨げたようです。「強制する」にチェックすると、そうしたプログラムを保存せずに閉じます"}。`,
   resumeFound: n => `前回 ${n} 個のファイルが未完了でした。`, resumeGo: "続ける", resumeDrop: "破棄",
   presets: "保存した設定", presetNone: "選択…", presetSave: "保存", presetDelete: "削除", presetName: "この設定の名前",
