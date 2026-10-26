@@ -25,11 +25,11 @@ const (
 )
 
 func windowPlacePath() string {
-	folder, err := os.UserConfigDir()
+	folder, err := dataFolder()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(folder, "NXPress", "window.json")
+	return filepath.Join(folder, "window.json")
 }
 
 // loadWindowPlace gives the place kept, or the size of the first time.

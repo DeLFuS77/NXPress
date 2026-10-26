@@ -18,6 +18,7 @@ import (
 	wailsoptions "github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -51,6 +52,8 @@ func runWindow(files []string) int {
 		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
 		Bind:             []any{app},
 		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
+		// portable (see portable.go): the page keeps its settings next to the program too
+		Windows: &windows.Options{WebviewUserDataPath: webviewFolder()},
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
