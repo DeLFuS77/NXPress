@@ -48,7 +48,7 @@ texts.zh = {
   shutdownWhenDone: "完成后关机", shutdownIn: s => `电脑将在 ${s} 秒后关机。`, shutdownCancel: "保持开机",
   shutdownForce: "强制", shutdownForceHint: "不保存就关闭仍打开的程序,否则它们可能阻止关机。",
   soundWhenDone: "完成时播放声音", soundChime: "NXPress 提示音", soundChoose: "选择…", soundPlay: "试听",
-  soundDefault: "默认", soundFailed: "无法播放所选的声音",
+  soundDefault: "默认", soundFailed: "无法播放所选的声音", sortHint: "按此列排序；第三次点击恢复文件加入时的顺序",
   shutdownFailed: forced => `电脑没有关机:${forced ? "有程序阻止了关机" : "有程序阻止了关机,可能有未保存的内容。勾选“强制”可不保存就关闭这些程序"}。`,
   resumeFound: n => `上次有 ${n} 个文件没有完成。`, resumeGo: "继续处理", resumeDrop: "忽略",
   presets: "已保存的设置", presetNone: "选择…", presetSave: "保存", presetDelete: "删除", presetName: "这组设置的名称",

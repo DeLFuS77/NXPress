@@ -17,7 +17,7 @@ const $ = id => document.getElementById(id);
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "",
+  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 },
 };
 
 function load(name, fallback) {
@@ -148,6 +148,7 @@ function render() {
   renderSound();
   summary();
   for (const row of state.rows.values()) paint(row);
+  sortRows();
 }
 
 // summary tells what the list holds, how far the work is, and what it saved.
@@ -233,6 +234,38 @@ function add(item) {
   paint(row);
 }
 
+// the list in the order a click on a column asks for: by name, size or state, the other way round
+// on a second click, and back to the order the files came in on a third (#17). The work goes in
+// the order shown; while it runs, sorting by state waits for its end, so rows do not jump about.
+const stateOrder = { work: 0, waiting: 1, failed: 2, skipped: 3, ok: 4 };
+function sortValue(row, key) {
+  if (key === "size") return row.item.size;
+  if (key === "state") return stateOrder[row.status] ?? 5;
+  return (row.game && row.game.name) || row.item.name;
+}
+function sortRows() {
+  const { key, dir } = state.sort;
+  for (const th of document.querySelectorAll("#files th[data-sort]")) {
+    th.classList.toggle("sorted", th.dataset.sort === key);
+    th.classList.toggle("desc", th.dataset.sort === key && dir < 0);
+  }
+  if (state.busy && key === "state") return;
+  const rows = [...state.rows.values()];
+  if (key) rows.sort((a, b) => {
+    const x = sortValue(a, key), y = sortValue(b, key);
+    return dir * (typeof x === "string" ? x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" }) : x - y);
+  });
+  const body = $("files").tBodies[0];
+  if (rows.some((row, i) => body.rows[i] !== row.tr)) for (const row of rows) body.append(row.tr);
+  if (!state.busy) state.items = rows.map(row => row.item);
+}
+// the names of the games come in a few at a time: the list is sorted again once they settle
+let sortTimer = 0;
+function sortSoon() {
+  clearTimeout(sortTimer);
+  sortTimer = setTimeout(sortRows, 400);
+}
+
 // the name and the icon of the game of each row, read a few at a time
 const describeQueue = [];
 let describing = 0;
@@ -246,7 +279,7 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => { row.game = game; paint(row); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
+    app().Describe(row.item.path).then(game => { row.game = game; paint(row); if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
   }
 }
 
@@ -709,6 +742,8 @@ async function main() {
   $("no-cache").checked = !!chosen.noCache;
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
+  const sort = load("sort", null);
+  if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
   state.output = chosen.output || "";
   state.dat = chosen.dat || "";
   state.template = chosen.template || await app().DefaultTemplate();
@@ -768,6 +803,13 @@ async function main() {
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
+  // a click on a column sorts the list by it (see sortRows)
+  for (const th of document.querySelectorAll("#files th[data-sort]")) th.onclick = () => {
+    const { key, dir } = state.sort;
+    state.sort = key !== th.dataset.sort ? { key: th.dataset.sort, dir: 1 } : dir > 0 ? { key, dir: -1 } : { key: "", dir: 1 };
+    save("sort", state.sort);
+    sortRows();
+  };
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");
   $("compare-levels").onclick = () => start("estimate", { levels: true });

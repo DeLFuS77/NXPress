@@ -48,7 +48,7 @@ texts.de = {
   shutdownWhenDone: "Danach ausschalten", shutdownIn: s => `Der Computer schaltet sich in ${s} s aus.`, shutdownCancel: "Eingeschaltet lassen",
   shutdownForce: "Erzwingen", shutdownForceHint: "Schließt offene Programme ohne zu speichern, die das Ausschalten sonst verhindern können.",
   soundWhenDone: "Ton am Ende abspielen", soundChime: "NXPress-Klang", soundChoose: "Auswählen…", soundPlay: "Abspielen",
-  soundDefault: "Standard", soundFailed: "der gewählte Ton ließ sich nicht abspielen",
+  soundDefault: "Standard", soundFailed: "der gewählte Ton ließ sich nicht abspielen", sortHint: "Nach dieser Spalte sortieren; ein dritter Klick stellt die Reihenfolge wieder her, in der die Dateien kamen",
   shutdownFailed: forced => `Der Computer hat sich nicht ausgeschaltet: ${forced ? "etwas hat es verhindert" : "ein Programm hat es verhindert, wohl mit Ungespeichertem. Hake „Erzwingen“ an, um solche Programme ohne Speichern zu schließen"}.`,
   resumeFound: n => n === 1 ? "Letztes Mal blieb 1 Datei unfertig." : `Letztes Mal blieben ${n} Dateien unfertig.`, resumeGo: "Fortsetzen", resumeDrop: "Verwerfen",
   presets: "Gespeicherte Einstellungen", presetNone: "Wählen…", presetSave: "Speichern", presetDelete: "Löschen", presetName: "Name dieser Einstellungen",

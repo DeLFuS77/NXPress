@@ -48,7 +48,7 @@ texts.ko = {
   shutdownWhenDone: "끝나면 전원 끄기", shutdownIn: s => `${s}초 뒤 컴퓨터가 꺼집니다.`, shutdownCancel: "켜 두기",
   shutdownForce: "강제로", shutdownForceHint: "열려 있는 프로그램을 저장하지 않고 닫아요. 그렇지 않으면 꺼지지 않을 수 있어요.",
   soundWhenDone: "완료 시 소리 재생", soundChime: "NXPress 알림음", soundChoose: "선택…", soundPlay: "재생",
-  soundDefault: "기본값", soundFailed: "선택한 소리를 재생할 수 없습니다",
+  soundDefault: "기본값", soundFailed: "선택한 소리를 재생할 수 없습니다", sortHint: "이 열로 정렬합니다. 세 번째로 클릭하면 파일을 추가한 순서로 돌아갑니다",
   shutdownFailed: forced => `컴퓨터가 꺼지지 않았어요: ${forced ? "무언가가 막았어요" : "저장하지 않은 작업이 있는 프로그램이 막은 것 같아요. ‘강제로’를 선택하면 그런 프로그램을 저장하지 않고 닫아요"}.`,
   resumeFound: n => `지난번에 파일 ${n}개가 끝나지 않았습니다.`, resumeGo: "이어서 하기", resumeDrop: "잊기",
   presets: "저장한 설정", presetNone: "선택…", presetSave: "저장", presetDelete: "삭제", presetName: "이 설정의 이름",

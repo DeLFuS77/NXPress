@@ -48,7 +48,7 @@ texts.it = {
   shutdownWhenDone: "Spegni alla fine", shutdownIn: s => `Il computer si spegne tra ${s} s.`, shutdownCancel: "Lascialo acceso",
   shutdownForce: "Forza", shutdownForceHint: "Chiude senza salvare i programmi rimasti aperti, che altrimenti possono impedire lo spegnimento.",
   soundWhenDone: "Suono al termine", soundChime: "Suono di NXPress", soundChoose: "Scegli…", soundPlay: "Ascolta",
-  soundDefault: "Predefinito", soundFailed: "non è stato possibile riprodurre il suono scelto",
+  soundDefault: "Predefinito", soundFailed: "non è stato possibile riprodurre il suono scelto", sortHint: "Ordina per questa colonna; un terzo clic torna all'ordine in cui sono arrivati i file",
   shutdownFailed: forced => `Il computer non si è spento: ${forced ? "qualcosa lo ha impedito" : "un programma lo ha impedito, probabilmente con lavoro non salvato. Spunta «Forza» per chiudere quei programmi senza salvare"}.`,
   resumeFound: n => n === 1 ? "L'ultima volta 1 file è rimasto incompleto." : `L'ultima volta ${n} file sono rimasti incompleti.`, resumeGo: "Riprendili", resumeDrop: "Dimenticali",
   presets: "Impostazioni salvate", presetNone: "Scegli…", presetSave: "Salva", presetDelete: "Elimina", presetName: "Nome di queste impostazioni",

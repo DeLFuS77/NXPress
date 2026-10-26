@@ -7,8 +7,11 @@
 - Pack a SuperNSP per game: give Pack a whole collection, and each game goes with its updates and DLC into a file of its own, found by the title IDs inside the files, not by their names, and named by a template, by default "{name} [{id}][v{version}] ({contents})": Game [0100...][v65536] (1G+1U+2D).nsp. A game with one file only is SKIPPED. One file with everything stays as a choice; on the command line, `--pack-games` and `--pack-name` (thanks @NikoMuffin, #3)
 - New fields for Rename and for the packs: {version_txt}, the version as the game shows it (1.0.5), read from the control data of its update or of the game (#18); {contents}, the titles of each kind a file holds (1G+1U+2D), and {size_gb} and {size_mb} (#19). The fields as Switch Library Manager writes them work too ({TITLE_NAME}, {TITLE_ID}, {VERSION}, {VERSION_TXT}, {TYPE}, {PACKAGE_CONTENTS}, {SIZE_GB}, {SIZE_MB}), and brackets left empty are taken away. For a game with its updates, {version} is the version of the newest update (thanks @NikoMuffin, #18, #19)
 - Packs by game and names with these fields were already in Switch Library Manager Web, which this program comes from: they are brought here
+- The list of files sorts by name, size or state with a click on the column; a second click turns the order round and a third goes back to the order the files came in. The work goes in the order shown, and the order is kept for the next time (thanks @NikoMuffin, #17)
 
 ### Improvements
+
+- The title of the window shows the version of NXPress, as the corner of the window already did
 
 - Measure this PC takes a heavier setting when it is at least 5% faster, not 10%: in a measure where 7 threads with 2 files at once went 60 MB/s and 14 threads with one 55, the first is chosen now. The speed is told as what it is, all the files at once together, and when a setting a little faster is not taken, the window says why: the lighter one uses less memory and finishes each file sooner (thanks @NikoMuffin, #22)
 - The level buttons show the levels each one covers, Light 1–6, Medium 7–14 and Maximum 15–19, and the hint tells that 18, the level of the presets and the default of nsz, is barely bigger than 19 and faster (thanks @NikoMuffin, #28)

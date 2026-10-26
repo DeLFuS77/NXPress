@@ -37,7 +37,7 @@ func runWindow(files []string) int {
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := loadWindowPlace()
 	err := wails.Run(&wailsoptions.App{
-		Title:            "NXPress",
+		Title:            "NXPress " + version,
 		Width:            place.Width,
 		Height:           place.Height,
 		MinWidth:         windowMinWidth,

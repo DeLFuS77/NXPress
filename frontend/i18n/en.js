@@ -48,7 +48,7 @@ texts.en = {
   shutdownWhenDone: "Turn off when done", shutdownIn: s => `The computer turns off in ${s} s.`, shutdownCancel: "Keep it on",
   shutdownForce: "Force it", shutdownForceHint: "Closes the programs left open without saving, which can else keep the computer on.",
   soundWhenDone: "Play a sound when done", soundChime: "NXPress chime", soundChoose: "Choose…", soundPlay: "Play",
-  soundDefault: "Default", soundFailed: "the sound chosen could not be played",
+  soundDefault: "Default", soundFailed: "the sound chosen could not be played", sortHint: "Sort by this column; a third click goes back to the order the files came in",
   shutdownFailed: forced => `The computer did not turn off: ${forced ? "something kept it on" : "a program kept it on, probably with work not saved. Tick “Force it” to close such programs without saving"}.`,
   resumeFound: n => n === 1 ? "1 file was left unfinished last time." : `${n} files were left unfinished last time.`, resumeGo: "Resume them", resumeDrop: "Forget them",
   presets: "Saved settings", presetNone: "Choose…", presetSave: "Save", presetDelete: "Delete", presetName: "Name of these settings",
