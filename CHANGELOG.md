@@ -8,6 +8,13 @@
 - New fields for Rename and for the packs: {version_txt}, the version as the game shows it (1.0.5), read from the control data of its update or of the game (#18); {contents}, the titles of each kind a file holds (1G+1U+2D), and {size_gb} and {size_mb} (#19). The fields as Switch Library Manager writes them work too ({TITLE_NAME}, {TITLE_ID}, {VERSION}, {VERSION_TXT}, {TYPE}, {PACKAGE_CONTENTS}, {SIZE_GB}, {SIZE_MB}), and brackets left empty are taken away. For a game with its updates, {version} is the version of the newest update (thanks @NikoMuffin, #18, #19)
 - Packs by game and names with these fields were already in Switch Library Manager Web, which this program comes from: they are brought here
 
+### Improvements
+
+- Measure this PC takes a heavier setting when it is at least 5% faster, not 10%: in a measure where 7 threads with 2 files at once went 60 MB/s and 14 threads with one 55, the first is chosen now. The speed is told as what it is, all the files at once together, and when a setting a little faster is not taken, the window says why: the lighter one uses less memory and finishes each file sooner (thanks @NikoMuffin, #22)
+- The level buttons show the levels each one covers, Light 1–6, Medium 7–14 and Maximum 15–19, and the hint tells that 18, the level of the presets and the default of nsz, is barely bigger than 19 and faster (thanks @NikoMuffin, #28)
+- Trim shows that it takes the NSP and NSZ files of updates, the only ones with delta fragments: "NSP/NSZ (updates)" (thanks @NikoMuffin, #23)
+- A game in sparse storage is SKIPPED with a plain sentence: no compressor can read that layout yet, nsz included, and the game installs as it is (thanks @NikoMuffin, #29)
+
 ## 1.2.2
 
 ### New

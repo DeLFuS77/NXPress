@@ -318,6 +318,10 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	return "", found, err
 }
 
+// sparseSkipped is why a game in sparse storage is left as it is: no compressor reads that
+// layout yet, nsz included, and the game installs as it is.
+const sparseSkipped = "this game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is"
+
 func compress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
 	name, err := target(o, switchfs.CompressedPath(path))
 	if err == nil {
@@ -331,6 +335,10 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 	result, err := switchfs.CompressGame(ctx, path, written, switchfs.CompressOptions{
 		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Compressing"),
 	})
+	// the most common reason, told plainly
+	if errors.Is(err, switchfs.ErrSparseStorage) {
+		return "", "", skipped(sparseSkipped)
+	}
 	if errors.Is(err, switchfs.ErrNotCompressible) {
 		// why: what the library tells after its sentence, when it tells more
 		reason := "nothing in it can be compressed, it is left as it is"

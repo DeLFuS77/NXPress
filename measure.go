@@ -49,16 +49,32 @@ func measureTrials(processors int, level string) []trial {
 	return trials
 }
 
-// chooseTrial gives the fastest setting tried; a heavier one must be clearly faster than a
-// lighter one, as the measure varies a little.
+// measureMargin is how much faster a heavier setting must be than a lighter one to be chosen,
+// as the measure varies a little from one run to the next: 5%.
+const measureMargin = 1.05
+
+// chooseTrial gives the fastest setting tried; a heavier one must be at least 5% faster than a
+// lighter one.
 func chooseTrial(trials []trial) trial {
 	best := trials[0]
 	for _, t := range trials[1:] {
-		if float64(t.speed) > float64(best.speed)*1.1 {
+		if float64(t.speed) >= float64(best.speed)*measureMargin {
 			best = t
 		}
 	}
 	return best
+}
+
+// fasterTrial is the fastest setting tried when it was not chosen, less than 5% faster than the
+// one chosen, so the window can tell why the lighter one stays; or nil.
+func fasterTrial(trials []trial, best trial) *trial {
+	var faster *trial
+	for i := range trials {
+		if trials[i].speed > best.speed && (faster == nil || trials[i].speed > faster.speed) {
+			faster = &trials[i]
+		}
+	}
+	return faster
 }
 
 // measureReport is what a measure found: every setting tried and the one chosen, which the
@@ -69,6 +85,8 @@ type measureReport struct {
 	block      bool
 	trials     []trial
 	best       trial
+	// the fastest setting when it was not chosen, or nil
+	faster *trial
 	// how long 10 GB of games take with the setting chosen
 	per10GB time.Duration
 }
@@ -139,7 +157,7 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 	out.say("%d processors, level %d (threads × files at once):\n  %s", runtime.NumCPU(), o.level, strings.Join(lines, "\n  "))
 	per10GB := time.Duration(float64(10<<10) / float64(max(1, best.speed)) * float64(time.Second))
 	if window, ok := out.(measured); ok {
-		window.measured(measureReport{processors: runtime.NumCPU(), level: o.level, block: o.block, trials: trials, best: best, per10GB: per10GB})
+		window.measured(measureReport{processors: runtime.NumCPU(), level: o.level, block: o.block, trials: trials, best: best, faster: fasterTrial(trials, best), per10GB: per10GB})
 	}
 	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.threads, best.files, best.speed, duration(per10GB)), nil
 }

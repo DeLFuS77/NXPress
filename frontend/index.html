@@ -126,7 +126,7 @@
         <div class="level-head"><span data-t="level"></span><b id="level-value"></b></div>
         <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
         <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
-        <div class="segmented"><button data-level="3" data-t="light"></button><button data-level="12" data-t="medium"></button><button data-level="19" data-t="maximum"></button></div>
+        <div class="segmented levels"><button data-level="3"><span data-t="light"></span><small>1–6</small></button><button data-level="12"><span data-t="medium"></span><small>7–14</small></button><button data-level="19"><span data-t="maximum"></span><small>15–19</small></button></div>
         <p class="hint" id="level-hint"></p>
         <button id="compare-levels" class="link" data-t="compareLevels"></button>
         <p class="hint" data-t="compareHint"></p>
@@ -222,6 +222,7 @@
     <tbody id="measure-rows"></tbody>
   </table>
   <p id="measure-result"></p>
+  <p id="measure-kept" class="muted" hidden></p>
   <p class="hint" data-t="measureChange"></p>
   <div class="dialog-actions"><button id="measure-close" class="primary" data-t="close"></button></div>
 </dialog>

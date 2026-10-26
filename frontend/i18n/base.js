@@ -14,6 +14,7 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
+  [/^this game uses sparse storage, which no compressor can read yet \(nsz included\): it installs as it is$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which cannot be compressed yet/g, "sparseWhy"],

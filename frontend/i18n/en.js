@@ -22,7 +22,7 @@ texts.en = {
   saved: bytes => `${size(bytes)} saved`,
   file: "File", size: "Size", state: "State",
   level: "Compression level", light: "Light", medium: "Medium", maximum: "Maximum", faster: "faster", smaller: "smaller files",
-  levelHint: l => l >= 15 ? "Maximum compression: the smallest files, the slowest." : l >= 7 ? "Medium compression: a good middle." : "Light compression: quick, files a bit larger.",
+  levelHint: l => l === 18 ? "Maximum compression, the level nsz uses by default: small files, slower. 19, the top, is barely smaller and slower still." : l === 19 ? "Maximum compression, the top level: the smallest files, the slowest." : l >= 15 ? "Maximum compression: the smallest files, the slowest." : l >= 7 ? "Medium compression: a good middle." : "Light compression: quick, files a bit larger.",
   groupSpace: "Space", groupOrganize: "Organize", groupCheck: "Check",
   hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "solid ↔ blocks, level", hintTrim: "padding and deltas",
   hintPack: "several → one SuperNSP or XCI", hintSplit: "SuperNSP → one per title", hintConvert: "XCI → NSP", hintVerify: "check the hashes", hintInfo: "titles and format",
@@ -56,9 +56,10 @@ texts.en = {
   compareLevels: "Compare the levels on this computer", compareHint: "Compresses samples of the files at each level, to tell the size and the time of each: nothing is written.",
   measurePc: "Measure this PC", measureMac: "Measure this Mac", measureComputer: "Measure this computer",
   measureHint: "Compresses a few seconds of the first game of the list with several threads and files at once, at the level and kind chosen, and puts the fastest in these fields. It takes 1 to 3 minutes.", measureNeedsGame: "Add an NSP or XCI to measure with.",
-  measureTitle: "Measure of this computer", measureSpeed: "Speed", measureApplied: "applied", close: "Close",
+  measureTitle: "Measure of this computer", measureSpeed: "Speed, all files together", measureApplied: "applied", close: "Close",
   measureIntro: (p, l, b) => `${p} processors, level ${l}, ${b ? "in blocks" : "solid"}: each setting compressed a part of the game for a few seconds.`,
   measureResult: (th, m, s, tm) => `Applied: ${th} threads per file and ${m} at once, ${s} MB/s, about ${tm} for 10 GB.`,
+  measureKept: (th, m, s) => `${th} threads × ${m} at once went ${s} MB/s, less than 5% faster: the lighter setting stays, as it uses less memory and finishes each file sooner.`, takesUpdates: "updates",
   measureChange: "You can change them under Advanced; they are kept with your settings.",
   auto: "Automatic", watch: "Watch the folders added", watchHint: "New files copied into them are worked on by themselves, until you press Stop.",
   watchNeedsFolder: "Add a folder to watch it.", watching: "Watching for new files", stop: "Stop",
@@ -74,6 +75,6 @@ texts.en = {
   notes: {
     onlyFileOfGame: "it is the only file of its game here: there is nothing to pack it with", packedInto: "packed into ",
     trimOnlyUpdates: ": only updates have them",
-    notCompressibleWhy: "nothing to compress in it, left as it is", sparseWhy: "it uses sparse storage, which no compressor reads yet", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
+    notCompressibleWhy: "nothing to compress in it, left as it is", sparseSkip: "This game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is", sparseWhy: "it uses sparse storage, which no compressor reads yet", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
     measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", notMeasurableAny: "nothing in the games of the list can be compressed: add another game to measure with", alreadyThere: " is already there (tick “Replace files already there”)" },
 };

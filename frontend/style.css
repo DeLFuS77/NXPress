@@ -189,6 +189,8 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 1
 .segmented button { flex: 1; border: none; border-radius: 0; font-size: 12px; padding: 5px; background: transparent; }
 .segmented button + button { border-left: 1px solid var(--line); }
 .segmented button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+/* the levels each button covers, under its name */
+.segmented.levels small { display: block; font-size: 10px; font-weight: 400; opacity: .75; }
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .field.row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 10px 0 0; }

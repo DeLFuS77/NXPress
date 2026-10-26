@@ -515,10 +515,15 @@ func (w *window) measured(report measureReport) {
 	for _, t := range report.trials {
 		trials = append(trials, map[string]any{"threads": t.threads, "multi": t.files, "speed": t.speed, "best": t == report.best})
 	}
+	// a faster setting less than 5% faster than the one chosen: the window tells why it was not
+	var faster any
+	if report.faster != nil {
+		faster = map[string]any{"threads": report.faster.threads, "multi": report.faster.files, "speed": report.faster.speed}
+	}
 	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{
 		"threads": report.best.threads, "multi": report.best.files, "speed": report.best.speed,
 		"processors": report.processors, "level": report.level, "block": report.block,
-		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials,
+		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials, "faster": faster,
 	})
 }
 

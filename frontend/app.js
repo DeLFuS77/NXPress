@@ -9,7 +9,7 @@ const groups = [
 ];
 // what each mode takes, to show it
 const takesShown = {
-  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
+  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
   split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
 
@@ -80,9 +80,11 @@ function render() {
   $("title").textContent = t(state.mode);
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
-  for (const type of takesShown[state.mode].split(" ")) {
+  for (const entry of takesShown[state.mode].split(" ")) {
+    // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on
+    const [type, which] = entry.split(":");
     const tag = document.createElement("i");
-    tag.textContent = type;
+    tag.textContent = which ? `${type} (${t(which)})` : type;
     $("takes").append(tag);
   }
   $("language-select").value = state.language;
@@ -432,6 +434,9 @@ function showMeasure(report) {
     rows.append(tr);
   }
   $("measure-result").textContent = t("measureResult")(report.threads, report.multi, report.speed, time(report.seconds10GB));
+  // a heavier setting a little faster was not taken: the window tells why
+  $("measure-kept").hidden = !report.faster;
+  if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
   $("measure-dialog").showModal();
 }
 
