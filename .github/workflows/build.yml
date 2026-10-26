@@ -195,13 +195,17 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # the archives are named after the version; the program of Windows is nxpress.exe on its
+      # own, so a new version replaces the old one without breaking its shortcuts or the rules
+      # of a firewall (its version is in its properties)
       - name: Name them after the version
         run: |
           cd dist
+          mv nxpress-windows-x64.exe nxpress.exe
           for file in nxpress-*; do
             mv "${file}" "${file/nxpress-/nxpress-${GITHUB_REF_NAME}-}"
           done
-          sha256sum nxpress-* > SHA256SUMS.txt
+          sha256sum nxpress.exe nxpress-* > SHA256SUMS.txt
           ls -l
 
       # proof that each file was built by this workflow from this tag
@@ -209,7 +213,9 @@ jobs:
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/nxpress-*
+          subject-path: |
+            dist/nxpress.exe
+            dist/nxpress-*
 
       - name: Keep the provenance with the release
         run: cp "${{ steps.attest.outputs.bundle-path }}" "dist/nxpress-${GITHUB_REF_NAME}.intoto.jsonl"
@@ -222,7 +228,7 @@ jobs:
 
           | System | File |
           |---|---|
-          | Windows | \`nxpress-${GITHUB_REF_NAME}-windows-x64.exe\` |
+          | Windows | \`nxpress.exe\` |
           | macOS with Apple chip (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple.tar.gz\` |
           | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
@@ -245,4 +251,4 @@ jobs:
             --title "NXPress ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             --verify-tag \
-            dist/nxpress-* dist/SHA256SUMS.txt
+            dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt

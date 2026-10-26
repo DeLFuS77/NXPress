@@ -27,10 +27,14 @@ func keepAwake() func() {
 	}
 }
 
-// shutDown turns the computer off.
-func shutDown() error {
+// shutDown turns the computer off; forced, on Linux the programs that hold it on are not waited
+// for (macOS has no such choice: it asks them).
+func shutDown(force bool) error {
 	if runtime.GOOS == "darwin" {
 		return exec.Command("osascript", "-e", `tell application "System Events" to shut down`).Run()
+	}
+	if force {
+		return exec.Command("systemctl", "poweroff", "-i").Run()
 	}
 	return exec.Command("systemctl", "poweroff").Run()
 }

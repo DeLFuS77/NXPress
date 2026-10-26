@@ -31,9 +31,14 @@ func keepAwake() func() {
 	}
 }
 
-// shutDown turns the computer off.
-func shutDown() error {
-	command := exec.Command("shutdown.exe", "/s", "/t", "0")
+// shutDown turns the computer off; forced, the programs left open are closed without asking to
+// save, which else can keep it on.
+func shutDown(force bool) error {
+	arguments := []string{"/s", "/t", "0"}
+	if force {
+		arguments = append(arguments, "/f")
+	}
+	command := exec.Command("shutdown.exe", arguments...)
 	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return command.Run()
 }
