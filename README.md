@@ -10,7 +10,7 @@ It is one program with no Python or other dependencies. Opened with no arguments
 
 The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI. On Linux, unpack it and run `install.sh` to put NXPress in the menu of applications with its icon.
 
-To use it portable, make a folder named `settings` next to the program: NXPress then keeps its settings, its window and the files already checked in it, and nothing in your user folders. With `prod.keys` next to the program as well, the whole folder can go on a USB stick.
+For Windows there is also a portable download (`…-windows-x64-portable.zip`): a folder with the program and its `settings` folder, ready to unpack anywhere. Any copy becomes portable with a folder named `settings` next to the program: NXPress then keeps its settings, its window and the files already checked in it, and nothing in your user folders. With `prod.keys` next to the program as well, the whole folder can go on a USB stick.
 
 ## The window
 

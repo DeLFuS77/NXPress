@@ -108,7 +108,13 @@ jobs:
           mkdir -p dist
           case "${RUNNER_OS}" in
             Windows)
-              cp out/nxpress.exe "dist/nxpress-${{ matrix.name }}.exe" ;;
+              cp out/nxpress.exe "dist/nxpress-${{ matrix.name }}.exe"
+              # the portable download: the program in a folder with its settings folder, where it
+              # keeps everything (see portable.go)
+              mkdir -p out/portable/NXPress/settings
+              cp out/nxpress.exe out/portable/NXPress/
+              printf '%s\r\n' "NXPress keeps its settings, its window and the files already checked in this folder." "Put your prod.keys next to nxpress.exe." > out/portable/NXPress/settings/README.txt
+              pwsh -NoProfile -Command "Compress-Archive -Path out/portable/NXPress -DestinationPath dist/nxpress-${{ matrix.name }}-portable.zip" ;;
             macOS)
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
               tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app ;;
@@ -229,6 +235,7 @@ jobs:
           | System | File |
           |---|---|
           | Windows | \`nxpress.exe\` |
+          | Windows, portable (all in its folder, for a USB stick) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-portable.zip\` |
           | macOS with Apple silicon (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
           | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
