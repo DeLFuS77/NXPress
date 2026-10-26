@@ -33,11 +33,11 @@ func (c *checkCache) load() {
 		return
 	}
 	c.files = map[string]checkedFile{}
-	folder, err := os.UserConfigDir()
+	folder, err := dataFolder()
 	if err != nil {
 		return
 	}
-	c.path = filepath.Join(folder, "NXPress", "checked.json")
+	c.path = filepath.Join(folder, "checked.json")
 	if data, err := os.ReadFile(c.path); err == nil {
 		json.Unmarshal(data, &c.files)
 	}

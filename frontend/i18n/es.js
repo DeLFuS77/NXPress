@@ -45,6 +45,8 @@ texts.es = {
   pause: "Pausar", resume: "Continuar", paused: "En pausa",
   shutdownWhenDone: "Apagar al terminar", shutdownIn: s => `El equipo se apagará en ${s} s.`, shutdownCancel: "Mantener encendido",
   shutdownForce: "Forzar", shutdownForceHint: "Cierra sin guardar los programas que queden abiertos, que si no pueden impedir el apagado.",
+  soundWhenDone: "Sonido al terminar", soundChime: "Aviso de NXPress", soundChoose: "Elegir…", soundPlay: "Probar",
+  soundDefault: "El de serie", soundFailed: "no se pudo reproducir el sonido elegido",
   shutdownFailed: forced => `El equipo no se ha apagado: ${forced ? "algo lo impidió" : "un programa lo impidió, seguramente con algo sin guardar. Marca «Forzar» para cerrar esos programas sin guardar"}.`,
   resumeFound: n => n === 1 ? "La última vez quedó 1 archivo sin terminar." : `La última vez quedaron ${n} archivos sin terminar.`, resumeGo: "Continuar con ellos", resumeDrop: "Olvidarlos",
   presets: "Ajustes guardados", presetNone: "Elegir…", presetSave: "Guardar", presetDelete: "Borrar", presetName: "Nombre de estos ajustes",

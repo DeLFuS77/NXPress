@@ -52,6 +52,8 @@ texts.ru = {
   pause: "Пауза", resume: "Продолжить", paused: "На паузе",
   shutdownWhenDone: "Выключить по завершении", shutdownIn: s => `Компьютер выключится через ${s} с.`, shutdownCancel: "Не выключать",
   shutdownForce: "Принудительно", shutdownForceHint: "Закрывает открытые программы без сохранения: иначе они могут помешать выключению.",
+  soundWhenDone: "Звук по завершении", soundChime: "Сигнал NXPress", soundChoose: "Выбрать…", soundPlay: "Прослушать",
+  soundDefault: "По умолчанию", soundFailed: "не удалось воспроизвести выбранный звук",
   shutdownFailed: forced => `Компьютер не выключился: ${forced ? "что-то помешало" : "помешала программа, вероятно с несохранёнными данными. Отметьте «Принудительно», чтобы закрывать такие программы без сохранения"}.`,
   resumeFound: n => `В прошлый раз не закончено: ${ruFiles(n)}.`, resumeGo: "Продолжить с ними", resumeDrop: "Забыть",
   presets: "Сохранённые настройки", presetNone: "Выбрать…", presetSave: "Сохранить", presetDelete: "Удалить", presetName: "Название этих настроек",

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.2
+
+### New
+
+- A sound when the work is done, turned on in the menu: a chime of NXPress, or a sound file of your own (WAV, MP3, OGG or M4A, up to 5 MB), with a button to try it and one to go back to the chime (thanks @NikoMuffin, #32)
+- Portable: a new download for Windows, nxpress-…-windows-x64-portable.zip, is a folder NXPress with the program and its folder `settings`, ready to unpack anywhere. With a folder named `settings` next to the program, NXPress keeps everything it remembers there (the settings of the window, its size and place, and the files already checked), and nothing in the folders of the user. Put `prod.keys` next to the program too, and the whole folder can go on a USB stick (thanks @NikoMuffin, #5)
+
+### Improvements
+
+- The download for Macs with an Apple chip is named macos-apple-silicon (thanks @NikoMuffin, #25)
+
 ## 1.2.1
 
 ### Improvements

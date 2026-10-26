@@ -78,6 +78,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .menu-body .theme .segmented { margin: 0; }
 .menu-body .theme .segmented button { padding: 3px 10px; text-align: center; }
 .menu-body hr { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
+.menu-sound { display: flex; align-items: center; gap: 10px; padding: 0 12px 6px 38px; font-size: 12px; color: var(--muted); }
+.menu-sound span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-body .menu-sound button { padding: 0; }
 
 /* layout */
 main { flex: 1; display: flex; min-height: 0; }
