@@ -18,6 +18,7 @@ texts.es = {
   keysMissing: "NXPress necesita tu prod.keys para leer los juegos.", keysChoose: "Elegir prod.keys",
   popKind: "Tipo", gameKind: k => ({ BASE: "Juego", UPD: "Actualización", DLC: "DLC" })[k] || k, popDemo: "Demo", popVersion: "Versión", popHolds: "Contiene", popGame: "Del juego", popNeedsGame: "Necesita el juego en", popFirmware: "Necesita firmware",
   popTitles: (b, u, d) => [b && (b === 1 ? "1 juego" : b + " juegos"), u && (u === 1 ? "1 actualización" : u + " actualizaciones"), d && d + " DLC"].filter(Boolean).join(" · "),
+  spaceTitle: "Puede que los archivos nuevos no quepan", spaceIntro: "Pueden ocupar más de lo que hay libre. Si un archivo llena el disco, ese falla y su original queda como estaba.", spaceLine: (need, free) => `hacen falta hasta ${need}, hay ${free} libres`, spaceStart: "Empezar igual",
   tagEmulators: "emuladores", removeWarning: "Cada original se borra definitivamente cuando su archivo nuevo está comprobado.",
   selected: (n, bytes) => `${n === 1 ? "1 archivo" : n + " archivos"} · ${size(bytes)}`, nothing: "Aún no hay archivos",
   working: (done, n, share) => `${done} de ${n} hechos · ${share}%`,

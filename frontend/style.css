@@ -330,6 +330,10 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 
 /* 3: the card at the end of the work */
 #done-dialog { max-width: 460px; }
+.space-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.space-list li { display: grid; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--warn); border-radius: var(--radius-small); background: var(--hover); }
+.space-list b { overflow-wrap: anywhere; font-weight: 600; }
+.space-list span { color: var(--muted); font-size: 13px; }
 .done-saved { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
 #done-dialog h3 { font-size: 13px; margin: 14px 0 6px; }
 .done-top { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }

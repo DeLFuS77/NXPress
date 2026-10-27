@@ -838,11 +838,12 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
   }
+  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  if (!await spaceAllows(request)) return;
   for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
-  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   try {
     await app().Start(request);
     resetSpeed();
@@ -857,6 +858,28 @@ async function start(mode, extra) {
     $("status").textContent = String(error);
   }
   render();
+}
+
+// spaceAllows tells, before anything is written, the drives where the new files may not fit,
+// and starts only when asked to; a file that fills its drive fails, and its original stays
+function spaceAllows(request) {
+  return app().SpaceCheck(request).then(short => {
+    if (!short || !short.length) return true;
+    const list = $("space-list");
+    list.innerHTML = "";
+    for (const drive of short) {
+      const item = document.createElement("li");
+      item.innerHTML = `<b></b><span></span>`;
+      item.querySelector("b").textContent = drive.folder;
+      item.querySelector("span").textContent = t("spaceLine")(size(drive.need), size(drive.free));
+      list.append(item);
+    }
+    return new Promise(resolve => {
+      $("space-start").onclick = () => { resolve(true); $("space-dialog").close(); };
+      $("space-dialog").onclose = () => resolve(false);
+      $("space-dialog").showModal();
+    });
+  }).catch(() => true);
 }
 
 // showMeasure tells what a measure found in a dialog: every setting tried, as fast as it went,
@@ -1213,6 +1236,7 @@ async function main() {
   $("toast-undo").onclick = undo;
   app().SetTaskbar("none", 0, 0);
   $("done-close").onclick = () => $("done-dialog").close();
+  $("space-cancel").onclick = () => $("space-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
   let dragging = 0;
   const dropShown = show => { $("drop-overlay").hidden = !show; if (show) replay("enter", $("drop-overlay").firstElementChild); };

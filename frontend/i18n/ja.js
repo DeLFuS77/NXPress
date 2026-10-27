@@ -18,6 +18,7 @@ texts.ja = {
   keysMissing: "ゲームを読むには prod.keys が必要です。", keysChoose: "prod.keys を選択",
   popKind: "種類", gameKind: k => ({ BASE: "ゲーム", UPD: "アップデート", DLC: "DLC" })[k] || k, popDemo: "体験版", popVersion: "バージョン", popHolds: "内容", popGame: "本体ゲーム", popNeedsGame: "必要なゲームのバージョン", popFirmware: "必要なファームウェア",
   popTitles: (b, u, d) => [b && "ゲーム " + b, u && "アップデート " + u, d && "DLC " + d].filter(Boolean).join(" · "),
+  spaceTitle: "新しいファイルが入りきらない可能性があります", spaceIntro: "空き容量より大きくなる場合があります。ドライブがいっぱいになったファイルは失敗し、元のファイルはそのまま残ります。", spaceLine: (need, free) => `最大 ${need} 必要、空き ${free}`, spaceStart: "このまま開始",
   tagEmulators: "エミュレーター", removeWarning: "新しいファイルの検証後、元のファイルは完全に削除されます。",
   selected: (n, bytes) => `${n} 個のファイル · ${size(bytes)}`, nothing: "まだファイルがありません",
   working: (done, n, share) => `${n} 個中 ${done} 個完了 · ${share}%`,
