@@ -12,26 +12,6 @@
     <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8"/><path d="M6.8 22V10l6.6 12V10M18.6 10l6.6 12M25.2 10l-6.6 12"/></svg>
     <span>NXPress</span><small id="version"></small>
   </div>
-  <div class="right">
-    <button id="keys" class="chip"></button>
-    <details class="menu" id="menu">
-      <summary aria-label="Menu">⋯</summary>
-      <div class="menu-body">
-        <div class="theme"><span data-t="theme"></span>
-          <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
-        </div>
-        <div class="theme"><label for="language-select" data-t="language"></label>
-          <select id="language-select"></select>
-        </div>
-        <hr>
-        <label class="check menu-check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
-        <label class="check menu-check"><input id="sound" type="checkbox"><span data-t="soundWhenDone"></span></label>
-        <div class="menu-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></div>
-        <button id="send-to"></button>
-        <button id="last-report" data-t="lastReport"></button>
-      </div>
-    </details>
-  </div>
 </header>
 
 <div id="update-banner" class="topbar" hidden>
@@ -41,7 +21,13 @@
 </div>
 
 <main>
-  <nav id="modes" aria-label="Modes"></nav>
+  <nav aria-label="Modes">
+    <div id="modes"></div>
+    <div class="side-foot">
+      <button id="keys" class="side-keys"></button>
+      <button id="open-preferences" class="side-item"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b data-t="preferences"></b></button>
+    </div>
+  </nav>
 
   <section id="work">
     <div class="page-head">
@@ -214,6 +200,37 @@
       </div>
     </details>
   </aside>
+
+  <section id="preferences" hidden>
+    <div class="page-head">
+      <h1 data-t="preferences"></h1>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefKeys"></h2>
+      <p class="pref-keys" id="keys-path"></p>
+      <button id="keys-change" data-t="keysChoose"></button>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefLook"></h2>
+      <div class="pref-row"><span data-t="theme"></span>
+        <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+      </div>
+      <div class="pref-row"><label for="language-select" data-t="language"></label>
+        <select id="language-select"></select>
+      </div>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefWork"></h2>
+      <label class="check"><input id="sound" type="checkbox"><span data-t="soundWhenDone"></span></label>
+      <div class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></div>
+      <button id="last-report" data-t="lastReport"></button>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefApp"></h2>
+      <label class="check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
+      <button id="send-to"></button>
+    </div>
+  </section>
 </main>
 <dialog id="measure-dialog" aria-labelledby="measure-title">
   <h2 id="measure-title" data-t="measureTitle"></h2>

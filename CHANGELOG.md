@@ -9,6 +9,7 @@
 - Packs by game and names with these fields were already in Switch Library Manager Web, which this program comes from: they are brought here
 - The list of files sorts by name, size or state with a click on the column; a second click turns the order round and a third goes back to the order the files came in. The work goes in the order shown, and the order is kept for the next time (thanks @NikoMuffin, #17)
 - Rename has a field {dlc_number}, the number of a DLC among the ones of its game (1, 2...), for short names like Game [DLC 1] [ID] instead of the long name of the DLC, and "Keep the names that already have their title ID" (--keep-named) leaves the files you named yourself. Both come from Switch Library Manager Web, which has them in Organize
+- An icon beside each section of the menu (thanks @NikoMuffin, #30), and Settings as a page of its own at the bottom of the menu, by group: prod.keys, the look, what happens when the work is done and the app. prod.keys shows at the bottom left, and the menu of the top bar is gone (thanks @NikoMuffin, #27)
 
 ### Improvements
 

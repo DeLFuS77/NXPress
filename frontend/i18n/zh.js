@@ -65,6 +65,7 @@ texts.zh = {
   watchNeedsFolder: "请添加一个要监视的文件夹。", watching: "正在等待新文件", stop: "停止",
   noCache: "重新校验已校验过的文件", noCacheHint: "NXPress 会记住已校验或写入的文件，文件没有变化时不再重新读取。",
   keepNamed: "保留已包含 Title ID 的名称",
+  preferences: "设置", prefKeys: "prod.keys", prefLook: "外观", prefWork: "工作完成时", prefApp: "应用",
   template: "名称模板", templateHint: "字段:{name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number}（DLC 1、2…）,或 Switch Library Manager 的写法:{TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}…… 扩展名保持不变。", templateReset: "默认",
   fat32Hint: "如果主机在 microSD 上把文件夹显示为文件夹，请设置它的归档属性（Hekate: Tools, Archive bit）。在 Windows 上 NXPress 已自动设置。",
   cancel: "取消", waiting: "等待中", ok: "完成", failed: "失败", skipped: "已跳过", cancelled: "已取消",

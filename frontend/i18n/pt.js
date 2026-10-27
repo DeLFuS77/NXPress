@@ -65,6 +65,7 @@ texts.pt = {
   watchNeedsFolder: "Adicione uma pasta para vigiá-la.", watching: "Vigiando arquivos novos", stop: "Parar",
   noCache: "Verificar de novo arquivos já verificados", noCacheHint: "O NXPress lembra os arquivos que verificou ou gravou, e não os lê de novo enquanto não mudarem.",
   keepNamed: "Manter os nomes que já têm o Title ID",
+  preferences: "Configurações", prefKeys: "prod.keys", prefLook: "Aparência", prefWork: "Quando o trabalho termina", prefApp: "O app",
   template: "Modelo do nome", templateHint: "Campos: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), ou como os escreve o Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... A extensão mantém-se.", templateReset: "Padrão",
   fat32Hint: "No microSD, se o console mostrar a pasta como pasta, ative o bit de arquivo dela (Hekate: Tools, Archive bit). No Windows o NXPress já faz isso.",
   cancel: "Cancelar", waiting: "Aguardando", ok: "OK", failed: "Erro", skipped: "Ignorado", cancelled: "Cancelado",

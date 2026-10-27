@@ -65,6 +65,7 @@ texts.nl = {
   watchNeedsFolder: "Voeg een map toe om die in de gaten te houden.", watching: "Wacht op nieuwe bestanden", stop: "Stoppen",
   noCache: "Al gecontroleerde bestanden opnieuw controleren", noCacheHint: "NXPress onthoudt de bestanden die het controleerde of schreef, en leest ze niet opnieuw zolang ze niet veranderen.",
   keepNamed: "Namen houden die hun Title ID al hebben",
+  preferences: "Instellingen", prefKeys: "prod.keys", prefLook: "Uiterlijk", prefWork: "Als het werk klaar is", prefApp: "De app",
   template: "Naamsjabloon", templateHint: "Velden: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), of zoals Switch Library Manager ze schrijft: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... De extensie blijft.", templateReset: "Standaard",
   fat32Hint: "Als de console de map op de microSD als map toont, zet dan zijn archiefbit (Hekate: Tools, Archive bit). Op Windows doet NXPress dat al.",
   cancel: "Annuleren", waiting: "Wacht", ok: "OK", failed: "Mislukt", skipped: "Overgeslagen", cancelled: "Geannuleerd",

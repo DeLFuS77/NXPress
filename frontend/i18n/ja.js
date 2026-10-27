@@ -65,6 +65,7 @@ texts.ja = {
   watchNeedsFolder: "監視するフォルダーを追加してください。", watching: "新しいファイルを待機中", stop: "停止",
   noCache: "検証済みのファイルも再検証", noCacheHint: "NXPress は検証または書き込んだファイルを記憶し、変更がない限り読み直しません。",
   keepNamed: "Title ID を含む名前はそのままにする",
+  preferences: "設定", prefKeys: "prod.keys", prefLook: "外観", prefWork: "作業が終わったとき", prefApp: "アプリ",
   template: "名前のテンプレート", templateHint: "フィールド: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number}（DLC 1、2…）、または Switch Library Manager の書き方: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... 拡張子はそのままです。", templateReset: "既定",
   fat32Hint: "microSD 上でフォルダーがフォルダーとして表示される場合は、アーカイブビットを設定してください（Hekate: Tools, Archive bit）。Windows では NXPress が設定します。",
   cancel: "キャンセル", waiting: "待機中", ok: "OK", failed: "失敗", skipped: "スキップ", cancelled: "キャンセル済み",

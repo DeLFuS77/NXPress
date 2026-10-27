@@ -72,6 +72,7 @@ texts.ru = {
   watchNeedsFolder: "Добавьте папку, чтобы следить за ней.", watching: "Ожидание новых файлов", stop: "Стоп",
   noCache: "Проверять заново уже проверенные файлы", noCacheHint: "NXPress помнит проверенные или записанные им файлы и не читает их снова, пока они не изменятся.",
   keepNamed: "Оставлять имена, в которых уже есть Title ID",
+  preferences: "Настройки", prefKeys: "prod.keys", prefLook: "Внешний вид", prefWork: "Когда работа закончена", prefApp: "Приложение",
   template: "Шаблон имени", templateHint: "Поля: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), или как их пишет Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... Расширение сохраняется.", templateReset: "По умолчанию",
   fat32Hint: "Если консоль показывает папку на microSD как папку, установите ей атрибут «архивный» (Hekate: Tools, Archive bit). В Windows NXPress делает это сам.",
   cancel: "Отмена", waiting: "Ожидание", ok: "OK", failed: "Ошибка", skipped: "Пропущен", cancelled: "Отменено",

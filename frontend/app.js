@@ -13,6 +13,22 @@ const takesShown = {
   split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
 
+// the icon of each section: lines drawn on a grid of 24, in the color of the text
+const icons = {
+  compress: '<path d="M12 3v6m0 0-3-3m3 3 3-3M12 21v-6m0 0-3 3m3-3 3 3M5 12h14"/>',
+  decompress: '<path d="M12 9V3m0 0-3 3m3-3 3 3M12 15v6m0 0-3-3m3 3 3-3M5 12h14"/>',
+  recompress: '<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/>',
+  trim: '<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.4 20 18M8.2 15.6 20 6"/>',
+  verify: '<path d="M12 3 4.5 6v6c0 4.3 3.2 7.7 7.5 9 4.3-1.3 7.5-4.7 7.5-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+  convert: '<path d="M4 8h13m0 0-3-3m3 3-3 3M20 16H7m0 0 3-3m-3 3 3 3"/>',
+  split: '<path d="M12 3v7m0 0-6 6v5m6-11 6 6v5"/>',
+  pack: '<path d="m3 7 9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  fat32: '<path d="M7 3h7l4 4v14H7z"/><path d="M10 6v3m3-3v3"/>',
+  rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
+};
+const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || ""}</svg>`;
+
 const $ = id => document.getElementById(id);
 const app = () => window.go.main.App;
 const state = {
@@ -68,15 +84,26 @@ function render() {
     $("modes").append(title);
     for (const mode of members) {
       const button = document.createElement("button");
-      button.innerHTML = "<b></b><small></small>";
+      button.innerHTML = icon(mode) + "<span><b></b><small></small></span>";
       button.querySelector("b").textContent = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
-      button.className = mode === state.mode ? "on" : "";
-      button.onclick = () => setMode(mode);
+      button.className = mode === state.mode && !state.view ? "on" : "";
+      button.onclick = () => {
+        // a section leaves the page of the settings
+        if (state.view) { state.view = ""; render(); }
+        setMode(mode);
+      };
       $("modes").append(button);
     }
   }
   document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
+  // the page of the settings takes the place of the section and its options
+  const preferences = state.view === "preferences";
+  $("work").hidden = preferences;
+  $("settings").hidden = preferences;
+  $("preferences").hidden = !preferences;
+  $("open-preferences").classList.toggle("on", preferences);
+  $("keys-path").textContent = state.keys || t("keys")("");
   $("title").textContent = t(state.mode);
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
@@ -100,7 +127,7 @@ function render() {
   $("remove-warning").hidden = !$("remove").checked;
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
-  $("keys").className = "chip" + (state.keys ? "" : " bad");
+  $("keys").className = "side-keys" + (state.keys ? "" : " bad");
   $("level-value").textContent = $("level").value;
   $("level-hint").textContent = t("levelHint")(level);
   $("output").textContent = state.output || t("nextTo");
@@ -774,10 +801,9 @@ async function main() {
   };
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
-  $("keys-choose").onclick = () => $("keys").click();
+  $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
+  $("open-preferences").onclick = () => { state.view = "preferences"; render(); };
   $("remove").onchange = render;
-  // the menu closes on a click elsewhere
-  document.addEventListener("click", event => { if (!$("menu").contains(event.target)) $("menu").open = false; });
   $("clear").onclick = () => { clearList(); render(); };
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); };
   $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); };
@@ -796,7 +822,6 @@ async function main() {
       await app().SetSendTo(!state.setup.sendToEnabled);
       state.setup.sendToEnabled = !state.setup.sendToEnabled;
     } catch (error) { $("status").textContent = String(error); }
-    $("menu").open = false;
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
@@ -816,7 +841,7 @@ async function main() {
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
   $("measure-close").onclick = () => $("measure-dialog").close();
-  $("last-report").onclick = () => { $("menu").open = false; showReport(); };
+  $("last-report").onclick = showReport;
   $("report-close").onclick = () => $("report-dialog").close();
   $("report-copy").onclick = () => { const kept = load("lastReport", null); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
   $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };

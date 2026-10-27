@@ -65,6 +65,7 @@ texts.it = {
   watchNeedsFolder: "Aggiungi una cartella per controllarla.", watching: "In attesa di nuovi file", stop: "Ferma",
   noCache: "Verifica di nuovo i file già verificati", noCacheHint: "NXPress ricorda i file che ha verificato o scritto, e non li rilegge finché non cambiano.",
   keepNamed: "Mantieni i nomi che hanno già il loro Title ID",
+  preferences: "Impostazioni", prefKeys: "prod.keys", prefLook: "Aspetto", prefWork: "Al termine del lavoro", prefApp: "L'app",
   template: "Modello del nome", templateHint: "Campi: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), o come li scrive Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... L'estensione resta.", templateReset: "Predefinito",
   fat32Hint: "Sulla microSD, se la console mostra la cartella come cartella, imposta il suo bit di archivio (Hekate: Tools, Archive bit). Su Windows NXPress lo imposta già.",
   cancel: "Annulla", waiting: "In attesa", ok: "OK", failed: "Errore", skipped: "Saltato", cancelled: "Annullato",
