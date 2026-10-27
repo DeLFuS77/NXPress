@@ -18,10 +18,11 @@ type windowPlace struct {
 
 // the size the window opens with the first time, and the least it takes
 const (
-	windowWidth     = 1120
-	windowHeight    = 720
-	windowMinWidth  = 900
-	windowMinHeight = 520
+	windowWidth  = 1120
+	windowHeight = 720
+	// the smallest window where the list, the bar of actions and the whole menu fit
+	windowMinWidth  = 960
+	windowMinHeight = 600
 )
 
 func windowPlacePath() string {

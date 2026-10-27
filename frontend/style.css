@@ -171,9 +171,12 @@ input.changed { animation: changed 2.5s ease-out; }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 #log { margin: 0 20px 12px; max-height: 160px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 
-.actions { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--panel); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--panel); }
 .actions > button { flex: none; }
-.summary { flex: 1; min-width: 0; }
+/* the summary keeps room to be read: on a narrow window the buttons go under it */
+.summary { flex: 1 1 220px; min-width: 0; }
+/* while the files are at work, the estimate cannot start: its button makes room for the others */
+.busy #estimate { display: none; }
 .summary-extra { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
 button.link.small-link { margin: 0; font-size: 12px; }
 #summary-text { font-weight: 600; }
@@ -228,6 +231,21 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .advanced summary { cursor: pointer; font-weight: 600; list-style: none; }
 .advanced summary::before { content: "▸ "; color: var(--muted); }
 .advanced[open] summary::before { content: "▾ "; }
+
+/* a smaller window: the menu, the panel of options and the columns narrower, and on a low one
+the sentence under the title gives its room to the list */
+@media (max-width: 1200px) {
+  nav { width: 180px; }
+  aside { width: 280px; }
+  button.primary.big { min-width: 130px; padding: 10px 20px; }
+  .size, td.size { width: 76px; }
+  .state, td.state { width: 128px; }
+  .summary { flex-basis: 170px; }
+}
+@media (max-height: 640px) {
+  .page-head p { display: none; }
+  .page-head { padding-top: 12px; }
+}
 
 /* while the files are at work */
 .busy nav button, .busy .toolbar button, .busy aside, .busy #empty button { pointer-events: none; opacity: .55; }
