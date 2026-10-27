@@ -30,6 +30,7 @@
 ### Fixes
 
 - The window cannot be made smaller than 960 x 600, where everything fits (it went down to 900 x 520, where the bar of actions broke its words apart); on a smaller window the menu, the panel of options and the columns narrow, the bar of actions puts its buttons under the summary when they do not fit, Estimate leaves its place while the files are at work, and on a low window the sentence under the title gives its room to the list
+- On a smaller or lower window the new look packs too: the menu keeps its tiles closer, so Settings at its foot stays in sight, and the line of the speed keeps one row
 - With --rm-source (or "Delete originals once checked"), a new file that could only be checked in part, an NCA rewritten by a tool with a section that cannot be checked on its own, no longer replaces its original: the original is kept and the row says why, as Switch Library Manager Web does. This covers Convert, Decompress, Recompress, Trim, Split and Pack
 
 ## 1.2.2

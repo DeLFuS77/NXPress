@@ -203,6 +203,7 @@ input.changed { animation: changed 2.5s ease-out; }
 .actions > button { flex: none; }
 /* the summary keeps room to be read: on a narrow window the buttons go under it */
 .summary { flex: 1 1 220px; min-width: 0; }
+.summary { flex: 1 1 240px; min-width: 0; }
 /* while the files are at work, the estimate cannot start: its button makes room for the others */
 .busy #estimate { display: none; }
 .summary-extra { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
@@ -391,6 +392,31 @@ table.grid .game .file, table.grid td.name .note, table.grid .error-more, table.
 table.grid td.size { padding-top: 0; font-size: 12px; }
 table.grid td.remove { position: absolute; top: 4px; right: 4px; padding: 0; }
 table.grid td.remove button { background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 999px; }
+
+/* a smaller window: the panel of options narrower, the buttons smaller, and on a low one the
+sentence under the title gives its room to the list */
+@media (max-width: 1200px) {
+  aside { width: 280px; padding: 16px; }
+  button.primary.big { min-width: 130px; padding: 10px 20px; }
+  .actions, .toolbar { padding-left: 16px; padding-right: 16px; }
+  #drop { margin: 10px 16px; }
+  .page-head { padding: 16px 16px 4px; }
+}
+/* a low window: the menu closer together, so Settings at its foot stays in sight */
+@media (max-height: 760px) {
+  #modes, nav { gap: 1px; }
+  nav button { padding-top: 3px !important; padding-bottom: 3px !important; }
+  nav .tile { width: 28px; height: 28px; border-radius: 8px; }
+  nav .group { padding: 8px 12px 2px !important; }
+  .side-foot { padding-top: 6px; }
+}
+@media (max-height: 640px) {
+  .page-head p { display: none; }
+  .page-head { padding-top: 12px; }
+  .title-row .tile { width: 30px; height: 30px; }
+  h1 { font-size: 19px; }
+  .toolbar { padding-top: 8px; }
+}
 
 /* motion: each one answers a change, and Windows can ask for none */
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
