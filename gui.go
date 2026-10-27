@@ -37,6 +37,14 @@ func runWindow(files []string) int {
 	app := &App{files: files}
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := loadWindowPlace()
+	// on Windows 11 the menu shows the Mica of the system through a window left clear
+	mica := micaWindow()
+	background := &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255}
+	backdrop := windows.Auto
+	if mica {
+		background.A = 0
+		backdrop = windows.Mica
+	}
 	err := wails.Run(&wailsoptions.App{
 		Title:            "NXPress " + version,
 		Width:            place.Width,
@@ -44,7 +52,7 @@ func runWindow(files []string) int {
 		MinWidth:         windowMinWidth,
 		MinHeight:        windowMinHeight,
 		StartHidden:      true,
-		BackgroundColour: &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255},
+		BackgroundColour: background,
 		AssetServer:      &assetserver.Options{Assets: frontend},
 		OnStartup:        app.startup,
 		OnDomReady:       placeWindow,
@@ -54,7 +62,10 @@ func runWindow(files []string) int {
 		Bind:             []any{app},
 		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
 		// portable (see portable.go): the page keeps its settings next to the program too
-		Windows: &windows.Options{WebviewUserDataPath: webviewFolder()},
+		Windows: &windows.Options{
+			WebviewUserDataPath:  webviewFolder(),
+			WebviewIsTransparent: mica, WindowIsTranslucent: mica, BackdropType: backdrop,
+		},
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
@@ -103,6 +114,8 @@ type Setup struct {
 	// whether "Send to" can hold NXPress, and holds it
 	SendTo        bool `json:"sendTo"`
 	SendToEnabled bool `json:"sendToEnabled"`
+	// the window is clear behind the menu, for the Mica of Windows 11
+	Mica bool `json:"mica"`
 }
 
 func (a *App) Setup() Setup {
@@ -111,6 +124,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: defaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
+		Mica: micaWindow(),
 	}
 	setup.SendToEnabled = setup.SendTo && sendToEnabled()
 	if len(a.files) > 0 {

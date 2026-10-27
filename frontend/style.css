@@ -73,6 +73,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 
 /* layout */
 main { flex: 1; display: flex; min-height: 0; }
+/* Windows 11: the top bar and the menu show the Mica of the system, the work stays on its own ground */
+html.mica body, html.mica header, html.mica nav { background: transparent; }
+html.mica #work, html.mica #preferences { background: var(--bg); }
 
 /* the modes, by group */
 nav { width: 210px; flex: none; border-right: 1px solid var(--line); background: var(--panel); padding: 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
@@ -320,9 +323,9 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .row-menu button:last-child:disabled { color: var(--muted); }
 
 /* a card over the cover of a game: what it is, at a glance */
-.game-pop { position: fixed; z-index: 45; display: flex; gap: 14px; width: 380px; max-width: calc(100vw - 16px); padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; }
+.game-pop { --pop-tone: var(--accent); position: fixed; z-index: 45; display: flex; gap: 14px; width: 380px; max-width: calc(100vw - 16px); padding: 14px; border: 1px solid color-mix(in srgb, var(--pop-tone) 35%, var(--line)); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--pop-tone) 22%, var(--raised)), var(--raised) 65%); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; transition: background .3s, border-color .3s; }
 .game-pop[hidden] { display: none; }
-.game-pop img { flex: none; width: 112px; height: 112px; border-radius: var(--radius-small); object-fit: cover; }
+.game-pop img { flex: none; width: 112px; height: 112px; border-radius: var(--radius-small); object-fit: cover; box-shadow: 0 6px 18px color-mix(in srgb, var(--pop-tone) 45%, transparent); }
 .game-pop > div { min-width: 0; flex: 1; }
 .game-pop .pop-name { font-weight: 600; font-size: 15px; line-height: 1.3; }
 .game-pop .pop-publisher { color: var(--muted); font-size: 12px; margin-top: 2px; }
@@ -341,7 +344,7 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .error-more[open] p { animation: enter .18s ease-out; }
 
 /* 3: the card at the end of the work */
-#done-dialog { max-width: 460px; }
+#done-dialog { --done-tone: var(--ok); max-width: 460px; background: linear-gradient(170deg, color-mix(in srgb, var(--done-tone) 18%, var(--panel)), var(--panel) 55%); border-top: 3px solid var(--done-tone); }
 .space-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .space-list li { display: grid; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--warn); border-radius: var(--radius-small); background: var(--hover); }
 .space-list b { overflow-wrap: anywhere; font-weight: 600; }
@@ -409,6 +412,10 @@ table.grid .game .file, table.grid td.name .note, table.grid .error-more, table.
 table.grid td.size { padding-top: 0; font-size: 12px; }
 table.grid td.remove { position: absolute; top: 4px; right: 4px; padding: 0; }
 table.grid td.remove button { background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 999px; }
+/* in the grid, the cover of a file at work fills up from the bottom, with its share on it */
+table.grid .game { position: relative; }
+table.grid .game::after { content: attr(data-share); position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 1; display: grid; place-items: center; font: 700 26px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); background: linear-gradient(to top, color-mix(in srgb, var(--accent) 45%, transparent) var(--share, 0%), rgba(0, 0, 0, .45) var(--share, 0%)); opacity: 0; pointer-events: none; transition: opacity .4s; }
+table.grid .game.working::after { opacity: 1; }
 
 /* a smaller window: the panel of options narrower, the buttons smaller, and on a low one the
 sentence under the title gives its room to the list */

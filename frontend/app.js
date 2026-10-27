@@ -195,6 +195,40 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
+// the color of a cover: the mean of its pixels, the bright and colorful ones weighing more, so a
+// card of the game can wear it; kept with the game once found
+function coverTone(game) {
+  if (!game || !game.icon) return "";
+  if (game.tone !== undefined) return game.tone;
+  game.tone = "";
+  const image = new Image();
+  image.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 16;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(image, 0, 0, 16, 16);
+    const pixels = context.getImageData(0, 0, 16, 16).data;
+    let r = 0, g = 0, b = 0, sum = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const max = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]), min = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
+      const weight = 1 + (max - min) / 32 + max / 255;
+      r += pixels[i] * weight; g += pixels[i + 1] * weight; b += pixels[i + 2] * weight; sum += weight;
+    }
+    // its hue, a little livelier and never too dark or too light, so it shows on both themes
+    r /= sum * 255; g /= sum * 255; b /= sum * 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), light = (max + min) / 2;
+    let hue = 0, saturation = 0;
+    if (max > min) {
+      saturation = (max - min) / (1 - Math.abs(2 * light - 1));
+      hue = max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4;
+    }
+    game.tone = saturation < 0.08 ? "" : `hsl(${Math.round(hue * 60)} ${Math.round(Math.max(saturation, 0.55) * 100)}% ${Math.round(Math.min(Math.max(light, 0.42), 0.58) * 100)}%)`;
+    document.dispatchEvent(new CustomEvent("nx-tone", { detail: game }));
+  };
+  image.src = game.icon;
+  return "";
+}
+
 // over the cover and the name of a game read, a card with what it is: its publisher, title ID,
 // version, the titles of each kind, the game of an update or a DLC, the version of its game a
 // DLC needs, the firmware it needs and its languages
@@ -249,8 +283,26 @@ function showPop(row, anchor) {
   }
   pop.style.left = Math.max(margin, Math.min(left, innerWidth - width - margin)) + "px";
   pop.style.top = Math.max(margin, Math.min(top, innerHeight - height - margin)) + "px";
-  replay("enter", pop);
+  // the card wears the color of the cover, as soon as it is known
+  const tone = coverTone(game);
+  pop.style.setProperty("--pop-tone", tone || "var(--accent)");
+  popGame = game;
+  // the cover of the row grows into the one of the card
+  const small = row.tr.querySelector("img.icon:not([hidden])");
+  if (game.icon && small && !calm()) {
+    const from = small.getBoundingClientRect(), to = image.getBoundingClientRect();
+    pop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: "ease-out" });
+    image.animate([
+      { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`, transformOrigin: "0 0", borderRadius: "16px" },
+      { transform: "none", transformOrigin: "0 0" },
+    ], { duration: 260, easing: "cubic-bezier(.2, .8, .2, 1)" });
+  } else replay("enter", pop);
 }
+// a color found while the card is open
+let popGame = null;
+document.addEventListener("nx-tone", event => {
+  if (event.detail === popGame && !$("game-pop").hidden) $("game-pop").style.setProperty("--pop-tone", event.detail.tone || "var(--accent)");
+});
 function hidePop() {
   clearTimeout(popTimer);
   $("game-pop").hidden = true;
@@ -349,6 +401,10 @@ function showDone(event, status) {
   const output = rows.find(row => row.output);
   $("done-folder").hidden = !output;
   $("done-folder").onclick = () => { if (output) app().ShowFile(output.output); };
+  // the card wears the color of the game that saved the most
+  const best = savings.length ? savings[0].row : rows.find(row => row.game && row.game.icon);
+  const tone = best && best.game && coverTone(best.game);
+  $("done-dialog").style.setProperty("--done-tone", tone || "var(--ok)");
   $("done-dialog").showModal();
 }
 
@@ -737,12 +793,18 @@ function paint(row) {
   if (row.game && row.game.icon) {
     icon.src = row.game.icon;
     icon.hidden = false;
+    coverTone(row.game);
     row.tr.querySelector(".cover").hidden = true;
   }
   // the cover shimmers while the game is read
   row.tr.querySelector(".cover").classList.toggle("loading", !!state.keys && !row.described);
+  // in the grid, the cover fills up with the progress of its file
+  const game = row.tr.querySelector(".game");
+  game.classList.toggle("working", row.status === "work");
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
+    game.style.setProperty("--share", (share * 100).toFixed(1) + "%");
+    game.dataset.share = Math.floor(share * 100) + "%";
     cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
     cell.querySelector(".step").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${Math.floor(share * 100)}%`;
     cell.querySelector(".bar div").style.width = (share * 100).toFixed(1) + "%";
@@ -1246,9 +1308,16 @@ async function main() {
   state.keys = state.setup.keys;
   // the theme: the one of the system, or the one chosen
   state.theme = load("theme", "auto");
+  // on Windows 11 the menu shows the Mica of the system, in the theme chosen
+  document.documentElement.classList.toggle("mica", !!state.setup.mica);
   const theme = () => {
     if (state.theme === "auto") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.dataset.theme = state.theme;
+    if (state.setup.mica && window.runtime) {
+      if (state.theme === "dark") window.runtime.WindowSetDarkTheme();
+      else if (state.theme === "light") window.runtime.WindowSetLightTheme();
+      else window.runtime.WindowSetSystemDefaultTheme();
+    }
   };
   theme();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
