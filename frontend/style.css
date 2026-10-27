@@ -357,8 +357,10 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .lifetime b { color: var(--ok); font-size: 22px; }
 
 /* the speed of the work and the time left */
-.speed { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.sparkline { width: 120px; height: 24px; flex: none; }
+.speed { display: flex; align-items: center; gap: 10px; margin-top: 6px; min-width: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* on a narrow window the line keeps one row: the time left gives way first */
+#speed-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sparkline { width: clamp(60px, 18vw, 120px); height: 24px; flex: none; }
 #speed-line { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 #speed-area { fill: color-mix(in srgb, var(--accent) 18%, transparent); stroke: none; }
 

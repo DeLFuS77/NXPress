@@ -51,8 +51,11 @@ func init() {
 		// an error here is S_FALSE, COM already initialized on this thread: it works the same
 		ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 		var list *ole.IUnknown
+		var window windows.HWND
 		for call := range taskbarCalls {
-			window := ownWindow()
+			if window == 0 || !windows.IsWindowVisible(window) {
+				window = ownWindow()
+			}
 			if window == 0 {
 				continue
 			}
@@ -71,26 +74,30 @@ func init() {
 	}()
 }
 
-// ownWindow is the main window of this process: the visible one titled NXPress.
-func ownWindow() windows.HWND {
-	process := windows.GetCurrentProcessId()
-	var found windows.HWND
-	callback := syscall.NewCallback(func(window windows.HWND, _ uintptr) uintptr {
+// the window found by ownWindow; the callback is made once, as Windows takes a few only
+var (
+	foundWindow windows.HWND
+	findWindow  = syscall.NewCallback(func(window windows.HWND, _ uintptr) uintptr {
 		var owner uint32
 		windows.GetWindowThreadProcessId(window, &owner)
-		if owner != process || !windows.IsWindowVisible(window) {
+		if owner != windows.GetCurrentProcessId() || !windows.IsWindowVisible(window) {
 			return 1
 		}
 		title := make([]uint16, 64)
 		length, _ := getWindowText(window, &title[0], int32(len(title)))
-		if length > 0 && len(windows.UTF16ToString(title[:length])) >= 7 && windows.UTF16ToString(title[:7]) == "NXPress" {
-			found = window
+		if name := windows.UTF16ToString(title[:max(length, 0)]); len(name) >= 7 && name[:7] == "NXPress" {
+			foundWindow = window
 			return 0
 		}
 		return 1
 	})
-	windows.EnumWindows(callback, nil)
-	return found
+)
+
+// ownWindow is the main window of this process: the visible one titled NXPress.
+func ownWindow() windows.HWND {
+	foundWindow = 0
+	windows.EnumWindows(findWindow, nil)
+	return foundWindow
 }
 
 var procGetWindowTextW = windows.NewLazySystemDLL("user32.dll").NewProc("GetWindowTextW")
