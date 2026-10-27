@@ -366,7 +366,7 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}
-	return name, note, removeSource(o, path)
+	return removeSource(o, path, switchfs.FileCheck{}, name, note)
 }
 
 func decompress(ctx context.Context, path string, o options, out output) (string, string, error) {
@@ -386,7 +386,7 @@ func decompress(ctx context.Context, path string, o options, out output) (string
 	if err != nil {
 		return "", "", err
 	}
-	return name, modifiedNote(check), removeSource(o, path)
+	return removeSource(o, path, check, name, modifiedNote(check))
 }
 
 func convert(ctx context.Context, path string, o options, out output) (string, string, error) {
@@ -406,7 +406,7 @@ func convert(ctx context.Context, path string, o options, out output) (string, s
 	if err != nil {
 		return "", "", err
 	}
-	return name, modifiedNote(check), removeSource(o, path)
+	return removeSource(o, path, check, name, modifiedNote(check))
 }
 
 // recompress writes an NSZ or XCZ again, solid or in blocks, at another level. Without an output
@@ -453,7 +453,7 @@ func recompress(ctx context.Context, path string, o options, threads int, out ou
 	if inPlace {
 		return name, note, nil
 	}
-	return name, note, removeSource(o, path)
+	return removeSource(o, path, check, name, note)
 }
 
 // trim takes away what installers do not use: the padding after the data of an XCI, or the
@@ -498,7 +498,7 @@ func trim(ctx context.Context, path string, o options, out output) (string, stri
 	if inPlace {
 		return name, note, nil
 	}
-	return name, note, removeSource(o, path)
+	return removeSource(o, path, check, name, note)
 }
 
 // stripDeltas writes an NSP or NSZ again without the delta fragments of its updates.
@@ -541,7 +541,7 @@ func stripDeltas(ctx context.Context, path string, o options, out output) (strin
 	if inPlace {
 		return name, note, nil
 	}
-	return name, note, removeSource(o, path)
+	return removeSource(o, path, check, name, note)
 }
 
 // how much of a game is compressed to tell its estimate
@@ -617,6 +617,7 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 	}
 	base := strings.TrimSpace(strings.SplitN(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), "[", 2)[0])
 	names := []string{}
+	var checked switchfs.FileCheck
 	for _, part := range plan.Parts {
 		extension := ".nsp"
 		switch {
@@ -635,7 +636,9 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 			return "", "", err
 		}
 		written := temporary(name)
-		_, err = switchfs.WriteSplitPartAndCheck(ctx, path, part, written, out.progress(path, "Splitting "+part.Type))
+		var check switchfs.FileCheck
+		check, err = switchfs.WriteSplitPartAndCheck(ctx, path, part, written, out.progress(path, "Splitting "+part.Type))
+		checked.Partial = checked.Partial || check.Partial
 		if err == nil {
 			err = finish(o, written, name)
 		}
@@ -650,7 +653,8 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 		// files of the original that no title lists: it is kept, whatever --rm-source says
 		return "", note + "; some of its files are in no part, so it is kept", nil
 	}
-	return "", note, removeSource(o, path)
+	_, note, err = removeSource(o, path, checked, "", note)
+	return "", note, err
 }
 
 // pack merges the files given into one multi-title file (a SuperNSP), checked as it is
@@ -663,15 +667,15 @@ func pack(ctx context.Context, o options, out output) error {
 	if len(sources) < 2 {
 		return errors.New("a pack needs at least two files")
 	}
-	name, note, err := packFiles(ctx, o, sources, o.pack, func(extension string, _ int64) (string, error) {
+	name, note, check, err := packFiles(ctx, o, sources, o.pack, func(extension string, _ int64) (string, error) {
 		return target(o, strings.TrimSuffix(o.pack, filepath.Ext(o.pack))+extension)
 	}, out)
 	if err != nil {
 		return err
 	}
-	out.done(o.pack, name, note, nil)
+	out.done(o.pack, name, keptNote(o, check, note), nil)
 	for _, source := range sources {
-		if err := removeSource(o, source); err != nil {
+		if _, _, err := removeSource(o, source, check, "", ""); err != nil {
 			return err
 		}
 	}
@@ -731,7 +735,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			continue
 		}
 		// the pack is named by the titles it holds, next to the file of the game
-		name, note, err := packFiles(ctx, o, files, files[0], func(extension string, size int64) (string, error) {
+		name, note, check, err := packFiles(ctx, o, files, files[0], func(extension string, size int64) (string, error) {
 			titles := []*switchfs.ContentMetaAttributes{}
 			newest := map[string]*switchfs.ContentMetaAttributes{}
 			for _, file := range files {
@@ -752,7 +756,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			title.Size = size
 			return target(o, filepath.Join(filepath.Dir(files[0]), strings.TrimSuffix(newName(files[0], title, template), filepath.Ext(files[0]))+extension))
 		}, out)
-		out.done(files[0], name, note, err)
+		out.done(files[0], name, keptNote(o, check, note), err)
 		for _, file := range files[1:] {
 			if err != nil {
 				out.done(file, "", "", err)
@@ -765,7 +769,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			continue
 		}
 		for _, file := range files {
-			if err := removeSource(o, file); err != nil {
+			if _, _, err := removeSource(o, file, check, "", ""); err != nil {
 				out.done(file, "", "", err)
 				failed++
 			}
@@ -776,7 +780,7 @@ func packGames(ctx context.Context, o options, out output) int {
 
 // packFiles writes the pack of the files given, checked, under the name nameOf gives for its
 // extension and its size, and tells what it did. label names the work in its progress.
-func packFiles(ctx context.Context, o options, sources []string, label string, nameOf func(extension string, size int64) (string, error), out output) (string, string, error) {
+func packFiles(ctx context.Context, o options, sources []string, label string, nameOf func(extension string, size int64) (string, error), out output) (string, string, switchfs.FileCheck, error) {
 	// a game card among them: its updates and DLC go into it, and the pack is a game card
 	cards := []string{}
 	others := []string{}
@@ -788,13 +792,13 @@ func packFiles(ctx context.Context, o options, sources []string, label string, n
 		}
 	}
 	if len(cards) > 1 {
-		return "", "", errors.New("only one game card can be packed: give its updates and DLC as NSP or NSZ")
+		return "", "", switchfs.FileCheck{}, errors.New("only one game card can be packed: give its updates and DLC as NSP or NSZ")
 	}
 	// a pack of NSP files is an NSP, uncompressed; one with an NSZ among them holds NCZ, an NSZ
 	compressed := false
 	for _, source := range sources {
 		if facts, err := switchfs.DescribeFile(source); err != nil {
-			return "", "", err
+			return "", "", switchfs.FileCheck{}, err
 		} else if facts.Solid+facts.Blocks > 0 {
 			compressed = true
 		}
@@ -813,7 +817,7 @@ func packFiles(ctx context.Context, o options, sources []string, label string, n
 	folder := filepath.Dir(sources[0])
 	if o.output != "" {
 		if err := os.MkdirAll(o.output, 0o755); err != nil {
-			return "", "", err
+			return "", "", switchfs.FileCheck{}, err
 		}
 		folder = o.output
 	}
@@ -845,7 +849,7 @@ func packFiles(ctx context.Context, o options, sources []string, label string, n
 		err = finish(o, written, name)
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", switchfs.FileCheck{}, err
 	}
 	note := fmt.Sprintf("%d files merged", len(sources))
 	if skipped > 0 {
@@ -857,7 +861,7 @@ func packFiles(ctx context.Context, o options, sources []string, label string, n
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}
-	return name, note, nil
+	return name, note, check, nil
 }
 
 // info tells the titles a file holds.
@@ -928,14 +932,33 @@ func describe(path string) []string {
 	return lines
 }
 
-func removeSource(o options, path string) error {
+// removeSource deletes the original with --rm-source once its new file is checked whole, and
+// gives back name and note. A file checked only in part (an NCA rewritten by a tool with a
+// section that cannot be checked on its own) does not replace it: the original is kept, and the
+// note says why.
+func removeSource(o options, path string, check switchfs.FileCheck, name string, note string) (string, string, error) {
 	if !o.rmSource {
-		return nil
+		return name, note, nil
+	}
+	if check.Partial {
+		return name, keptNote(o, check, note), nil
 	}
 	if err := os.Remove(path); err != nil {
-		return fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
+		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 	}
-	return nil
+	return name, note, nil
+}
+
+// keptNote is note, with why the original stays when --rm-source cannot delete it.
+func keptNote(o options, check switchfs.FileCheck, note string) string {
+	if !o.rmSource || !check.Partial {
+		return note
+	}
+	kept := "the original is kept: the new file could only be checked in part"
+	if note == "" {
+		return kept
+	}
+	return note + "; " + kept
 }
 
 func modifiedNote(check switchfs.FileCheck) string {

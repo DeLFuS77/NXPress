@@ -18,6 +18,10 @@
 - Trim shows that it takes the NSP and NSZ files of updates, the only ones with delta fragments: "NSP/NSZ (updates)" (thanks @NikoMuffin, #23)
 - A game in sparse storage is SKIPPED with a plain sentence: no compressor can read that layout yet, nsz included, and the game installs as it is (thanks @NikoMuffin, #29)
 
+### Fixes
+
+- With --rm-source (or "Delete originals once checked"), a new file that could only be checked in part, an NCA rewritten by a tool with a section that cannot be checked on its own, no longer replaces its original: the original is kept and the row says why, as Switch Library Manager Web does. This covers Convert, Decompress, Recompress, Trim, Split and Pack
+
 ## 1.2.2
 
 ### New

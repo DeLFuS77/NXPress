@@ -153,7 +153,8 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	if inPlace {
 		return name, note, nil
 	}
-	return name, note, removeSource(o, path)
+	// the parts, read again as one file, gave the original byte for byte
+	return removeSource(o, path, switchfs.FileCheck{}, name, note)
 }
 
 func joinParts(ctx context.Context, path string, whole string, o options, out output) (string, string, error) {
