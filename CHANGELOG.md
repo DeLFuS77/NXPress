@@ -20,6 +20,7 @@
 - Trim shows that it takes the NSP and NSZ files of updates, the only ones with delta fragments: "NSP/NSZ (updates)" (thanks @NikoMuffin, #23)
 - A game in sparse storage is SKIPPED with a plain sentence: no compressor can read that layout yet, nsz included, and the game installs as it is (thanks @NikoMuffin, #29)
 - Info tells more of each title: the firmware the console needs for a game or an update, the version of its game a DLC needs, and the NCA files it is made of, by kind (thanks @NikoMuffin, #20)
+- A new look: blue for what you choose and start, red only for the name of the app and for what went wrong; the icon of each section on a tile in the color of its group; the options of a section on one panel instead of boxes in a box; labels in sentence case; states with a dot of their color; sizes in figures of the same width; and, until the icon of a game is read, a cover with the kind of file and its name without the [ID][version] tags
 
 ### Fixes
 

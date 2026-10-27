@@ -28,6 +28,9 @@ const icons = {
   rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || ""}</svg>`;
+// the color of the tile of an icon, by the group of its section
+const tones = { groupSpace: "space", groupOrganize: "organize", groupCheck: "check" };
+const tile = (name, group) => `<span class="tile tone-${tones[group] || "neutral"}">${icon(name)}</span>`;
 
 const $ = id => document.getElementById(id);
 const app = () => window.go.main.App;
@@ -84,7 +87,7 @@ function render() {
     $("modes").append(title);
     for (const mode of members) {
       const button = document.createElement("button");
-      button.innerHTML = icon(mode) + "<span><b></b><small></small></span>";
+      button.innerHTML = tile(mode, group) + "<span><b></b><small></small></span>";
       button.querySelector("b").textContent = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
       button.className = mode === state.mode && !state.view ? "on" : "";
@@ -243,7 +246,11 @@ function add(item) {
   if (state.rows.has(item.path)) return;
   state.items.push(item);
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  // until the icon of the game comes, a cover tells the kind of file
+  const kind = (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
+  tr.querySelector(".cover").textContent = kind;
+  tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
   tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
@@ -320,12 +327,15 @@ function paint(row) {
     title.textContent = row.game.name;
     file.textContent = `${row.game.titleId} · v${row.game.version} · ${row.game.type} · ${row.item.name}`;
   } else {
-    title.textContent = row.item.name;
-    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : "";
+    // the name of the file without its [title ID][version] tags, which go under it
+    const tags = row.item.name.match(/(\s*\[[^\]]*\])+\s*$/);
+    title.textContent = tags ? row.item.name.slice(0, tags.index).trim() || row.item.name : row.item.name;
+    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : tags ? tags[0].trim() : "";
   }
   if (row.game && row.game.icon) {
     icon.src = row.game.icon;
     icon.hidden = false;
+    row.tr.querySelector(".cover").hidden = true;
   }
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
