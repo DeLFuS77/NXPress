@@ -86,3 +86,21 @@ func TestBaseTitleID(t *testing.T) {
 		}
 	}
 }
+
+// {dlc_number} names a DLC by its number, and --keep-named leaves a name with its title ID.
+func TestDlcNumberAndKeptNames(t *testing.T) {
+	dlc := gameTitle{Name: "Game", TitleID: "0100000000011002", Type: "DLC", Titles: 1}
+	if got := newName("x.nsp", dlc, "{name} [DLC {dlc_number}] [{id}]"); got != "Game [DLC 2] [0100000000011002].nsp" {
+		t.Errorf("a DLC: %q", got)
+	}
+	game := gameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 1}
+	if got := newName("x.nsp", game, "{name} [DLC {DLC_NUMBER}] [{id}]"); got != "Game [DLC ] [0100000000010000].nsp" && got != "Game [DLC] [0100000000010000].nsp" {
+		t.Errorf("a game: %q", got)
+	}
+	if !keepsName(`C:\games\My name [0100000000011002].nsp`, "0100000000011002") || keepsName("My name [0100000000011003].nsp", "0100000000011002") {
+		t.Error("keepsName")
+	}
+	if dlcNumber("0100000000010800") != "" || dlcNumber("010022900D3ED01C") != "28" {
+		t.Error("dlcNumber")
+	}
+}

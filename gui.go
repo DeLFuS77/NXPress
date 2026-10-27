@@ -222,12 +222,16 @@ func (a *App) Describe(path string) (gameTitle, error) {
 	return readTitle(path, true)
 }
 
-// NewNames gives the names the files would get by a template, "" for a file that cannot be read.
-func (a *App) NewNames(paths []string, template string) []string {
+// NewNames gives the names the files would get by a template, "" for a file that cannot be read;
+// with keepNamed, a file whose name has its title ID keeps it.
+func (a *App) NewNames(paths []string, template string, keepNamed bool) []string {
 	names := make([]string, len(paths))
 	for i, path := range paths {
 		if title, err := readTitle(path, false); err == nil {
 			names[i] = newName(path, title, template)
+			if keepNamed && keepsName(path, title.TitleID) {
+				names[i] = filepath.Base(path)
+			}
 		}
 	}
 	return names
@@ -302,6 +306,7 @@ type Request struct {
 	Template     string   `json:"template"`
 	Watch        bool     `json:"watch"`
 	NoCache      bool     `json:"noCache"`
+	KeepNamed    bool     `json:"keepNamed"`
 	Levels       bool     `json:"levels"`
 }
 
@@ -337,6 +342,7 @@ func (a *App) Start(request Request) error {
 		o.fat32 = true
 	case "rename":
 		o.template = request.Template
+		o.keepNamed = request.KeepNamed
 		if o.template == "" {
 			o.template = defaultTemplate
 		}

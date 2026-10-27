@@ -25,6 +25,8 @@ type options struct {
 	template   string
 	watch      bool
 	noCache    bool
+	// --rename leaves the files whose name has their title ID
+	keepNamed bool
 	levels     bool
 	split      bool
 	pack       string
@@ -128,6 +130,8 @@ func parseOptions(args []string) (options, error) {
 			o.watch = true
 		case "--no-cache":
 			o.noCache = true
+		case "--keep-named":
+			o.keepNamed = true
 		case "--levels":
 			o.levels = true
 		case "--split":
@@ -297,7 +301,10 @@ Usage: nxpress [options] file or folder...
                       shows it: 1.0.5), {type}, {titles}, {contents} (1G+1U+2D),
                       {size_gb} and {size_mb}; the fields of Switch Library Manager
                       ({TITLE_NAME}, {VERSION_TXT}, {PACKAGE_CONTENTS}...) work too. For
-                      example "{name} [{id}][v{version}]"
+                      example "{name} [{id}][v{version}]"; {dlc_number} is the number of a
+                      DLC (1, 2...), for names like "{name} [DLC {dlc_number}] [{id}]"
+  --keep-named        with --rename, leave the files whose name has their title ID in
+                      brackets, as you named them
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ; of a

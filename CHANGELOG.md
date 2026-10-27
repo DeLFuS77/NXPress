@@ -8,6 +8,7 @@
 - New fields for Rename and for the packs: {version_txt}, the version as the game shows it (1.0.5), read from the control data of its update or of the game (#18); {contents}, the titles of each kind a file holds (1G+1U+2D), and {size_gb} and {size_mb} (#19). The fields as Switch Library Manager writes them work too ({TITLE_NAME}, {TITLE_ID}, {VERSION}, {VERSION_TXT}, {TYPE}, {PACKAGE_CONTENTS}, {SIZE_GB}, {SIZE_MB}), and brackets left empty are taken away. For a game with its updates, {version} is the version of the newest update (thanks @NikoMuffin, #18, #19)
 - Packs by game and names with these fields were already in Switch Library Manager Web, which this program comes from: they are brought here
 - The list of files sorts by name, size or state with a click on the column; a second click turns the order round and a third goes back to the order the files came in. The work goes in the order shown, and the order is kept for the next time (thanks @NikoMuffin, #17)
+- Rename has a field {dlc_number}, the number of a DLC among the ones of its game (1, 2...), for short names like Game [DLC 1] [ID] instead of the long name of the DLC, and "Keep the names that already have their title ID" (--keep-named) leaves the files you named yourself. Both come from Switch Library Manager Web, which has them in Organize
 
 ### Improvements
 

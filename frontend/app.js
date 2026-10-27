@@ -348,7 +348,7 @@ function previewNames() {
   previewTimer = setTimeout(async () => {
     const paths = state.items.map(item => item.path);
     if (!paths.length || !state.keys) return;
-    const names = await app().NewNames(paths, state.template);
+    const names = await app().NewNames(paths, state.template, $("keep-named").checked);
     paths.forEach((path, i) => { const row = state.rows.get(path); if (row) { row.preview = names[i]; paint(row); } });
   }, 300);
 }
@@ -357,7 +357,7 @@ function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
-    watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template,
+    watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
   };
 }
@@ -740,6 +740,7 @@ async function main() {
   $("remove").checked = !!chosen.removeSource;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  $("keep-named").checked = !!chosen.keepNamed;
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
@@ -844,6 +845,7 @@ async function main() {
     render();
   };
   $("template").oninput = () => { state.template = $("template").value; save("settings", settings()); previewNames(); };
+  $("keep-named").onchange = () => { save("settings", settings()); previewNames(); };
   $("template-reset").onclick = async () => { state.template = await app().DefaultTemplate(); $("template").value = state.template; save("settings", settings()); previewNames(); };
   listen();
 
