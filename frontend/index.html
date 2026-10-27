@@ -31,7 +31,7 @@
 
   <section id="work">
     <div class="page-head">
-      <h1 id="title"></h1>
+      <h1 class="title-row"><span class="tile" id="title-tile" aria-hidden="true"></span><span id="title"></span></h1>
       <p id="about" class="muted"></p>
     </div>
 
@@ -113,6 +113,10 @@
         <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
         <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
         <div class="segmented levels"><button data-level="3"><span data-t="light"></span><small>1–6</small></button><button data-level="12"><span data-t="medium"></span><small>7–14</small></button><button data-level="19"><span data-t="maximum"></span><small>15–19</small></button></div>
+        <div class="gauge" aria-hidden="true">
+          <div class="gauge-row"><span data-t="gaugeSize"></span><div class="gauge-bar"><div id="gauge-size"></div></div></div>
+          <div class="gauge-row"><span data-t="gaugeSpeed"></span><div class="gauge-bar"><div id="gauge-speed"></div></div></div>
+        </div>
         <p class="hint" id="level-hint"></p>
         <button id="compare-levels" class="link" data-t="compareLevels"></button>
         <p class="hint" data-t="compareHint"></p>
@@ -239,6 +243,16 @@
       <button id="last-report" data-t="lastReport"></button>
     </div>
     <div class="pref-group">
+      <h2 data-t="shortcuts"></h2>
+      <dl class="keys">
+        <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
+      </dl>
+    </div>
+    <div class="pref-group">
       <h2 data-t="prefApp"></h2>
       <label class="check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
       <button id="send-to"></button>
@@ -256,6 +270,18 @@
   <p id="measure-kept" class="muted" hidden></p>
   <p class="hint" data-t="measureChange"></p>
   <div class="dialog-actions"><button id="measure-close" class="primary" data-t="close"></button></div>
+</dialog>
+<div id="drop-overlay" hidden><div class="drop-card"><svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><b id="drop-text"></b></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-text"></span><button id="toast-undo" class="link" data-t="undo"></button></div>
+<dialog id="done-dialog" aria-labelledby="done-title">
+  <h2 id="done-title" data-t="doneTitle"></h2>
+  <p class="done-saved" id="done-saved"></p>
+  <p class="muted" id="done-stats"></p>
+  <div id="done-top-block">
+    <h3 data-t="doneTop"></h3>
+    <ol class="done-top" id="done-top"></ol>
+  </div>
+  <div class="dialog-actions"><button id="done-folder" data-t="showFolder"></button><button id="done-close" class="primary" data-t="close"></button></div>
 </dialog>
 <dialog id="report-dialog" aria-labelledby="report-title">
   <h2 id="report-title" data-t="lastReport"></h2>

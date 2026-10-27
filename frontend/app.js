@@ -82,6 +82,80 @@ function size(bytes) {
   return value.toFixed(unit ? 1 : 0) + " " + units[unit];
 }
 // the notes of the results, which come in English, in the language chosen
+// what to do about an error, by what it says
+function adviceFor(error) {
+  const text = error.toLowerCase();
+  if (text.includes("not signed")) return "adviceUnsigned";
+  if (/content id|hash|damaged|does not match|corrupt/.test(text)) return "adviceDamaged";
+  if (/key|titlekek|title key|prod\.keys|rights id/.test(text)) return "adviceKeys";
+  if (/no space|not enough space|disk full/.test(text)) return "adviceSpace";
+  if (/access is denied|permission|in use|being used/.test(text)) return "adviceAccess";
+  return "adviceGeneric";
+}
+
+// the name of a file to show: the one of its game when read, else its name without [ID][version]
+function shownName(row) {
+  if (row.game && row.game.name) return row.game.name;
+  return row.item.name.replace(/(\s*\[[^\]]*\])+\s*$/, "").trim() || row.item.name;
+}
+
+// a notice at the bottom of the window, with Undo when there is something to undo
+let toastTimer = 0;
+let undoLast = null;
+function showToast(text, undo) {
+  clearTimeout(toastTimer);
+  $("toast-text").textContent = text;
+  $("toast-undo").hidden = !undo;
+  undoLast = undo || null;
+  $("toast").hidden = false;
+  replay("enter", $("toast"));
+  toastTimer = setTimeout(() => { $("toast").hidden = true; undoLast = null; }, undo ? 6000 : 2500);
+}
+function undo() {
+  if (!undoLast || state.busy) return;
+  const action = undoLast;
+  undoLast = null;
+  $("toast").hidden = true;
+  action();
+}
+// files taken out of the list come back with Undo, where they were
+function takenOut(items, name) {
+  const kept = items.slice();
+  showToast(kept.length === 1 ? t("toastRemoved")(name || kept[0].name) : t("toastCleared")(kept.length), () => {
+    for (const item of kept) add(item);
+    previewPacks();
+    render();
+  });
+}
+
+// the card at the end of a work that wrote files: what it saved, how long it took, and the
+// files that saved the most
+function showDone(event, status) {
+  const writes = ["compress", "decompress", "recompress", "trim", "convert", "split", "pack", "fat32"];
+  if (event.cancelled || !writes.includes(state.mode) || !state.lastRun) return;
+  const rows = [...state.rows.values()].filter(row => row.run === state.lastRun.started);
+  if (!rows.length) return;
+  const savings = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after)
+    .map(row => ({ row, saved: row.item.size - row.after })).sort((a, b) => b.saved - a.saved);
+  const saved = savings.reduce((sum, entry) => sum + entry.saved, 0);
+  $("done-saved").hidden = saved === 0;
+  if (saved > 0) countUp($("done-saved"), saved, bytes => t("saved")(bytes));
+  $("done-stats").textContent = status;
+  $("done-top-block").hidden = savings.length < 2;
+  $("done-top").innerHTML = "";
+  for (const { row, saved: amount } of savings.slice(0, 3)) {
+    const item = document.createElement("li");
+    item.innerHTML = `<span></span><b></b>`;
+    item.querySelector("span").textContent = shownName(row);
+    item.querySelector("b").textContent = size(amount);
+    $("done-top").append(item);
+  }
+  const output = rows.find(row => row.output);
+  $("done-folder").hidden = !output;
+  $("done-folder").onclick = () => { if (output) app().ShowFile(output.output); };
+  $("done-dialog").showModal();
+}
+
 function noteText(note) {
   const own = texts[state.language] && texts[state.language].notes || {};
   const english = texts.en.notes || {};
@@ -111,6 +185,8 @@ function render() {
       const button = document.createElement("button");
       button.innerHTML = tile(mode, group) + "<span><b></b><small></small></span>";
       button.querySelector("b").textContent = t(mode);
+      // the menu keeps its tiles only on a narrow window: the name shows on hover
+      button.title = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
       button.className = mode === state.mode && !state.view ? "on" : "";
       // the tile chosen pops; the menu is drawn again while it does, and the pop goes on where it was
@@ -137,6 +213,11 @@ function render() {
   $("open-preferences").classList.toggle("on", preferences);
   $("keys-path").textContent = state.keys || t("keys")("");
   $("title").textContent = t(state.mode);
+  // the section in the color of its group, its tile beside its title
+  const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
+  $("title-tile").className = `tile tone-${tones[group] || "neutral"}`;
+  $("title-tile").innerHTML = icon(state.mode);
+  $("work").dataset.tone = tones[group] || "neutral";
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
   for (const entry of takesShown[state.mode].split(" ")) {
@@ -169,6 +250,9 @@ function render() {
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
   $("level-value").textContent = $("level").value;
   $("level-hint").textContent = t("levelHint")(level);
+  // what the level trades, as a picture: higher levels make smaller files, more slowly
+  $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
+  $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
   $("output").textContent = state.output || t("nextTo");
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
@@ -295,11 +379,13 @@ function add(item) {
   tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
   tr.querySelector(".remove button").onclick = () => {
     if (state.busy) return;
+    const gone = state.rows.get(item.path);
     state.items = state.items.filter(other => other.path !== item.path);
     state.rows.delete(item.path);
-    // the row folds away before it goes
+    // the row folds away before it goes, and comes back with Undo
     tr.classList.add("row-out");
     setTimeout(() => { tr.remove(); render(); }, calm() ? 0 : 180);
+    takenOut([item], shownName(gone || { item, game: null }));
   };
   $("files").tBodies[0].append(tr);
   // the files added together come in one after the other
@@ -356,13 +442,16 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => { row.game = game; paint(row); if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
+    app().Describe(row.item.path).then(game => { row.game = game; if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { row.described = true; paint(row); describing--; pumpDescribe(); });
   }
 }
 
 function paint(row) {
   const cell = row.tr.querySelector(".state");
-  if (row.painted !== undefined && row.painted !== row.status && ["ok", "failed", "skipped"].includes(row.status)) replay("ended-" + row.status, row.tr);
+  if (row.painted !== undefined && row.painted !== row.status && ["ok", "failed", "skipped"].includes(row.status)) {
+    replay("ended-" + row.status, row.tr);
+    row.endedAt = performance.now();
+  }
   row.painted = row.status;
   const note = row.tr.querySelector(".note");
   const title = row.tr.querySelector(".title");
@@ -382,6 +471,8 @@ function paint(row) {
     icon.hidden = false;
     row.tr.querySelector(".cover").hidden = true;
   }
+  // the cover shimmers while the game is read
+  row.tr.querySelector(".cover").classList.toggle("loading", !!state.keys && !row.described);
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
     cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
@@ -393,6 +484,19 @@ function paint(row) {
   } else if (row.status === "ok") {
     cell.innerHTML = `<span class="badge ok"></span>`;
     cell.firstChild.textContent = t("ok");
+    // the space saved: the bar of the original shrinks to the new file, once, as the file ends
+    if (row.after > 0 && row.item.size > row.after) {
+      const share = row.after / row.item.size;
+      const since = performance.now() - (row.endedAt || -1e9);
+      const bar = document.createElement("div");
+      bar.className = "saving" + (since < 1200 ? " shrink" : "");
+      bar.style.setProperty("--to", (share * 100).toFixed(1) + "%");
+      bar.style.setProperty("--since", -Math.min(since, 1200) + "ms");
+      bar.innerHTML = `<div></div><small></small>`;
+      bar.querySelector("small").textContent = "−" + Math.round((1 - share) * 100) + "%";
+      bar.title = `${size(row.item.size)} → ${size(row.after)}`;
+      cell.append(bar);
+    }
   } else if (row.status === "skipped") {
     // left as it is, with why: neither done nor failed
     cell.innerHTML = `<span class="badge skipped"></span>`;
@@ -405,6 +509,20 @@ function paint(row) {
   }
   note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
+  // an error opens to say what to do, with its detail to copy; it stays open while drawn again
+  row.tr.querySelector(".error-more")?.remove();
+  if (row.status === "failed" && row.error && row.error !== "cancelled") {
+    const more = document.createElement("details");
+    more.className = "error-more";
+    more.open = !!row.open;
+    more.ontoggle = () => { row.open = more.open; };
+    more.innerHTML = `<summary></summary><p></p><button class="link small-link"></button>`;
+    more.querySelector("summary").textContent = t("errorWhat");
+    more.querySelector("p").textContent = t(adviceFor(row.error));
+    more.querySelector("button").textContent = t("copyDetail");
+    more.querySelector("button").onclick = () => { window.runtime.ClipboardSetText(`${row.item.path}\n${row.error}`); showToast(t("detailCopied")); };
+    note.after(more);
+  }
   if (!row.status && state.mode === "rename" && row.preview && row.preview !== row.item.name) {
     note.textContent = "→ " + row.preview;
   }
@@ -681,6 +799,7 @@ function listen() {
     state.celebrate = !event.cancelled;
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
+    if (!($("shutdown").checked && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
   });
   // the computer did not turn off: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
@@ -894,7 +1013,36 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
-  $("clear").onclick = () => { clearList(); render(); };
+  $("clear").onclick = () => {
+    const items = state.items.slice();
+    clearList();
+    render();
+    if (items.length) takenOut(items);
+  };
+  $("toast-undo").onclick = undo;
+  $("done-close").onclick = () => $("done-dialog").close();
+  // 2: a drop answers before it lands: the whole window says how many files it takes
+  let dragging = 0;
+  const dropShown = show => { $("drop-overlay").hidden = !show; if (show) replay("enter", $("drop-overlay").firstElementChild); };
+  window.addEventListener("dragenter", event => {
+    if (state.busy || !event.dataTransfer || ![...event.dataTransfer.types].includes("Files")) return;
+    dragging++;
+    const count = event.dataTransfer.items ? event.dataTransfer.items.length : 0;
+    $("drop-text").textContent = t("dropOverlay")(count);
+    dropShown(true);
+  });
+  window.addEventListener("dragleave", () => { dragging = Math.max(0, dragging - 1); if (!dragging) dropShown(false); });
+  window.addEventListener("drop", () => { dragging = 0; dropShown(false); });
+  // 7: the keys of the window
+  window.addEventListener("keydown", event => {
+    if (!event.ctrlKey || event.altKey) return;
+    const key = event.key.toLowerCase();
+    const typing = /^(input|textarea|select)$/i.test(document.activeElement.tagName) && document.activeElement.type !== "checkbox";
+    if (key === "o" && !state.busy) { event.preventDefault(); (event.shiftKey ? addFolder : addFiles)(); }
+    else if (key === "enter") { event.preventDefault(); start(); }
+    else if (key === ",") { event.preventDefault(); $("open-preferences").click(); }
+    else if (key === "z" && !typing && undoLast) { event.preventDefault(); undo(); }
+  });
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); previewPacks(); };
   $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); previewPacks(); };
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };

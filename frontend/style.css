@@ -285,6 +285,73 @@ the sentence under the title gives its room to the list */
 .pack-plan small { display: block; font-size: 12px; color: var(--muted); }
 .pack-plan li.off label { opacity: .6; }
 
+/* 8: the section in the color of its group */
+.title-row { display: flex; align-items: center; gap: 12px; }
+.title-row .tile { width: 36px; height: 36px; border-radius: 10px; background: var(--tone); color: var(--tile-on); }
+.title-row .tile .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#work[data-tone] .page-head { box-shadow: inset 0 -1px 0 transparent; }
+#work[data-tone="space"] { --tone: var(--tone-space); }
+#work[data-tone="organize"] { --tone: var(--tone-organize); }
+#work[data-tone="check"] { --tone: var(--tone-check); }
+#work .bar div { background-color: var(--accent); }
+
+/* 1: the space saved, the original shrinking to the new file */
+.saving { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.saving div { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--ok) var(--to), color-mix(in srgb, var(--ok) 18%, transparent) var(--to)); }
+.saving small { font-size: 12px; font-weight: 700; color: var(--ok); font-variant-numeric: tabular-nums; }
+@property --to { syntax: "<percentage>"; inherits: true; initial-value: 100%; }
+@keyframes shrink { from { --to: 100%; } }
+.saving.shrink { animation: shrink 1.2s cubic-bezier(.2, .8, .2, 1) var(--since, 0ms) both; }
+
+/* 2: the drop over the whole window, and covers that load */
+#drop-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(3px); --wails-drop-target: drop; }
+#drop-overlay[hidden] { display: none; }
+.drop-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 48px; border: 2px dashed var(--accent); border-radius: 16px; background: var(--panel); font-size: 18px; pointer-events: none; }
+.drop-icon { width: 48px; height: 48px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: lift .7s ease-in-out infinite; }
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+.game .cover.loading { background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes icon-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+.game img.icon:not([hidden]) { animation: icon-in .3s ease-out; }
+
+/* 4: a notice with Undo */
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: var(--radius); background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.toast[hidden] { display: none; }
+.toast button.link { margin: 0; color: var(--bg); text-decoration: underline; }
+.toast.enter { animation: toast-in .2s ease-out; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+
+/* 5: an error that tells what to do */
+.error-more { margin-top: 4px; font-size: 12px; }
+.error-more summary { cursor: pointer; color: var(--accent); font-weight: 600; width: max-content; }
+.error-more p { margin: 4px 0; color: var(--text); max-width: 60ch; user-select: text; -webkit-user-select: text; }
+.error-more[open] p { animation: enter .18s ease-out; }
+
+/* 3: the card at the end of the work */
+#done-dialog { max-width: 460px; }
+.done-saved { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+#done-dialog h3 { font-size: 13px; margin: 14px 0 6px; }
+.done-top { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.done-top li { display: list-item; }
+.done-top li span { margin-right: 8px; }
+.done-top li b { color: var(--ok); font-variant-numeric: tabular-nums; }
+
+/* 6: what the level trades */
+.gauge { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.gauge-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.gauge-bar { height: 6px; border-radius: 3px; background: var(--bar); overflow: hidden; }
+.gauge-bar div { height: 100%; border-radius: 3px; background: var(--accent); transition: width .3s cubic-bezier(.2, .8, .2, 1); }
+
+/* 7: the keys, and a menu of tiles on a narrow window */
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+.keys dt { white-space: nowrap; }
+.keys dd { margin: 0; color: var(--muted); }
+kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--raised); }
+@media (max-width: 1000px) {
+  nav { width: 64px; padding: 12px 6px; }
+  nav .group, nav button > span, nav .side-keys, .side-item b { display: none; }
+  nav button { justify-content: center; padding: 5px; }
+}
+
 /* motion: each one answers a change, and Windows can ask for none */
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes pop { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
