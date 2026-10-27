@@ -16,6 +16,8 @@ texts.ja = {
   addFiles: "ファイルを追加", addFolder: "フォルダーを追加", clear: "リストを空にする", dropHere: "ここにファイルやフォルダーをドロップ", orChoose: "または選択",
   compression: "圧縮", result: "新しいファイル", advanced: "詳細設定",
   keysMissing: "ゲームを読むには prod.keys が必要です。", keysChoose: "prod.keys を選択",
+  popKind: "種類", gameKind: k => ({ BASE: "ゲーム", UPD: "アップデート", DLC: "DLC" })[k] || k, popDemo: "体験版", popVersion: "バージョン", popHolds: "内容", popGame: "本体ゲーム", popNeedsGame: "必要なゲームのバージョン", popFirmware: "必要なファームウェア",
+  popTitles: (b, u, d) => [b && "ゲーム " + b, u && "アップデート " + u, d && "DLC " + d].filter(Boolean).join(" · "),
   tagEmulators: "エミュレーター", removeWarning: "新しいファイルの検証後、元のファイルは完全に削除されます。",
   selected: (n, bytes) => `${n} 個のファイル · ${size(bytes)}`, nothing: "まだファイルがありません",
   working: (done, n, share) => `${n} 個中 ${done} 個完了 · ${share}%`,

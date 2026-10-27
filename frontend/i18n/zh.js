@@ -16,6 +16,8 @@ texts.zh = {
   addFiles: "添加文件", addFolder: "添加文件夹", clear: "清空列表", dropHere: "将文件或文件夹拖到这里", orChoose: "或选择它们",
   compression: "压缩", result: "新文件", advanced: "高级",
   keysMissing: "NXPress 需要你的 prod.keys 才能读取游戏。", keysChoose: "选择 prod.keys",
+  popKind: "类型", gameKind: k => ({ BASE: "游戏", UPD: "更新", DLC: "DLC" })[k] || k, popDemo: "体验版", popVersion: "版本", popHolds: "包含", popGame: "所属游戏", popNeedsGame: "所需游戏版本", popFirmware: "所需固件",
+  popTitles: (b, u, d) => [b && b + " 个游戏", u && u + " 个更新", d && d + " 个 DLC"].filter(Boolean).join(" · "),
   tagEmulators: "模拟器", removeWarning: "新文件校验通过后，原文件将被永久删除。",
   selected: (n, bytes) => `${n} 个文件 · ${size(bytes)}`, nothing: "还没有文件",
   working: (done, n, share) => `已完成 ${done}/${n} · ${share}%`,

@@ -32,6 +32,15 @@ type gameTitle struct {
 	Updates    int    `json:"updates"`
 	Dlcs       int    `json:"dlcs"`
 	Size       int64  `json:"size"`
+	// what the window shows of the game over its cover: who publishes it, the languages it
+	// comes in (as tags like en-US), the firmware the game or its update needs, if it is a demo,
+	// the game of an update or a DLC, and the version of its game a DLC needs
+	Publisher string   `json:"publisher,omitempty"`
+	Languages []string `json:"languages,omitempty"`
+	Firmware  string   `json:"firmware,omitempty"`
+	Demo      bool     `json:"demo,omitempty"`
+	GameID    string   `json:"gameId,omitempty"`
+	NeedsGame int      `json:"needsGame,omitempty"`
 	// the icon of the game, as a data URL, when asked for
 	Icon string `json:"icon,omitempty"`
 }
@@ -106,6 +115,16 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 	if shown.Ncap != nil {
 		result.VersionTxt = strings.TrimSpace(shown.Ncap.DisplayVersion)
 	}
+	if shown.Type != "DLC" && shown.RequiredTitleVersion > 0 {
+		result.Firmware = firmware(uint32(shown.RequiredTitleVersion))
+	}
+	// an update or a DLC tells its game, and a DLC the version of its game it needs
+	if main.Type != "BASE" {
+		result.GameID = fmt.Sprintf("%016X", baseTitleID(main))
+	}
+	if main.Type == "DLC" {
+		result.NeedsGame = main.RequiredTitleVersion
+	}
 	if result.VersionTxt == "" && main.Type == "DLC" && main.Version == 0 {
 		result.VersionTxt = "1.0.0"
 	}
@@ -117,6 +136,7 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 		for _, language := range []string{"AmericanEnglish", "BritishEnglish", "Spanish", "French", "German", "Italian", "Japanese"} {
 			if name := strings.TrimSpace(title.Ncap.TitleName[language].Title); name != "" {
 				result.Name = name
+				result.Publisher = strings.TrimSpace(title.Ncap.TitleName[language].Publisher)
 				break
 			}
 		}
@@ -124,11 +144,19 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 			for _, entry := range title.Ncap.TitleName {
 				if name := strings.TrimSpace(entry.Title); name != "" {
 					result.Name = name
+					result.Publisher = strings.TrimSpace(entry.Publisher)
 					break
 				}
 			}
 		}
 		if result.Name != "" {
+			// bit n of the flag is the language n of the control data
+			for language := switchfs.Language(0); language < 16; language++ {
+				if title.Ncap.SupportedLanguageFlag&(1<<uint(language)) != 0 {
+					result.Languages = append(result.Languages, language.ToLanguageTag())
+				}
+			}
+			result.Demo = title.Ncap.Demo
 			break
 		}
 	}

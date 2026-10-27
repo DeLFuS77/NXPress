@@ -23,6 +23,8 @@ texts.ru = {
   addFiles: "Добавить файлы", addFolder: "Добавить папку", clear: "Очистить список", dropHere: "Перетащите сюда файлы или папки", orChoose: "или выберите их",
   compression: "Сжатие", result: "Новые файлы", advanced: "Дополнительно",
   keysMissing: "NXPress нужен ваш prod.keys, чтобы читать игры.", keysChoose: "Выбрать prod.keys",
+  popKind: "Тип", gameKind: k => ({ BASE: "Игра", UPD: "Обновление", DLC: "DLC" })[k] || k, popDemo: "Демо", popVersion: "Версия", popHolds: "Содержит", popGame: "Игра", popNeedsGame: "Нужна версия игры", popFirmware: "Нужна прошивка",
+  popTitles: (b, u, d) => [b && b + " " + (b === 1 ? "игра" : b < 5 ? "игры" : "игр"), u && u + " " + (u === 1 ? "обновление" : u < 5 ? "обновления" : "обновлений"), d && d + " DLC"].filter(Boolean).join(" · "),
   tagEmulators: "эмуляторы", removeWarning: "Каждый оригинал удаляется навсегда, когда его новый файл проверен.",
   selected: (n, bytes) => `${ruFiles(n)} · ${size(bytes)}`, nothing: "Файлов пока нет",
   working: (done, n, share) => `Готово ${done} из ${n} · ${share}%`,

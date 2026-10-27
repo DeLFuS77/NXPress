@@ -16,6 +16,8 @@ texts.nl = {
   addFiles: "Bestanden toevoegen", addFolder: "Map toevoegen", clear: "Lijst leegmaken", dropHere: "Sleep hier bestanden of mappen naartoe", orChoose: "of kies ze",
   compression: "Compressie", result: "Nieuwe bestanden", advanced: "Geavanceerd",
   keysMissing: "NXPress heeft je prod.keys nodig om de spellen te lezen.", keysChoose: "prod.keys kiezen",
+  popKind: "Soort", gameKind: k => ({ BASE: "Game", UPD: "Update", DLC: "DLC" })[k] || k, popDemo: "Demo", popVersion: "Versie", popHolds: "Bevat", popGame: "Van de game", popNeedsGame: "Vereist de game op", popFirmware: "Vereist firmware",
+  popTitles: (b, u, d) => [b && (b === 1 ? "1 game" : b + " games"), u && (u === 1 ? "1 update" : u + " updates"), d && d + " DLC"].filter(Boolean).join(" · "),
   tagEmulators: "emulators", removeWarning: "Elk origineel wordt definitief verwijderd zodra het nieuwe bestand gecontroleerd is.",
   selected: (n, bytes) => `${n === 1 ? "1 bestand" : n + " bestanden"} · ${size(bytes)}`, nothing: "Nog geen bestanden",
   working: (done, n, share) => `${done} van ${n} klaar · ${share}%`,

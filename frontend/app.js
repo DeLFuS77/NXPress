@@ -195,6 +195,67 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
+// over the cover and the name of a game read, a card with what it is: its publisher, title ID,
+// version, the titles of each kind, the game of an update or a DLC, the version of its game a
+// DLC needs, the firmware it needs and its languages
+let popTimer = 0;
+function showPop(row, anchor) {
+  const game = row.game;
+  if (!game || !game.titleId || !anchor.isConnected) return;
+  const pop = $("game-pop");
+  const image = pop.querySelector("img");
+  image.hidden = !game.icon;
+  if (game.icon) image.src = game.icon;
+  pop.querySelector(".pop-name").textContent = shownName(row);
+  pop.querySelector(".pop-publisher").textContent = game.publisher || "";
+  const facts = [
+    ["Title ID", game.titleId],
+    [t("popKind"), t("gameKind")(game.type) + (game.demo ? " · " + t("popDemo") : "")],
+    [t("popVersion"), (game.versionTxt ? game.versionTxt + " · " : "") + "v" + game.latest],
+  ];
+  if (game.titles > 1) facts.push([t("popHolds"), t("popTitles")(game.bases, game.updates, game.dlcs)]);
+  if (game.gameId) facts.push([t("popGame"), game.gameId]);
+  if (game.needsGame) facts.push([t("popNeedsGame"), "v" + game.needsGame]);
+  if (game.firmware) facts.push([t("popFirmware"), game.firmware]);
+  const list = pop.querySelector("dl");
+  list.innerHTML = "";
+  for (const [name, value] of facts) {
+    const term = document.createElement("dt");
+    const detail = document.createElement("dd");
+    term.textContent = name;
+    detail.textContent = value;
+    list.append(term, detail);
+  }
+  // the languages by their first tag: EN for en-US and en-GB
+  const languages = pop.querySelector(".pop-languages");
+  languages.innerHTML = "";
+  languages.hidden = !(game.languages || []).length;
+  for (const code of new Set((game.languages || []).map(tag => tag.split("-")[0].toUpperCase()))) {
+    const chip = document.createElement("i");
+    chip.textContent = code;
+    languages.append(chip);
+  }
+  // beside a cover of the grid, else under the name; above or to the left when there is no room
+  pop.hidden = false;
+  const box = anchor.getBoundingClientRect();
+  const width = pop.offsetWidth, height = pop.offsetHeight, margin = 8;
+  let left, top;
+  if ($("files").classList.contains("grid")) {
+    left = box.right + margin + width < innerWidth ? box.right + margin : box.left - margin - width;
+    top = box.top;
+  } else {
+    left = box.left + 44;
+    top = box.bottom + 4 + height < innerHeight - margin ? box.bottom + 4 : box.top - 4 - height;
+  }
+  pop.style.left = Math.max(margin, Math.min(left, innerWidth - width - margin)) + "px";
+  pop.style.top = Math.max(margin, Math.min(top, innerHeight - height - margin)) + "px";
+  replay("enter", pop);
+}
+function hidePop() {
+  clearTimeout(popTimer);
+  $("game-pop").hidden = true;
+}
+
 // the name of a file to show: the one of its game when read, else its name without [ID][version]
 function shownName(row) {
   if (row.game && row.game.name) return row.game.name;
@@ -485,9 +546,16 @@ function add(item) {
   tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
+  const game = tr.querySelector(".game");
+  game.addEventListener("mouseenter", () => {
+    clearTimeout(popTimer);
+    popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
+  });
+  game.addEventListener("mouseleave", hidePop);
   tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
   tr.querySelector(".remove button").onclick = () => {
     if (state.busy) return;
+    hidePop();
     const gone = state.rows.get(item.path);
     state.items = state.items.filter(other => other.path !== item.path);
     state.rows.delete(item.path);
@@ -1158,7 +1226,10 @@ async function main() {
   window.addEventListener("dragleave", () => { dragging = Math.max(0, dragging - 1); if (!dragging) dropShown(false); });
   window.addEventListener("drop", () => { dragging = 0; dropShown(false); });
   // 7: the keys of the window
+  // the card over a game goes with Escape and with a scroll
+  window.addEventListener("scroll", hidePop, true);
   window.addEventListener("keydown", event => {
+    if (event.key === "Escape") hidePop();
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
     const typing = /^(input|textarea|select)$/i.test(document.activeElement.tagName) && document.activeElement.type !== "checkbox";

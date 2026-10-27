@@ -104,3 +104,28 @@ func TestDlcNumberAndKeptNames(t *testing.T) {
 		t.Error("dlcNumber")
 	}
 }
+
+// over its cover a game tells its publisher, its languages, the firmware of its newest update
+// and if it is a demo; a DLC tells its game and the version of it it needs
+func TestDescribeTitlesForTheHover(t *testing.T) {
+	base := &switchfs.ContentMetaAttributes{TitleId: "0100BFC002B4E000", Type: "BASE", RequiredTitleVersion: 0x30100000, Ncap: &switchfs.Nacp{
+		TitleName:             map[string]switchfs.NacpTitle{"AmericanEnglish": {Title: "Game", Publisher: " Studio "}},
+		SupportedLanguageFlag: 1<<0 | 1<<2 | 1<<6,
+		Demo:                  true,
+	}}
+	update := &switchfs.ContentMetaAttributes{TitleId: "0100BFC002B4E800", Type: "UPD", Version: 65536, RequiredTitleVersion: 0x48000000}
+	got := describeTitles([]*switchfs.ContentMetaAttributes{update, base})
+	if got.Publisher != "Studio" || !got.Demo || got.Firmware != "18.0.0" {
+		t.Errorf("publisher %q, demo %v, firmware %q", got.Publisher, got.Demo, got.Firmware)
+	}
+	if got.GameID != "" || got.NeedsGame != 0 {
+		t.Errorf("a game tells a game of its own: %q %d", got.GameID, got.NeedsGame)
+	}
+	dlc := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100BFC002B4F001", Type: "DLC", RequiredTitleVersion: 131072}})
+	if dlc.GameID != "0100BFC002B4E000" || dlc.NeedsGame != 131072 || dlc.Firmware != "" {
+		t.Errorf("DLC: game %q, needs %d, firmware %q", dlc.GameID, dlc.NeedsGame, dlc.Firmware)
+	}
+	if len(got.Languages) != 3 || got.Languages[0] != "en-US" || got.Languages[1] != "ja" || got.Languages[2] != "es" {
+		t.Errorf("languages %v", got.Languages)
+	}
+}

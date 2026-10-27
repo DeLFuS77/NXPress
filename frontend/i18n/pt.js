@@ -16,6 +16,8 @@ texts.pt = {
   addFiles: "Adicionar arquivos", addFolder: "Adicionar pasta", clear: "Limpar lista", dropHere: "Solte aqui arquivos ou pastas", orChoose: "ou escolha-os",
   compression: "Compressão", result: "Arquivos novos", advanced: "Avançado",
   keysMissing: "O NXPress precisa do seu prod.keys para ler os jogos.", keysChoose: "Escolher prod.keys",
+  popKind: "Tipo", gameKind: k => ({ BASE: "Jogo", UPD: "Atualização", DLC: "DLC" })[k] || k, popDemo: "Demo", popVersion: "Versão", popHolds: "Contém", popGame: "Do jogo", popNeedsGame: "Requer o jogo na", popFirmware: "Requer firmware",
+  popTitles: (b, u, d) => [b && (b === 1 ? "1 jogo" : b + " jogos"), u && (u === 1 ? "1 atualização" : u + " atualizações"), d && d + " DLC"].filter(Boolean).join(" · "),
   tagEmulators: "emuladores", removeWarning: "Cada original é apagado de vez quando o seu arquivo novo está verificado.",
   selected: (n, bytes) => `${n === 1 ? "1 arquivo" : n + " arquivos"} · ${size(bytes)}`, nothing: "Ainda não há arquivos",
   working: (done, n, share) => `${done} de ${n} concluídos · ${share}%`,
