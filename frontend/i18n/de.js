@@ -20,6 +20,7 @@ texts.de = {
   popTitles: (b, u, d) => [b && (b === 1 ? "1 Spiel" : b + " Spiele"), u && (u === 1 ? "1 Update" : u + " Updates"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Die neuen Dateien passen vielleicht nicht", spaceIntro: "Sie können mehr belegen, als frei ist. Füllt eine Datei das Laufwerk, schlägt sie fehl, und ihr Original bleibt, wie es war.", spaceLine: (need, free) => `bis zu ${need} nötig, ${free} frei`, spaceStart: "Trotzdem starten",
   menuShow: "Im Ordner zeigen", menuCopyId: "Title-ID kopieren", menuCopyName: "Namen kopieren", menuCopyPath: "Pfad kopieren", menuVerify: "Nur diese prüfen", menuRemove: "Aus der Liste entfernen", copied: text => "Kopiert: " + text,
+  warnNewer: v => `ein neueres Update ist in der Liste (${v})`, warnTwice: "dieser Titel ist zweimal in der Liste", warnNoGame: "sein Spiel ist nicht in der Liste", warnNeedsGame: (need, reach) => `braucht das Spiel in v${need}; die Liste reicht bis v${reach}`,
   tagEmulators: "Emulatoren", removeWarning: "Jedes Original wird endgültig gelöscht, sobald seine neue Datei geprüft ist.",
   selected: (n, bytes) => `${n === 1 ? "1 Datei" : n + " Dateien"} · ${size(bytes)}`, nothing: "Noch keine Dateien",
   working: (done, n, share) => `${done} von ${n} fertig · ${share} %`,

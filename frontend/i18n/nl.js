@@ -20,6 +20,7 @@ texts.nl = {
   popTitles: (b, u, d) => [b && (b === 1 ? "1 game" : b + " games"), u && (u === 1 ? "1 update" : u + " updates"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "De nieuwe bestanden passen misschien niet", spaceIntro: "Ze kunnen meer innemen dan er vrij is. Een bestand dat de schijf vult mislukt, en het origineel blijft zoals het was.", spaceLine: (need, free) => `tot ${need} nodig, ${free} vrij`, spaceStart: "Toch starten",
   menuShow: "Tonen in map", menuCopyId: "Title-ID kopiëren", menuCopyName: "Naam kopiëren", menuCopyPath: "Pad kopiëren", menuVerify: "Alleen deze controleren", menuRemove: "Uit de lijst halen", copied: text => "Gekopieerd: " + text,
+  warnNewer: v => `er staat een nieuwere update in de lijst (${v})`, warnTwice: "deze titel staat twee keer in de lijst", warnNoGame: "de game staat niet in de lijst", warnNeedsGame: (need, reach) => `vereist de game op v${need}; de lijst komt tot v${reach}`,
   tagEmulators: "emulators", removeWarning: "Elk origineel wordt definitief verwijderd zodra het nieuwe bestand gecontroleerd is.",
   selected: (n, bytes) => `${n === 1 ? "1 bestand" : n + " bestanden"} · ${size(bytes)}`, nothing: "Nog geen bestanden",
   working: (done, n, share) => `${done} van ${n} klaar · ${share}%`,

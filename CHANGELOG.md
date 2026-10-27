@@ -29,6 +29,7 @@
 - A card over the cover of a game read in the list, after a moment: its cover in big, its name and publisher, title ID, kind (and Demo), version, the titles of each kind it holds, the game of an update or a DLC and the version of it a DLC needs, the firmware it needs and its languages; beside the cover in the grid. Escape or a scroll takes it away
 - Before a work starts, NXPress weighs the most its new files may take on each drive against what is free there, and when they may not fit it says where and how much, with Start anyway and Cancel: a file that fills its drive fails, and its original stays. Files that replace their originals count only the ones made at once
 - A menu on each file with a right click: Show in folder, Copy title ID, Copy name, Copy path, Verify only this (one file checked by itself, whatever the section) and Remove from list; the arrow keys move in it and Escape closes it
+- Warnings in the list, from the games read, until a file is worked on: an update with a newer one in the list, and a title given twice; in Pack also an update or a DLC whose game is not in the list, and a DLC that needs its game at a newer version than the list brings
 
 ### Fixes
 

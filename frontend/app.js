@@ -368,7 +368,46 @@ function stepText(step) {
   return [table[first] || first, ...rest].join(" ");
 }
 
+// warnings of the list, from the games read: an update with a newer one beside it, a title given
+// twice; in Pack also an update or a DLC without its game, and a DLC that needs a newer game
+// than the list brings
+function listWarnings() {
+  const read = [...state.rows.values()].filter(row => row.game && row.game.titleId);
+  const games = new Map();
+  for (const row of read) {
+    const id = row.game.type === "BASE" ? row.game.titleId : row.game.gameId;
+    if (!id) continue;
+    if (!games.has(id)) games.set(id, { base: false, reach: -1 });
+    const game = games.get(id);
+    if (row.game.type === "BASE") game.base = true;
+    if (row.game.type !== "DLC") game.reach = Math.max(game.reach, row.game.latest || 0);
+  }
+  const warnings = new Map();
+  for (const row of read) {
+    const same = read.filter(other => other !== row && other.game.titleId === row.game.titleId && other.game.type === row.game.type);
+    const newer = row.game.type === "UPD" ? same.filter(other => other.game.version > row.game.version).sort((a, b) => b.game.version - a.game.version)[0] : null;
+    const game = games.get(row.game.type === "BASE" ? row.game.titleId : row.game.gameId);
+    if (newer) warnings.set(row, t("warnNewer")(newer.game.versionTxt || "v" + newer.game.version));
+    else if (same.some(other => other.game.version === row.game.version)) warnings.set(row, t("warnTwice"));
+    else if (state.mode === "pack" && row.game.type !== "BASE" && row.game.titles === 1 && game && !game.base) warnings.set(row, t("warnNoGame"));
+    else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
+  }
+  return warnings;
+}
+let warnTimer = 0;
+function warnSoon() {
+  clearTimeout(warnTimer);
+  warnTimer = setTimeout(() => {
+    const warnings = listWarnings();
+    for (const row of state.rows.values()) {
+      const warn = warnings.get(row) || "";
+      if (warn !== (row.warn || "")) { row.warn = warn; paint(row); }
+    }
+  }, 100);
+}
+
 function render() {
+  warnSoon();
   document.documentElement.lang = state.language;
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
@@ -661,7 +700,7 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => { row.game = game; if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { row.described = true; paint(row); describing--; pumpDescribe(); });
+    app().Describe(row.item.path).then(game => { row.game = game; if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { row.described = true; paint(row); warnSoon(); describing--; pumpDescribe(); });
   }
 }
 
@@ -685,6 +724,16 @@ function paint(row) {
     title.textContent = tags ? row.item.name.slice(0, tags.index).trim() || row.item.name : row.item.name;
     file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : tags ? tags[0].trim() : "";
   }
+  // a warning of the list shows until the file is worked on
+  let warn = row.tr.querySelector(".list-warn");
+  if (row.warn && !row.status) {
+    if (!warn) {
+      warn = document.createElement("div");
+      warn.className = "list-warn";
+      file.after(warn);
+    }
+    warn.textContent = row.warn;
+  } else warn?.remove();
   if (row.game && row.game.icon) {
     icon.src = row.game.icon;
     icon.hidden = false;
