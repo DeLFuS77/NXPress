@@ -66,6 +66,7 @@ texts.fr = {
   noCache: "Revérifier les fichiers déjà vérifiés", noCacheHint: "NXPress retient les fichiers qu'il a vérifiés ou écrits, et ne les relit pas tant qu'ils ne changent pas.",
   keepNamed: "Garder les noms qui ont déjà leur Title ID",
   preferences: "Réglages", prefKeys: "prod.keys", prefLook: "Apparence", prefWork: "Quand le travail est fini", prefApp: "L'application",
+  packPlan: "Jeux à regrouper", packPlanEmpty: "Ajoutez les fichiers de vos jeux pour voir ici chaque pack.", packPlanFiles: n => `${n} fichiers`, packPlanPacked: name => `Déjà regroupé : ${name}`, packPlanOne: "Un seul fichier : rien à regrouper avec",
   template: "Modèle de nom", templateHint: "Champs : {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), ou comme les écrit Switch Library Manager : {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... L'extension est conservée.", templateReset: "Par défaut",
   fat32Hint: "Sur la microSD, si la console affiche le dossier comme un dossier, activez son bit d'archive (Hekate : Tools, Archive bit). Sous Windows, NXPress le fait déjà.",
   cancel: "Annuler", waiting: "En attente", ok: "OK", failed: "Échec", skipped: "Ignoré", cancelled: "Annulé",

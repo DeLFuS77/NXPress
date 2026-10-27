@@ -690,21 +690,17 @@ const defaultPackTemplate = "{name} [{id}][v{version}] ({contents})"
 // its own (into its game card, when it is one), named by o.packName, next to the files of the
 // game or in -o. A game with one file only is skipped: there is nothing to pack it with. It
 // gives how many files failed.
-func packGames(ctx context.Context, o options, out output) int {
-	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
-	failed := len(missing)
-	for _, path := range missing {
-		out.done(path, "", "", errors.New("no such file or folder"))
-	}
-	// the files of each game, in the order the games come; the game itself first
+// gameGroups puts the files of each game together, in the order the games come and with the
+// game itself first; the files that cannot be read are given apart, with why.
+func gameGroups(sources []string) ([]uint64, map[uint64][]string, map[string]error) {
 	groups := map[uint64][]string{}
 	order := []uint64{}
 	first := map[string]int{}
+	unread := map[string]error{}
 	for _, source := range sources {
 		titles, err := readTitles(source)
 		if err != nil {
-			out.done(source, "", "", err)
-			failed++
+			unread[source] = err
 			continue
 		}
 		main := describeTitles(titles)
@@ -720,6 +716,58 @@ func packGames(ctx context.Context, o options, out output) int {
 		groups[id] = append(groups[id], source)
 		first[source] = map[string]int{"BASE": 0, "UPD": 1, "DLC": 2}[main.Type]
 	}
+	for _, files := range groups {
+		sort.SliceStable(files, func(i, j int) bool { return first[files[i]] < first[files[j]] })
+	}
+	return order, groups, unread
+}
+
+// packedAlready is a pack of the game id found where its pack would go: a file not given whose
+// name has the title ID of the game and that holds more than one title. "" when there is none.
+func packedAlready(o options, id uint64, files []string) string {
+	folder := o.output
+	if folder == "" {
+		folder = filepath.Dir(files[0])
+	}
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return ""
+	}
+	given := map[string]bool{}
+	for _, file := range files {
+		given[strings.ToLower(filepath.Clean(file))] = true
+	}
+	tag := fmt.Sprintf("[%016X]", id)
+	for _, entry := range entries {
+		name := entry.Name()
+		extension := strings.ToLower(filepath.Ext(name))
+		if entry.IsDir() || !strings.Contains(strings.ToUpper(name), tag) || (extension != ".nsp" && extension != ".nsz" && extension != ".xci" && extension != ".xcz") {
+			continue
+		}
+		path := filepath.Join(folder, name)
+		if given[strings.ToLower(filepath.Clean(path))] {
+			continue
+		}
+		if titles, err := readTitles(path); err == nil && len(titles) > 1 {
+			return path
+		}
+	}
+	return ""
+}
+
+func packGames(ctx context.Context, o options, out output) int {
+	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	failed := len(missing)
+	for _, path := range missing {
+		out.done(path, "", "", errors.New("no such file or folder"))
+	}
+	order, groups, unread := gameGroups(sources)
+	for _, source := range sources {
+		if err, ok := unread[source]; ok {
+			out.done(source, "", "", err)
+			failed++
+		}
+	}
 	template := o.packName
 	if template == "" {
 		template = defaultPackTemplate
@@ -729,7 +777,19 @@ func packGames(ctx context.Context, o options, out output) int {
 			break
 		}
 		files := groups[id]
-		sort.SliceStable(files, func(i, j int) bool { return first[files[i]] < first[files[j]] })
+		// a game left out in the window, and a game packed before, unless asked to write again
+		if o.skipGames[fmt.Sprintf("%016X", id)] {
+			for _, file := range files {
+				out.done(file, "", "", skipped("left out of the packs"))
+			}
+			continue
+		}
+		if packed := packedAlready(o, id, files); packed != "" && !o.overwrite {
+			for _, file := range files {
+				out.done(file, "", "", skipped("already packed in "+filepath.Base(packed)+" (-w writes it again)"))
+			}
+			continue
+		}
 		if len(files) == 1 {
 			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to pack it with"))
 			continue

@@ -66,6 +66,7 @@ texts.de = {
   noCache: "Bereits geprüfte Dateien erneut prüfen", noCacheHint: "NXPress merkt sich die Dateien, die es geprüft oder geschrieben hat, und liest sie nicht erneut, solange sie sich nicht ändern.",
   keepNamed: "Namen behalten, die ihre Title ID schon enthalten",
   preferences: "Einstellungen", prefKeys: "prod.keys", prefLook: "Aussehen", prefWork: "Wenn die Arbeit fertig ist", prefApp: "Die App",
+  packPlan: "Zu packende Spiele", packPlanEmpty: "Füge die Dateien deiner Spiele hinzu, um hier jedes Paket zu sehen.", packPlanFiles: n => `${n} Dateien`, packPlanPacked: name => `Schon gepackt: ${name}`, packPlanOne: "Nur eine Datei: nichts zum Zusammenpacken",
   template: "Namensvorlage", templateHint: "Felder: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), oder wie Switch Library Manager sie schreibt: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... Die Endung bleibt.", templateReset: "Standard",
   fat32Hint: "Wenn die Konsole den Ordner auf der microSD als Ordner zeigt, setze sein Archivbit (Hekate: Tools, Archive bit). Unter Windows setzt NXPress es schon.",
   cancel: "Abbrechen", waiting: "Wartet", ok: "OK", failed: "Fehler", skipped: "Übersprungen", cancelled: "Abgebrochen",

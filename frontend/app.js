@@ -58,7 +58,7 @@ function countUp(element, bytes, format) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 },
+  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(),
 };
 
 function load(name, fallback) {
@@ -259,6 +259,7 @@ async function refill(paths, replace) {
   for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
   for (const item of items) add(item);
   if (state.mode === "rename") previewNames();
+  previewPacks();
   render();
 }
 
@@ -415,6 +416,36 @@ function rowOf(file) {
   return state.rows.get(file);
 }
 
+// the packs by game the list would make, before they are made: each game with a box to leave it
+// out; a game packed before where its pack would go, and a game of one file, are left out
+let packTimer = 0;
+function previewPacks() {
+  clearTimeout(packTimer);
+  packTimer = setTimeout(async () => {
+    const list = $("pack-plan");
+    if (state.mode !== "pack" || !$("pack-games").checked) return;
+    const paths = state.items.map(item => item.path);
+    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.output) || [] : [];
+    list.innerHTML = "";
+    $("pack-plan-empty").hidden = plan.length > 0;
+    plan.forEach((game, i) => {
+      const item = document.createElement("li");
+      item.style.animationDelay = Math.min(i, 12) * 25 + "ms";
+      const alone = game.files.length < 2;
+      const blocked = alone || (!!game.packed && !$("overwrite").checked);
+      item.innerHTML = `<label class="check"><input type="checkbox"><span><b></b><small></small></span></label>`;
+      const box = item.querySelector("input");
+      box.checked = !blocked && !state.skipGames.has(game.id);
+      box.disabled = blocked;
+      box.onchange = () => { if (box.checked) state.skipGames.delete(game.id); else state.skipGames.add(game.id); item.classList.toggle("off", !box.checked); };
+      item.classList.toggle("off", !box.checked);
+      item.querySelector("b").textContent = game.name;
+      item.querySelector("small").textContent = game.packed ? t("packPlanPacked")(game.packed) : alone ? t("packPlanOne") : t("packPlanFiles")(game.files.length);
+      list.append(item);
+    });
+  }, 300);
+}
+
 // the new names of the files, for the template written
 let previewTimer = 0;
 function previewNames() {
@@ -508,7 +539,7 @@ async function start(mode, extra) {
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
-  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, ...(extra || {}) };
+  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   try {
     await app().Start(request);
     state.busy = true;
@@ -837,7 +868,7 @@ async function main() {
     try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
     render();
   };
-  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); if (state.mode === "rename") previewNames(); render(); };
+  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); if (state.mode === "rename") previewNames(); previewPacks(); render(); };
   const addFolder = async () => {
     const items = await app().ChooseFolder(state.mode) || [];
     for (const item of items) add(item);
@@ -855,11 +886,12 @@ async function main() {
   $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => { clearList(); render(); };
-  $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); };
-  $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); };
+  $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); previewPacks(); };
+  $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); previewPacks(); };
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
-  for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); };
+  for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); previewPacks(); };
+  $("overwrite").addEventListener("change", previewPacks);
   for (const field of [$("template"), $("pack-template")]) {
     field.addEventListener("input", () => fitTemplate(field));
     field.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });

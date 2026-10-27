@@ -66,6 +66,7 @@ texts.en = {
   noCache: "Check again files already checked", noCacheHint: "NXPress remembers the files it checked or wrote, and does not read them again while they do not change.",
   keepNamed: "Keep the names that already have their title ID",
   preferences: "Settings", prefKeys: "prod.keys", prefLook: "Look", prefWork: "When the work is done", prefApp: "The app",
+  packPlan: "Games to pack", packPlanEmpty: "Add the files of your games to see each pack here.", packPlanFiles: n => `${n} files`, packPlanPacked: name => `Already packed: ${name}`, packPlanOne: "Only one file: nothing to pack it with",
   template: "Name template", templateHint: "Fields: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), or as Switch Library Manager writes them: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... The extension is kept.", templateReset: "Default",
   fat32Hint: "On the microSD card, if the console shows the folder as a folder, set its archive bit (Hekate: Tools, Archive bit). On Windows NXPress sets it already.",
   cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", skipped: "Skipped", cancelled: "Cancelled",

@@ -237,6 +237,37 @@ func (a *App) NewNames(paths []string, template string, keepNamed bool) []string
 	return names
 }
 
+// PackGame is a game of the packs by game, as the window shows it before they are made.
+type PackGame struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Files  []string `json:"files"`
+	Packed string   `json:"packed"`
+}
+
+// PackPlan tells the packs by game the files would make: the files of each game, and the pack
+// made before when there is one where its pack would go (output, or the folder of the game).
+func (a *App) PackPlan(files []string, output string) []PackGame {
+	sources, _ := inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	order, groups, _ := gameGroups(sources)
+	o := options{output: output}
+	plan := []PackGame{}
+	for _, id := range order {
+		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
+		if title, err := readTitle(groups[id][0], false); err == nil {
+			game.Name = title.Name
+		}
+		if game.Name == "" {
+			game.Name = filepath.Base(groups[id][0])
+		}
+		if packed := packedAlready(o, id, groups[id]); packed != "" {
+			game.Packed = filepath.Base(packed)
+		}
+		plan = append(plan, game)
+	}
+	return plan
+}
+
 // DefaultPackTemplate is the name of the pack of each game when none is chosen.
 func (a *App) DefaultPackTemplate() string {
 	return defaultPackTemplate
@@ -307,6 +338,7 @@ type Request struct {
 	Watch        bool     `json:"watch"`
 	NoCache      bool     `json:"noCache"`
 	KeepNamed    bool     `json:"keepNamed"`
+	SkipGames    []string `json:"skipGames"`
 	Levels       bool     `json:"levels"`
 }
 
@@ -351,6 +383,10 @@ func (a *App) Start(request Request) error {
 	case "info":
 		o.info = true
 	case "pack":
+		o.skipGames = map[string]bool{}
+		for _, id := range request.SkipGames {
+			o.skipGames[strings.ToUpper(id)] = true
+		}
 		// a SuperNSP per game, named by its template; else one file with everything
 		if request.PackGames {
 			o.packGames, o.packName = true, request.PackTemplate

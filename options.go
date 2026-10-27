@@ -27,6 +27,8 @@ type options struct {
 	noCache    bool
 	// --rename leaves the files whose name has their title ID
 	keepNamed bool
+	// --pack-games leaves out the games with these title IDs, in capitals (from the window)
+	skipGames map[string]bool
 	levels     bool
 	split      bool
 	pack       string
