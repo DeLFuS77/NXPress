@@ -91,7 +91,7 @@ nav button:hover:not(:disabled) .tile { background: color-mix(in srgb, var(--ton
 nav button.on .tile { background: var(--tone); color: var(--tile-on); }
 /* prod.keys and the settings, at the bottom of the menu */
 .side-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
-.side-foot .side-keys { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-foot .side-keys { margin-top: 6px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-foot .side-keys::before { content: "●"; margin-right: 6px; color: var(--ok); }
 .side-foot .side-keys.bad { color: var(--bad); }
 .side-foot .side-keys.bad::before { color: var(--bad); }
