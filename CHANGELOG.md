@@ -31,6 +31,7 @@
 - A menu on each file with a right click: Show in folder, Copy title ID, Copy name, Copy path, Verify only this (one file checked by itself, whatever the section) and Remove from list; the arrow keys move in it and Escape closes it
 - Warnings in the list, from the games read, until a file is worked on: an update with a newer one in the list, and a title given twice; in Pack also an update or a DLC whose game is not in the list, and a DLC that needs its game at a newer version than the list brings
 - On Windows 11 the top bar and the menu show the Mica of the system, in the theme chosen; the card of a game and the card at the end of the work wear the color of its cover; the cover of a row grows into the one of the card; and in the grid the cover of a file at work fills up from the bottom with its share. With less motion asked in Windows, the cover does not move
+- After the third work that saved space, the card at the end asks once for a star on GitHub, with No, thanks beside it, and never again; Settings has a link to NXPress on GitHub
 
 ### Fixes
 

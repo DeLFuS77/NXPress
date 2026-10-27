@@ -47,6 +47,7 @@ texts.ko = {
   language: "언어", theme: "테마", themeAuto: "자동", themeLight: "밝게", themeDark: "어둡게", showFolder: "폴더에서 보기",
   sendToOn: "탐색기의 '보내기'에 NXPress 추가", sendToOff: "'보내기'에서 NXPress 제거",
   updates: "GitHub에서 새 버전 확인",
+  starAsk: "NXPress로 공간을 아끼셨나요? GitHub에 별을 주시면 더 많은 사람이 찾을 수 있습니다.", starGive: "별 주기", starNo: "괜찮습니다", starLink: "GitHub의 NXPress",
   updateFound: v => `NXPress ${v}가 나왔습니다.`, updateGet: "다운로드", dismiss: "닫기",
   report: "보고서 복사", reportCopied: "보고서를 복사했습니다. GitHub 이슈나 스레드에 붙여 넣으세요.", lastReport: "마지막 보고서", noReport: "아직 한 작업이 없어요.", reportProblems: "문제가 있는 것만",
   pause: "일시 정지", resume: "계속", paused: "일시 정지됨",

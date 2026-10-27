@@ -262,6 +262,7 @@
       <h2 data-t="prefApp"></h2>
       <label class="check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
       <button id="send-to"></button>
+      <button id="star-link"><span aria-hidden="true">★ </span><span data-t="starLink"></span></button>
     </div>
   </section>
 </main>
@@ -294,6 +295,10 @@
   <div id="done-top-block">
     <h3 data-t="doneTop"></h3>
     <ol class="done-top" id="done-top"></ol>
+  </div>
+  <div class="done-star" id="done-star" hidden>
+    <p data-t="starAsk"></p>
+    <div><button id="star-yes" class="outline"><span aria-hidden="true">★ </span><span data-t="starGive"></span></button><button id="star-no" class="quiet" data-t="starNo"></button></div>
   </div>
   <div class="dialog-actions"><button id="done-folder" data-t="showFolder"></button><button id="done-close" class="primary" data-t="close"></button></div>
 </dialog>

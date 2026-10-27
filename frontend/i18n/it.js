@@ -47,6 +47,7 @@ texts.it = {
   language: "Lingua", theme: "Tema", themeAuto: "Auto", themeLight: "Chiaro", themeDark: "Scuro", showFolder: "Mostra nella cartella",
   sendToOn: "Aggiungi NXPress a «Invia a» di Esplora file", sendToOff: "Togli NXPress da «Invia a»",
   updates: "Cerca nuove versioni su GitHub",
+  starAsk: "NXPress ti fa risparmiare spazio? Una stella su GitHub aiuta altri a trovarlo.", starGive: "Dai una stella", starNo: "No, grazie", starLink: "NXPress su GitHub",
   updateFound: v => `È uscito NXPress ${v}.`, updateGet: "Scarica", dismiss: "Chiudi",
   report: "Copia rapporto", reportCopied: "Rapporto copiato: incollalo in una issue di GitHub o nel thread.", lastReport: "Ultimo rapporto", noReport: "Non è ancora stato fatto nessun lavoro.", reportProblems: "Solo con problemi",
   pause: "Pausa", resume: "Riprendi", paused: "In pausa",

@@ -47,6 +47,7 @@ texts.zh = {
   language: "语言", theme: "主题", themeAuto: "自动", themeLight: "浅色", themeDark: "深色", showFolder: "在文件夹中显示",
   sendToOn: "将 NXPress 添加到资源管理器的“发送到”", sendToOff: "从“发送到”移除 NXPress",
   updates: "在 GitHub 上检查新版本",
+  starAsk: "NXPress 帮你省下空间了吗?在 GitHub 上点个星,能让更多人找到它。", starGive: "点个星", starNo: "不用了", starLink: "GitHub 上的 NXPress",
   updateFound: v => `NXPress ${v} 已发布。`, updateGet: "下载", dismiss: "关闭",
   report: "复制报告", reportCopied: "报告已复制：粘贴到 GitHub issue 或帖子中。", lastReport: "上次报告", noReport: "还没有进行过任何操作。", reportProblems: "只看有问题的",
   pause: "暂停", resume: "继续", paused: "已暂停",

@@ -47,6 +47,7 @@ texts.nl = {
   language: "Taal", theme: "Thema", themeAuto: "Auto", themeLight: "Licht", themeDark: "Donker", showFolder: "Tonen in map",
   sendToOn: "NXPress toevoegen aan „Kopiëren naar” in Verkenner", sendToOff: "NXPress uit „Kopiëren naar” halen",
   updates: "Op GitHub naar nieuwe versies zoeken",
+  starAsk: "Bespaart NXPress je ruimte? Een ster op GitHub helpt anderen het te vinden.", starGive: "Geef een ster", starNo: "Nee, bedankt", starLink: "NXPress op GitHub",
   updateFound: v => `NXPress ${v} is uit.`, updateGet: "Downloaden", dismiss: "Sluiten",
   report: "Rapport kopiëren", reportCopied: "Rapport gekopieerd: plak het in een GitHub-issue of in de thread.", lastReport: "Laatste verslag", noReport: "Er is nog geen werk gedaan.", reportProblems: "Alleen met problemen",
   pause: "Pauzeren", resume: "Doorgaan", paused: "Gepauzeerd",

@@ -47,6 +47,7 @@ texts.pt = {
   language: "Idioma", theme: "Tema", themeAuto: "Auto", themeLight: "Claro", themeDark: "Escuro", showFolder: "Mostrar na pasta",
   sendToOn: "Adicionar o NXPress a «Enviar para» do Explorador", sendToOff: "Tirar o NXPress de «Enviar para»",
   updates: "Procurar versões novas no GitHub",
+  starAsk: "O NXPress poupa-te espaço? Uma estrela no GitHub ajuda mais pessoas a encontrá-lo.", starGive: "Dar uma estrela", starNo: "Não, obrigado", starLink: "NXPress no GitHub",
   updateFound: v => `O NXPress ${v} já saiu.`, updateGet: "Baixar", dismiss: "Fechar",
   report: "Copiar relatório", reportCopied: "Relatório copiado: cole-o numa issue do GitHub ou no tópico.", lastReport: "Último relatório", noReport: "Ainda não foi feito nenhum trabalho.", reportProblems: "Só com problemas",
   pause: "Pausar", resume: "Continuar", paused: "Em pausa",

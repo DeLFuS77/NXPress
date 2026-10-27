@@ -47,6 +47,7 @@ texts.ja = {
   language: "言語", theme: "テーマ", themeAuto: "自動", themeLight: "ライト", themeDark: "ダーク", showFolder: "フォルダーで表示",
   sendToOn: "エクスプローラーの「送る」に NXPress を追加", sendToOff: "「送る」から NXPress を外す",
   updates: "GitHub で新しいバージョンを確認",
+  starAsk: "NXPress で容量を節約できましたか?GitHub でスターを付けると、もっと多くの人に見つけてもらえます。", starGive: "スターを付ける", starNo: "いいえ", starLink: "GitHub の NXPress",
   updateFound: v => `NXPress ${v} が公開されました。`, updateGet: "ダウンロード", dismiss: "閉じる",
   report: "レポートをコピー", reportCopied: "レポートをコピーしました。GitHub の issue かスレッドに貼り付けてください。", lastReport: "最後のレポート", noReport: "まだ作業をしていません。", reportProblems: "問題のあるものだけ",
   pause: "一時停止", resume: "再開", paused: "一時停止中",

@@ -351,6 +351,10 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .space-list span { color: var(--muted); font-size: 13px; }
 .done-saved { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
 #done-dialog h3 { font-size: 13px; margin: 14px 0 6px; }
+.done-star { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-small); background: var(--accent-soft); }
+.done-star p { margin: 0 0 8px; font-size: 13px; }
+.done-star div { display: flex; gap: 8px; align-items: center; }
+.done-star span[aria-hidden] { color: #f5b400; }
 .done-top { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .done-top li { display: list-item; }
 .done-top li span { margin-right: 8px; }

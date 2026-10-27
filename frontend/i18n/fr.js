@@ -47,6 +47,7 @@ texts.fr = {
   language: "Langue", theme: "Thème", themeAuto: "Auto", themeLight: "Clair", themeDark: "Sombre", showFolder: "Afficher dans le dossier",
   sendToOn: "Ajouter NXPress à « Envoyer vers » de l'Explorateur", sendToOff: "Retirer NXPress de « Envoyer vers »",
   updates: "Chercher les nouvelles versions sur GitHub",
+  starAsk: "NXPress vous fait gagner de la place ? Une étoile sur GitHub aide d'autres à le trouver.", starGive: "Donner une étoile", starNo: "Non merci", starLink: "NXPress sur GitHub",
   updateFound: v => `NXPress ${v} est disponible.`, updateGet: "Télécharger", dismiss: "Fermer",
   report: "Copier le rapport", reportCopied: "Rapport copié : collez-le dans une issue GitHub ou dans le fil.", lastReport: "Dernier rapport", noReport: "Aucun travail n'a encore été fait.", reportProblems: "Seulement les problèmes",
   pause: "Pause", resume: "Reprendre", paused: "En pause",

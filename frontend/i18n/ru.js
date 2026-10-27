@@ -54,6 +54,7 @@ texts.ru = {
   language: "Язык", theme: "Тема", themeAuto: "Авто", themeLight: "Светлая", themeDark: "Тёмная", showFolder: "Показать в папке",
   sendToOn: "Добавить NXPress в «Отправить» Проводника", sendToOff: "Убрать NXPress из «Отправить»",
   updates: "Искать новые версии на GitHub",
+  starAsk: "NXPress экономит вам место? Звезда на GitHub поможет другим его найти.", starGive: "Поставить звезду", starNo: "Нет, спасибо", starLink: "NXPress на GitHub",
   updateFound: v => `Вышел NXPress ${v}.`, updateGet: "Скачать", dismiss: "Закрыть",
   report: "Копировать отчёт", reportCopied: "Отчёт скопирован: вставьте его в issue на GitHub или в тему.", lastReport: "Последний отчёт", noReport: "Пока не было ни одной работы.", reportProblems: "Только с проблемами",
   pause: "Пауза", resume: "Продолжить", paused: "На паузе",

@@ -405,6 +405,10 @@ function showDone(event, status) {
   const best = savings.length ? savings[0].row : rows.find(row => row.game && row.game.icon);
   const tone = best && best.game && coverTone(best.game);
   $("done-dialog").style.setProperty("--done-tone", tone || "var(--ok)");
+  // after the third work that saved space, once and never again: a star on GitHub
+  const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
+  save("worksSaved", works);
+  $("done-star").hidden = works < 3 || load("starAsked", false);
   $("done-dialog").showModal();
 }
 
@@ -1397,6 +1401,10 @@ async function main() {
   $("toast-undo").onclick = undo;
   app().SetTaskbar("none", 0, 0);
   $("done-close").onclick = () => $("done-dialog").close();
+  const repository = "https://github.com/DeLFuS77/NXPress";
+  $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
+  $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
+  $("star-link").onclick = () => app().OpenURL(repository);
   $("space-cancel").onclick = () => $("space-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
   let dragging = 0;
