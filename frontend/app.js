@@ -256,6 +256,39 @@ function hidePop() {
   $("game-pop").hidden = true;
 }
 
+// the menu of a file, with a right click: show it in its folder, copy its title ID, its name or
+// its path, check only it, take it out of the list
+function showRowMenu(row, remove, x, y) {
+  hidePop();
+  const menu = $("row-menu");
+  const copy = text => { window.runtime.ClipboardSetText(text); showToast(t("copied")(text)); };
+  const items = [
+    ["menuShow", () => app().ShowFile(row.output || row.item.path)],
+    row.game && row.game.titleId && ["menuCopyId", () => copy(row.game.titleId)],
+    ["menuCopyName", () => copy(shownName(row))],
+    ["menuCopyPath", () => copy(row.item.path)],
+    /\.(nsp|nsz|xci|xcz)$/i.test(row.item.path) && ["menuVerify", () => start("verify", { files: [row.item.path], removeSource: false, output: "", watch: false }), true],
+    ["menuRemove", remove, true],
+  ].filter(Boolean);
+  menu.innerHTML = "";
+  for (const [key, action, needsIdle] of items) {
+    const button = document.createElement("button");
+    button.setAttribute("role", "menuitem");
+    button.textContent = t(key);
+    button.disabled = !!needsIdle && state.busy;
+    button.onclick = () => { hideRowMenu(); action(); };
+    menu.append(button);
+  }
+  menu.hidden = false;
+  menu.style.left = Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8)) + "px";
+  menu.style.top = Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8)) + "px";
+  replay("enter", menu);
+  menu.querySelector("button:not(:disabled)")?.focus();
+}
+function hideRowMenu() {
+  $("row-menu").hidden = true;
+}
+
 // the name of a file to show: the one of its game when read, else its name without [ID][version]
 function shownName(row) {
   if (row.game && row.game.name) return row.game.name;
@@ -295,7 +328,7 @@ function takenOut(items, name) {
 // files that saved the most
 function showDone(event, status) {
   const writes = ["compress", "decompress", "recompress", "trim", "convert", "split", "pack", "fat32"];
-  if (event.cancelled || !writes.includes(state.mode) || !state.lastRun) return;
+  if (event.cancelled || !state.lastRun || !writes.includes(state.lastRun.mode)) return;
   const rows = [...state.rows.values()].filter(row => row.run === state.lastRun.started);
   if (!rows.length) return;
   const savings = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after)
@@ -479,10 +512,13 @@ function summary() {
   text.textContent = "";
   bar.hidden = true;
   if (state.busy) {
+    // the files of this work: all the list, or the one file verified alone
+    const given = state.lastRun && !state.lastRun.watch ? new Set(state.lastRun.request.files) : null;
+    const working = given ? rows.filter(row => given.has(row.item.path)) : rows;
     const ended = row => ["ok", "failed", "skipped"].includes(row.status);
-    const done = rows.filter(ended).length;
-    const share = rows.reduce((sum, row) => sum + (ended(row) ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, rows.length);
-    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, rows.length, Math.floor(share * 100));
+    const done = working.filter(ended).length;
+    const share = working.reduce((sum, row) => sum + (ended(row) ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, working.length);
+    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, working.length, Math.floor(share * 100));
     if (state.lastRun && state.lastRun.watch) text.textContent = t("watching") + " · " + text.textContent;
     bar.hidden = false;
     bar.firstElementChild.style.width = (share * 100).toFixed(1) + "%";
@@ -553,7 +589,7 @@ function add(item) {
   });
   game.addEventListener("mouseleave", hidePop);
   tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
-  tr.querySelector(".remove button").onclick = () => {
+  const remove = () => {
     if (state.busy) return;
     hidePop();
     const gone = state.rows.get(item.path);
@@ -564,6 +600,12 @@ function add(item) {
     setTimeout(() => { tr.remove(); render(); }, calm() ? 0 : 180);
     takenOut([item], shownName(gone || { item, game: null }));
   };
+  tr.querySelector(".remove button").onclick = remove;
+  tr.addEventListener("contextmenu", event => {
+    event.preventDefault();
+    const row = state.rows.get(item.path);
+    if (row) showRowMenu(row, remove, event.clientX, event.clientY);
+  });
   $("files").tBodies[0].append(tr);
   // the files added together come in one after the other
   tr.classList.add("row-in");
@@ -839,6 +881,7 @@ async function start(mode, extra) {
     if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
   }
   const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  files = request.files;
   if (!await spaceAllows(request)) return;
   for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
   $("log").textContent = "";
@@ -988,7 +1031,7 @@ function listen() {
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const onePack = state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames);
-    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
+    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
     keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
     const skippedRows = onePack || !state.lastRun ? 0 : state.lastRun.skipped;
@@ -1250,10 +1293,21 @@ async function main() {
   window.addEventListener("dragleave", () => { dragging = Math.max(0, dragging - 1); if (!dragging) dropShown(false); });
   window.addEventListener("drop", () => { dragging = 0; dropShown(false); });
   // 7: the keys of the window
-  // the card over a game goes with Escape and with a scroll
-  window.addEventListener("scroll", hidePop, true);
+  // the card over a game and the menu of a file go with Escape and with a scroll; the menu also
+  // with a click out of it, and its arrows move between its items
+  window.addEventListener("scroll", () => { hidePop(); hideRowMenu(); }, true);
+  window.addEventListener("blur", hideRowMenu);
+  window.addEventListener("mousedown", event => { if (!$("row-menu").contains(event.target)) hideRowMenu(); });
+  $("row-menu").addEventListener("keydown", event => {
+    const buttons = [...$("row-menu").querySelectorAll("button:not(:disabled)")];
+    const at = buttons.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      buttons[(at + (event.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length]?.focus();
+    }
+  });
   window.addEventListener("keydown", event => {
-    if (event.key === "Escape") hidePop();
+    if (event.key === "Escape") { hidePop(); hideRowMenu(); }
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
     const typing = /^(input|textarea|select)$/i.test(document.activeElement.tagName) && document.activeElement.type !== "checkbox";

@@ -19,6 +19,7 @@ texts.pt = {
   popKind: "Tipo", gameKind: k => ({ BASE: "Jogo", UPD: "Atualização", DLC: "DLC" })[k] || k, popDemo: "Demo", popVersion: "Versão", popHolds: "Contém", popGame: "Do jogo", popNeedsGame: "Requer o jogo na", popFirmware: "Requer firmware",
   popTitles: (b, u, d) => [b && (b === 1 ? "1 jogo" : b + " jogos"), u && (u === 1 ? "1 atualização" : u + " atualizações"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Os novos ficheiros podem não caber", spaceIntro: "Podem ocupar mais do que o espaço livre. Um ficheiro que encha o disco falha, e o original fica como estava.", spaceLine: (need, free) => `até ${need} necessários, ${free} livres`, spaceStart: "Começar mesmo assim",
+  menuShow: "Mostrar na pasta", menuCopyId: "Copiar Title ID", menuCopyName: "Copiar nome", menuCopyPath: "Copiar caminho", menuVerify: "Verificar só este", menuRemove: "Tirar da lista", copied: text => "Copiado: " + text,
   tagEmulators: "emuladores", removeWarning: "Cada original é apagado de vez quando o seu arquivo novo está verificado.",
   selected: (n, bytes) => `${n === 1 ? "1 arquivo" : n + " arquivos"} · ${size(bytes)}`, nothing: "Ainda não há arquivos",
   working: (done, n, share) => `${done} de ${n} concluídos · ${share}%`,

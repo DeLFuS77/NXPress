@@ -26,6 +26,7 @@ texts.ru = {
   popKind: "Тип", gameKind: k => ({ BASE: "Игра", UPD: "Обновление", DLC: "DLC" })[k] || k, popDemo: "Демо", popVersion: "Версия", popHolds: "Содержит", popGame: "Игра", popNeedsGame: "Нужна версия игры", popFirmware: "Нужна прошивка",
   popTitles: (b, u, d) => [b && b + " " + (b === 1 ? "игра" : b < 5 ? "игры" : "игр"), u && u + " " + (u === 1 ? "обновление" : u < 5 ? "обновления" : "обновлений"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Новые файлы могут не поместиться", spaceIntro: "Они могут занять больше, чем свободно. Файл, заполнивший диск, завершится ошибкой, а оригинал останется как был.", spaceLine: (need, free) => `нужно до ${need}, свободно ${free}`, spaceStart: "Всё равно начать",
+  menuShow: "Показать в папке", menuCopyId: "Копировать Title ID", menuCopyName: "Копировать название", menuCopyPath: "Копировать путь", menuVerify: "Проверить только этот", menuRemove: "Убрать из списка", copied: text => "Скопировано: " + text,
   tagEmulators: "эмуляторы", removeWarning: "Каждый оригинал удаляется навсегда, когда его новый файл проверен.",
   selected: (n, bytes) => `${ruFiles(n)} · ${size(bytes)}`, nothing: "Файлов пока нет",
   working: (done, n, share) => `Готово ${done} из ${n} · ${share}%`,

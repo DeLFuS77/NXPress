@@ -19,6 +19,7 @@ texts.ko = {
   popKind: "종류", gameKind: k => ({ BASE: "게임", UPD: "업데이트", DLC: "DLC" })[k] || k, popDemo: "체험판", popVersion: "버전", popHolds: "포함", popGame: "본편 게임", popNeedsGame: "필요한 게임 버전", popFirmware: "필요한 펌웨어",
   popTitles: (b, u, d) => [b && "게임 " + b + "개", u && "업데이트 " + u + "개", d && "DLC " + d + "개"].filter(Boolean).join(" · "),
   spaceTitle: "새 파일이 들어가지 않을 수 있습니다", spaceIntro: "남은 공간보다 클 수 있습니다. 드라이브를 가득 채운 파일은 실패하고, 원본은 그대로 남습니다.", spaceLine: (need, free) => `최대 ${need} 필요, 남은 공간 ${free}`, spaceStart: "그래도 시작",
+  menuShow: "폴더에서 보기", menuCopyId: "타이틀 ID 복사", menuCopyName: "이름 복사", menuCopyPath: "경로 복사", menuVerify: "이것만 검증", menuRemove: "목록에서 빼기", copied: text => "복사됨: " + text,
   tagEmulators: "에뮬레이터", removeWarning: "새 파일이 검증되면 원본은 영구히 삭제됩니다.",
   selected: (n, bytes) => `파일 ${n}개 · ${size(bytes)}`, nothing: "아직 파일이 없습니다",
   working: (done, n, share) => `${n}개 중 ${done}개 완료 · ${share}%`,

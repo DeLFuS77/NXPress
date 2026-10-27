@@ -19,6 +19,7 @@ texts.zh = {
   popKind: "类型", gameKind: k => ({ BASE: "游戏", UPD: "更新", DLC: "DLC" })[k] || k, popDemo: "体验版", popVersion: "版本", popHolds: "包含", popGame: "所属游戏", popNeedsGame: "所需游戏版本", popFirmware: "所需固件",
   popTitles: (b, u, d) => [b && b + " 个游戏", u && u + " 个更新", d && d + " 个 DLC"].filter(Boolean).join(" · "),
   spaceTitle: "新文件可能放不下", spaceIntro: "新文件可能比剩余空间更大。写满磁盘的文件会失败，原文件保持不变。", spaceLine: (need, free) => `最多需要 ${need}，剩余 ${free}`, spaceStart: "仍然开始",
+  menuShow: "在文件夹中显示", menuCopyId: "复制 Title ID", menuCopyName: "复制名称", menuCopyPath: "复制路径", menuVerify: "仅校验此文件", menuRemove: "从列表移除", copied: text => "已复制：" + text,
   tagEmulators: "模拟器", removeWarning: "新文件校验通过后，原文件将被永久删除。",
   selected: (n, bytes) => `${n} 个文件 · ${size(bytes)}`, nothing: "还没有文件",
   working: (done, n, share) => `已完成 ${done}/${n} · ${share}%`,

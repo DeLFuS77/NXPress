@@ -28,6 +28,7 @@
 - The space NXPress has saved you since always, on the empty list, counting up, with a notice at 100 GB, 250 GB, 500 GB, 1 TB and on; the speed of the work as a line of the last minute, with the time left; the progress on the button of NXPress in the taskbar of Windows, filling up while it works and red when a file failed (thanks @NikoMuffin, #31); in Info, a card of each file with its size beside the one as NSP or XCI and what it works with; and the list as a grid of covers, with a switch above it
 - A card over the cover of a game read in the list, after a moment: its cover in big, its name and publisher, title ID, kind (and Demo), version, the titles of each kind it holds, the game of an update or a DLC and the version of it a DLC needs, the firmware it needs and its languages; beside the cover in the grid. Escape or a scroll takes it away
 - Before a work starts, NXPress weighs the most its new files may take on each drive against what is free there, and when they may not fit it says where and how much, with Start anyway and Cancel: a file that fills its drive fails, and its original stays. Files that replace their originals count only the ones made at once
+- A menu on each file with a right click: Show in folder, Copy title ID, Copy name, Copy path, Verify only this (one file checked by itself, whatever the section) and Remove from list; the arrow keys move in it and Escape closes it
 
 ### Fixes
 
