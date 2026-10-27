@@ -74,6 +74,7 @@ texts.ru = {
   keepNamed: "Оставлять имена, в которых уже есть Title ID",
   preferences: "Настройки", prefKeys: "prod.keys", prefLook: "Внешний вид", prefWork: "Когда работа закончена", prefApp: "Приложение",
   packPlan: "Игры для упаковки", packPlanEmpty: "Добавьте файлы игр, чтобы увидеть здесь каждый пакет.", packPlanFiles: n => `файлов: ${n}`, packPlanPacked: name => `Уже упаковано: ${name}`, packPlanOne: "Только один файл: не с чем упаковать",
+  verifyLevel: "Что проверять", verifyFull: "Целиком", verifySignature: "Подпись", verifyBoth: "Оба", verifyFullHint: "Каждый NCA читается целиком и сверяется с хешами: находит любой повреждённый байт. Занимает столько, сколько чтение файла.", verifySignatureHint: "Заголовок каждого NCA за секунды проверяется на подпись Nintendo: инструмент, переписавший NCA, оставляет его без подписи. Данные не читаются.", verifyBothHint: "Сначала подпись, затем весь файл: так проходит неповреждённый дамп от Nintendo.",
   template: "Шаблон имени", templateHint: "Поля: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), или как их пишет Switch Library Manager: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... Расширение сохраняется.", templateReset: "По умолчанию",
   fat32Hint: "Если консоль показывает папку на microSD как папку, установите ей атрибут «архивный» (Hekate: Tools, Archive bit). В Windows NXPress делает это сам.",
   cancel: "Отмена", waiting: "Ожидание", ok: "OK", failed: "Ошибка", skipped: "Пропущен", cancelled: "Отменено",

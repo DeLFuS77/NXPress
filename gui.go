@@ -339,6 +339,7 @@ type Request struct {
 	NoCache      bool     `json:"noCache"`
 	KeepNamed    bool     `json:"keepNamed"`
 	SkipGames    []string `json:"skipGames"`
+	VerifyLevel  string   `json:"verifyLevel"`
 	Levels       bool     `json:"levels"`
 }
 
@@ -350,6 +351,7 @@ func (a *App) Start(request Request) error {
 		output: request.Output, overwrite: request.Overwrite, rmSource: request.RemoveSource, files: request.Files,
 	}
 	if request.Mode == "verify" {
+		o.verifyLevel = request.VerifyLevel
 		o.dat = request.Dat
 	}
 	o.watch = request.Watch

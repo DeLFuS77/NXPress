@@ -67,6 +67,7 @@ texts.ko = {
   keepNamed: "Title ID가 이미 들어 있는 이름은 유지",
   preferences: "설정", prefKeys: "prod.keys", prefLook: "모양", prefWork: "작업이 끝나면", prefApp: "앱",
   packPlan: "묶을 게임", packPlanEmpty: "게임 파일을 추가하면 여기에 각 팩이 표시됩니다.", packPlanFiles: n => `파일 ${n}개`, packPlanPacked: name => `이미 묶음: ${name}`, packPlanOne: "파일이 하나뿐: 함께 묶을 것이 없음",
+  verifyLevel: "확인할 내용", verifyFull: "전체", verifySignature: "서명", verifyBoth: "둘 다", verifyFullHint: "각 NCA를 전부 읽고 해시와 대조합니다. 손상된 바이트를 찾아냅니다. 파일을 읽는 만큼 시간이 걸립니다.", verifySignatureHint: "각 NCA 헤더에 Nintendo 서명이 있는지 몇 초 만에 확인합니다. 도구로 다시 쓴 NCA에는 서명이 없습니다. 데이터는 읽지 않습니다.", verifyBothHint: "먼저 서명, 그다음 파일 전체: Nintendo가 만든 손상 없는 덤프가 통과합니다.",
   template: "이름 템플릿", templateHint: "필드: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), 또는 Switch Library Manager 방식: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... 확장자는 그대로예요.", templateReset: "기본값",
   fat32Hint: "microSD에서 폴더가 폴더로 보이면 아카이브 비트를 설정하세요(Hekate: Tools, Archive bit). Windows에서는 NXPress가 설정합니다.",
   cancel: "취소", waiting: "대기 중", ok: "OK", failed: "실패", skipped: "건너뜀", cancelled: "취소됨",

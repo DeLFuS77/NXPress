@@ -58,7 +58,7 @@ function countUp(element, bytes, format) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(),
+  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
 function load(name, fallback) {
@@ -149,6 +149,13 @@ function render() {
   $("language-select").value = state.language;
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  // what Verify checks: the button chosen, and a sentence for it
+  for (const button of document.querySelectorAll("[data-verify-level]")) {
+    const on = button.dataset.verifyLevel === state.verifyLevel;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
+  $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
   $("keys-banner").hidden = !!state.keys || state.mode === "recompress" || state.mode === "fat32";
   $("toolbar").hidden = state.items.length === 0;
   $("drop").classList.toggle("filled", state.items.length > 0);
@@ -461,7 +468,7 @@ function previewNames() {
 function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
-    overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
+    overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
   };
@@ -848,6 +855,7 @@ async function main() {
   $("remove").checked = !!chosen.removeSource;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
   $("keep-named").checked = !!chosen.keepNamed;
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
@@ -883,6 +891,7 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
+  for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => { clearList(); render(); };

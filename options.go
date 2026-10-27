@@ -29,6 +29,9 @@ type options struct {
 	keepNamed bool
 	// --pack-games leaves out the games with these title IDs, in capitals (from the window)
 	skipGames map[string]bool
+	// what -V checks: "full" (every NCA by its hashes, the default), "signature" (the header
+	// of every NCA signed by Nintendo) or "both"
+	verifyLevel string
 	levels     bool
 	split      bool
 	pack       string
@@ -61,7 +64,7 @@ const (
 // the options that take a value, by every name they have
 var valued = map[string]string{
 	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename",
+	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename", "--verify-level": "verifyLevel",
 }
 
 // the options of nsz that NXPress accepts and has no use for
@@ -192,6 +195,11 @@ func (o *options) set(what string, name string, value string) error {
 		o.pack = value
 	case "packName":
 		o.packName = value
+	case "verifyLevel":
+		if value != "full" && value != "signature" && value != "both" {
+			return errors.New("--verify-level is full, signature or both")
+		}
+		o.verifyLevel = value
 	case "bs", "depth":
 		o.ignored = append(o.ignored, name)
 	}
@@ -258,6 +266,9 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
+  --verify-level L    what -V checks: full (every NCA by its hashes, the default),
+                      signature (the header of every NCA signed by Nintendo, in seconds:
+                      a tool that rewrote an NCA leaves it unsigned) or both
   --no-cache          with -V, check every file again, also the ones checked before and not
                       changed since (NXPress remembers them, and every file it writes)
   --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of

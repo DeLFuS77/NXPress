@@ -11,6 +11,7 @@
 - Rename has a field {dlc_number}, the number of a DLC among the ones of its game (1, 2...), for short names like Game [DLC 1] [ID] instead of the long name of the DLC, and "Keep the names that already have their title ID" (--keep-named) leaves the files you named yourself. Both come from Switch Library Manager Web, which has them in Organize
 - An icon beside each section of the menu (thanks @NikoMuffin, #30), and Settings as a page of its own at the bottom of the menu, by group: prod.keys, the look, what happens when the work is done and the app. prod.keys shows at the bottom left, and the menu of the top bar is gone (thanks @NikoMuffin, #27)
 - Pack, a SuperNSP per game, shows the games before they are packed, each with a box to leave it out, and the number of its files. A game already packed where its pack would go (a file with its title ID that holds more than one title) is SKIPPED and told, unless Replace files already there is on (-w on the command line); a game of one file is shown as having nothing to pack it with
+- Verify in levels: Whole (every NCA by its hashes, as before), Signature (the header of every NCA checked for the signature of Nintendo, in seconds: an NCA a tool rewrote is told by name) or Both, with a sentence for each; on the command line, --verify-level full, signature or both (thanks @NikoMuffin, #9). Signature needs Switch Library Manager Web with the same check
 
 ### Improvements
 

@@ -67,6 +67,7 @@ texts.zh = {
   keepNamed: "保留已包含 Title ID 的名称",
   preferences: "设置", prefKeys: "prod.keys", prefLook: "外观", prefWork: "工作完成时", prefApp: "应用",
   packPlan: "要打包的游戏", packPlanEmpty: "添加游戏文件后，这里会显示每个包。", packPlanFiles: n => `${n} 个文件`, packPlanPacked: name => `已打包：${name}`, packPlanOne: "只有一个文件：没有可合并的内容",
+  verifyLevel: "检查内容", verifyFull: "完整", verifySignature: "签名", verifyBoth: "两者", verifyFullHint: "完整读取每个 NCA 并与其哈希比对：能发现任何损坏的字节。所需时间与读取文件相同。", verifySignatureHint: "几秒内检查每个 NCA 的头部是否有 Nintendo 的签名：被工具改写过的 NCA 没有签名。不读取数据。", verifyBothHint: "先检查签名，再检查整个文件：Nintendo 原版且无损坏的转储才能通过。",
   template: "名称模板", templateHint: "字段:{name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number}（DLC 1、2…）,或 Switch Library Manager 的写法:{TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}…… 扩展名保持不变。", templateReset: "默认",
   fat32Hint: "如果主机在 microSD 上把文件夹显示为文件夹，请设置它的归档属性（Hekate: Tools, Archive bit）。在 Windows 上 NXPress 已自动设置。",
   cancel: "取消", waiting: "等待中", ok: "完成", failed: "失败", skipped: "已跳过", cancelled: "已取消",

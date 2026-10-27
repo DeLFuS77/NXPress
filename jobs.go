@@ -295,6 +295,15 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	case "info":
 		return "", info(path, out), nil
 	}
+	// the signature of Nintendo on every NCA, read from the headers only (#9)
+	signed := ""
+	if o.verifyLevel == "signature" || o.verifyLevel == "both" {
+		note, err := checkSignatures(path)
+		if err != nil || o.verifyLevel == "signature" {
+			return "", note, err
+		}
+		signed = note
+	}
 	// a file checked before and not changed since is not read again, unless asked
 	if entry, ok := checked.find(path); ok && !o.noCache && o.datFile == nil {
 		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
@@ -308,6 +317,9 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	if err == nil {
 		checked.keep(path, note)
 	}
+	if signed != "" {
+		note = strings.TrimPrefix(note+"; "+signed, "; ")
+	}
 	if err != nil || o.datFile == nil {
 		return "", note, err
 	}
@@ -316,6 +328,23 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		found = note + "; " + found
 	}
 	return "", found, err
+}
+
+// checkSignatures tells whether every NCA of a file is signed by Nintendo: an error names the
+// ones that are not, as a tool that rewrote them leaves them.
+func checkSignatures(path string) (string, error) {
+	check, err := switchfs.CheckSignatures(path)
+	if err != nil {
+		return "", err
+	}
+	if len(check.Unsigned) > 0 {
+		return "", fmt.Errorf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", "))
+	}
+	note := fmt.Sprintf("%d NCA signed by Nintendo", check.Checked)
+	if len(check.Unknown) > 0 {
+		note += fmt.Sprintf("; %d signed with a key not known yet", len(check.Unknown))
+	}
+	return note, nil
 }
 
 // sparseSkipped is why a game in sparse storage is left as it is: no compressor reads that

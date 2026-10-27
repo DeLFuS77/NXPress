@@ -67,6 +67,7 @@ texts.en = {
   keepNamed: "Keep the names that already have their title ID",
   preferences: "Settings", prefKeys: "prod.keys", prefLook: "Look", prefWork: "When the work is done", prefApp: "The app",
   packPlan: "Games to pack", packPlanEmpty: "Add the files of your games to see each pack here.", packPlanFiles: n => `${n} files`, packPlanPacked: name => `Already packed: ${name}`, packPlanOne: "Only one file: nothing to pack it with",
+  verifyLevel: "What to check", verifyFull: "Whole", verifySignature: "Signature", verifyBoth: "Both", verifyFullHint: "Every NCA read whole and checked against its hashes: finds any damaged byte. It takes as long as reading the file.", verifySignatureHint: "The header of every NCA checked for the signature of Nintendo, in seconds: a tool that rewrote an NCA leaves it unsigned. It does not read the data.", verifyBothHint: "The signature first, then the whole file: what a dump made by Nintendo and undamaged passes.",
   template: "Name template", templateHint: "Fields: {name} {id} {version} {version_txt} (1.0.5) {type} {titles} {contents} (1G+1U+2D) {size_gb} {size_mb} {dlc_number} (DLC 1, 2...), or as Switch Library Manager writes them: {TITLE_NAME} {VERSION_TXT} {PACKAGE_CONTENTS}... The extension is kept.", templateReset: "Default",
   fat32Hint: "On the microSD card, if the console shows the folder as a folder, set its archive bit (Hekate: Tools, Archive bit). On Windows NXPress sets it already.",
   cancel: "Cancel", waiting: "Waiting", ok: "OK", failed: "Failed", skipped: "Skipped", cancelled: "Cancelled",

@@ -143,6 +143,16 @@
     </section>
 
     <section class="block" data-for="verify">
+      <h2 data-t="verifyLevel"></h2>
+      <div class="segmented" role="radiogroup" id="verify-level">
+        <button data-verify-level="full" role="radio" data-t="verifyFull"></button>
+        <button data-verify-level="signature" role="radio" data-t="verifySignature"></button>
+        <button data-verify-level="both" role="radio" data-t="verifyBoth"></button>
+      </div>
+      <p class="hint" id="verify-level-hint"></p>
+    </section>
+
+    <section class="block" data-for="verify">
       <h2 data-t="datTitle"></h2>
       <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon">✕</button></div>
       <p class="hint" data-t="datHint"></p>
