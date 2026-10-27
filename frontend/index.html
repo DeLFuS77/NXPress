@@ -57,6 +57,10 @@
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
+      <div class="view-switch segmented" role="radiogroup">
+        <button data-view="list" role="radio" data-t-title="viewList"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
+        <button data-view="grid" role="radio" data-t-title="viewGrid"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
+      </div>
     </div>
 
     <div id="drop">
@@ -69,6 +73,7 @@
           <button id="empty-folder" data-t="addFolder"></button>
         </div>
         <div class="types" id="takes"></div>
+        <p class="lifetime" id="lifetime" hidden></p>
       </div>
       <table id="files" hidden>
         <thead><tr><th data-t="file" data-sort="name" data-t-title="sortHint"></th><th class="size" data-t="size" data-sort="size" data-t-title="sortHint"></th><th class="state" data-t="state" data-sort="state" data-t-title="sortHint"></th><th></th></tr></thead>
@@ -81,6 +86,7 @@
       <div class="summary">
         <div id="summary-text"></div>
         <div class="bar total" id="total-bar" hidden><div></div></div>
+        <div class="speed" id="speed" hidden><svg class="sparkline" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true"><path id="speed-area"/><path id="speed-line"/></svg><span id="speed-text"></span></div>
         <div id="status" class="muted"></div>
         <div class="summary-extra">
           <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>

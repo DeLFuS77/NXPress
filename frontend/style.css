@@ -352,6 +352,44 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
   nav button { justify-content: center; padding: 5px; }
 }
 
+/* the space saved since always, on the empty list */
+.lifetime { margin: 18px 0 0; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lifetime b { color: var(--ok); font-size: 22px; }
+
+/* the speed of the work and the time left */
+.speed { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sparkline { width: 120px; height: 24px; flex: none; }
+#speed-line { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+#speed-area { fill: color-mix(in srgb, var(--accent) 18%, transparent); stroke: none; }
+
+/* the card of a file in Info */
+.file-card { margin-top: 8px; max-width: 520px; }
+.card-sizes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.card-sizes .kind { font-weight: 700; color: var(--accent); min-width: 34px; }
+.card-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
+.card-bar div { height: 100%; border-radius: 4px; background: var(--ok); animation: card-in .6s cubic-bezier(.2, .8, .2, 1); }
+@keyframes card-in { from { width: 0; } }
+.file-card .tags { margin-top: 6px; }
+
+/* the switch of the list: rows or a grid of covers */
+.view-switch { margin: 0 0 0 auto; }
+.view-switch button { padding: 4px 8px; display: grid; place-items: center; }
+.view-switch .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+table.grid thead { display: none; }
+table.grid tbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; padding: 12px; }
+table.grid tr { display: flex; flex-direction: column; position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); overflow: hidden; }
+table.grid tr:hover { background: var(--hover); }
+table.grid td { border: none; padding: 6px 10px; width: auto; text-align: left; }
+table.grid td.name { padding: 0; }
+table.grid .game { flex-direction: column; align-items: stretch; gap: 0; }
+table.grid .game .icon, table.grid .game .cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 0; font-size: 20px; border: none; }
+table.grid .game > div { padding: 8px 10px 0; }
+table.grid .game .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+table.grid .game .file, table.grid td.name .note, table.grid .error-more, table.grid .file-card { display: none; }
+table.grid td.size { padding-top: 0; font-size: 12px; }
+table.grid td.remove { position: absolute; top: 4px; right: 4px; padding: 0; }
+table.grid td.remove button { background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 999px; }
+
 /* motion: each one answers a change, and Windows can ask for none */
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes pop { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }

@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 	"github.com/wailsapp/wails/v2"
 	wailsoptions "github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -220,6 +221,26 @@ func (a *App) Describe(path string) (gameTitle, error) {
 		return gameTitle{}, errors.New("a file in parts")
 	}
 	return readTitle(path, true)
+}
+
+// FileCard is what Info shows of a file beside its row: its kind, its size and the one as NSP
+// or XCI, how its NCZ files are compressed, and what trimming takes away.
+type FileCard struct {
+	Kind         string `json:"kind"`
+	Size         int64  `json:"size"`
+	Decompressed int64  `json:"decompressed"`
+	Solid        int    `json:"solid"`
+	Blocks       int    `json:"blocks"`
+	Trimmable    int64  `json:"trimmable"`
+}
+
+// Card tells how a file is stored, for its card in Info.
+func (a *App) Card(path string) (FileCard, error) {
+	facts, err := switchfs.DescribeFile(path)
+	if err != nil {
+		return FileCard{}, err
+	}
+	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments}, nil
 }
 
 // NewNames gives the names the files would get by a template, "" for a file that cannot be read;
@@ -446,6 +467,12 @@ func (a *App) Cancel() {
 // SetPaused stops the work where it is, or lets it go on.
 func (a *App) SetPaused(paused bool) {
 	a.paused.Store(paused)
+}
+
+// SetTaskbar shows the progress of the work on the button of NXPress in the taskbar (#31):
+// state "none", "normal", "paused" or "error", done of total.
+func (a *App) SetTaskbar(state string, done float64, total float64) {
+	setTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
 }
 
 // Notify shows a notice of the system, with the texts of the page.

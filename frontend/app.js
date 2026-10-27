@@ -45,12 +45,13 @@ function replay(className, ...elements) {
   }
 }
 // countUp shows a size growing to its value, in the text format gives
-function countUp(element, bytes, format) {
-  if (calm()) { element.textContent = format(bytes); return; }
+function countUp(element, bytes, format, html) {
+  const put = text => { if (html) element.innerHTML = text; else element.textContent = text; };
+  if (calm()) { put(format(bytes)); return; }
   const start = performance.now(), length = 900;
   const step = now => {
     const share = Math.min(1, (now - start) / length);
-    element.textContent = format(bytes * (1 - Math.pow(1 - share, 3)));
+    put(format(bytes * (1 - Math.pow(1 - share, 3))));
     if (share < 1 && element.isConnected) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -81,7 +82,6 @@ function size(bytes) {
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
   return value.toFixed(unit ? 1 : 0) + " " + units[unit];
 }
-// the notes of the results, which come in English, in the language chosen
 // what to do about an error, by what it says
 function adviceFor(error) {
   const text = error.toLowerCase();
@@ -91,6 +91,108 @@ function adviceFor(error) {
   if (/no space|not enough space|disk full/.test(text)) return "adviceSpace";
   if (/access is denied|permission|in use|being used/.test(text)) return "adviceAccess";
   return "adviceGeneric";
+}
+
+// the space saved since always, kept in the window: what every work that wrote files saved
+// in the units the window shows sizes in (1 GB = 1024 MB), so they read round
+const milestones = [100, 250, 500, 1024, 2048, 5120, 10240].map(gb => gb * 2 ** 30);
+function keepSaved(bytes, files) {
+  if (bytes <= 0) return;
+  const before = load("lifetime", { bytes: 0, files: 0 });
+  const after = { bytes: before.bytes + bytes, files: before.files + files };
+  save("lifetime", after);
+  // crossing a milestone is told once, with the bar of actions glowing
+  const crossed = milestones.filter(mark => before.bytes < mark && after.bytes >= mark).pop();
+  if (crossed) setTimeout(() => { showToast(t("milestone")(size(crossed))); replay("glow", document.querySelector(".actions")); }, 1600);
+}
+// the space saved since always, on the empty list; it counts up the first time it shows
+let lifetimeShown = false, lifetimeAt = 0;
+function renderLifetime() {
+  const kept = load("lifetime", { bytes: 0, files: 0 });
+  const element = $("lifetime");
+  element.hidden = !(kept.bytes > 0);
+  if (element.hidden) return;
+  if (!lifetimeShown && !$("empty").hidden) {
+    lifetimeShown = true;
+    lifetimeAt = performance.now();
+    // the text is made of figures of this window only: it is drawn as HTML for its bold figure
+    countUp(element, kept.bytes, bytes => t("lifetime")(size(bytes), kept.files), true);
+  } else if (lifetimeShown && performance.now() - lifetimeAt > 1000) {
+    element.innerHTML = t("lifetime")(size(kept.bytes), kept.files);
+  }
+}
+
+// the speed of the work: the bytes done each second, for a line of the last minute and the time
+// left; and the progress on the button of the taskbar
+const speed = { samples: [], last: 0, at: 0, taskbarAt: 0 };
+function workDone() {
+  let done = 0, total = 0;
+  for (const row of state.rows.values()) {
+    if (!["waiting", "work", "ok", "failed", "skipped"].includes(row.status)) continue;
+    const bytes = row.total || row.item.size || 0;
+    total += bytes;
+    done += ["ok", "failed", "skipped"].includes(row.status) ? bytes : Math.min(row.done || 0, bytes);
+  }
+  return { done, total };
+}
+function trackSpeed() {
+  const now = performance.now();
+  const { done, total } = workDone();
+  if (!speed.at) { speed.at = now; speed.last = done; }
+  if (now - speed.at >= 1000) {
+    const rate = Math.max(0, (done - speed.last) / ((now - speed.at) / 1000));
+    speed.samples = [...speed.samples, rate].slice(-60);
+    speed.at = now;
+    speed.last = done;
+  }
+  if (now - speed.taskbarAt >= 700 || done >= total) {
+    speed.taskbarAt = now;
+    app().SetTaskbar(state.paused ? "paused" : "normal", done, total);
+  }
+  return { done, total };
+}
+function resetSpeed() {
+  Object.assign(speed, { samples: [], last: 0, at: 0, taskbarAt: 0 });
+}
+function renderSpeed() {
+  $("speed").hidden = !state.busy || speed.samples.length < 2;
+  if ($("speed").hidden) return;
+  const { done, total } = workDone();
+  const samples = speed.samples;
+  const top = Math.max(...samples, 1);
+  const points = samples.map((value, i) => `${(i / (samples.length - 1)) * 120},${24 - (value / top) * 22 - 1}`);
+  $("speed-line").setAttribute("d", "M" + points.join("L"));
+  $("speed-area").setAttribute("d", "M0,24L" + points.join("L") + "L120,24Z");
+  const recent = samples.slice(-5);
+  const rate = recent.reduce((sum, value) => sum + value, 0) / recent.length;
+  const left = rate > 0 ? (total - done) / rate : 0;
+  $("speed-text").textContent = `${size(rate)}/s` + (left > 0 && !state.paused ? " · " + t("timeLeft")(time(Math.round(left))) : "");
+}
+
+// a card for a file in Info: its size beside the one as NSP or XCI, and what it works with
+function renderCard(row) {
+  row.tr.querySelector(".file-card")?.remove();
+  const card = row.card;
+  if (!card || state.mode !== "info") return;
+  const element = document.createElement("div");
+  element.className = "file-card";
+  const whole = Math.max(card.decompressed || card.size, card.size);
+  const share = whole ? card.size / whole : 1;
+  const compressed = card.solid + card.blocks > 0;
+  const works = card.solid > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 0 }
+    : card.blocks > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 0, CyberFoil: 1, Sphaira: 1, emulators: 1 }
+    : { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 1 };
+  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><div class="tags"></div>`;
+  element.querySelector(".kind").textContent = card.kind;
+  element.querySelector(".card-bar div").style.width = (share * 100).toFixed(1) + "%";
+  element.querySelector("small").textContent = compressed ? t("cardAs")(size(card.size), size(whole), card.kind.startsWith("XC") ? "XCI" : "NSP") : size(card.size) + (card.trimmable > 0 ? " · " + t("cardTrim")(size(card.trimmable)) : "");
+  for (const [name, yes] of Object.entries(works)) {
+    const tag = document.createElement("i");
+    tag.className = yes ? "yes" : "no";
+    tag.textContent = name === "emulators" ? t("tagEmulators") : name;
+    element.querySelector(".tags").append(tag);
+  }
+  row.tr.querySelector(".note").after(element);
 }
 
 // the name of a file to show: the one of its game when read, else its name without [ID][version]
@@ -156,6 +258,7 @@ function showDone(event, status) {
   $("done-dialog").showModal();
 }
 
+// the notes of the results, which come in English, in the language chosen
 function noteText(note) {
   const own = texts[state.language] && texts[state.language].notes || {};
   const english = texts.en.notes || {};
@@ -230,6 +333,10 @@ function render() {
   $("language-select").value = state.language;
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  // the list as rows, or as a grid of covers
+  const view = load("view", "list") === "grid" ? "grid" : "list";
+  $("files").classList.toggle("grid", view === "grid");
+  for (const button of document.querySelectorAll("[data-view]")) { button.classList.toggle("on", button.dataset.view === view); button.setAttribute("aria-checked", button.dataset.view === view); }
   // what Verify checks: the button chosen, and a sentence for it
   for (const button of document.querySelectorAll("[data-verify-level]")) {
     const on = button.dataset.verifyLevel === state.verifyLevel;
@@ -303,6 +410,8 @@ function render() {
 
 // summary tells what the list holds, how far the work is, and what it saved.
 function summary() {
+  renderSpeed();
+  renderLifetime();
   const rows = [...state.rows.values()];
   const text = $("summary-text");
   const bar = $("total-bar");
@@ -526,6 +635,7 @@ function paint(row) {
   if (!row.status && state.mode === "rename" && row.preview && row.preview !== row.item.name) {
     note.textContent = "→ " + row.preview;
   }
+  renderCard(row);
   if (row.output) {
     if (note.textContent) note.append(" · ");
     const link = document.createElement("a");
@@ -667,6 +777,8 @@ async function start(mode, extra) {
   const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   try {
     await app().Start(request);
+    resetSpeed();
+    app().SetTaskbar("normal", 0, 1);
     state.busy = true;
     state.paused = false;
     state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
@@ -727,6 +839,7 @@ function listen() {
     const row = rowOf(event.file);
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total });
     paint(row);
+    trackSpeed();
     summary();
   });
   events.EventsOn("done", event => {
@@ -754,6 +867,8 @@ function listen() {
       save("pending", pending.request.files.length ? pending : null);
     }
     paint(row);
+    if (state.mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
+    trackSpeed();
     summary();
   });
   events.EventsOn("say", text => {
@@ -795,6 +910,13 @@ function listen() {
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
     if (!event.cancelled && $("sound").checked) playSound();
     if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
+    // the taskbar: red while there are errors to look at, else nothing
+    app().SetTaskbar(!event.cancelled && event.failed ? "error" : "none", 1, 1);
+    // what this work saved goes to the space saved since always
+    if (!event.cancelled && state.lastRun && ["compress", "recompress", "trim", "pack"].includes(state.lastRun.mode)) {
+      const ran = [...state.rows.values()].filter(row => row.run === state.lastRun.started && row.status === "ok" && row.after > 0 && row.item.size > row.after);
+      keepSaved(ran.reduce((sum, row) => sum + row.item.size - row.after, 0), ran.length);
+    }
     // the end of the work: the space saved counts up, and the bar glows when nothing failed
     state.celebrate = !event.cancelled;
     render();
@@ -1010,6 +1132,7 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
+  for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("view", button.dataset.view); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
@@ -1020,6 +1143,7 @@ async function main() {
     if (items.length) takenOut(items);
   };
   $("toast-undo").onclick = undo;
+  app().SetTaskbar("none", 0, 0);
   $("done-close").onclick = () => $("done-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
   let dragging = 0;
