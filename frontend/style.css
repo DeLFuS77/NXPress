@@ -274,6 +274,34 @@ the sentence under the title gives its room to the list */
 @media (max-height: 640px) {
   .page-head p { display: none; }
   .page-head { padding-top: 12px; }
+/* motion: each one answers a change, and Windows can ask for none */
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes row-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes row-out { to { opacity: 0; transform: translateX(12px); } }
+@keyframes ended { from { background: var(--flash); } to { background: transparent; } }
+@keyframes stripes { from { background-position: 0 0; } to { background-position: 24px 0; } }
+@keyframes glow { 0% { box-shadow: inset 0 3px 0 var(--ok); } 100% { box-shadow: inset 0 3px 0 transparent; } }
+@keyframes lift { 0%, 100% { transform: none; } 50% { transform: translateY(-6px); } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.enter { animation: enter .22s ease-out both; }
+#settings.enter { animation-delay: .05s; }
+nav button.chosen .tile { animation: pop .28s ease-out var(--since, 0ms) both; }
+tr.row-in { animation: row-in .22s ease-out both; }
+tr.row-out { animation: row-out .18s ease-in forwards; }
+tr.ended-ok { --flash: var(--ok-soft); animation: ended 1.4s ease-out; }
+tr.ended-failed { --flash: var(--bad-soft); animation: ended 1.8s ease-out; }
+tr.ended-skipped { --flash: color-mix(in srgb, var(--warn) 14%, transparent); animation: ended 1.4s ease-out; }
+tr.ended-ok .badge, tr.ended-failed .badge, tr.ended-skipped .badge { animation: pop .3s ease-out; }
+/* work in progress moves: the bar of a file at work and the bar of the whole list */
+td.state .bar div, .busy .bar.total div { background-image: linear-gradient(135deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%); background-size: 24px 24px; animation: stripes .8s linear infinite; }
+.actions.glow { animation: glow 1.6s ease-out; }
+#drop.wails-drop-target-active .empty-icon { animation: lift .7s ease-in-out infinite; }
+dialog[open] { animation: dialog-in .18s ease-out; }
+button:active:not(:disabled) { transform: scale(.97); }
+button { transition: background .12s, border-color .12s, transform .08s; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
 
 /* while the files are at work */

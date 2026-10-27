@@ -21,6 +21,7 @@
 - A game in sparse storage is SKIPPED with a plain sentence: no compressor can read that layout yet, nsz included, and the game installs as it is (thanks @NikoMuffin, #29)
 - Info tells more of each title: the firmware the console needs for a game or an update, the version of its game a DLC needs, and the NCA files it is made of, by kind (thanks @NikoMuffin, #20)
 - A new look: blue for what you choose and start, red only for the name of the app and for what went wrong; the icon of each section on a tile in the color of its group; the options of a section on one panel instead of boxes in a box; labels in sentence case; states with a dot of their color; sizes in figures of the same width; and, until the icon of a game is read, a cover with the kind of file and its name without the [ID][version] tags
+- Motion that tells what changed: a section comes in and the tile chosen pops, files come into the list one after the other and fold away when taken out, a file that ends lights up in the color of its state, the bars of the work in progress move, the space saved counts up at the end and the bar of actions glows when nothing failed, and the drop zone answers a file dragged over it. With less motion asked in Windows, none of it plays
 
 ### Fixes
 

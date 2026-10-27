@@ -33,6 +33,28 @@ const tones = { groupSpace: "space", groupOrganize: "organize", groupCheck: "che
 const tile = (name, group) => `<span class="tile tone-${tones[group] || "neutral"}">${icon(name)}</span>`;
 
 const $ = id => document.getElementById(id);
+// motion is left out when Windows asks for less of it
+const calm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// enter plays the animation of a class again on the elements given
+function replay(className, ...elements) {
+  for (const element of elements) {
+    if (!element) continue;
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+  }
+}
+// countUp shows a size growing to its value, in the text format gives
+function countUp(element, bytes, format) {
+  if (calm()) { element.textContent = format(bytes); return; }
+  const start = performance.now(), length = 900;
+  const step = now => {
+    const share = Math.min(1, (now - start) / length);
+    element.textContent = format(bytes * (1 - Math.pow(1 - share, 3)));
+    if (share < 1 && element.isConnected) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
@@ -91,10 +113,17 @@ function render() {
       button.querySelector("b").textContent = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
       button.className = mode === state.mode && !state.view ? "on" : "";
+      // the tile chosen pops; the menu is drawn again while it does, and the pop goes on where it was
+      const since = performance.now() - (state.chosenAt || 0);
+      if (mode === state.mode && !state.view && since < 300) { button.classList.add("chosen"); button.style.setProperty("--since", -since + "ms"); }
       button.onclick = () => {
+        if (state.busy) return;
+        const changed = state.view || mode !== state.mode;
         // a section leaves the page of the settings
         if (state.view) { state.view = ""; render(); }
+        if (changed) state.chosenAt = performance.now();
         setMode(mode);
+        if (changed) { render(); replay("enter", document.querySelector("#work .page-head"), $("drop"), $("settings")); }
       };
       $("modes").append(button);
     }
@@ -209,7 +238,9 @@ function summary() {
     tag.className = "saved";
     tag.textContent = " · " + t("saved")(saved);
     text.append(tag);
+    if (state.celebrate) countUp(tag, saved, bytes => " · " + t("saved")(bytes));
   }
+  state.celebrate = false;
 }
 
 function setMode(mode) {
@@ -258,10 +289,14 @@ function add(item) {
     if (state.busy) return;
     state.items = state.items.filter(other => other.path !== item.path);
     state.rows.delete(item.path);
-    tr.remove();
-    render();
+    // the row folds away before it goes
+    tr.classList.add("row-out");
+    setTimeout(() => { tr.remove(); render(); }, calm() ? 0 : 180);
   };
   $("files").tBodies[0].append(tr);
+  // the files added together come in one after the other
+  tr.classList.add("row-in");
+  tr.style.animationDelay = Math.min(state.items.length - 1, 12) * 25 + "ms";
   const row = { item, tr, status: "", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0, game: null, preview: "" };
   state.rows.set(item.path, row);
   describe(row);
@@ -319,6 +354,8 @@ function pumpDescribe() {
 
 function paint(row) {
   const cell = row.tr.querySelector(".state");
+  if (row.painted !== undefined && row.painted !== row.status && ["ok", "failed", "skipped"].includes(row.status)) replay("ended-" + row.status, row.tr);
+  row.painted = row.status;
   const note = row.tr.querySelector(".note");
   const title = row.tr.querySelector(".title");
   const file = row.tr.querySelector(".file");
@@ -602,7 +639,10 @@ function listen() {
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
     if (!event.cancelled && $("sound").checked) playSound();
     if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
+    // the end of the work: the space saved counts up, and the bar glows when nothing failed
+    state.celebrate = !event.cancelled;
     render();
+    if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
   });
   // the computer did not turn off: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
@@ -812,7 +852,7 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
-  $("open-preferences").onclick = () => { state.view = "preferences"; render(); };
+  $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => { clearList(); render(); };
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); };
