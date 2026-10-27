@@ -19,6 +19,7 @@
 - The level buttons show the levels each one covers, Light 1–6, Medium 7–14 and Maximum 15–19, and the hint tells that 18, the level of the presets and the default of nsz, is barely bigger than 19 and faster (thanks @NikoMuffin, #28)
 - Trim shows that it takes the NSP and NSZ files of updates, the only ones with delta fragments: "NSP/NSZ (updates)" (thanks @NikoMuffin, #23)
 - A game in sparse storage is SKIPPED with a plain sentence: no compressor can read that layout yet, nsz included, and the game installs as it is (thanks @NikoMuffin, #29)
+- Info tells more of each title: the firmware the console needs for a game or an update, the version of its game a DLC needs, and the NCA files it is made of, by kind (thanks @NikoMuffin, #20)
 
 ### Fixes
 

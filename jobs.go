@@ -889,6 +889,7 @@ func info(path string, out output) string {
 			}
 		}
 		lines = append(lines, line)
+		lines = append(lines, titleDetails(title)...)
 	}
 	lines = append(lines, describe(path)...)
 	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
@@ -896,6 +897,32 @@ func info(path string, out output) string {
 		return "1 title"
 	}
 	return fmt.Sprintf("%d titles", len(titles))
+}
+
+// contentOrder is the order the NCA files of a title are told in.
+var contentOrder = []string{"Meta", "Program", "Control", "Data", "HtmlDocument", "LegalInformation", "DeltaFragment"}
+
+// titleDetails tells what a title needs, the firmware of the console for a game or an update
+// and the version of its game for a DLC, and the NCA files it is made of (#20).
+func titleDetails(title *switchfs.ContentMetaAttributes) []string {
+	lines := []string{}
+	switch {
+	case title.RequiredTitleVersion > 0 && title.Type == "DLC":
+		lines = append(lines, fmt.Sprintf("  needs version %d of its game", title.RequiredTitleVersion))
+	case title.RequiredTitleVersion > 0:
+		lines = append(lines, "  needs firmware "+firmware(uint32(title.RequiredTitleVersion)))
+	}
+	for _, kind := range contentOrder {
+		if content, ok := title.Contents[kind]; ok && content.ID != "" {
+			lines = append(lines, fmt.Sprintf("  %s NCA %s", kind, content.ID))
+		}
+	}
+	return lines
+}
+
+// firmware is a version of the system as the console shows it: 12.1.0 for 0x30100000.
+func firmware(version uint32) string {
+	return fmt.Sprintf("%d.%d.%d", version>>26, version>>20&0x3F, version>>16&0xF)
 }
 
 // describe tells how a file is stored, what it works with, and what trimming takes away.
