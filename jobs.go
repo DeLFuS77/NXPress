@@ -258,10 +258,13 @@ func temporary(path string) string {
 
 // finish gives the checked temporary file its name, replacing a file there with -w.
 func finish(o options, written string, path string) error {
+	if err := syncPath(written); err != nil {
+		return err
+	}
 	if o.overwrite {
 		os.Remove(path)
 	}
-	return os.Rename(written, path)
+	return commitFile(written, path)
 }
 
 // free tells whether a new file can be written at path.
@@ -464,7 +467,7 @@ func recompress(ctx context.Context, path string, o options, threads int, out ou
 		return "", "", err
 	}
 	if inPlace {
-		err = os.Rename(written, path)
+		err = commitFile(written, path)
 	} else {
 		err = finish(o, written, name)
 	}
@@ -556,7 +559,7 @@ func stripDeltas(ctx context.Context, path string, o options, out output) (strin
 		return "", "", err
 	}
 	if inPlace {
-		err = os.Rename(written, path)
+		err = commitFile(written, path)
 	} else {
 		err = finish(o, written, name)
 	}
