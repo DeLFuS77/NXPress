@@ -422,6 +422,23 @@ function noteText(note) {
   }
   return note;
 }
+// stepsOf are the steps of a file in the work running, in their order: the work, then the check
+// of what it wrote; a trimmed NSP is checked while it is written, so it has one step
+function stepsOf(row) {
+  const mode = (state.lastRun && state.lastRun.mode) || state.mode;
+  // splitting and joining for FAT32 share their mode: the work is the one this file was doing
+  if (row.step && !row.step.startsWith("Verifying")) row.work = row.step.split(" ")[0];
+  const work = { compress: "Compressing", recompress: "Recompressing", fat32: row.work || "Splitting" }[mode];
+  if (work) return [work, "Verifying"];
+  if (mode === "trim" && /\.xc[iz]$/i.test(row.item.path)) return ["Trimming", "Verifying"];
+  return [];
+}
+
+// the colour of a step, as in the library app: the check green, the work orange
+function stepTone(step) {
+  return step === "Verifying" ? "check" : "work";
+}
+
 function stepText(step) {
   const table = texts[state.language] && texts[state.language].steps || {};
   const [first, ...rest] = step.split(" ");
@@ -809,9 +826,21 @@ function paint(row) {
     const share = row.total ? row.done / row.total : 0;
     game.style.setProperty("--share", (share * 100).toFixed(1) + "%");
     game.dataset.share = Math.floor(share * 100) + "%";
-    cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
-    cell.querySelector(".step").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${Math.floor(share * 100)}%`;
-    cell.querySelector(".bar div").style.width = (share * 100).toFixed(1) + "%";
+    // a file in steps (the work, then the check) has its bar split in them, each in its colour:
+    // the ones done stay full and only the one being done fills up
+    const steps = stepsOf(row);
+    const index = steps.indexOf((row.step || "").split(" ")[0]);
+    if (steps.length > 1 && index >= 0) {
+      cell.innerHTML = `<div class="step"><i class="dot"></i><span></span></div><div class="segs">` +
+        steps.map((step, i) => `<span class="seg tone-${stepTone(step)}${i < index ? " done" : ""}">${i === index ? "<div></div>" : ""}</span>`).join("") + `</div>`;
+      cell.querySelector(".step .dot").className = "dot tone-" + stepTone(steps[index]);
+      cell.querySelector(".step span").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${index + 1}/${steps.length} · ${Math.floor(share * 100)}%`;
+      cell.querySelector(".segs div").style.width = (share * 100).toFixed(1) + "%";
+    } else {
+      cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
+      cell.querySelector(".step").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${Math.floor(share * 100)}%`;
+      cell.querySelector(".bar div").style.width = (share * 100).toFixed(1) + "%";
+    }
   } else if (row.status === "waiting") {
     cell.innerHTML = `<span class="badge waiting"></span>`;
     cell.firstChild.textContent = t("waiting");
