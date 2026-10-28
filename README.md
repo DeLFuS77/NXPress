@@ -1,6 +1,18 @@
 # NXPress
 
+[![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/delfus77)
+[![Release](https://img.shields.io/github/v/release/DeLFuS77/NXPress?sort=semver)](https://github.com/DeLFuS77/NXPress/releases)
+[![Downloads](https://img.shields.io/github/downloads/DeLFuS77/NXPress/total?logo=github)](https://github.com/DeLFuS77/NXPress/releases)
+[![Build](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml/badge.svg)](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/DeLFuS77/NXPress/blob/main/LICENSE)
+
 Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, multi-title files (SuperNSP) included. It writes standard NSZ and XCZ, the same format nsz writes, so installers read them as usual.
+
+<p align="center">
+  <a href="https://ko-fi.com/delfus77"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="36"></a>
+  <br>
+  <sub>❤️ Free and open source, and it will stay free. If it saves you time, a coffee helps keep it going.</sub>
+</p>
 
 It is one program with no Python or other dependencies. Opened with no arguments it shows a window: drop files or folders on it, choose what to do and start. With arguments it is a command line that takes the same options as nsz, so it can replace it in scripts and in tools that call nsz.
 
