@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- A file NXPress writes (compressed, decompressed, recompressed, trimmed, split for FAT32 or joined) is on the disk before it takes its name, and before the original is deleted: a power cut at that moment no longer leaves an empty file with the original gone
+
 ## 1.2.3
 
 ### Improvements

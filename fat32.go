@@ -135,6 +135,10 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	}
 	// Windows deletes no file still open
 	input.Close()
+	// the parts are on the disk before the original goes
+	if err := syncPath(written); err != nil {
+		return "", "", err
+	}
 	if inPlace {
 		// the folder takes the name of the file: the file goes first
 		if err := os.Remove(path); err != nil {
@@ -143,7 +147,7 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	} else if o.overwrite {
 		os.RemoveAll(name)
 	}
-	if err := os.Rename(written, name); err != nil {
+	if err := commitFile(written, name); err != nil {
 		return "", "", err
 	}
 	note := fmt.Sprintf("%d parts in a folder", parts)
@@ -199,6 +203,10 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 		return "", "", err
 	}
 	reader.Close()
+	// the whole file is on the disk before the parts go
+	if err := syncPath(written); err != nil {
+		return "", "", err
+	}
 	// the parts give way to the whole file, in place or when asked to
 	if inPlace || o.rmSource {
 		if err := removeParts(path); err != nil {
@@ -208,7 +216,7 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 	if o.overwrite {
 		os.Remove(name)
 	}
-	if err := os.Rename(written, name); err != nil {
+	if err := commitFile(written, name); err != nil {
 		return "", "", err
 	}
 	return name, fmt.Sprintf("%d parts joined", parts), nil
