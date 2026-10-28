@@ -37,7 +37,7 @@ func runWindow(files []string) int {
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := loadWindowPlace()
 	err := wails.Run(&wailsoptions.App{
-		Title:            "NXPress",
+		Title:            "NXPress " + version,
 		Width:            place.Width,
 		Height:           place.Height,
 		MinWidth:         windowMinWidth,
@@ -233,6 +233,11 @@ func (a *App) NewNames(paths []string, template string) []string {
 	return names
 }
 
+// DefaultPackTemplate is the name of the pack of each game when none is chosen.
+func (a *App) DefaultPackTemplate() string {
+	return defaultPackTemplate
+}
+
 // DefaultTemplate is the template of names offered first.
 func (a *App) DefaultTemplate() string {
 	return defaultTemplate
@@ -291,6 +296,8 @@ type Request struct {
 	Overwrite    bool     `json:"overwrite"`
 	RemoveSource bool     `json:"removeSource"`
 	Pack         string   `json:"pack"`
+	PackGames    bool     `json:"packGames"`
+	PackTemplate string   `json:"packTemplate"`
 	Dat          string   `json:"dat"`
 	Template     string   `json:"template"`
 	Watch        bool     `json:"watch"`
@@ -338,6 +345,11 @@ func (a *App) Start(request Request) error {
 	case "info":
 		o.info = true
 	case "pack":
+		// a SuperNSP per game, named by its template; else one file with everything
+		if request.PackGames {
+			o.packGames, o.packName = true, request.PackTemplate
+			break
+		}
 		if request.Pack == "" {
 			return errors.New("choose the name of the new file")
 		}
@@ -503,10 +515,15 @@ func (w *window) measured(report measureReport) {
 	for _, t := range report.trials {
 		trials = append(trials, map[string]any{"threads": t.threads, "multi": t.files, "speed": t.speed, "best": t == report.best})
 	}
+	// a faster setting less than 5% faster than the one chosen: the window tells why it was not
+	var faster any
+	if report.faster != nil {
+		faster = map[string]any{"threads": report.faster.threads, "multi": report.faster.files, "speed": report.faster.speed}
+	}
 	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{
 		"threads": report.best.threads, "multi": report.best.files, "speed": report.best.speed,
 		"processors": report.processors, "level": report.level, "block": report.block,
-		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials,
+		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials, "faster": faster,
 	})
 }
 

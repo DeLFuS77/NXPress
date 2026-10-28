@@ -9,7 +9,7 @@ const groups = [
 ];
 // what each mode takes, to show it
 const takesShown = {
-  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP NSZ", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
+  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
   split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
 
@@ -17,7 +17,7 @@ const $ = id => document.getElementById(id);
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "",
+  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 },
 };
 
 function load(name, fallback) {
@@ -97,9 +97,11 @@ function render() {
   $("title").textContent = t(state.mode);
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
-  for (const type of takesShown[state.mode].split(" ")) {
+  for (const entry of takesShown[state.mode].split(" ")) {
+    // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on
+    const [type, which] = entry.split(":");
     const tag = document.createElement("i");
-    tag.textContent = type;
+    tag.textContent = which ? `${type} (${t(which)})` : type;
     $("takes").append(tag);
   }
   $("language-select").value = state.language;
@@ -124,6 +126,12 @@ function render() {
   $("output").classList.toggle("empty", !state.output);
   $("reset-output").hidden = !state.output;
   $("reset-output").title = t("nextTo");
+  // a SuperNSP per game, or one file with everything
+  $("pack-one-fields").hidden = $("pack-games").checked;
+  $("pack-games-fields").hidden = !$("pack-games").checked;
+  for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
+  // one file with everything is saved where it is chosen; a pack per game where Save in says
+  if (state.mode === "pack" && !$("pack-games").checked) $("output-field").hidden = true;
   $("pack").textContent = state.pack || t("noPack");
   $("pack").title = state.pack;
   $("pack").classList.toggle("empty", !state.pack);
@@ -157,6 +165,7 @@ function render() {
   renderSound();
   summary();
   for (const row of state.rows.values()) paint(row);
+  sortRows();
 }
 
 // summary tells what the list holds, how far the work is, and what it saved.
@@ -242,6 +251,38 @@ function add(item) {
   paint(row);
 }
 
+// the list in the order a click on a column asks for: by name, size or state, the other way round
+// on a second click, and back to the order the files came in on a third (#17). The work goes in
+// the order shown; while it runs, sorting by state waits for its end, so rows do not jump about.
+const stateOrder = { work: 0, waiting: 1, failed: 2, skipped: 3, ok: 4 };
+function sortValue(row, key) {
+  if (key === "size") return row.item.size;
+  if (key === "state") return stateOrder[row.status] ?? 5;
+  return (row.game && row.game.name) || row.item.name;
+}
+function sortRows() {
+  const { key, dir } = state.sort;
+  for (const th of document.querySelectorAll("#files th[data-sort]")) {
+    th.classList.toggle("sorted", th.dataset.sort === key);
+    th.classList.toggle("desc", th.dataset.sort === key && dir < 0);
+  }
+  if (state.busy && key === "state") return;
+  const rows = [...state.rows.values()];
+  if (key) rows.sort((a, b) => {
+    const x = sortValue(a, key), y = sortValue(b, key);
+    return dir * (typeof x === "string" ? x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" }) : x - y);
+  });
+  const body = $("files").tBodies[0];
+  if (rows.some((row, i) => body.rows[i] !== row.tr)) for (const row of rows) body.append(row.tr);
+  if (!state.busy) state.items = rows.map(row => row.item);
+}
+// the names of the games come in a few at a time: the list is sorted again once they settle
+let sortTimer = 0;
+function sortSoon() {
+  clearTimeout(sortTimer);
+  sortTimer = setTimeout(sortRows, 400);
+}
+
 // the name and the icon of the game of each row, read a few at a time
 const describeQueue = [];
 let describing = 0;
@@ -255,7 +296,7 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => { row.game = game; paint(row); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
+    app().Describe(row.item.path).then(game => { row.game = game; paint(row); if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { describing--; pumpDescribe(); });
   }
 }
 
@@ -346,6 +387,7 @@ function settings() {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template,
+    packGames: $("pack-games").checked, packTemplate: state.packTemplate,
   };
 }
 
@@ -361,6 +403,13 @@ const builtinPresets = () => [
 function presetKey(all, index) {
   const preset = all[index];
   return !preset ? "" : preset.builtin ? "builtin:" + index : preset.name;
+}
+
+// a template field is as tall as its text, which wraps; a new line is no part of a name
+function fitTemplate(field) {
+  if (/[\r\n]/.test(field.value)) field.value = field.value.replace(/\s*[\r\n]+\s*/g, " ");
+  field.style.height = "auto";
+  field.style.height = field.scrollHeight + 2 + "px";
 }
 
 function renderPresets() {
@@ -397,7 +446,7 @@ async function start(mode, extra) {
   mode = typeof mode === "string" ? mode : state.mode;
   if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
-  if (state.mode === "pack" && !state.pack) { $("status").textContent = t("needPack"); return; }
+  if (state.mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
   const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
@@ -447,6 +496,9 @@ function showMeasure(report) {
     rows.append(tr);
   }
   $("measure-result").textContent = t("measureResult")(report.threads, report.multi, report.speed, time(report.seconds10GB));
+  // a heavier setting a little faster was not taken: the window tells why
+  $("measure-kept").hidden = !report.faster;
+  if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
   $("measure-dialog").showModal();
 }
 
@@ -477,7 +529,7 @@ function listen() {
     summary();
   });
   events.EventsOn("done", event => {
-    if (state.mode === "pack") {
+    if (state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames)) {
       // a pack is one result for all its files
       for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: state.lastRun && state.lastRun.started });
     }
@@ -528,10 +580,11 @@ function listen() {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
-    const total = state.mode === "pack" || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
+    const onePack = state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames);
+    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.items.length;
     keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
-    const skippedRows = state.mode === "pack" || !state.lastRun ? 0 : state.lastRun.skipped;
+    const skippedRows = onePack || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
@@ -718,10 +771,16 @@ async function main() {
   $("no-cache").checked = !!chosen.noCache;
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
+  const sort = load("sort", null);
+  if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
   state.output = chosen.output || "";
   state.dat = chosen.dat || "";
   state.template = chosen.template || await app().DefaultTemplate();
   $("template").value = state.template;
+  // a pack per game unless one file with everything was chosen last
+  $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
+  state.packTemplate = chosen.packTemplate || await app().DefaultPackTemplate();
+  $("pack-template").value = state.packTemplate;
 
   $("level").oninput = () => { $("preset").value = ""; render(); };
   document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; render(); }; });
@@ -752,6 +811,13 @@ async function main() {
   $("reset-output").onclick = () => { state.output = ""; save("settings", settings()); render(); };
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
+  for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); };
+  for (const field of [$("template"), $("pack-template")]) {
+    field.addEventListener("input", () => fitTemplate(field));
+    field.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });
+  }
+  $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); };
+  $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
   $("choose-pack").onclick = async () => { const path = await app().ChoosePack(); if (path) state.pack = path; render(); };
   $("send-to").onclick = async () => {
     try {
@@ -766,6 +832,13 @@ async function main() {
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
+  // a click on a column sorts the list by it (see sortRows)
+  for (const th of document.querySelectorAll("#files th[data-sort]")) th.onclick = () => {
+    const { key, dir } = state.sort;
+    state.sort = key !== th.dataset.sort ? { key: th.dataset.sort, dir: 1 } : dir > 0 ? { key, dir: -1 } : { key: "", dir: 1 };
+    save("sort", state.sort);
+    sortRows();
+  };
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");
   $("compare-levels").onclick = () => start("estimate", { levels: true });

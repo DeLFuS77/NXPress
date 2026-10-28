@@ -14,6 +14,7 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
+  [/^this game uses sparse storage, which no compressor can read yet \(nsz included\): it installs as it is$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which cannot be compressed yet/g, "sparseWhy"],
@@ -56,6 +57,8 @@ const noteRules = [
   [/(\d+) NCA rewritten by a tool, their data checked/g, "ncaRewritten"],
   [/; some of its files are in no part, so it is kept/g, "unclaimed"],
   [/^(\d+) files merged/, "filesMerged"],
+  [/^it is the only file of its game here: there is nothing to pack it with$/, "onlyFileOfGame"],
+  [/^packed into /, "packedInto"],
   [/^(\d+) files: /, "filesSplit"],
   [/^1 title$/, "oneTitleCount"],
   [/^(\d+) titles$/, "titlesCount"],
