@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3
+
+### Improvements
+
+- A file worked on in two steps, the work and then the check of what it wrote (Compress, Recompress, Trim of an XCI, FAT32), has its bar split in them, each in its colour: the work orange, the check green, with the step it is in and its number (1/2, 2/2). The step done stays full and only the one being done fills up, so the bar no longer seems to start again, as in Switch Library Manager Web
+- The bar of a file at work moves with stripes while it is being done
+
 ## 1.2.2
 
 ### New
