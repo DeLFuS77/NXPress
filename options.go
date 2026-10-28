@@ -13,19 +13,26 @@ import (
 // can take its place in scripts and in the tools that call it; a few of them have no use
 // here and are accepted without effect.
 type options struct {
-	compress    bool
-	decompress  bool
-	verify      bool
-	info        bool
-	convert     bool
-	recompress  bool
-	trim        bool
-	estimate    bool
-	measure     bool
-	fat32       bool
-	template    string
-	watch       bool
-	noCache     bool
+	compress   bool
+	decompress bool
+	verify     bool
+	info       bool
+	convert    bool
+	recompress bool
+	trim       bool
+	estimate   bool
+	measure    bool
+	fat32      bool
+	template   string
+	watch      bool
+	noCache    bool
+	// --rename leaves the files whose name has their title ID
+	keepNamed bool
+	// --pack-games leaves out the games with these title IDs, in capitals (from the window)
+	skipGames map[string]bool
+	// what -V checks: "full" (every NCA by its hashes, the default), "signature" (the header
+	// of every NCA signed by Nintendo) or "both"
+	verifyLevel string
 	levels      bool
 	split       bool
 	pack        string
@@ -59,7 +66,7 @@ const (
 // the options that take a value, by every name they have
 var valued = map[string]string{
 	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename",
+	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename", "--verify-level": "verifyLevel",
 }
 
 // the options of nsz that NXPress accepts and has no use for
@@ -132,6 +139,8 @@ func parseOptions(args []string) (options, error) {
 			o.watch = true
 		case "--no-cache":
 			o.noCache = true
+		case "--keep-named":
+			o.keepNamed = true
 		case "--levels":
 			o.levels = true
 		case "--split":
@@ -190,6 +199,11 @@ func (o *options) set(what string, name string, value string) error {
 		o.pack = value
 	case "packName":
 		o.packName = value
+	case "verifyLevel":
+		if value != "full" && value != "signature" && value != "both" {
+			return errors.New("--verify-level is full, signature or both")
+		}
+		o.verifyLevel = value
 	case "bs", "depth":
 		o.ignored = append(o.ignored, name)
 	}
@@ -246,6 +260,9 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
+  --verify-level L    what -V checks: full (every NCA by its hashes, the default),
+                      signature (the header of every NCA signed by Nintendo, in seconds:
+                      a tool that rewrote an NCA leaves it unsigned) or both
   --no-cache          with -V, check every file again, also the ones checked before and not
                       changed since (NXPress remembers them, and every file it writes)
   --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of
@@ -293,7 +310,10 @@ Usage: nxpress [options] file or folder...
                       shows it: 1.0.5), {type}, {titles}, {contents} (1G+1U+2D),
                       {size_gb} and {size_mb}; the fields of Switch Library Manager
                       ({TITLE_NAME}, {VERSION_TXT}, {PACKAGE_CONTENTS}...) work too. For
-                      example "{name} [{id}][v{version}]"
+                      example "{name} [{id}][v{version}]"; {dlc_number} is the number of a
+                      DLC (1, 2...), for names like "{name} [DLC {dlc_number}] [{id}]"
+  --keep-named        with --rename, leave the files whose name has their title ID in
+                      brackets, as you named them
   --split             split multi-title files (SuperNSP) into one file per title
   --pack FILE         merge the files given into one multi-title file (SuperNSP): an
                       NSP when they are all NSP, an NSZ when one of them is an NSZ; of a

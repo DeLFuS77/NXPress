@@ -96,7 +96,7 @@ func TestDescribeTitles(t *testing.T) {
 		{TitleId: "0100000000010800", Type: "UPD", Version: 65536, Ncap: control("1.1.0", nil)},
 	})
 	want := gameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 4, Latest: 131072, VersionTxt: "1.2.0", Bases: 1, Updates: 2, Dlcs: 1}
-	if pack != want {
+	if !reflect.DeepEqual(pack, want) {
 		t.Fatalf("pack: %+v", pack)
 	}
 	dlc := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100000000011001", Type: "DLC"}})

@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 	"github.com/wailsapp/wails/v2"
 	wailsoptions "github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -36,6 +37,14 @@ func runWindow(files []string) int {
 	app := &App{files: files}
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := loadWindowPlace()
+	// on Windows 11 the menu shows the Mica of the system through a window left clear
+	mica := micaWindow()
+	background := &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255}
+	backdrop := windows.Auto
+	if mica {
+		background.A = 0
+		backdrop = windows.Mica
+	}
 	err := wails.Run(&wailsoptions.App{
 		Title:            "NXPress " + version,
 		Width:            place.Width,
@@ -43,7 +52,7 @@ func runWindow(files []string) int {
 		MinWidth:         windowMinWidth,
 		MinHeight:        windowMinHeight,
 		StartHidden:      true,
-		BackgroundColour: &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255},
+		BackgroundColour: background,
 		AssetServer:      &assetserver.Options{Assets: frontend},
 		OnStartup:        app.startup,
 		OnDomReady:       placeWindow,
@@ -53,7 +62,10 @@ func runWindow(files []string) int {
 		Bind:             []any{app},
 		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
 		// portable (see portable.go): the page keeps its settings next to the program too
-		Windows: &windows.Options{WebviewUserDataPath: webviewFolder()},
+		Windows: &windows.Options{
+			WebviewUserDataPath:  webviewFolder(),
+			WebviewIsTransparent: mica, WindowIsTranslucent: mica, BackdropType: backdrop,
+		},
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "nxpress:", err)
@@ -102,6 +114,8 @@ type Setup struct {
 	// whether "Send to" can hold NXPress, and holds it
 	SendTo        bool `json:"sendTo"`
 	SendToEnabled bool `json:"sendToEnabled"`
+	// the window is clear behind the menu, for the Mica of Windows 11
+	Mica bool `json:"mica"`
 }
 
 func (a *App) Setup() Setup {
@@ -110,6 +124,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: defaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
+		Mica: micaWindow(),
 	}
 	setup.SendToEnabled = setup.SendTo && sendToEnabled()
 	if len(a.files) > 0 {
@@ -222,15 +237,70 @@ func (a *App) Describe(path string) (gameTitle, error) {
 	return readTitle(path, true)
 }
 
-// NewNames gives the names the files would get by a template, "" for a file that cannot be read.
-func (a *App) NewNames(paths []string, template string) []string {
+// FileCard is what Info shows of a file beside its row: its kind, its size and the one as NSP
+// or XCI, how its NCZ files are compressed, and what trimming takes away.
+type FileCard struct {
+	Kind         string `json:"kind"`
+	Size         int64  `json:"size"`
+	Decompressed int64  `json:"decompressed"`
+	Solid        int    `json:"solid"`
+	Blocks       int    `json:"blocks"`
+	Trimmable    int64  `json:"trimmable"`
+}
+
+// Card tells how a file is stored, for its card in Info.
+func (a *App) Card(path string) (FileCard, error) {
+	facts, err := switchfs.DescribeFile(path)
+	if err != nil {
+		return FileCard{}, err
+	}
+	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments}, nil
+}
+
+// NewNames gives the names the files would get by a template, "" for a file that cannot be read;
+// with keepNamed, a file whose name has its title ID keeps it.
+func (a *App) NewNames(paths []string, template string, keepNamed bool) []string {
 	names := make([]string, len(paths))
 	for i, path := range paths {
 		if title, err := readTitle(path, false); err == nil {
 			names[i] = newName(path, title, template)
+			if keepNamed && keepsName(path, title.TitleID) {
+				names[i] = filepath.Base(path)
+			}
 		}
 	}
 	return names
+}
+
+// PackGame is a game of the packs by game, as the window shows it before they are made.
+type PackGame struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Files  []string `json:"files"`
+	Packed string   `json:"packed"`
+}
+
+// PackPlan tells the packs by game the files would make: the files of each game, and the pack
+// made before when there is one where its pack would go (output, or the folder of the game).
+func (a *App) PackPlan(files []string, output string) []PackGame {
+	sources, _ := inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	order, groups, _ := gameGroups(sources)
+	o := options{output: output}
+	plan := []PackGame{}
+	for _, id := range order {
+		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
+		if title, err := readTitle(groups[id][0], false); err == nil {
+			game.Name = title.Name
+		}
+		if game.Name == "" {
+			game.Name = filepath.Base(groups[id][0])
+		}
+		if packed := packedAlready(o, id, groups[id]); packed != "" {
+			game.Packed = filepath.Base(packed)
+		}
+		plan = append(plan, game)
+	}
+	return plan
 }
 
 // DefaultPackTemplate is the name of the pack of each game when none is chosen.
@@ -302,6 +372,9 @@ type Request struct {
 	Template     string   `json:"template"`
 	Watch        bool     `json:"watch"`
 	NoCache      bool     `json:"noCache"`
+	KeepNamed    bool     `json:"keepNamed"`
+	SkipGames    []string `json:"skipGames"`
+	VerifyLevel  string   `json:"verifyLevel"`
 	Levels       bool     `json:"levels"`
 	LowPriority  bool     `json:"lowPriority"`
 }
@@ -314,6 +387,7 @@ func (a *App) Start(request Request) error {
 		output: request.Output, overwrite: request.Overwrite, rmSource: request.RemoveSource, files: request.Files,
 	}
 	if request.Mode == "verify" {
+		o.verifyLevel = request.VerifyLevel
 		o.dat = request.Dat
 	}
 	o.watch = request.Watch
@@ -343,6 +417,7 @@ func (a *App) Start(request Request) error {
 		o.fat32 = true
 	case "rename":
 		o.template = request.Template
+		o.keepNamed = request.KeepNamed
 		if o.template == "" {
 			o.template = defaultTemplate
 		}
@@ -351,6 +426,10 @@ func (a *App) Start(request Request) error {
 	case "info":
 		o.info = true
 	case "pack":
+		o.skipGames = map[string]bool{}
+		for _, id := range request.SkipGames {
+			o.skipGames[strings.ToUpper(id)] = true
+		}
 		// a SuperNSP per game, named by its template; else one file with everything
 		if request.PackGames {
 			o.packGames, o.packName = true, request.PackTemplate
@@ -408,6 +487,12 @@ func (a *App) Cancel() {
 // SetPaused stops the work where it is, or lets it go on.
 func (a *App) SetPaused(paused bool) {
 	a.paused.Store(paused)
+}
+
+// SetTaskbar shows the progress of the work on the button of NXPress in the taskbar (#31):
+// state "none", "normal", "paused" or "error", done of total.
+func (a *App) SetTaskbar(state string, done float64, total float64) {
+	setTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
 }
 
 // Notify shows a notice of the system, with the texts of the page.

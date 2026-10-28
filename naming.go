@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -31,6 +32,15 @@ type gameTitle struct {
 	Updates    int    `json:"updates"`
 	Dlcs       int    `json:"dlcs"`
 	Size       int64  `json:"size"`
+	// what the window shows of the game over its cover: who publishes it, the languages it
+	// comes in (as tags like en-US), the firmware the game or its update needs, if it is a demo,
+	// the game of an update or a DLC, and the version of its game a DLC needs
+	Publisher string   `json:"publisher,omitempty"`
+	Languages []string `json:"languages,omitempty"`
+	Firmware  string   `json:"firmware,omitempty"`
+	Demo      bool     `json:"demo,omitempty"`
+	GameID    string   `json:"gameId,omitempty"`
+	NeedsGame int      `json:"needsGame,omitempty"`
 	// the icon of the game, as a data URL, when asked for
 	Icon string `json:"icon,omitempty"`
 }
@@ -105,6 +115,18 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 	if shown.Ncap != nil {
 		result.VersionTxt = strings.TrimSpace(shown.Ncap.DisplayVersion)
 	}
+	if shown.Type != "DLC" && shown.RequiredTitleVersion > 0 {
+		result.Firmware = firmware(uint32(shown.RequiredTitleVersion))
+	}
+	// an update or a DLC tells its game, and a DLC the version of its game it needs
+	if main.Type != "BASE" {
+		if game, err := switchfs.GameTitleID(main.TitleId, main.Type); err == nil {
+			result.GameID = fmt.Sprintf("%016X", game)
+		}
+	}
+	if main.Type == "DLC" {
+		result.NeedsGame = main.RequiredTitleVersion
+	}
 	if result.VersionTxt == "" && main.Type == "DLC" && main.Version == 0 {
 		result.VersionTxt = "1.0.0"
 	}
@@ -116,6 +138,7 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 		for _, language := range []string{"AmericanEnglish", "BritishEnglish", "Spanish", "French", "German", "Italian", "Japanese"} {
 			if name := strings.TrimSpace(title.Ncap.TitleName[language].Title); name != "" {
 				result.Name = name
+				result.Publisher = strings.TrimSpace(title.Ncap.TitleName[language].Publisher)
 				break
 			}
 		}
@@ -123,11 +146,19 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) gameTitle {
 			for _, entry := range title.Ncap.TitleName {
 				if name := strings.TrimSpace(entry.Title); name != "" {
 					result.Name = name
+					result.Publisher = strings.TrimSpace(entry.Publisher)
 					break
 				}
 			}
 		}
 		if result.Name != "" {
+			// bit n of the flag is the language n of the control data
+			for language := switchfs.Language(0); language < 16; language++ {
+				if title.Ncap.SupportedLanguageFlag&(1<<uint(language)) != 0 {
+					result.Languages = append(result.Languages, language.ToLanguageTag())
+				}
+			}
+			result.Demo = title.Ncap.Demo
 			break
 		}
 	}
@@ -148,7 +179,8 @@ var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
 // Manager writes them: {name} {TITLE_NAME}, {id} {TITLE_ID}, {version} {VERSION} (of the newest
 // update for a game with its updates), {version_txt} {VERSION_TXT} (as the game shows it,
 // 1.0.5), {type} {TYPE}, {titles}, {contents} {PACKAGE_CONTENTS} (1G+1U+2D), {size_gb}
-// {SIZE_GB} and {size_mb} {SIZE_MB}. {REGION} and {DLC_NAME}, which that program takes from
+// {SIZE_GB}, {size_mb} {SIZE_MB} and {dlc_number} {DLC_NUMBER} (1 for the first DLC of its
+// game, empty for other files). {REGION} and {DLC_NAME}, which that program takes from
 // its database of titles, are left empty, as brackets left with nothing. Its extension is kept.
 func newName(path string, title gameTitle, template string) string {
 	if template == "" {
@@ -163,7 +195,10 @@ func newName(path string, title gameTitle, template string) string {
 	fields := []string{
 		"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
 		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
-		"{size_gb}", sizeGB, "{size_mb}", sizeMB,
+		"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{dlc_number}", "",
+	}
+	if title.Type == "DLC" && title.Titles == 1 {
+		fields[len(fields)-1] = dlcNumber(title.TitleID)
 	}
 	// the same fields as Switch Library Manager writes them, added after the ones above
 	lower := len(fields)
@@ -194,11 +229,30 @@ func newName(path string, title gameTitle, template string) string {
 	return result + filepath.Ext(path)
 }
 
+// dlcNumber is the number of a DLC among the ones of its game: its title ID is the one of the
+// game with 0x1000 added and the number, 1 for the first. "" when id is not one.
+func dlcNumber(id string) string {
+	value, err := strconv.ParseUint(id, 16, 64)
+	if err != nil || value&0x1000 == 0 || value&0xFFF == 0 {
+		return ""
+	}
+	return strconv.FormatUint(value&0xFFF, 10)
+}
+
+// keepsName tells whether a file keeps its name with --keep-named: it has its title ID in
+// brackets, in any case.
+func keepsName(path string, id string) bool {
+	return id != "" && strings.Contains(strings.ToUpper(filepath.Base(path)), "["+strings.ToUpper(id)+"]")
+}
+
 // rename gives a file the name of its template, in its folder.
 func rename(ctx context.Context, path string, o options, out output) (string, string, error) {
 	title, err := readTitle(path, false)
 	if err != nil {
 		return "", "", err
+	}
+	if o.keepNamed && keepsName(path, title.TitleID) {
+		return "", "its name has its title ID, it is kept", nil
 	}
 	name := filepath.Join(filepath.Dir(path), newName(path, title, o.template))
 	if name == path {

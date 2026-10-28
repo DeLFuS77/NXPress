@@ -31,7 +31,7 @@ For Windows there is also a portable download (`…-windows-x64-portable.zip`): 
 Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. Each game shows with its name, icon, title ID and version. Its modes are grouped by what they are for:
 
 - **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
-- **Organize**: pack a game, its updates and DLC into one SuperNSP or into its XCI; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
+- **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
 - **Check**: verify files, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with
 
 ![A compression done, with the space saved](docs/screenshots/compress-done.png)

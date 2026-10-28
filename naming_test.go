@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
+)
 
 func TestNewName(t *testing.T) {
 	title := gameTitle{Name: "Some: Game?", TitleID: "0100000000010000", Version: 65536, Type: "BASE", Titles: 2}
@@ -62,5 +66,48 @@ func TestNewer(t *testing.T) {
 		if got := newer(c.a, c.b); got != c.want {
 			t.Fatalf("newer(%s, %s) = %v", c.a, c.b, got)
 		}
+	}
+}
+
+// {dlc_number} names a DLC by its number, and --keep-named leaves a name with its title ID.
+func TestDlcNumberAndKeptNames(t *testing.T) {
+	dlc := gameTitle{Name: "Game", TitleID: "0100000000011002", Type: "DLC", Titles: 1}
+	if got := newName("x.nsp", dlc, "{name} [DLC {dlc_number}] [{id}]"); got != "Game [DLC 2] [0100000000011002].nsp" {
+		t.Errorf("a DLC: %q", got)
+	}
+	game := gameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 1}
+	if got := newName("x.nsp", game, "{name} [DLC {DLC_NUMBER}] [{id}]"); got != "Game [DLC ] [0100000000010000].nsp" && got != "Game [DLC] [0100000000010000].nsp" {
+		t.Errorf("a game: %q", got)
+	}
+	if !keepsName(`C:\games\My name [0100000000011002].nsp`, "0100000000011002") || keepsName("My name [0100000000011003].nsp", "0100000000011002") {
+		t.Error("keepsName")
+	}
+	if dlcNumber("0100000000010800") != "" || dlcNumber("010022900D3ED01C") != "28" {
+		t.Error("dlcNumber")
+	}
+}
+
+// over its cover a game tells its publisher, its languages, the firmware of its newest update
+// and if it is a demo; a DLC tells its game and the version of it it needs
+func TestDescribeTitlesForTheHover(t *testing.T) {
+	base := &switchfs.ContentMetaAttributes{TitleId: "0100BFC002B4E000", Type: "BASE", RequiredTitleVersion: 0x30100000, Ncap: &switchfs.Nacp{
+		TitleName:             map[string]switchfs.NacpTitle{"AmericanEnglish": {Title: "Game", Publisher: " Studio "}},
+		SupportedLanguageFlag: 1<<0 | 1<<2 | 1<<6,
+		Demo:                  true,
+	}}
+	update := &switchfs.ContentMetaAttributes{TitleId: "0100BFC002B4E800", Type: "UPD", Version: 65536, RequiredTitleVersion: 0x48000000}
+	got := describeTitles([]*switchfs.ContentMetaAttributes{update, base})
+	if got.Publisher != "Studio" || !got.Demo || got.Firmware != "18.0.0" {
+		t.Errorf("publisher %q, demo %v, firmware %q", got.Publisher, got.Demo, got.Firmware)
+	}
+	if got.GameID != "" || got.NeedsGame != 0 {
+		t.Errorf("a game tells a game of its own: %q %d", got.GameID, got.NeedsGame)
+	}
+	dlc := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100BFC002B4F001", Type: "DLC", RequiredTitleVersion: 131072}})
+	if dlc.GameID != "0100BFC002B4E000" || dlc.NeedsGame != 131072 || dlc.Firmware != "" {
+		t.Errorf("DLC: game %q, needs %d, firmware %q", dlc.GameID, dlc.NeedsGame, dlc.Firmware)
+	}
+	if len(got.Languages) != 3 || got.Languages[0] != "en-US" || got.Languages[1] != "ja" || got.Languages[2] != "es" {
+		t.Errorf("languages %v", got.Languages)
 	}
 }

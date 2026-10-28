@@ -295,6 +295,15 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	case "info":
 		return "", info(path, out), nil
 	}
+	// the signature of Nintendo on every NCA, read from the headers only (#9)
+	signed := ""
+	if o.verifyLevel == "signature" || o.verifyLevel == "both" {
+		note, err := checkSignatures(path)
+		if err != nil || o.verifyLevel == "signature" {
+			return "", note, err
+		}
+		signed = note
+	}
 	// a file checked before and not changed since is not read again, unless asked
 	if entry, ok := checked.find(path); ok && !o.noCache && o.datFile == nil {
 		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
@@ -308,6 +317,9 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	if err == nil {
 		checked.keep(path, note)
 	}
+	if signed != "" {
+		note = strings.TrimPrefix(note+"; "+signed, "; ")
+	}
 	if err != nil || o.datFile == nil {
 		return "", note, err
 	}
@@ -316,6 +328,23 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		found = note + "; " + found
 	}
 	return "", found, err
+}
+
+// checkSignatures tells whether every NCA of a file is signed by Nintendo: an error names the
+// ones that are not, as a tool that rewrote them leaves them.
+func checkSignatures(path string) (string, error) {
+	check, err := switchfs.CheckSignatures(path)
+	if err != nil {
+		return "", err
+	}
+	if len(check.Unsigned) > 0 {
+		return "", fmt.Errorf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", "))
+	}
+	note := fmt.Sprintf("%d NCA signed by Nintendo", check.Checked)
+	if len(check.Unknown) > 0 {
+		note += fmt.Sprintf("; %d signed with a key not known yet", len(check.Unknown))
+	}
+	return note, nil
 }
 
 // sparseSkipped is why a game in sparse storage is left as it is: no compressor reads that
@@ -690,21 +719,17 @@ const defaultPackTemplate = "{name} [{id}][v{version}] ({contents})"
 // its own (into its game card, when it is one), named by o.packName, next to the files of the
 // game or in -o. A game with one file only is skipped: there is nothing to pack it with. It
 // gives how many files failed.
-func packGames(ctx context.Context, o options, out output) int {
-	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
-	failed := len(missing)
-	for _, path := range missing {
-		out.done(path, "", "", errors.New("no such file or folder"))
-	}
-	// the files of each game, in the order the games come; the game itself first
+// gameGroups puts the files of each game together, in the order the games come and with the
+// game itself first; the files that cannot be read are given apart, with why.
+func gameGroups(sources []string) ([]uint64, map[uint64][]string, map[string]error) {
 	groups := map[uint64][]string{}
 	order := []uint64{}
 	first := map[string]int{}
+	unread := map[string]error{}
 	for _, source := range sources {
 		titles, err := readTitles(source)
 		if err != nil {
-			out.done(source, "", "", err)
-			failed++
+			unread[source] = err
 			continue
 		}
 		main := describeTitles(titles)
@@ -720,6 +745,58 @@ func packGames(ctx context.Context, o options, out output) int {
 		groups[id] = append(groups[id], source)
 		first[source] = map[string]int{"BASE": 0, "UPD": 1, "DLC": 2}[main.Type]
 	}
+	for _, files := range groups {
+		sort.SliceStable(files, func(i, j int) bool { return first[files[i]] < first[files[j]] })
+	}
+	return order, groups, unread
+}
+
+// packedAlready is a pack of the game id found where its pack would go: a file not given whose
+// name has the title ID of the game and that holds more than one title. "" when there is none.
+func packedAlready(o options, id uint64, files []string) string {
+	folder := o.output
+	if folder == "" {
+		folder = filepath.Dir(files[0])
+	}
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return ""
+	}
+	given := map[string]bool{}
+	for _, file := range files {
+		given[strings.ToLower(filepath.Clean(file))] = true
+	}
+	tag := fmt.Sprintf("[%016X]", id)
+	for _, entry := range entries {
+		name := entry.Name()
+		extension := strings.ToLower(filepath.Ext(name))
+		if entry.IsDir() || !strings.Contains(strings.ToUpper(name), tag) || (extension != ".nsp" && extension != ".nsz" && extension != ".xci" && extension != ".xcz") {
+			continue
+		}
+		path := filepath.Join(folder, name)
+		if given[strings.ToLower(filepath.Clean(path))] {
+			continue
+		}
+		if titles, err := readTitles(path); err == nil && len(titles) > 1 {
+			return path
+		}
+	}
+	return ""
+}
+
+func packGames(ctx context.Context, o options, out output) int {
+	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	failed := len(missing)
+	for _, path := range missing {
+		out.done(path, "", "", errors.New("no such file or folder"))
+	}
+	order, groups, unread := gameGroups(sources)
+	for _, source := range sources {
+		if err, ok := unread[source]; ok {
+			out.done(source, "", "", err)
+			failed++
+		}
+	}
 	template := o.packName
 	if template == "" {
 		template = defaultPackTemplate
@@ -729,9 +806,21 @@ func packGames(ctx context.Context, o options, out output) int {
 			break
 		}
 		files := groups[id]
-		sort.SliceStable(files, func(i, j int) bool { return first[files[i]] < first[files[j]] })
+		// a game left out in the window, and a game packed before, unless asked to write again
+		if o.skipGames[fmt.Sprintf("%016X", id)] {
+			for _, file := range files {
+				out.done(file, "", "", skipped("left out of the games to combine"))
+			}
+			continue
+		}
+		if packed := packedAlready(o, id, files); packed != "" && !o.overwrite {
+			for _, file := range files {
+				out.done(file, "", "", skipped("already combined in "+filepath.Base(packed)+" (-w writes it again)"))
+			}
+			continue
+		}
 		if len(files) == 1 {
-			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to pack it with"))
+			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to combine it with"))
 			continue
 		}
 		// the pack is named by the titles it holds, next to the file of the game
@@ -762,7 +851,7 @@ func packGames(ctx context.Context, o options, out output) int {
 				out.done(file, "", "", err)
 				continue
 			}
-			out.done(file, "", "packed into "+filepath.Base(name), nil)
+			out.done(file, "", "combined into "+filepath.Base(name), nil)
 		}
 		if err != nil {
 			failed += len(files)
@@ -889,6 +978,7 @@ func info(path string, out output) string {
 			}
 		}
 		lines = append(lines, line)
+		lines = append(lines, titleDetails(title)...)
 	}
 	lines = append(lines, describe(path)...)
 	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
@@ -896,6 +986,32 @@ func info(path string, out output) string {
 		return "1 title"
 	}
 	return fmt.Sprintf("%d titles", len(titles))
+}
+
+// contentOrder is the order the NCA files of a title are told in.
+var contentOrder = []string{"Meta", "Program", "Control", "Data", "HtmlDocument", "LegalInformation", "DeltaFragment"}
+
+// titleDetails tells what a title needs, the firmware of the console for a game or an update
+// and the version of its game for a DLC, and the NCA files it is made of (#20).
+func titleDetails(title *switchfs.ContentMetaAttributes) []string {
+	lines := []string{}
+	switch {
+	case title.RequiredTitleVersion > 0 && title.Type == "DLC":
+		lines = append(lines, fmt.Sprintf("  needs version %d of its game", title.RequiredTitleVersion))
+	case title.RequiredTitleVersion > 0:
+		lines = append(lines, "  needs firmware "+firmware(uint32(title.RequiredTitleVersion)))
+	}
+	for _, kind := range contentOrder {
+		if content, ok := title.Contents[kind]; ok && content.ID != "" {
+			lines = append(lines, fmt.Sprintf("  %s NCA %s", kind, content.ID))
+		}
+	}
+	return lines
+}
+
+// firmware is a version of the system as the console shows it: 12.1.0 for 0x30100000.
+func firmware(version uint32) string {
+	return fmt.Sprintf("%d.%d.%d", version>>26, version>>20&0x3F, version>>16&0xF)
 }
 
 // describe tells how a file is stored, what it works with, and what trimming takes away.

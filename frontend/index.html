@@ -12,26 +12,6 @@
     <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8"/><path d="M6.8 22V10l6.6 12V10M18.6 10l6.6 12M25.2 10l-6.6 12"/></svg>
     <span>NXPress</span><small id="version"></small>
   </div>
-  <div class="right">
-    <button id="keys" class="chip"></button>
-    <details class="menu" id="menu">
-      <summary aria-label="Menu">⋯</summary>
-      <div class="menu-body">
-        <div class="theme"><span data-t="theme"></span>
-          <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
-        </div>
-        <div class="theme"><label for="language-select" data-t="language"></label>
-          <select id="language-select"></select>
-        </div>
-        <hr>
-        <label class="check menu-check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
-        <label class="check menu-check"><input id="sound" type="checkbox"><span data-t="soundWhenDone"></span></label>
-        <div class="menu-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></div>
-        <button id="send-to"></button>
-        <button id="last-report" data-t="lastReport"></button>
-      </div>
-    </details>
-  </div>
 </header>
 
 <div id="update-banner" class="topbar" hidden>
@@ -41,11 +21,17 @@
 </div>
 
 <main>
-  <nav id="modes" aria-label="Modes"></nav>
+  <nav aria-label="Modes">
+    <div id="modes"></div>
+    <div class="side-foot">
+      <button id="open-preferences" class="side-item"><span class="tile tone-neutral"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b data-t="preferences"></b></button>
+      <button id="keys" class="side-keys"></button>
+    </div>
+  </nav>
 
   <section id="work">
     <div class="page-head">
-      <h1 id="title"></h1>
+      <h1 class="title-row"><span class="tile" id="title-tile" aria-hidden="true"></span><span id="title"></span></h1>
       <p id="about" class="muted"></p>
     </div>
 
@@ -71,6 +57,10 @@
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
+      <div class="view-switch segmented" role="radiogroup">
+        <button data-view="list" role="radio" data-t-title="viewList"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
+        <button data-view="grid" role="radio" data-t-title="viewGrid"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
+      </div>
     </div>
 
     <div id="drop">
@@ -83,6 +73,7 @@
           <button id="empty-folder" data-t="addFolder"></button>
         </div>
         <div class="types" id="takes"></div>
+        <p class="lifetime" id="lifetime" hidden></p>
       </div>
       <table id="files" hidden>
         <thead><tr><th data-t="file" data-sort="name" data-t-title="sortHint"></th><th class="size" data-t="size" data-sort="size" data-t-title="sortHint"></th><th class="state" data-t="state" data-sort="state" data-t-title="sortHint"></th><th></th></tr></thead>
@@ -95,6 +86,7 @@
       <div class="summary">
         <div id="summary-text"></div>
         <div class="bar total" id="total-bar" hidden><div></div></div>
+        <div class="speed" id="speed" hidden><svg class="sparkline" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true"><path id="speed-area"/><path id="speed-line"/></svg><span id="speed-text"></span></div>
         <div id="status" class="muted"></div>
         <div class="summary-extra">
           <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
@@ -127,6 +119,10 @@
         <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
         <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
         <div class="segmented levels"><button data-level="3"><span data-t="light"></span><small>1–6</small></button><button data-level="12"><span data-t="medium"></span><small>7–14</small></button><button data-level="19"><span data-t="maximum"></span><small>15–19</small></button></div>
+        <div class="gauge" aria-hidden="true">
+          <div class="gauge-row"><span data-t="gaugeSize"></span><div class="gauge-bar"><div id="gauge-size"></div></div></div>
+          <div class="gauge-row"><span data-t="gaugeSpeed"></span><div class="gauge-bar"><div id="gauge-speed"></div></div></div>
+        </div>
         <p class="hint" id="level-hint"></p>
         <button id="compare-levels" class="link" data-t="compareLevels"></button>
         <p class="hint" data-t="compareHint"></p>
@@ -148,11 +144,22 @@
       <textarea id="template" class="template" rows="1" spellcheck="false"></textarea>
       <div class="template-row"><button id="template-reset" class="quiet" data-t="templateReset"></button></div>
       <p class="hint" data-t="templateHint"></p>
+      <label class="check"><input id="keep-named" type="checkbox"><span data-t="keepNamed"></span></label>
     </section>
 
     <section class="block" data-for="fat32">
       <h2>FAT32</h2>
       <p class="hint" data-t="fat32Hint"></p>
+    </section>
+
+    <section class="block" data-for="verify">
+      <h2 data-t="verifyLevel"></h2>
+      <div class="segmented" role="radiogroup" id="verify-level">
+        <button data-verify-level="full" role="radio" data-t="verifyFull"></button>
+        <button data-verify-level="signature" role="radio" data-t="verifySignature"></button>
+        <button data-verify-level="both" role="radio" data-t="verifyBoth"></button>
+      </div>
+      <p class="hint" id="verify-level-hint"></p>
     </section>
 
     <section class="block" data-for="verify">
@@ -179,6 +186,9 @@
         <textarea id="pack-template" class="template" rows="1" spellcheck="false"></textarea>
         <div class="template-row"><button id="pack-template-reset" class="quiet" data-t="templateReset"></button></div>
         <p class="hint" data-t="templateHint"></p>
+        <h2 class="pack-plan-title" data-t="packPlan"></h2>
+        <p class="hint" id="pack-plan-empty" data-t="packPlanEmpty"></p>
+        <ul class="pack-plan" id="pack-plan"></ul>
       </div>
     </section>
 
@@ -217,6 +227,48 @@
       </div>
     </details>
   </aside>
+
+  <section id="preferences" hidden>
+    <div class="page-head">
+      <h1 data-t="preferences"></h1>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefKeys"></h2>
+      <p class="pref-keys" id="keys-path"></p>
+      <button id="keys-change" data-t="keysChoose"></button>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefLook"></h2>
+      <div class="pref-row"><span data-t="theme"></span>
+        <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+      </div>
+      <div class="pref-row"><label for="language-select" data-t="language"></label>
+        <select id="language-select"></select>
+      </div>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefWork"></h2>
+      <label class="check"><input id="sound" type="checkbox"><span data-t="soundWhenDone"></span></label>
+      <div class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></div>
+      <button id="last-report" data-t="lastReport"></button>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="shortcuts"></h2>
+      <dl class="keys">
+        <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
+      </dl>
+    </div>
+    <div class="pref-group">
+      <h2 data-t="prefApp"></h2>
+      <label class="check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
+      <button id="send-to"></button>
+      <button id="star-link"><span aria-hidden="true">★ </span><span data-t="starLink"></span></button>
+    </div>
+  </section>
 </main>
 <dialog id="measure-dialog" aria-labelledby="measure-title">
   <h2 id="measure-title" data-t="measureTitle"></h2>
@@ -229,6 +281,30 @@
   <p id="measure-kept" class="muted" hidden></p>
   <p class="hint" data-t="measureChange"></p>
   <div class="dialog-actions"><button id="measure-close" class="primary" data-t="close"></button></div>
+</dialog>
+<div id="drop-overlay" hidden><div class="drop-card"><svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><b id="drop-text"></b></div></div>
+<div id="row-menu" class="row-menu" role="menu" hidden></div>
+<div id="game-pop" class="game-pop" aria-hidden="true" hidden><img alt=""><div><div class="pop-name"></div><div class="pop-publisher"></div><dl></dl><div class="pop-languages"></div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-text"></span><button id="toast-undo" class="link" data-t="undo"></button></div>
+<dialog id="space-dialog" aria-labelledby="space-title">
+  <h2 id="space-title" data-t="spaceTitle"></h2>
+  <p class="muted" data-t="spaceIntro"></p>
+  <ul class="space-list" id="space-list"></ul>
+  <div class="dialog-actions"><button id="space-cancel" data-t="cancel"></button><button id="space-start" class="primary" data-t="spaceStart"></button></div>
+</dialog>
+<dialog id="done-dialog" aria-labelledby="done-title">
+  <h2 id="done-title" data-t="doneTitle"></h2>
+  <p class="done-saved" id="done-saved"></p>
+  <p class="muted" id="done-stats"></p>
+  <div id="done-top-block">
+    <h3 data-t="doneTop"></h3>
+    <ol class="done-top" id="done-top"></ol>
+  </div>
+  <div class="done-star" id="done-star" hidden>
+    <p data-t="starAsk"></p>
+    <div><button id="star-yes" class="outline"><span aria-hidden="true">★ </span><span data-t="starGive"></span></button><button id="star-no" class="quiet" data-t="starNo"></button></div>
+  </div>
+  <div class="dialog-actions"><button id="done-folder" data-t="showFolder"></button><button id="done-close" class="primary" data-t="close"></button></div>
 </dialog>
 <dialog id="report-dialog" aria-labelledby="report-title">
   <h2 id="report-title" data-t="lastReport"></h2>
