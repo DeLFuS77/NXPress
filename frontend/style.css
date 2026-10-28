@@ -174,13 +174,13 @@ td.name .note a:hover { text-decoration: underline; }
 td.remove { width: 36px; padding: 6px; }
 td.remove button { padding: 2px 8px; }
 .bar { height: 6px; background: var(--bar); border-radius: 3px; overflow: hidden; margin-top: 5px; }
-.bar div { height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .3s; }
+.bar div { height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .5s linear; }
 .step { font-size: 12px; color: var(--muted); }
 /* a file in steps: its bar split in them, each in its colour, as in the library app */
 .step .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
 .segs { display: flex; gap: 3px; height: 6px; margin-top: 5px; }
 .seg { flex: 1; background: var(--bar); border-radius: 3px; overflow: hidden; }
-.seg div { height: 100%; width: 0; border-radius: 3px; transition: width .3s; }
+.seg div { height: 100%; width: 0; border-radius: 3px; transition: width .5s linear; }
 .tone-work.dot, .seg.tone-work.done, .seg.tone-work div { background-color: var(--warn); }
 .tone-check.dot, .seg.tone-check.done, .seg.tone-check div { background-color: var(--ok); }
 /* a state is a word with a dot of its color: readable without the color too */
@@ -300,6 +300,11 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .saving div { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--ok) var(--to), color-mix(in srgb, var(--ok) 18%, transparent) var(--to)); }
 .saving small { font-size: 12px; font-weight: 700; color: var(--ok); font-variant-numeric: tabular-nums; }
 @property --to { syntax: "<percentage>"; inherits: true; initial-value: 100%; }
+/* the share a cover of the grid is filled with, registered so it rises smoothly between two
+   updates (they come every half second at most) instead of in jumps */
+@property --share { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
+table.grid .game.working { transition: --share .5s linear; }
+table.grid .game.refill { transition: none; }
 @keyframes shrink { from { --to: 100%; } }
 .saving.shrink { animation: shrink 1.2s cubic-bezier(.2, .8, .2, 1) var(--since, 0ms) both; }
 

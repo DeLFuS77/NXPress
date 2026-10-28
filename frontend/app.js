@@ -824,20 +824,35 @@ function paint(row) {
   game.classList.toggle("working", row.status === "work");
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
-    game.style.setProperty("--share", (share * 100).toFixed(1) + "%");
-    game.dataset.share = Math.floor(share * 100) + "%";
     // a file in steps (the work, then the check) has its bar split in them, each in its colour:
     // the ones done stay full and only the one being done fills up
     const steps = stepsOf(row);
     const index = steps.indexOf((row.step || "").split(" ")[0]);
-    if (steps.length > 1 && index >= 0) {
-      cell.innerHTML = `<div class="step"><i class="dot"></i><span></span></div><div class="segs">` +
-        steps.map((step, i) => `<span class="seg tone-${stepTone(step)}${i < index ? " done" : ""}">${i === index ? "<div></div>" : ""}</span>`).join("") + `</div>`;
+    const split = steps.length > 1 && index >= 0;
+    // the bar and the cover are kept from one update to the next, so they fill up smoothly
+    // instead of jumping; a new step (or file) starts them again at once
+    const shape = split ? `segs|${steps.join(",")}|${index}` : `bar|${row.step || ""}`;
+    const fresh = cell.firstElementChild?.dataset.shape !== shape;
+    if (fresh) {
+      cell.innerHTML = split
+        ? `<div class="step"><i class="dot"></i><span></span></div><div class="segs">` +
+          steps.map((step, i) => `<span class="seg tone-${stepTone(step)}${i < index ? " done" : ""}">${i === index ? "<div></div>" : ""}</span>`).join("") + `</div>`
+        : `<div class="step"></div><div class="bar"><div></div></div>`;
+      cell.firstElementChild.dataset.shape = shape;
+      game.classList.add("refill");
+    }
+    game.style.setProperty("--share", (share * 100).toFixed(1) + "%");
+    game.dataset.share = Math.floor(share * 100) + "%";
+    if (fresh) {
+      // the start of a step is taken at once, and the cover fills from there on
+      void getComputedStyle(game).getPropertyValue("--share");
+      game.classList.remove("refill");
+    }
+    if (split) {
       cell.querySelector(".step .dot").className = "dot tone-" + stepTone(steps[index]);
       cell.querySelector(".step span").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${index + 1}/${steps.length} · ${Math.floor(share * 100)}%`;
       cell.querySelector(".segs div").style.width = (share * 100).toFixed(1) + "%";
     } else {
-      cell.innerHTML = `<div class="step"></div><div class="bar"><div></div></div>`;
       cell.querySelector(".step").textContent = `${state.paused ? t("paused") : stepText(row.step)} · ${Math.floor(share * 100)}%`;
       cell.querySelector(".bar div").style.width = (share * 100).toFixed(1) + "%";
     }

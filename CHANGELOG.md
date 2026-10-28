@@ -15,6 +15,7 @@
 
 ### Improvements
 
+- The bar of a file at work, and its cover filling up in the grid, rise smoothly between two updates instead of in jumps
 - A file worked on in two steps, the work and then the check of what it wrote (Compress, Recompress, Trim of an XCI, FAT32), has its bar split in them, each in its colour: the work orange, the check green, with the step it is in and its number (1/2, 2/2). The step done stays full and only the one being done fills up, so the bar no longer seems to start again, in the list and in the grid of covers, as in Switch Library Manager Web
 - Pack is called Combine now, a plainer word for what it does: the section, its button, its list of games and the notes of its files (thanks @NikoMuffin, #35)
 - The title of the window shows the version of NXPress, as the corner of the window already did
