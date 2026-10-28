@@ -15,6 +15,7 @@
 
 ### Improvements
 
+- Pack is called Combine now, a plainer word for what it does: the section, its button, its list of games and the notes of its files (thanks @NikoMuffin, #35)
 - The title of the window shows the version of NXPress, as the corner of the window already did
 
 - Measure this PC takes a heavier setting when it is at least 5% faster, not 10%: in a measure where 7 threads with 2 files at once went 60 MB/s and 14 threads with one 55, the first is chosen now. The speed is told as what it is, all the files at once together, and when a setting a little faster is not taken, the window says why: the lighter one uses less memory and finishes each file sooner (thanks @NikoMuffin, #22)

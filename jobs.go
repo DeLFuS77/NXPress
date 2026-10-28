@@ -809,18 +809,18 @@ func packGames(ctx context.Context, o options, out output) int {
 		// a game left out in the window, and a game packed before, unless asked to write again
 		if o.skipGames[fmt.Sprintf("%016X", id)] {
 			for _, file := range files {
-				out.done(file, "", "", skipped("left out of the packs"))
+				out.done(file, "", "", skipped("left out of the games to combine"))
 			}
 			continue
 		}
 		if packed := packedAlready(o, id, files); packed != "" && !o.overwrite {
 			for _, file := range files {
-				out.done(file, "", "", skipped("already packed in "+filepath.Base(packed)+" (-w writes it again)"))
+				out.done(file, "", "", skipped("already combined in "+filepath.Base(packed)+" (-w writes it again)"))
 			}
 			continue
 		}
 		if len(files) == 1 {
-			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to pack it with"))
+			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to combine it with"))
 			continue
 		}
 		// the pack is named by the titles it holds, next to the file of the game
@@ -851,7 +851,7 @@ func packGames(ctx context.Context, o options, out output) int {
 				out.done(file, "", "", err)
 				continue
 			}
-			out.done(file, "", "packed into "+filepath.Base(name), nil)
+			out.done(file, "", "combined into "+filepath.Base(name), nil)
 		}
 		if err != nil {
 			failed += len(files)

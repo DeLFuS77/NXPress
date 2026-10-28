@@ -1,7 +1,7 @@
 "use strict";
 
 texts.en = {
-  compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Details", fat32: "FAT32", rename: "Rename",
+  compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Combine", info: "Details", fat32: "FAT32", rename: "Rename",
   aboutCompress: "NSP and XCI to NSZ and XCZ. Every file is checked before it gets its name.",
   aboutDecompress: "NSZ to NSP and XCZ to XCI, checked against the hashes of the game.",
   aboutRecompress: "Writes NSZ and XCZ files again, solid or in blocks, at another level: no NSP in between and no keys needed. Each file is replaced once its new copy is checked, unless you choose another folder.",
@@ -40,7 +40,7 @@ texts.en = {
   packFile: "New file",
   packGames: "A SuperNSP per game", packGamesHint: "Each game with its updates and DLC in a file of its own, named by the template. Give it a whole collection: a game with one file only is left as it is.",
   packOne: "One file with everything", packOneHint: "All the files given in one SuperNSP (or the game card of a XCI with its updates and DLC).", packTemplate: "Name of each SuperNSP", noPack: "None chosen",
-  start: m => ({ compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Pack", info: "Show details", fat32: "Split or join", rename: "Rename" })[m],
+  start: m => ({ compress: "Compress", decompress: "Decompress", recompress: "Recompress", trim: "Trim", verify: "Verify", convert: "Convert", split: "Split", pack: "Combine", info: "Show details", fat32: "Split or join", rename: "Rename" })[m],
   estimateButton: "Estimate",
   datTitle: "Compare with a DAT", noDat: "None: the hashes of the content only",
   datHint: "A DAT of No-Intro or others lists the size and the hashes of each known dump: each file is told whether it is one of them.",
@@ -72,7 +72,7 @@ texts.en = {
   noCache: "Check again files already checked", noCacheHint: "NXPress remembers the files it checked or wrote, and does not read them again while they do not change.",
   keepNamed: "Keep the names that already have their title ID",
   preferences: "Settings", prefKeys: "prod.keys", prefLook: "Look", prefWork: "When the work is done", prefApp: "The app",
-  packPlan: "Games to pack", packPlanEmpty: "Add the files of your games to see each pack here.", packPlanFiles: n => `${n} files`, packPlanPacked: name => `Already packed: ${name}`, packPlanOne: "Only one file: nothing to pack it with",
+  packPlan: "Games to combine", packPlanEmpty: "Add the files of your games to see here what each new file will hold.", packPlanFiles: n => `${n} files`, packPlanPacked: name => `Already combined: ${name}`, packPlanOne: "Only one file: nothing to combine it with",
   verifyLevel: "What to check", verifyFull: "Whole", verifySignature: "Signature", verifyBoth: "Both", verifyFullHint: "Every NCA read whole and checked against its hashes: finds any damaged byte. It takes as long as reading the file.", verifySignatureHint: "The header of every NCA checked for the signature of Nintendo, in seconds: a tool that rewrote an NCA leaves it unsigned. It does not read the data.", verifyBothHint: "The signature first, then the whole file: what a dump made by Nintendo and undamaged passes.",
   undo: "Undo", toastRemoved: n => `${n} taken out of the list`, toastCleared: n => `${n} files taken out of the list`, dropOverlay: n => n ? `Drop to add ${n} ${n === 1 ? "item" : "items"}` : "Drop to add", errorWhat: "What to do", copyDetail: "Copy the detail", detailCopied: "Detail copied", adviceDamaged: "The file is damaged: a byte does not match what it should hold. Get the file again; it will not install or play well as it is.", adviceUnsigned: "A tool rewrote an NCA of this file (to take out its rights ID, for example). It usually installs and plays; get another copy if you want the dump as Nintendo made it.", adviceKeys: "A key is missing: dump the prod.keys of your console again, updated, and choose it in Settings.", adviceSpace: "The disk is full: free some space where the new file goes, or choose another folder in Save to.", adviceAccess: "Another program has the file open, or it cannot be written there: close that program, or choose another folder in Save to.", adviceGeneric: "Try the file again. If it fails again, copy the detail and paste it in an issue on GitHub.", doneTitle: "The work is done", doneTop: "What saved the most", gaugeSize: "File size", gaugeSpeed: "Speed", shortcuts: "Keyboard shortcuts", shortStart: "Start or stop",
   lifetime: (s, n) => `NXPress has saved you <b>${s}</b> in ${n} files`, milestone: s => `You have saved ${s} with NXPress!`, timeLeft: s => `about ${s} left`, cardAs: (s, w, k) => `${s}, ${w} as ${k}`, cardTrim: s => `${s} that trimming takes away`, viewList: "List", viewGrid: "Covers",
@@ -85,7 +85,7 @@ texts.en = {
   stopped: "Cancelled.",
   steps: { Measuring: "Measuring",},
   notes: {
-    onlyFileOfGame: "it is the only file of its game here: there is nothing to pack it with", packedInto: "packed into ",
+    onlyFileOfGame: "it is the only file of its game here: there is nothing to combine it with", packedInto: "combined into ",
     trimOnlyUpdates: ": only updates have them",
     notCompressibleWhy: "nothing to compress in it, left as it is", sparseSkip: "This game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is", sparseWhy: "it uses sparse storage, which no compressor reads yet", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
     measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", notMeasurableAny: "nothing in the games of the list can be compressed: add another game to measure with", alreadyThere: " is already there (tick “Replace files already there”)" },
