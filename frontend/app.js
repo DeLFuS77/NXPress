@@ -1654,7 +1654,14 @@ async function main() {
   $("last-report").onclick = showReport;
   $("report-close").onclick = () => $("report-dialog").close();
   $("report-copy").onclick = () => { const kept = load("lastReport", null); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
-  $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
+  $("pause").onclick = () => {
+    state.paused = !state.paused;
+    app().SetPaused(state.paused);
+    // the taskbar says it at once: no progress comes while the work waits to tell it
+    const { done, total } = workDone();
+    app().SetTaskbar(state.paused ? "paused" : "normal", done, total);
+    render();
+  };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
   $("shutdown").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
