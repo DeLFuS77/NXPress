@@ -478,7 +478,7 @@ func (a *App) Start(request Request) error {
 			emit(a.ctx, "shutdownCancelled")
 		}
 		started := time.Now()
-		a.paused.Store(false)
+		a.setPaused(false)
 		jobs := runJobs
 		if o.watch {
 			jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
@@ -546,14 +546,20 @@ func (a *App) Cancel() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if a.cancel != nil {
-		a.paused.Store(false)
+		a.setPaused(false)
 		a.cancel()
 	}
 }
 
 // SetPaused stops the work where it is, or lets it go on.
 func (a *App) SetPaused(paused bool) {
+	a.setPaused(paused)
+}
+
+// setPaused pauses the work or lets it go on; paused, the computer may go to sleep.
+func (a *App) setPaused(paused bool) {
 	a.paused.Store(paused)
+	pauseAwake(paused)
 }
 
 // SetTaskbar shows the progress of the work on the button of NXPress in the taskbar (#31):

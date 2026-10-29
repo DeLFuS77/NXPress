@@ -9,11 +9,11 @@ import (
 	"strconv"
 )
 
-// keepAwake keeps the computer from going to sleep while files are at work, until the
-// function it gives is called: caffeinate on macOS, systemd-inhibit on Linux, when there. Both
-// end with NXPress too, if it ends without calling it: caffeinate waits for it, and on Linux
-// tail, which systemd-inhibit holds the computer awake for.
-func keepAwake() func() {
+// preventSleep keeps the computer from going to sleep until the function it gives is called:
+// caffeinate on macOS, systemd-inhibit on Linux, when there. Both end with NXPress too, if it
+// ends without calling it: caffeinate waits for it, and on Linux tail, which systemd-inhibit
+// holds the computer awake for.
+func preventSleep() func() {
 	var command *exec.Cmd
 	if runtime.GOOS == "darwin" {
 		command = exec.Command("caffeinate", "-i", "-w", strconv.Itoa(os.Getpid()))
