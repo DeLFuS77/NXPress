@@ -80,6 +80,7 @@ const noteRules = [
   [/^(.+) is not a prod\.keys: it has no header_key$/, "notKeys"],
   [/^the priority could not go back to normal: /, "priorityNotNormal"],
   [/^(.+) cannot be read: its files are left out$/, "folderUnreadable"],
+  [/^cannot be read: /, "cannotRead"],
   [/^(\d+) files: /, "filesSplit"],
   [/^1 title$/, "oneTitleCount"],
   [/^(\d+) titles$/, "titlesCount"],

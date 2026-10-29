@@ -112,6 +112,7 @@ const samples = [
   ["the priority could not be lowered: access denied", "could not be lowered"],
   ["no file to verify among the ones given", "among the ones given"],
   ["the file is empty", "the file is empty"],
+  ["cannot be read: Invalid NSP file, reason - [failed to read PFS0 header]", "cannot be read"],
   ["it would get the same name as D:\b\Game.nsp, another file of this work", "another file of this work"],
   ["it would get the same name as the new file of D:\b\Game.nsp: Game.nsz", "the new file of"],
   ["the originals are kept: the pack lacks the ticket of 0100000000010800, the Program NCA of 0100000000010800 v65536", "the ticket of"],
