@@ -90,12 +90,13 @@ type App struct {
 	// it was asked
 	shutdown      *time.Timer
 	shutdownRound int
+	// the notices of the system, readied as the first is sent, and whether they can be
+	notices      sync.Once
+	noticesReady bool
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	// the notices of the system, to tell when long work is done
-	wailsruntime.InitializeNotifications(ctx)
 	// the keys of the usual places are read at once, as the command line does
 	if path, err := loadKeys(""); err == nil {
 		a.keys = path
@@ -561,11 +562,34 @@ func (a *App) SetTaskbar(state string, done float64, total float64) {
 	setTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
 }
 
-// Notify shows a notice of the system, with the texts of the page.
+// Notify shows a notice of the system, with the texts of the page, to tell when long work is
+// done.
 func (a *App) Notify(title string, body string) {
-	if wailsruntime.IsNotificationAvailable(a.ctx) {
+	a.notices.Do(func() { a.noticesReady = a.readyNotices() })
+	if a.noticesReady {
 		wailsruntime.SendNotification(a.ctx, wailsruntime.NotificationOptions{ID: "nxpress-done", Title: title, Body: body})
 	}
+}
+
+// readyNotices readies the notices of the system as the first one is sent, not at every start,
+// and tells whether they can be sent. On Windows that writes NXPress in the registry (and its
+// icon in the temporary folder), which a portable NXPress does not do: it sends none. macOS asks
+// the user first.
+func (a *App) readyNotices() bool {
+	if runtime.GOOS == "windows" && portableFolder() != "" {
+		return false
+	}
+	wailsruntime.InitializeNotifications(a.ctx)
+	if !wailsruntime.IsNotificationAvailable(a.ctx) {
+		return false
+	}
+	if runtime.GOOS == "darwin" {
+		if allowed, err := wailsruntime.CheckNotificationAuthorization(a.ctx); err != nil || !allowed {
+			allowed, err = wailsruntime.RequestNotificationAuthorization(a.ctx)
+			return err == nil && allowed
+		}
+	}
+	return true
 }
 
 // shutdownWait is how long the computer has to turn off once asked: NXPress still running after
