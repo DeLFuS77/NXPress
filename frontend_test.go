@@ -61,6 +61,21 @@ for (const code of codes) {
   }
 }
 
+// plurals: [language, text, arguments, what it must say, what it must not]
+const plurals = [
+  ["en", "lifetime", ["S", 1], "1 file", "1 files"], ["es", "lifetime", ["S", 1], "1 archivo", "1 archivos"],
+  ["fr", "lifetime", ["S", 1], "1 fichier", "1 fichiers"], ["de", "lifetime", ["S", 1], "1 Datei", "1 Dateien"],
+  ["pt", "lifetime", ["S", 1], "1 arquivo", "1 arquivos"], ["nl", "lifetime", ["S", 1], "1 bestand", "1 bestanden"],
+  ["ru", "lifetime", ["S", 1], "1 файле", ""], ["ru", "lifetime", ["S", 2], "2 файлах", ""], ["ru", "lifetime", ["S", 21], "21 файле", ""],
+  ["ru", "popTitles", [21, 0, 0], "21 игра", ""], ["ru", "popTitles", [4, 0, 0], "4 игры", ""], ["ru", "popTitles", [11, 0, 0], "11 игр", ""],
+  ["ru", "popTitles", [0, 22, 0], "22 обновления", ""], ["ru", "popTitles", [0, 25, 0], "25 обновлений", ""],
+  ["ru", "measureIntro", [4, 18, false], "4 процессора", ""], ["ru", "measureIntro", [21, 18, false], "21 процессор,", ""], ["ru", "measureIntro", [8, 18, false], "8 процессоров", ""],
+];
+for (const [code, key, args, want, unwanted] of plurals) {
+  const text = texts[code][key](...args);
+  if (!text.includes(want) || unwanted && text.includes(unwanted)) say(code + "." + key + "(" + args.join(", ") + ") gives " + text + ", not " + want);
+}
+
 // the notes: each rule has a text in every language but English (which has one where its own
 // differs), with the parts the rule finds and no more
 const ruleKeys = noteRules.map(rule => rule[1]);
@@ -120,8 +135,8 @@ console.log(problems.join("\n"));
 `
 
 // The page and its texts: every script of it reads, the 11 languages have the same texts with
-// the same arguments and fields, each note rule has its text with the parts it finds, the notes
-// of NXPress come out translated, and the texts the page asks for are there.
+// the same arguments and fields, the plurals agree, each note rule has its text with the parts it
+// finds, the notes of NXPress come out translated, and the texts the page asks for are there.
 func TestFrontendTexts(t *testing.T) {
 	node, err := exec.LookPath("node")
 	if err != nil {
