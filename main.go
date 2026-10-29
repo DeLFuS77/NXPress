@@ -87,11 +87,14 @@ func run(args []string) int {
 
 // loadKeys makes the keys active, and gives the file they were read from: the ones given, else
 // a prod.keys or a keys.txt next to NXPress, in the working folder or in ~/.switch, the folder
-// nsz and hactool use too.
+// nsz and hactool use too. A file without header_key is no prod.keys, whatever else it holds.
 func loadKeys(given string) (string, error) {
 	if given != "" {
 		if err := settings.UseSwitchKeys(given); err != nil {
 			return "", fmt.Errorf("the keys %s cannot be read: %w", given, err)
+		}
+		if !settings.IsKeysFileAvailable() {
+			return "", fmt.Errorf("%s is not a prod.keys: it has no header_key", given)
 		}
 		return given, nil
 	}
@@ -105,7 +108,7 @@ func loadKeys(given string) (string, error) {
 	for _, folder := range folders {
 		for _, name := range []string{"prod.keys", "keys.txt"} {
 			path := filepath.Join(folder, name)
-			if _, err := os.Stat(path); err == nil && settings.UseSwitchKeys(path) == nil {
+			if _, err := os.Stat(path); err == nil && settings.UseSwitchKeys(path) == nil && settings.IsKeysFileAvailable() {
 				if absolute, err := filepath.Abs(path); err == nil {
 					path = absolute
 				}

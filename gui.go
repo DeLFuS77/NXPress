@@ -157,12 +157,22 @@ func (a *App) ChooseKeys() (string, error) {
 	if err != nil || path == "" {
 		return "", err
 	}
+	return a.useKeys(path)
+}
+
+// useKeys makes the keys of a file the active ones; when they cannot be, the ones before stay.
+func (a *App) useKeys(path string) (string, error) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	if _, err := loadKeys(path); err != nil {
+		if a.keys != "" {
+			if _, err := loadKeys(a.keys); err != nil {
+				a.keys = ""
+			}
+		}
 		return "", err
 	}
-	a.mutex.Lock()
 	a.keys = path
-	a.mutex.Unlock()
 	return path, nil
 }
 
