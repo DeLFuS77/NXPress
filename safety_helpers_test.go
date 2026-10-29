@@ -105,6 +105,11 @@ func safetyGameData(size int, seed int) []byte {
 }
 
 func safetyProgramNca(plain []byte) []byte {
+	return safetyProgramNcaWith(plain, nil)
+}
+
+// safetyProgramNcaWith is safetyProgramNca with its plain header changed by change first.
+func safetyProgramNcaWith(plain []byte, change func(header []byte)) []byte {
 	areaKey, _ := hex.DecodeString(safetyAreaKey)
 	contentKey, _ := hex.DecodeString(safetyNcaKey)
 	header := make([]byte, 0xC00)
@@ -121,6 +126,9 @@ func safetyProgramNca(plain []byte) []byte {
 	copy(header[0x280:], fsHash[:])
 	areaCipher, _ := aes.NewCipher(areaKey)
 	areaCipher.Encrypt(header[0x320:0x330], contentKey)
+	if change != nil {
+		change(header)
+	}
 	nca := make([]byte, 0x4000)
 	copy(nca, safetyEncryptHeader(header))
 	section := append([]byte(nil), plain...)
@@ -129,6 +137,42 @@ func safetyProgramNca(plain []byte) []byte {
 	binary.BigEndian.PutUint64(counter[8:], 0x4000>>4)
 	cipher.NewCTR(block, counter).XORKeyStream(section, section)
 	return append(nca, section...)
+}
+
+// safetyRewrittenNca is a program NCA as a tool leaves it: its header changed after it was
+// named, so it no longer matches its content ID. Its data is checked by the hash tree of its
+// second section; its first has none, and cannot be checked on its own: the check of a file
+// that holds it is in part. It gives the NCA and its name, the content ID of the original.
+func safetyRewrittenNca() ([]byte, string) {
+	plain := safetyGameData(0x10000, 7)
+	tree := make([]byte, 0x400)
+	copy(tree[0x200:], safetyGameData(0x200, 8))
+	block := sha256.Sum256(tree[0x200:])
+	copy(tree, block[:])
+	master := sha256.Sum256(tree[:0x20])
+	build := func(rewritten bool) []byte {
+		nca := safetyProgramNcaWith(plain, func(header []byte) {
+			start := uint32(0x20 + len(plain)/0x200)
+			binary.LittleEndian.PutUint32(header[0x250:], start)
+			binary.LittleEndian.PutUint32(header[0x254:], start+2)
+			header[0x602] = 1
+			header[0x603] = 2
+			header[0x604] = 1
+			copy(header[0x608:], master[:])
+			binary.LittleEndian.PutUint32(header[0x628:], 0x200)
+			binary.LittleEndian.PutUint32(header[0x62C:], 2)
+			binary.LittleEndian.PutUint64(header[0x638:], 0x20)
+			binary.LittleEndian.PutUint64(header[0x640:], 0x200)
+			binary.LittleEndian.PutUint64(header[0x648:], 0x200)
+			fsHash := sha256.Sum256(header[0x600:0x800])
+			copy(header[0x2A0:], fsHash[:])
+			if rewritten {
+				header[0x21C] ^= 0x5A
+			}
+		})
+		return append(nca, tree...)
+	}
+	return build(true), safetyContentName(build(false), ".nca")
 }
 
 func safetyMetaNca(section []byte) []byte {
@@ -199,7 +243,12 @@ func safetyContentName(nca []byte, suffix string) string {
 func safetyTitleNsp(t *testing.T, path string, titleID uint64, version uint32, metaType byte, seed int, extra map[string][]byte) string {
 	t.Helper()
 	program := safetyProgramNca(safetyGameData(0x10000+seed*0x200, seed))
-	programName := safetyContentName(program, ".nca")
+	return safetyNspWith(t, path, titleID, version, metaType, program, safetyContentName(program, ".nca"), extra)
+}
+
+// safetyNspWith writes an NSP of one title with the program NCA given, under its name.
+func safetyNspWith(t *testing.T, path string, titleID uint64, version uint32, metaType byte, program []byte, programName string, extra map[string][]byte) string {
+	t.Helper()
 	var id [16]byte
 	hex.Decode(id[:], []byte(strings.TrimSuffix(programName, ".nca")))
 	cnmt := make([]byte, 0x20+0x38)

@@ -524,7 +524,9 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}
-	return removeSource(o, path, switchfs.FileCheck{}, name, note)
+	// the compressed copy matches the original, which was itself checked only in part when a
+	// section of an NCA rewritten by a tool cannot be checked on its own
+	return removeSource(o, path, check, name, note)
 }
 
 func decompress(ctx context.Context, path string, o options, out output) (string, string, error) {
@@ -559,6 +561,19 @@ func convert(ctx context.Context, path string, o options, out output) (string, s
 		return "", "", err
 	}
 	return removeSource(o, path, check, name, modifiedNote(check))
+}
+
+// keptInPart is why an original stays: its new file could only be checked in part (an NCA
+// rewritten by a tool, with a section that cannot be checked on its own).
+const keptInPart = "the original is kept: the new file could only be checked in part"
+
+// replaceChecked gives the new copy of a file worked on in place its name, once it is checked
+// whole: a copy checked only in part does not replace it, and the file is left as it is.
+func replaceChecked(written string, path string, check switchfs.FileCheck) error {
+	if check.Partial {
+		return skipped(keptInPart)
+	}
+	return commitFile(written, path)
 }
 
 // sameOrNewFile is the name of the file an action that works in place writes for path: path
@@ -598,7 +613,7 @@ func recompress(ctx context.Context, path string, o options, threads int, out ou
 		return "", "", err
 	}
 	if inPlace {
-		err = commitFile(written, path)
+		err = replaceChecked(written, path, check)
 	} else {
 		err = finish(o, written, name)
 	}
@@ -629,26 +644,39 @@ func trim(ctx context.Context, path string, o options, out output) (string, stri
 	if err != nil {
 		return "", "", err
 	}
-	written := path
-	if !inPlace {
-		written = temporary(name)
-		defer os.Remove(written)
-	}
-	removed, err := switchfs.TrimXci(ctx, path, written, out.progress(path, "Trimming"))
-	if errors.Is(err, switchfs.ErrNothingToTrim) {
-		return "", "", skipped("nothing to trim, it ends where its data ends")
-	}
-	if err != nil {
-		return "", "", err
-	}
-	check, err := switchfs.VerifyFile(ctx, written, out.progress(path, "Verifying"))
-	if err != nil {
-		return "", "", err
-	}
-	if !inPlace {
-		if err := finish(o, written, name); err != nil {
+	nothingToTrim := skipped("nothing to trim, it ends where its data ends")
+	var (
+		removed int64
+		check   switchfs.FileCheck
+	)
+	if inPlace {
+		// in place the file is cut: it is checked first, and cut only when checked whole
+		if facts, err := switchfs.DescribeFile(path); err == nil && facts.Padding == 0 {
+			return "", "", nothingToTrim
+		}
+		if check, err = switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying")); err != nil {
 			return "", "", err
 		}
+		if check.Partial {
+			return "", "", skipped("it is left as it is: it could only be checked in part")
+		}
+		removed, err = switchfs.TrimXci(ctx, path, path, out.progress(path, "Trimming"))
+	} else {
+		written := temporary(name)
+		defer os.Remove(written)
+		removed, err = switchfs.TrimXci(ctx, path, written, out.progress(path, "Trimming"))
+		if err == nil {
+			check, err = switchfs.VerifyFile(ctx, written, out.progress(path, "Verifying"))
+		}
+		if err == nil {
+			err = finish(o, written, name)
+		}
+	}
+	if errors.Is(err, switchfs.ErrNothingToTrim) {
+		return "", "", nothingToTrim
+	}
+	if err != nil {
+		return "", "", err
 	}
 	note := fmt.Sprintf("%s of padding taken away", size(removed))
 	if modified := modifiedNote(check); modified != "" {
@@ -680,7 +708,7 @@ func stripDeltas(ctx context.Context, path string, o options, out output) (strin
 		return "", "", err
 	}
 	if inPlace {
-		err = commitFile(written, path)
+		err = replaceChecked(written, path, check)
 	} else {
 		err = finish(o, written, name)
 	}
@@ -1568,11 +1596,7 @@ func keptNote(o options, check switchfs.FileCheck, note string) string {
 	if !o.rmSource || !check.Partial {
 		return note
 	}
-	kept := "the original is kept: the new file could only be checked in part"
-	if note == "" {
-		return kept
-	}
-	return note + "; " + kept
+	return joinNotes(note, keptInPart)
 }
 
 func modifiedNote(check switchfs.FileCheck) string {
