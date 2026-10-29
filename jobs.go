@@ -98,6 +98,9 @@ func runJobs(ctx context.Context, o options, out output) int {
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
 			out.done(o.pack, "", "", shown(err))
+			if isSkipped(err) {
+				return 0
+			}
 			return 1
 		}
 		return 0
@@ -384,10 +387,12 @@ func finish(o options, written string, path string) error {
 	return err
 }
 
-// free tells whether a new file can be written at path.
+// free tells whether a new file can be written at path: a file there is replaced only with -w,
+// and without it the file worked on is skipped, as nsz skips it (a script run again over a
+// library does not fail for the files done before).
 func free(o options, path string) error {
 	if _, err := os.Stat(path); err == nil && !o.overwrite {
-		return fmt.Errorf("%s is already there (use -w to replace it)", filepath.Base(path))
+		return skipped(fmt.Sprintf("%s is already there (use -w to replace it)", filepath.Base(path)))
 	}
 	return nil
 }
