@@ -5,6 +5,7 @@
 [![Downloads](https://img.shields.io/github/downloads/DeLFuS77/NXPress/total?logo=github)](https://github.com/DeLFuS77/NXPress/releases)
 [![Build](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml/badge.svg)](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/DeLFuS77/NXPress/blob/main/LICENSE)
+![Languages: 11](https://img.shields.io/badge/languages-11-blue)
 
 Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, multi-title files (SuperNSP) included. It writes standard NSZ and XCZ, the same format nsz writes, so installers read them as usual.
 
