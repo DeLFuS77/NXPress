@@ -64,6 +64,7 @@ func (o options) action() string {
 
 // runJobs does the action on every file, several at once with -m, and gives how many failed.
 func runJobs(ctx context.Context, o options, out output) int {
+	defer checked.flush()
 	// the computer does not go to sleep while files are at work
 	defer keepAwake()()
 	action := o.action()
