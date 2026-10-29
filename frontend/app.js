@@ -1076,7 +1076,7 @@ function previewPacks() {
     const list = $("pack-plan");
     if (state.mode !== "pack" || !$("pack-games").checked) return;
     const paths = state.items.map(item => item.path);
-    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.output) || [] : [];
+    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.output, state.packTemplate) || [] : [];
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
@@ -1727,7 +1727,7 @@ async function main() {
     field.addEventListener("input", () => fitTemplate(field));
     field.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });
   }
-  $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); };
+  $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); previewPacks(); };
   $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
   $("choose-pack").onclick = async () => { const path = await app().ChoosePack(); if (path) state.pack = path; render(); };
   $("send-to").onclick = async () => {

@@ -17,7 +17,7 @@ func TestPackPlanOfRealGames(t *testing.T) {
 		t.Skip("no prod.keys")
 	}
 	files, _ := filepath.Glob(filepath.Join(folder, "*.ns*"))
-	plan := (&App{}).PackPlan(files, t.TempDir())
+	plan := (&App{}).PackPlan(files, t.TempDir(), "")
 	if len(plan) == 0 {
 		t.Fatal("no game")
 	}

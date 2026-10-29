@@ -306,11 +306,15 @@ type PackGame struct {
 }
 
 // PackPlan tells the packs by game the files would make: the files of each game, and the pack
-// made before when there is one where its pack would go (output, or the folder of the game).
-func (a *App) PackPlan(files []string, output string) []PackGame {
+// made before when there is one where its pack would go (output, or the folder of the game), or
+// among the files given under the name its pack would get, as the work then tells it.
+func (a *App) PackPlan(files []string, output string, template string) []PackGame {
 	sources, _ := inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
 	order, groups, _ := gameGroups(sources)
 	o := options{output: output}
+	if template == "" {
+		template = defaultPackTemplate
+	}
 	plan := []PackGame{}
 	for _, id := range order {
 		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
@@ -322,6 +326,10 @@ func (a *App) PackPlan(files []string, output string) []PackGame {
 		}
 		if packed := packedAlready(o, id, groups[id]); packed != "" {
 			game.Packed = filepath.Base(packed)
+		} else if extension, err := packKind(groups[id]); err == nil {
+			if again := packedAmong(o, groups[id], template, extension); again != "" {
+				game.Packed = filepath.Base(again)
+			}
 		}
 		plan = append(plan, game)
 	}
