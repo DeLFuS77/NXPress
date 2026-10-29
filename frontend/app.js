@@ -581,6 +581,8 @@ function render() {
   $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
   $("keys-banner").hidden = !!state.keys || state.mode === "recompress" || state.mode === "fat32";
   $("toolbar").hidden = state.items.length === 0;
+  // the list stays as it is while its files are at work, also from the keyboard
+  for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
   $("drop").classList.toggle("filled", state.items.length > 0);
   // the level falls in light (1 to 6), medium (7 to 14) or maximum (15 to 19)
   const level = +$("level").value;
@@ -1532,6 +1534,7 @@ async function main() {
   // the files and the folder added are kept as origins of the list, to take them again in another
   // section; the folder also to watch it
   const addFiles = async () => {
+    if (state.busy) return;
     const items = await app().ChooseFiles(state.mode) || [];
     addOrigins(items.map(item => item.path));
     for (const item of items) add(item);
@@ -1540,6 +1543,7 @@ async function main() {
     render();
   };
   const addFolder = async () => {
+    if (state.busy) return;
     // the folder dialog of Save to gives the folder chosen itself, not only the files of it this
     // section takes: one in a subfolder would else stand for it
     const folder = await app().ChooseOutput();
@@ -1560,6 +1564,7 @@ async function main() {
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => {
+    if (state.busy) return;
     const items = state.items.slice(), sources = state.sources.slice(), removed = [...state.removed];
     clearList();
     render();
