@@ -88,15 +88,9 @@ func fat32(ctx context.Context, path string, o options, out output) (string, str
 }
 
 func splitParts(ctx context.Context, path string, size int64, o options, out output) (string, string, error) {
-	name, err := target(o, path)
+	name, inPlace, err := sameOrNewFile(ctx, o, path)
 	if err != nil {
 		return "", "", err
-	}
-	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
-	if !inPlace {
-		if err := free(o, name); err != nil {
-			return "", "", err
-		}
 	}
 	written := temporary(name)
 	os.RemoveAll(written)
@@ -176,11 +170,16 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 		return "", "", err
 	}
 	name, err := target(o, whole)
+	if err == nil {
+		err = claim(ctx, path, name)
+	}
 	if err != nil {
 		return "", "", err
 	}
-	inPlace := o.output == ""
-	if !inPlace || !strings.EqualFold(filepath.Clean(name), filepath.Clean(path)) {
+	// in place, into the folder of the parts however it is written, the parts give way to the
+	// whole file; a folder of parts gives it its own name
+	inPlace := o.output == "" || sameFile(filepath.Dir(name), filepath.Dir(path))
+	if !sameFile(name, path) {
 		if err := free(o, name); err != nil {
 			return "", "", err
 		}

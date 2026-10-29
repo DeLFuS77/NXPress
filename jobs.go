@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -107,6 +108,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 		}
 		o.datFile = loaded
 	}
+	ctx = withDestinations(ctx, files)
 	threads := switchfs.LimitThreads(strconv.Itoa(o.level), o.threads, o.multi)
 	var (
 		mutex  sync.Mutex
@@ -245,10 +247,97 @@ func target(o options, name string) (string, error) {
 	if o.output == "" {
 		return name, nil
 	}
-	if err := os.MkdirAll(o.output, 0o755); err != nil {
+	folder, err := outputFolder(o)
+	if err != nil {
 		return "", err
 	}
-	return filepath.Join(o.output, filepath.Base(name)), nil
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		return "", err
+	}
+	return filepath.Join(folder, filepath.Base(name)), nil
+}
+
+// outputFolder is the folder of -o as an absolute path: "." or a folder given relative names the
+// folder it is at the start, not wherever the work is when it is used.
+func outputFolder(o options) (string, error) {
+	if o.output == "" {
+		return "", nil
+	}
+	return filepath.Abs(o.output)
+}
+
+// sameFile tells whether two paths name the same file or folder, however they are written: in
+// another case, through a link or a junction, by a short name, or on a mapped drive.
+func sameFile(a string, b string) bool {
+	first, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	second, err := os.Stat(b)
+	return err == nil && os.SameFile(first, second)
+}
+
+// destinations are the names the files of a work take, so that no two of them get the same one
+// (nor the hidden name a new file is written under), and none takes the name of a file the
+// work has to read: each file given holds its own name from the start, and each new name is
+// held by the file it comes from. Names that differ only in case are one on Windows and macOS.
+type destinations struct {
+	mutex   sync.Mutex
+	owners  map[string]string
+	folders map[string]string
+}
+
+type destinationsKey struct{}
+
+// withDestinations gives ctx the destinations of a work on files.
+func withDestinations(ctx context.Context, files []string) context.Context {
+	d := &destinations{owners: map[string]string{}, folders: map[string]string{}}
+	for _, file := range files {
+		d.owners[d.key(file)] = file
+	}
+	return context.WithValue(ctx, destinationsKey{}, d)
+}
+
+// claim holds name for the new file of path, or tells which file of the work has it.
+func claim(ctx context.Context, path string, name string) error {
+	d, ok := ctx.Value(destinationsKey{}).(*destinations)
+	if !ok {
+		return nil
+	}
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	key := d.key(name)
+	owner, ok := d.owners[key]
+	switch {
+	case !ok || owner == path:
+		d.owners[key] = path
+		return nil
+	case d.key(owner) == key:
+		return fmt.Errorf("it would get the same name as %s, another file of this work", owner)
+	}
+	return fmt.Errorf("it would get the same name as the new file of %s: %s", owner, filepath.Base(name))
+}
+
+// key is a name as the file system tells it apart: absolute, with the links of its folder
+// followed (and on Windows its short names made long), in lower case where case is not told.
+func (d *destinations) key(name string) string {
+	if absolute, err := filepath.Abs(name); err == nil {
+		name = absolute
+	}
+	folder := filepath.Dir(name)
+	real, ok := d.folders[folder]
+	if !ok {
+		real = folder
+		if followed, err := filepath.EvalSymlinks(folder); err == nil {
+			real = followed
+		}
+		d.folders[folder] = real
+	}
+	key := filepath.Join(real, filepath.Base(name))
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		key = strings.ToLower(key)
+	}
+	return key
 }
 
 // temporary is the hidden name a new file is written under until it is checked.
@@ -354,11 +443,21 @@ func checkSignatures(path string) (string, error) {
 // layout yet, nsz included, and the game installs as it is.
 const sparseSkipped = "this game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is"
 
-func compress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
-	name, err := target(o, switchfs.CompressedPath(path))
+// newFile is the name of the new file of path, in the output folder when there is one, held
+// for it in the work and free to write.
+func newFile(ctx context.Context, o options, path string, name string) (string, error) {
+	name, err := target(o, name)
+	if err == nil {
+		err = claim(ctx, path, name)
+	}
 	if err == nil {
 		err = free(o, name)
 	}
+	return name, err
+}
+
+func compress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
+	name, err := newFile(ctx, o, path, switchfs.CompressedPath(path))
 	if err != nil {
 		return "", "", err
 	}
@@ -402,10 +501,7 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 }
 
 func decompress(ctx context.Context, path string, o options, out output) (string, string, error) {
-	name, err := target(o, switchfs.DecompressedPath(path))
-	if err == nil {
-		err = free(o, name)
-	}
+	name, err := newFile(ctx, o, path, switchfs.DecompressedPath(path))
 	if err != nil {
 		return "", "", err
 	}
@@ -422,10 +518,7 @@ func decompress(ctx context.Context, path string, o options, out output) (string
 }
 
 func convert(ctx context.Context, path string, o options, out output) (string, string, error) {
-	name, err := target(o, switchfs.ConvertedPath(path))
-	if err == nil {
-		err = free(o, name)
-	}
+	name, err := newFile(ctx, o, path, switchfs.ConvertedPath(path))
 	if err != nil {
 		return "", "", err
 	}
@@ -441,18 +534,29 @@ func convert(ctx context.Context, path string, o options, out output) (string, s
 	return removeSource(o, path, check, name, modifiedNote(check))
 }
 
+// sameOrNewFile is the name of the file an action that works in place writes for path: path
+// itself (inPlace), or a new file in the output folder, held for it in the work and free to
+// write. The output folder can be the folder of path written another way: in place is told by
+// the file, not by how its name is written.
+func sameOrNewFile(ctx context.Context, o options, path string) (name string, inPlace bool, err error) {
+	if name, err = target(o, path); err != nil {
+		return "", false, err
+	}
+	if err = claim(ctx, path, name); err != nil {
+		return "", false, err
+	}
+	if inPlace = sameFile(name, path); !inPlace {
+		err = free(o, name)
+	}
+	return name, inPlace, err
+}
+
 // recompress writes an NSZ or XCZ again, solid or in blocks, at another level. Without an output
 // folder the file is replaced, once its new copy is checked.
 func recompress(ctx context.Context, path string, o options, threads int, out output) (string, string, error) {
-	name, err := target(o, path)
+	name, inPlace, err := sameOrNewFile(ctx, o, path)
 	if err != nil {
 		return "", "", err
-	}
-	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
-	if !inPlace {
-		if err := free(o, name); err != nil {
-			return "", "", err
-		}
 	}
 	written := temporary(name)
 	defer os.Remove(written)
@@ -494,16 +598,12 @@ func trim(ctx context.Context, path string, o options, out output) (string, stri
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".nsp" || extension == ".nsz" {
 		return stripDeltas(ctx, path, o, out)
 	}
-	name, err := target(o, path)
+	name, inPlace, err := sameOrNewFile(ctx, o, path)
 	if err != nil {
 		return "", "", err
 	}
-	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
-	written := name
+	written := path
 	if !inPlace {
-		if err := free(o, name); err != nil {
-			return "", "", err
-		}
 		written = temporary(name)
 		defer os.Remove(written)
 	}
@@ -542,15 +642,9 @@ func stripDeltas(ctx context.Context, path string, o options, out output) (strin
 	if deltas == 0 {
 		return "", "", skipped("nothing to trim, it holds no delta fragments: only updates have them")
 	}
-	name, err := target(o, path)
+	name, inPlace, err := sameOrNewFile(ctx, o, path)
 	if err != nil {
 		return "", "", err
-	}
-	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
-	if !inPlace {
-		if err := free(o, name); err != nil {
-			return "", "", err
-		}
 	}
 	written := temporary(name)
 	defer os.Remove(written)
@@ -648,9 +742,10 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 		return "", "it holds one title, nothing to split", nil
 	}
 	base := strings.TrimSpace(strings.SplitN(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), "[", 2)[0])
-	names := []string{}
-	var checked switchfs.FileCheck
-	for _, part := range plan.Parts {
+	// every name is known before a part is written: none may be the file itself (a SuperNSP
+	// named as its game is), nor the name of another part
+	parts := make([]string, len(plan.Parts))
+	for i, part := range plan.Parts {
 		extension := ".nsp"
 		switch {
 		case part.Cartridge && part.Compressed:
@@ -661,12 +756,29 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 			extension = ".nsz"
 		}
 		name, err := target(o, filepath.Join(filepath.Dir(path), fmt.Sprintf("%s [%s][v%d]%s", base, strings.ToUpper(part.TitleId), part.Version, extension)))
-		if err == nil {
-			err = free(o, name)
-		}
 		if err != nil {
 			return "", "", err
 		}
+		if sameFile(name, path) {
+			return "", "", fmt.Errorf("its part %s would take the place of the file itself: rename the file first, or split it into another folder", filepath.Base(name))
+		}
+		for _, other := range parts[:i] {
+			if strings.EqualFold(other, name) {
+				return "", "", fmt.Errorf("two of its parts would get the same name: %s", filepath.Base(name))
+			}
+		}
+		if err := claim(ctx, path, name); err != nil {
+			return "", "", err
+		}
+		if err := free(o, name); err != nil {
+			return "", "", err
+		}
+		parts[i] = name
+	}
+	names := []string{}
+	var checked switchfs.FileCheck
+	for i, part := range plan.Parts {
+		name := parts[i]
 		written := temporary(name)
 		var check switchfs.FileCheck
 		check, err = switchfs.WriteSplitPartAndCheck(ctx, path, part, written, out.progress(path, "Splitting "+part.Type))
@@ -707,7 +819,7 @@ func pack(ctx context.Context, o options, out output) error {
 	}
 	out.done(o.pack, name, keptNote(o, check, note), nil)
 	for _, source := range sources {
-		if _, _, err := removeSource(o, source, check, "", ""); err != nil {
+		if _, _, err := removeSource(o, source, check, name, ""); err != nil {
 			return err
 		}
 	}
@@ -757,7 +869,10 @@ func gameGroups(sources []string) ([]uint64, map[uint64][]string, map[string]err
 // packedAlready is a pack of the game id found where its pack would go: a file not given whose
 // name has the title ID of the game and that holds more than one title. "" when there is none.
 func packedAlready(o options, id uint64, files []string) string {
-	folder := o.output
+	folder, err := outputFolder(o)
+	if err != nil {
+		return ""
+	}
 	if folder == "" {
 		folder = filepath.Dir(files[0])
 	}
@@ -793,6 +908,7 @@ func packGames(ctx context.Context, o options, out output) int {
 	for _, path := range missing {
 		out.done(path, "", "", errors.New("no such file or folder"))
 	}
+	ctx = withDestinations(ctx, sources)
 	order, groups, unread := gameGroups(sources)
 	for _, source := range sources {
 		if err, ok := unread[source]; ok {
@@ -846,7 +962,11 @@ func packGames(ctx context.Context, o options, out output) int {
 			}
 			title := describeTitles(titles)
 			title.Size = size
-			return target(o, filepath.Join(filepath.Dir(files[0]), strings.TrimSuffix(newName(files[0], title, template), filepath.Ext(files[0]))+extension))
+			name, err := target(o, filepath.Join(filepath.Dir(files[0]), strings.TrimSuffix(newName(files[0], title, template), filepath.Ext(files[0]))+extension))
+			if err == nil {
+				err = claim(ctx, files[0], name)
+			}
+			return name, err
 		}, out)
 		out.done(files[0], name, keptNote(o, check, note), err)
 		for _, file := range files[1:] {
@@ -861,7 +981,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			continue
 		}
 		for _, file := range files {
-			if _, _, err := removeSource(o, file, check, "", ""); err != nil {
+			if _, _, err := removeSource(o, file, check, name, ""); err != nil {
 				out.done(file, "", "", err)
 				failed++
 			}
@@ -908,10 +1028,14 @@ func packFiles(ctx context.Context, o options, sources []string, label string, n
 	// known once it is written
 	folder := filepath.Dir(sources[0])
 	if o.output != "" {
-		if err := os.MkdirAll(o.output, 0o755); err != nil {
+		output, err := outputFolder(o)
+		if err == nil {
+			err = os.MkdirAll(output, 0o755)
+		}
+		if err != nil {
 			return "", "", switchfs.FileCheck{}, err
 		}
-		folder = o.output
+		folder = output
 	}
 	written := filepath.Join(folder, fmt.Sprintf(".nxpress-pack-%d%s", time.Now().UnixNano(), extension))
 	defer os.Remove(written)
@@ -1054,13 +1178,17 @@ func describe(path string) []string {
 // removeSource deletes the original with --rm-source once its new file is checked whole, and
 // gives back name and note. A file checked only in part (an NCA rewritten by a tool with a
 // section that cannot be checked on its own) does not replace it: the original is kept, and the
-// note says why.
+// note says why. An original that is the new file itself, however its name is written, is
+// never deleted.
 func removeSource(o options, path string, check switchfs.FileCheck, name string, note string) (string, string, error) {
 	if !o.rmSource {
 		return name, note, nil
 	}
 	if check.Partial {
 		return name, keptNote(o, check, note), nil
+	}
+	if name != "" && sameFile(path, name) {
+		return name, note, nil
 	}
 	if err := os.Remove(path); err != nil {
 		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)

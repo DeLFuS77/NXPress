@@ -258,7 +258,12 @@ func rename(ctx context.Context, path string, o options, out output) (string, st
 	if name == path {
 		return "", "the name is already that one", nil
 	}
-	if !strings.EqualFold(name, path) {
+	// held for this file in the work: two files never get the same name
+	if err := claim(ctx, path, name); err != nil {
+		return "", "", err
+	}
+	// the same file under another case is renamed; another file there is replaced only with -w
+	if !sameFile(name, path) {
 		if err := free(o, name); err != nil {
 			return "", "", err
 		}
