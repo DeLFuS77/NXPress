@@ -95,6 +95,8 @@ type App struct {
 	// the notices of the system, readied as the first is sent, and whether they can be
 	notices      sync.Once
 	noticesReady bool
+	// the question asked as the window closes with files at work, in the language of the page
+	closeAsk, closeYes, closeNo string
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -534,18 +536,42 @@ var closeWait = 10 * time.Second
 // window stays open (true) unless the answer is yes.
 func (a *App) beforeClose(ctx context.Context) bool {
 	if a.working() {
+		question, yes, no := a.closeQuestion()
+		// Windows names the buttons in its own language and answers "Yes"; the others give back
+		// the button chosen
 		answer, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
 			Type:    wailsruntime.QuestionDialog,
 			Title:   "NXPress",
-			Message: "Files are still at work. Stop them and close NXPress?",
-			Buttons: []string{"Yes", "No"}, DefaultButton: "No", CancelButton: "No",
+			Message: question,
+			Buttons: []string{yes, no}, DefaultButton: no, CancelButton: no,
 		})
-		if err == nil && answer != "Yes" {
+		if err == nil && answer != yes && answer != "Yes" {
 			return true
 		}
 	}
 	keepWindowPlace(ctx)
 	return false
+}
+
+// CloseTexts are the words of the question asked as the window closes with files at work, in the
+// language of the page: it sends them each time its language is set.
+func (a *App) CloseTexts(question string, yes string, no string) {
+	if question == "" || yes == "" || no == "" {
+		return
+	}
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	a.closeAsk, a.closeYes, a.closeNo = question, yes, no
+}
+
+// closeQuestion is the question asked as the window closes, in English until the page told its own.
+func (a *App) closeQuestion() (question string, yes string, no string) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.closeAsk == "" {
+		return "Files are still at work. Stop them and close NXPress?", "Yes", "No"
+	}
+	return a.closeAsk, a.closeYes, a.closeNo
 }
 
 // closed stops the files at work as NXPress closes, and waits for them to remove what they had

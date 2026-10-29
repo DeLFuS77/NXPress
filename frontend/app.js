@@ -567,6 +567,11 @@ function warnSoon() {
 function render() {
   warnSoon();
   document.documentElement.lang = state.language;
+  // the question asked as the window closes with files at work, in this language too
+  if (state.closeLanguage !== state.language) {
+    state.closeLanguage = state.language;
+    app().CloseTexts(t("closeAsk"), t("closeYes"), t("closeNo")).catch(() => { });
+  }
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
   // the name of a button that shows an icon, or no text on a narrow window

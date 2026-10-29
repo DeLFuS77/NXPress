@@ -52,6 +52,7 @@ texts.zh = {
   report: "复制报告", reportCopied: "报告已复制：粘贴到 GitHub issue 或帖子中。", lastReport: "上次报告", noReport: "还没有进行过任何操作。", reportProblems: "只看有问题的",
   pause: "暂停", resume: "继续", paused: "已暂停",
   shutdownWhenDone: "完成后关机", shutdownIn: s => `电脑将在 ${s} 秒后关机。`, shutdownCancel: "保持开机",
+  closeAsk: "仍有文件正在处理。要停止并关闭 NXPress 吗？", closeYes: "是", closeNo: "否",
   shutdownForce: "强制", shutdownForceHint: "不保存就关闭仍打开的程序,否则它们可能阻止关机。",
   soundWhenDone: "完成时播放声音", soundChime: "NXPress 提示音", soundChoose: "选择…", soundPlay: "试听",
   soundDefault: "默认", soundFailed: "无法播放所选的声音", sortHint: "按此列排序；第三次点击恢复文件加入时的顺序",

@@ -52,6 +52,7 @@ texts.nl = {
   report: "Rapport kopiëren", reportCopied: "Rapport gekopieerd: plak het in een GitHub-issue of in de thread.", lastReport: "Laatste verslag", noReport: "Er is nog geen werk gedaan.", reportProblems: "Alleen met problemen",
   pause: "Pauzeren", resume: "Doorgaan", paused: "Gepauzeerd",
   shutdownWhenDone: "Uitschakelen als klaar", shutdownIn: s => `De computer gaat over ${s} s uit.`, shutdownCancel: "Aan laten",
+  closeAsk: "Er worden nog bestanden verwerkt. Stoppen en NXPress sluiten?", closeYes: "Ja", closeNo: "Nee",
   shutdownForce: "Forceren", shutdownForceHint: "Sluit open programma's zonder op te slaan, die anders het uitschakelen kunnen tegenhouden.",
   soundWhenDone: "Geluid afspelen als het klaar is", soundChime: "NXPress-geluid", soundChoose: "Kiezen…", soundPlay: "Afspelen",
   soundDefault: "Standaard", soundFailed: "het gekozen geluid kon niet worden afgespeeld", sortHint: "Sorteren op deze kolom; een derde klik zet de volgorde terug waarin de bestanden kwamen",

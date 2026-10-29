@@ -101,3 +101,20 @@ func TestClosingStopsAWatch(t *testing.T) {
 		t.Fatal("closing did not wait for the watch to stop")
 	}
 }
+
+// The question asked as the window closes is in the language the page told, English before.
+func TestClosingAsksInTheLanguageOfThePage(t *testing.T) {
+	a := &App{}
+	if question, yes, no := a.closeQuestion(); question == "" || yes != "Yes" || no != "No" {
+		t.Fatalf("before the page: %q %q %q", question, yes, no)
+	}
+	a.CloseTexts("¿Pararlos y cerrar NXPress?", "Sí", "No")
+	if question, yes, no := a.closeQuestion(); question != "¿Pararlos y cerrar NXPress?" || yes != "Sí" || no != "No" {
+		t.Fatalf("in Spanish: %q %q %q", question, yes, no)
+	}
+	// a page without the words keeps the ones it had
+	a.CloseTexts("", "", "")
+	if question, _, _ := a.closeQuestion(); question != "¿Pararlos y cerrar NXPress?" {
+		t.Fatalf("kept: %q", question)
+	}
+}

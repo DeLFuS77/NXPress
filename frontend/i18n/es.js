@@ -52,6 +52,7 @@ texts.es = {
   report: "Copiar informe", reportCopied: "Informe copiado: pégalo en un issue de GitHub o en el hilo.", lastReport: "Último informe", noReport: "Todavía no se ha hecho ningún trabajo.", reportProblems: "Solo con problemas",
   pause: "Pausar", resume: "Continuar", paused: "En pausa",
   shutdownWhenDone: "Apagar al terminar", shutdownIn: s => `El equipo se apagará en ${s} s.`, shutdownCancel: "Mantener encendido",
+  closeAsk: "Aún hay archivos en marcha. ¿Pararlos y cerrar NXPress?", closeYes: "Sí", closeNo: "No",
   shutdownForce: "Forzar", shutdownForceHint: "Cierra sin guardar los programas que queden abiertos, que si no pueden impedir el apagado.",
   soundWhenDone: "Sonido al terminar", soundChime: "Aviso de NXPress", soundChoose: "Elegir…", soundPlay: "Probar",
   soundDefault: "El de serie", soundFailed: "no se pudo reproducir el sonido elegido", sortHint: "Ordena por esta columna; el tercer clic vuelve al orden en que llegaron los archivos",

@@ -52,6 +52,7 @@ texts.ja = {
   report: "レポートをコピー", reportCopied: "レポートをコピーしました。GitHub の issue かスレッドに貼り付けてください。", lastReport: "最後のレポート", noReport: "まだ作業をしていません。", reportProblems: "問題のあるものだけ",
   pause: "一時停止", resume: "再開", paused: "一時停止中",
   shutdownWhenDone: "完了後に電源を切る", shutdownIn: s => `${s} 秒後にコンピューターの電源が切れます。`, shutdownCancel: "電源を切らない",
+  closeAsk: "まだ処理中のファイルがあります。停止して NXPress を閉じますか？", closeYes: "はい", closeNo: "いいえ",
   shutdownForce: "強制する", shutdownForceHint: "開いたままのプログラムを保存せずに閉じます。閉じないと電源が切れないことがあります。",
   soundWhenDone: "完了時に音を鳴らす", soundChime: "NXPress のチャイム", soundChoose: "選択…", soundPlay: "再生",
   soundDefault: "既定", soundFailed: "選んだ音を再生できませんでした", sortHint: "この列で並べ替えます。3 回目のクリックでファイルを追加した順に戻ります",

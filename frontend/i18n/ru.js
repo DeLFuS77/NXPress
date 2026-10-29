@@ -59,6 +59,7 @@ texts.ru = {
   report: "Копировать отчёт", reportCopied: "Отчёт скопирован: вставьте его в issue на GitHub или в тему.", lastReport: "Последний отчёт", noReport: "Пока не было ни одной работы.", reportProblems: "Только с проблемами",
   pause: "Пауза", resume: "Продолжить", paused: "На паузе",
   shutdownWhenDone: "Выключить по завершении", shutdownIn: s => `Компьютер выключится через ${s} с.`, shutdownCancel: "Не выключать",
+  closeAsk: "Файлы ещё обрабатываются. Остановить их и закрыть NXPress?", closeYes: "Да", closeNo: "Нет",
   shutdownForce: "Принудительно", shutdownForceHint: "Закрывает открытые программы без сохранения: иначе они могут помешать выключению.",
   soundWhenDone: "Звук по завершении", soundChime: "Сигнал NXPress", soundChoose: "Выбрать…", soundPlay: "Прослушать",
   soundDefault: "По умолчанию", soundFailed: "не удалось воспроизвести выбранный звук", sortHint: "Сортировать по этому столбцу; третий щелчок возвращает порядок, в котором добавлялись файлы",

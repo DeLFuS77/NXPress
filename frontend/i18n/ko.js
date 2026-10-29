@@ -52,6 +52,7 @@ texts.ko = {
   report: "보고서 복사", reportCopied: "보고서를 복사했습니다. GitHub 이슈나 스레드에 붙여 넣으세요.", lastReport: "마지막 보고서", noReport: "아직 한 작업이 없어요.", reportProblems: "문제가 있는 것만",
   pause: "일시 정지", resume: "계속", paused: "일시 정지됨",
   shutdownWhenDone: "끝나면 전원 끄기", shutdownIn: s => `${s}초 뒤 컴퓨터가 꺼집니다.`, shutdownCancel: "켜 두기",
+  closeAsk: "아직 처리 중인 파일이 있습니다. 중지하고 NXPress를 닫을까요?", closeYes: "예", closeNo: "아니요",
   shutdownForce: "강제로", shutdownForceHint: "열려 있는 프로그램을 저장하지 않고 닫아요. 그렇지 않으면 꺼지지 않을 수 있어요.",
   soundWhenDone: "완료 시 소리 재생", soundChime: "NXPress 알림음", soundChoose: "선택…", soundPlay: "재생",
   soundDefault: "기본값", soundFailed: "선택한 소리를 재생할 수 없습니다", sortHint: "이 열로 정렬합니다. 세 번째로 클릭하면 파일을 추가한 순서로 돌아갑니다",
