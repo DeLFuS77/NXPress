@@ -20,7 +20,7 @@ texts.ja = {
   popTitles: (b, u, d) => [b && "ゲーム " + b, u && "アップデート " + u, d && "DLC " + d].filter(Boolean).join(" · "),
   spaceTitle: "新しいファイルが入りきらない可能性があります", spaceIntro: "空き容量より大きくなる場合があります。ドライブがいっぱいになったファイルは失敗し、元のファイルはそのまま残ります。", spaceLine: (need, free) => `最大 ${need} 必要、空き ${free}`, spaceStart: "このまま開始",
   menuShow: "フォルダーで表示", menuCopyId: "タイトル ID をコピー", menuCopyName: "名前をコピー", menuCopyPath: "パスをコピー", menuVerify: "これだけ検証", menuRemove: "リストから外す", copied: text => "コピーしました: " + text,
-  warnNewer: v => `リストにより新しいアップデートがあります (${v})`, warnTwice: "このタイトルはリストに2回入っています", warnNoGame: "本体ゲームがリストにありません", warnNeedsGame: (need, reach) => `ゲーム v${need} が必要ですが、リストは v${reach} までです`,
+  warnNewer: v => `リストにより新しいアップデートがあります (${v})`, warnTwice: "このタイトルはリストに2回入っています", warnSameName: "リストの別のファイルと同じ名前になります", warnNoGame: "本体ゲームがリストにありません", warnNeedsGame: (need, reach) => `ゲーム v${need} が必要ですが、リストは v${reach} までです`,
   tagEmulators: "エミュレーター", removeWarning: "新しいファイルの検証後、元のファイルは完全に削除されます。",
   selected: (n, bytes) => `${n} 個のファイル · ${size(bytes)}`, nothing: "まだファイルがありません",
   working: (done, n, share) => `${n} 個中 ${done} 個完了 · ${share}%`,

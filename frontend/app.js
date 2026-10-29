@@ -541,7 +541,17 @@ function listWarnings() {
   const extension = row => (row.item.path.match(/\.\w+$/) || [""])[0].toLowerCase();
   const folder = row => row.item.path.replace(/[\\/][^\\/]*$/, "").toLowerCase();
   const twice = (row, other) => other.game.version === row.game.version && (state.mode !== "rename" || extension(other) === extension(row) && folder(other) === folder(row));
+  // in Rename, with any template: a file whose new name another file of its folder would end
+  // with too (renamed or not); NXPress then leaves it as it is
+  if (state.mode === "rename") {
+    const rows = [...state.rows.values()].filter(row => !row.item.result);
+    const final = row => folder(row) + "/" + (row.preview || row.item.name).toLowerCase();
+    const count = new Map();
+    for (const row of rows) count.set(final(row), (count.get(final(row)) || 0) + 1);
+    for (const row of rows) if (row.preview && row.preview !== row.item.name && count.get(final(row)) > 1) warnings.set(row, t("warnSameName"));
+  }
   for (const row of read) {
+    if (warnings.has(row)) continue;
     const same = read.filter(other => other !== row && other.game.titleId === row.game.titleId && other.game.type === row.game.type);
     const newer = row.game.type === "UPD" ? same.filter(other => other.game.version > row.game.version).sort((a, b) => b.game.version - a.game.version)[0] : null;
     const game = games.get(row.game.type === "BASE" ? row.game.titleId : row.game.gameId);
@@ -1093,6 +1103,8 @@ function previewNames() {
     if (!paths.length || !state.keys) return;
     const names = await app().NewNames(paths, state.template, $("keep-named").checked);
     paths.forEach((path, i) => { const row = state.rows.get(path); if (row) { row.preview = names[i]; paint(row); } });
+    // two files that would get the same name are told before anything is renamed
+    warnSoon();
   }, 300);
 }
 

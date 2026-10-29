@@ -20,7 +20,7 @@ texts.fr = {
   popTitles: (b, u, d) => [b && (b === 1 ? "1 jeu" : b + " jeux"), u && (u === 1 ? "1 mise à jour" : u + " mises à jour"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Les nouveaux fichiers risquent de ne pas tenir", spaceIntro: "Ils peuvent prendre plus que l'espace libre. Un fichier qui remplit le disque échoue, et son original reste tel quel.", spaceLine: (need, free) => `jusqu'à ${need} nécessaires, ${free} libres`, spaceStart: "Démarrer quand même",
   menuShow: "Afficher dans le dossier", menuCopyId: "Copier le Title ID", menuCopyName: "Copier le nom", menuCopyPath: "Copier le chemin", menuVerify: "Vérifier seulement celui-ci", menuRemove: "Retirer de la liste", copied: text => "Copié : " + text,
-  warnNewer: v => `une mise à jour plus récente est dans la liste (${v})`, warnTwice: "ce titre est deux fois dans la liste", warnNoGame: "son jeu n'est pas dans la liste", warnNeedsGame: (need, reach) => `nécessite le jeu en v${need} ; la liste va jusqu'à v${reach}`,
+  warnNewer: v => `une mise à jour plus récente est dans la liste (${v})`, warnTwice: "ce titre est deux fois dans la liste", warnSameName: "recevrait le même nom qu'un autre fichier de la liste", warnNoGame: "son jeu n'est pas dans la liste", warnNeedsGame: (need, reach) => `nécessite le jeu en v${need} ; la liste va jusqu'à v${reach}`,
   tagEmulators: "émulateurs", removeWarning: "Chaque original est supprimé définitivement une fois son nouveau fichier vérifié.",
   selected: (n, bytes) => `${n === 1 ? "1 fichier" : n + " fichiers"} · ${size(bytes)}`, nothing: "Aucun fichier pour l'instant",
   working: (done, n, share) => `${done} sur ${n} terminés · ${share} %`,

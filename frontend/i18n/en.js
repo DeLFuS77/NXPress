@@ -20,7 +20,7 @@ texts.en = {
   popTitles: (b, u, d) => [b && (b === 1 ? "1 game" : b + " games"), u && (u === 1 ? "1 update" : u + " updates"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "The new files may not fit", spaceIntro: "They may take more than is free. A file that fills its drive fails, and its original stays as it was.", spaceLine: (need, free) => `up to ${need} needed, ${free} free`, spaceStart: "Start anyway",
   menuShow: "Show in folder", menuCopyId: "Copy title ID", menuCopyName: "Copy name", menuCopyPath: "Copy path", menuVerify: "Verify only this", menuRemove: "Remove from list", copied: text => "Copied: " + text,
-  warnNewer: v => `a newer update is in the list (${v})`, warnTwice: "this title is in the list twice", warnNoGame: "its game is not in the list", warnNeedsGame: (need, reach) => `needs the game at v${need}; the list reaches v${reach}`,
+  warnNewer: v => `a newer update is in the list (${v})`, warnTwice: "this title is in the list twice", warnSameName: "would get the same name as another file of the list", warnNoGame: "its game is not in the list", warnNeedsGame: (need, reach) => `needs the game at v${need}; the list reaches v${reach}`,
   tagEmulators: "emulators", removeWarning: "Each original is deleted for good once its new file is checked.",
   selected: (n, bytes) => `${n === 1 ? "1 file" : n + " files"} · ${size(bytes)}`, nothing: "No files yet",
   working: (done, n, share) => `${done} of ${n} done · ${share}%`,

@@ -27,7 +27,7 @@ texts.ru = {
   popTitles: (b, u, d) => [b && b + " " + ruPlural(b, "игра", "игры", "игр"), u && u + " " + ruPlural(u, "обновление", "обновления", "обновлений"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Новые файлы могут не поместиться", spaceIntro: "Они могут занять больше, чем свободно. Файл, заполнивший диск, завершится ошибкой, а оригинал останется как был.", spaceLine: (need, free) => `нужно до ${need}, свободно ${free}`, spaceStart: "Всё равно начать",
   menuShow: "Показать в папке", menuCopyId: "Копировать Title ID", menuCopyName: "Копировать название", menuCopyPath: "Копировать путь", menuVerify: "Проверить только этот", menuRemove: "Убрать из списка", copied: text => "Скопировано: " + text,
-  warnNewer: v => `в списке есть более новое обновление (${v})`, warnTwice: "этот тайтл в списке дважды", warnNoGame: "его игры нет в списке", warnNeedsGame: (need, reach) => `нужна игра версии v${need}; в списке только до v${reach}`,
+  warnNewer: v => `в списке есть более новое обновление (${v})`, warnTwice: "этот тайтл в списке дважды", warnSameName: "получит то же имя, что и другой файл списка", warnNoGame: "его игры нет в списке", warnNeedsGame: (need, reach) => `нужна игра версии v${need}; в списке только до v${reach}`,
   tagEmulators: "эмуляторы", removeWarning: "Каждый оригинал удаляется навсегда, когда его новый файл проверен.",
   selected: (n, bytes) => `${ruFiles(n)} · ${size(bytes)}`, nothing: "Файлов пока нет",
   working: (done, n, share) => `Готово ${done} из ${n} · ${share}%`,

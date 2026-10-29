@@ -20,7 +20,7 @@ texts.pt = {
   popTitles: (b, u, d) => [b && (b === 1 ? "1 jogo" : b + " jogos"), u && (u === 1 ? "1 atualização" : u + " atualizações"), d && d + " DLC"].filter(Boolean).join(" · "),
   spaceTitle: "Os novos ficheiros podem não caber", spaceIntro: "Podem ocupar mais do que o espaço livre. Um ficheiro que encha o disco falha, e o original fica como estava.", spaceLine: (need, free) => `até ${need} necessários, ${free} livres`, spaceStart: "Começar mesmo assim",
   menuShow: "Mostrar na pasta", menuCopyId: "Copiar Title ID", menuCopyName: "Copiar nome", menuCopyPath: "Copiar caminho", menuVerify: "Verificar só este", menuRemove: "Tirar da lista", copied: text => "Copiado: " + text,
-  warnNewer: v => `há uma atualização mais recente na lista (${v})`, warnTwice: "este título está duas vezes na lista", warnNoGame: "o seu jogo não está na lista", warnNeedsGame: (need, reach) => `requer o jogo na v${need}; a lista chega à v${reach}`,
+  warnNewer: v => `há uma atualização mais recente na lista (${v})`, warnTwice: "este título está duas vezes na lista", warnSameName: "receberia o mesmo nome que outro arquivo da lista", warnNoGame: "o seu jogo não está na lista", warnNeedsGame: (need, reach) => `requer o jogo na v${need}; a lista chega à v${reach}`,
   tagEmulators: "emuladores", removeWarning: "Cada original é apagado de vez quando o seu arquivo novo está verificado.",
   selected: (n, bytes) => `${n === 1 ? "1 arquivo" : n + " arquivos"} · ${size(bytes)}`, nothing: "Ainda não há arquivos",
   working: (done, n, share) => `${done} de ${n} concluídos · ${share}%`,
