@@ -4,6 +4,8 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -23,7 +25,7 @@ type fileBasicInfo struct {
 // stampOf reads what tells a file apart through a handle that only reads its attributes: it
 // waits for no one and no one waits for it, also while another program copies or reads it.
 func stampOf(path string) (fileStamp, error) {
-	name, err := windows.UTF16PtrFromString(path)
+	name, err := windows.UTF16PtrFromString(longPath(path))
 	if err != nil {
 		return fileStamp{}, err
 	}
@@ -56,4 +58,16 @@ func stampOf(path string) (fileStamp, error) {
 		stamp.Changed = time.Unix(0, changed.Nanoseconds())
 	}
 	return stamp, nil
+}
+
+// longPath lets a path longer than 260 characters open on any Windows, as os does on its own.
+func longPath(path string) string {
+	if len(path) < 248 || !filepath.IsAbs(path) || strings.HasPrefix(path, `\\?\`) {
+		return path
+	}
+	path = filepath.Clean(path)
+	if strings.HasPrefix(path, `\\`) {
+		return `\\?\UNC\` + path[2:]
+	}
+	return `\\?\` + path
 }

@@ -298,3 +298,17 @@ func TestCheckCacheChangedWhileRead(t *testing.T) {
 		t.Error("the new file of a later work is not kept")
 	}
 }
+
+// a game deep in folders, its path longer than 260 characters, is kept as well
+func TestCheckCacheLongPath(t *testing.T) {
+	cache, folder := testCheckCache(t, "")
+	deep := filepath.Join(folder, strings.Repeat("a", 100), strings.Repeat("b", 100), strings.Repeat("c", 100))
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	game := testGame(t, deep, strings.Repeat("d", 60)+".nsp", 100)
+	cache.keep(game, "")
+	if _, ok := cache.find(game); !ok {
+		t.Errorf("a game at a path of %d characters is not kept", len(game))
+	}
+}
