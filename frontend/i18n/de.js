@@ -28,7 +28,7 @@ texts.de = {
   file: "Datei", size: "Größe", state: "Status",
   level: "Kompressionsstufe", light: "Leicht", medium: "Mittel", maximum: "Maximal", faster: "schneller", smaller: "kleiner",
   levelHint: l => l === 18 ? "Maximale Kompression, die Stufe, die nsz standardmäßig nutzt: kleine Dateien, langsamer. 19, die höchste, ist kaum kleiner und noch langsamer." : l === 19 ? "Maximale Kompression, die höchste Stufe: die kleinsten Dateien, am langsamsten." : l >= 15 ? "Maximale Kompression: die kleinsten Dateien, am langsamsten." : l >= 7 ? "Mittlere Kompression: ein guter Mittelweg." : "Leichte Kompression: schnell, Dateien etwas größer.",
-  groupSpace: "Speicher", groupOrganize: "Ordnen", groupCheck: "Prüfen",
+  groupSpace: "Speicher", groupOrganize: "Ordnen", groupCheck: "Kontrolle",
   hintCompress: "NSP, XCI → NSZ, XCZ", hintDecompress: "NSZ, XCZ → NSP, XCI", hintRecompress: "solid ↔ Blöcke, Stufe", hintTrim: "Füllmaterial und Deltas",
   hintPack: "mehrere → ein SuperNSP oder XCI", hintSplit: "SuperNSP → eine pro Titel", hintConvert: "XCI → NSP", hintVerify: "Hashes prüfen", hintInfo: "Titel und Format",
   hintFat32: "über 4 GB ↔ Teile", hintRename: "Namen aus dem Spiel",
