@@ -114,7 +114,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 		out.say("no file to %s among the ones given", action)
 		return len(missing)
 	}
-	// the measure tries its settings on the first game that can be compressed
+	// the measure tries its settings on the biggest game that can be compressed
 	if action == "measure" {
 		path, err := measurableGame(ctx, files, o)
 		output, note := "", ""
