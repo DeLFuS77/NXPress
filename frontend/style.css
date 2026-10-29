@@ -322,10 +322,10 @@ table.grid .game.refill { transition: none; }
 /* the menu of a file, with a right click */
 .row-menu { position: fixed; z-index: 46; display: flex; flex-direction: column; min-width: 200px; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
 .row-menu button { justify-content: flex-start; text-align: left; margin: 0; padding: 7px 10px; border: none; border-radius: var(--radius-small); background: none; color: var(--text); font-weight: normal; }
-.row-menu button:hover:not(:disabled), .row-menu button:focus-visible { background: var(--hover); outline: none; }
+.row-menu button:hover:not(:disabled) { background: var(--hover); }
+/* the keyboard marks its choice in the blue of the focus, inside the menu */
+.row-menu button:focus-visible { background: var(--hover); outline: 2px solid var(--focus); outline-offset: -2px; }
 .row-menu button:disabled { color: var(--muted); opacity: .6; }
-.row-menu button:last-child { color: var(--bad); }
-.row-menu button:last-child:disabled { color: var(--muted); }
 
 /* a card over the cover of a game: what it is, at a glance */
 .game-pop { --pop-tone: var(--accent); position: fixed; z-index: 45; display: flex; gap: 14px; width: 380px; max-width: calc(100vw - 16px); padding: 14px; border: 1px solid color-mix(in srgb, var(--pop-tone) 35%, var(--line)); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--pop-tone) 22%, var(--raised)), var(--raised) 65%); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; transition: background .3s, border-color .3s; }
