@@ -117,7 +117,7 @@ texts.ko = {
     solidAndBlocks: ", 솔리드와 블록: ", solidColon: ", 솔리드: ", blocksColon: ", 블록: ",
     uncompressedColon: ", 압축 안 함: ", uncompressedParen: " 압축 전 (", solidComma: "솔리드, ", blocksComma: "블록, ",
     smaller: " 감소",
-    leftOut: "묶을 게임에서 제외됨", alreadyCombined: "이미 $1에 묶음('기존 파일 바꾸기'를 선택하면 다시 씁니다)", keptPartial: "원본은 남겨 둡니다: 새 파일은 일부만 확인할 수 있었어요", priorityNotLowered: "우선순위를 낮출 수 없었어요: ", noFileTo: "지정한 파일 중에 이 작업에 쓸 수 있는 파일이 없어요", fileEmpty: "파일이 비어 있어요", sameNameAs: " — 다음과 같은 이름이 됩니다: ",
+    leftOut: "묶을 게임에서 제외됨", alreadyCombined: "이미 $1에 묶음('기존 파일 바꾸기'를 선택하면 다시 씁니다)", keptPartial: "원본은 남겨 둡니다: 새 파일은 일부만 확인할 수 있었어요", priorityNotLowered: "우선순위를 낮출 수 없었어요: ", noFileTo: "지정한 파일 중에 이 작업에 쓸 수 있는 파일이 없어요", fileEmpty: "파일이 비어 있어요", sameNameWork: "이 작업의 다른 파일 $1과(와) 같은 이름이 됩니다", sameNameNew: "$1의 새 파일과 같은 이름이 됩니다: $2", partTakesPlace: "파트 $1이(가) 파일 자체를 대신하게 됩니다: 먼저 파일 이름을 바꾸거나 다른 폴더에 나누세요", partsSameName: "파트 두 개가 같은 이름이 됩니다: $1", packLacks: "원본은 남겨 둡니다: 팩에 다음이 없어요: $1", lacksTicket: "$1의 티켓", lacksNca: "$2 v$3의 $1 NCA", packUnreadable: "원본은 남겨 둡니다: 팩을 다시 읽을 수 없어요: ", packTakesName: "팩이 묶을 파일 중 하나인 $1과(와) 같은 이름이 됩니다", newPackLacks: "새 팩에 다음이 없어요: $1. $2은(는) 그대로 둡니다", leftPartial: "그대로 둡니다: 일부만 확인할 수 있었어요", keptAs: ". 원본은 $1(으)로 남겨 두었어요", notKeys: "$1은(는) prod.keys가 아니에요: header_key가 없어요", priorityNotNormal: "우선순위를 보통으로 되돌릴 수 없었어요: ", folderUnreadable: "$1을(를) 읽을 수 없어요: 안의 파일은 제외됩니다",
     arrow: " → ", decimal: "$1.$2",
   },
 };

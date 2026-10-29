@@ -117,7 +117,7 @@ texts.zh = {
     solidAndBlocks: "，固实和分块：", solidColon: "，固实：", blocksColon: "，分块：",
     uncompressedColon: "，未压缩：", uncompressedParen: " 未压缩（", solidComma: "固实，", blocksComma: "分块，",
     smaller: " 更小",
-    leftOut: "已从要打包的游戏中排除", alreadyCombined: "已打包到 $1（勾选“替换已有文件”可重新写入）", keptPartial: "保留原文件：新文件只能部分校验", priorityNotLowered: "无法降低优先级：", noFileTo: "给出的文件中没有适用于此操作的文件", fileEmpty: "文件为空", sameNameAs: " 的新名称将与以下文件相同：",
+    leftOut: "已从要打包的游戏中排除", alreadyCombined: "已打包到 $1（勾选“替换已有文件”可重新写入）", keptPartial: "保留原文件：新文件只能部分校验", priorityNotLowered: "无法降低优先级：", noFileTo: "给出的文件中没有适用于此操作的文件", fileEmpty: "文件为空", sameNameWork: "将与本次工作的另一个文件 $1 同名", sameNameNew: "将与 $1 的新文件同名：$2", partTakesPlace: "它的分卷 $1 会取代文件本身：请先重命名文件，或分割到另一个文件夹", partsSameName: "它的两个分卷将同名：$1", packLacks: "保留原文件：包中缺少 $1", lacksTicket: "$1 的票据", lacksNca: "$2 v$3 的 $1 NCA", packUnreadable: "保留原文件：无法重新读取该包：", packTakesName: "该包将与要打包的文件之一 $1 同名", newPackLacks: "新包缺少 $1：$2 保持原样", leftPartial: "保持原样：只能部分校验", keptAs: "；原文件保留为 $1", notKeys: "$1 不是 prod.keys：其中没有 header_key", priorityNotNormal: "无法恢复为正常优先级：", folderUnreadable: "无法读取 $1：其中的文件被排除",
     arrow: " → ", decimal: "$1.$2",
   },
 };
