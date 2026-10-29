@@ -485,12 +485,19 @@ func (a *App) Start(request Request) error {
 			jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
 		}
 		failed := jobs(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
+		cancelled := ctx.Err() != nil
 		a.mutex.Lock()
 		a.cancel, a.finished = nil, nil
+		// the taskbar ends as the work did: red while there are errors to look at, else nothing
+		if failed > 0 && !cancelled {
+			setTaskbarProgress("error", 1, 1)
+		} else {
+			setTaskbarProgress("none", 1, 1)
+		}
 		a.mutex.Unlock()
 		close(finished)
 		emit(a.ctx, "finished", map[string]any{
-			"failed": failed, "cancelled": ctx.Err() != nil, "seconds": int(time.Since(started).Seconds()),
+			"failed": failed, "cancelled": cancelled, "seconds": int(time.Since(started).Seconds()),
 		})
 		cancel()
 	}()
@@ -586,8 +593,15 @@ func (a *App) setPaused(paused bool) {
 }
 
 // SetTaskbar shows the progress of the work on the button of NXPress in the taskbar (#31):
-// state "none", "normal", "paused" or "error", done of total.
+// state "none", "normal", "paused" or "error", done of total. Progress told once the work ended
+// (it comes late, or for work that ended at once) is left out: the state the work ended with
+// stays.
 func (a *App) SetTaskbar(state string, done float64, total float64) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if (state == "normal" || state == "paused") && a.cancel == nil {
+		return
+	}
 	setTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
 }
 
