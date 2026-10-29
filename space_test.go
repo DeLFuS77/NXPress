@@ -107,3 +107,29 @@ func TestSpaceShortParts(t *testing.T) {
 		}
 	}
 }
+
+// two folders of one drive are one drive, also one not made yet: a new file in another folder of
+// the drive of its original gives the room of the original back
+func TestSpaceOneDrive(t *testing.T) {
+	folder := t.TempDir()
+	games, output := filepath.Join(folder, "games"), filepath.Join(folder, "out", "not made")
+	if err := os.Mkdir(games, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if volumeOf(games) != volumeOf(output) || volumeOf(games) != volumeOf(folder) {
+		t.Errorf("one drive, three names: %s, %s, %s", volumeOf(folder), volumeOf(games), volumeOf(output))
+	}
+	files := []string{}
+	for i, size := range []int{300, 200, 100} {
+		path := filepath.Join(games, string(rune('a'+i))+".nsp")
+		if err := os.WriteFile(path, make([]byte, size), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, path)
+	}
+	request := Request{Mode: "compress", Files: files, Output: output, Multi: 1, RemoveSource: true}
+	short := spaceShort(request, func(string) (int64, error) { return 299, nil })
+	if len(short) != 1 || short[0].Need != 300 {
+		t.Errorf("%+v, want need 300", short)
+	}
+}

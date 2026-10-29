@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -122,14 +121,6 @@ func originalSize(path string) (int64, bool) {
 		return 0, false
 	}
 	return info.Size(), true
-}
-
-// volumeOf names the drive of a folder: its letter or share on Windows, the folder elsewhere.
-func volumeOf(folder string) string {
-	if volume := filepath.VolumeName(folder); volume != "" {
-		return strings.ToLower(volume)
-	}
-	return folder
 }
 
 // existing is the folder itself, or the nearest folder above it that exists: an output folder is
