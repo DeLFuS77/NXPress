@@ -479,6 +479,10 @@ button:active:not(:disabled) { transform: scale(.97); }
 button { transition: background .12s, border-color .12s, transform .08s; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+  /* what tells that something is at work keeps moving, at a third of its speed and without a
+     flash: a cover being read and the bars of the work */
+  .game .cover.loading { animation-duration: 3.9s !important; animation-iteration-count: infinite !important; }
+  td.state .bar div, td.state .seg div, .busy .bar.total div { animation-duration: 2.4s !important; animation-iteration-count: infinite !important; }
 }
 
 /* while the files are at work */
