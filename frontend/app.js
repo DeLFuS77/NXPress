@@ -1188,7 +1188,8 @@ async function start(mode, extra) {
   render();
   let allowed = false;
   try { allowed = await spaceAllows(request, opener); } finally { state.starting = false; }
-  if (!allowed) { render(); return; }
+  // the button pressed lost the focus while it waited: it gets it back
+  if (!allowed) { render(); refocus(opener); return; }
   // the work is marked as running before NXPress is asked to start it, as its first events (and
   // the end of a quick one) can come before the answer; what changes is put back if it does not
   // start, so another work still running keeps its rows
@@ -1213,6 +1214,7 @@ async function start(mode, extra) {
   if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   app().SetTaskbar("normal", 0, 1);
   render();
+  if (document.activeElement === document.body) refocus(opener);
   try {
     await app().Start(request);
     // a new pack shows its own new file: the one of a pack before leaves the list
