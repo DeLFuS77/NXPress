@@ -147,6 +147,12 @@ func runJobs(ctx context.Context, o options, out output) int {
 		go func() {
 			defer wait.Done()
 			for path := range work {
+				// a file is taken only while the work is not paused: renaming, -i and the files
+				// checked before have no progress of their own to pause in
+				waitWhilePaused(out)
+				if ctx.Err() != nil {
+					continue
+				}
 				output, note, err := doJob(ctx, action, path, o, threads, out)
 				// a new file checked as a game before it got its name need not be read again
 				if err == nil && output != "" && checksOutput[action] {
@@ -170,6 +176,13 @@ func runJobs(ctx context.Context, o options, out output) int {
 	close(work)
 	wait.Wait()
 	return failed
+}
+
+// waitWhilePaused waits while the work is paused, in the window; the console has no pause.
+func waitWhilePaused(out output) {
+	if p, ok := out.(interface{ waitWhilePaused() }); ok {
+		p.waitWhilePaused()
+	}
 }
 
 // skippedError is a file left as it is, with why: not done, and not failed either, so it
@@ -1173,11 +1186,19 @@ const defaultPackTemplate = "{name} [{id}][v{version}] ({contents})"
 // gameGroups puts the files of each game together, in the order the games come and with the
 // game itself first; the files that cannot be read are given apart, with why.
 func gameGroups(sources []string) ([]uint64, map[uint64][]string, map[string]error) {
+	return groupGames(context.Background(), sources)
+}
+
+// groupGames is gameGroups that stops reading the files once ctx ends.
+func groupGames(ctx context.Context, sources []string) ([]uint64, map[uint64][]string, map[string]error) {
 	groups := map[uint64][]string{}
 	order := []uint64{}
 	first := map[string]int{}
 	unread := map[string]error{}
 	for _, source := range sources {
+		if ctx.Err() != nil {
+			break
+		}
 		titles, err := readTitles(source)
 		if err != nil {
 			unread[source] = err
@@ -1249,7 +1270,7 @@ func packGames(ctx context.Context, o options, out output) int {
 		out.done(path, "", "", errors.New("no such file or folder"))
 	}
 	ctx = withDestinations(ctx, sources)
-	order, groups, unread := gameGroups(sources)
+	order, groups, unread := groupGames(ctx, sources)
 	for _, source := range sources {
 		if err, ok := unread[source]; ok {
 			out.done(source, "", "", shown(err))
@@ -1261,6 +1282,7 @@ func packGames(ctx context.Context, o options, out output) int {
 		template = defaultPackTemplate
 	}
 	for _, id := range order {
+		waitWhilePaused(out)
 		if ctx.Err() != nil {
 			break
 		}
