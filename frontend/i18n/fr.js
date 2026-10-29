@@ -115,5 +115,6 @@ texts.fr = {
     solidAndBlocks: ", solide et par blocs : ", solidColon: ", solide : ", blocksColon: ", par blocs : ",
     uncompressedColon: ", non compressé : ", uncompressedParen: " non compressé (", solidComma: "solide, ", blocksComma: "par blocs, ",
     smaller: " en moins",
+    leftOut: "laissé hors des jeux à regrouper", alreadyCombined: "déjà regroupé dans $1 (cochez « Remplacer les fichiers existants » pour l'écrire à nouveau)", keptPartial: "l'original est conservé : le nouveau fichier n'a pu être vérifié qu'en partie", priorityNotLowered: "la priorité n'a pas pu être abaissée : ", noFileTo: "aucun des fichiers donnés ne convient à cette action", fileEmpty: "le fichier est vide", sameNameAs: " recevrait le même nom que ",
   },
 };

@@ -115,5 +115,6 @@ texts.it = {
     solidAndBlocks: ", solido e a blocchi: ", solidColon: ", solido: ", blocksColon: ", a blocchi: ",
     uncompressedColon: ", non compresso: ", uncompressedParen: " non compresso (", solidComma: "solido, ", blocksComma: "a blocchi, ",
     smaller: " in meno",
+    leftOut: "escluso dai giochi da unire", alreadyCombined: "già unito in $1 (spunta «Sostituisci i file esistenti» per scriverlo di nuovo)", keptPartial: "l'originale viene conservato: il nuovo file è stato controllato solo in parte", priorityNotLowered: "non è stato possibile abbassare la priorità: ", noFileTo: "nessuno dei file indicati va bene per questa azione", fileEmpty: "il file è vuoto", sameNameAs: " riceverebbe lo stesso nome di ",
   },
 };

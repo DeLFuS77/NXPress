@@ -115,5 +115,6 @@ texts.nl = {
     solidAndBlocks: ", solid en in blokken: ", solidColon: ", solid: ", blocksColon: ", in blokken: ",
     uncompressedColon: ", ongecomprimeerd: ", uncompressedParen: " ongecomprimeerd (", solidComma: "solid, ", blocksComma: "in blokken, ",
     smaller: " kleiner",
+    leftOut: "weggelaten uit de te bundelen games", alreadyCombined: "al gebundeld in $1 (vink „Bestaande bestanden vervangen” aan om het opnieuw te schrijven)", keptPartial: "het origineel blijft bewaard: het nieuwe bestand kon maar deels gecontroleerd worden", priorityNotLowered: "de prioriteit kon niet worden verlaagd: ", noFileTo: "geen van de opgegeven bestanden past bij deze actie", fileEmpty: "het bestand is leeg", sameNameAs: " zou dezelfde naam krijgen als ",
   },
 };

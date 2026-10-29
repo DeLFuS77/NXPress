@@ -122,5 +122,6 @@ texts.ru = {
     solidAndBlocks: ", сплошное и блоками: ", solidColon: ", сплошное: ", blocksColon: ", блоками: ",
     uncompressedColon: ", без сжатия: ", uncompressedParen: " без сжатия (", solidComma: "сплошное, ", blocksComma: "блоками, ",
     smaller: " меньше",
+    leftOut: "исключено из игр для упаковки", alreadyCombined: "уже упаковано в $1 (отметьте «Заменять существующие файлы», чтобы записать заново)", keptPartial: "оригинал сохранён: новый файл удалось проверить лишь частично", priorityNotLowered: "не удалось понизить приоритет: ", noFileTo: "ни один из указанных файлов не подходит для этого действия", fileEmpty: "файл пуст", sameNameAs: " получил бы то же имя, что и ",
   },
 };

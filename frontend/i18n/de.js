@@ -115,5 +115,6 @@ texts.de = {
     solidAndBlocks: ", solid und in Blöcken: ", solidColon: ", solid: ", blocksColon: ", in Blöcken: ",
     uncompressedColon: ", unkomprimiert: ", uncompressedParen: " unkomprimiert (", solidComma: "solid, ", blocksComma: "in Blöcken, ",
     smaller: " kleiner",
+    leftOut: "aus den zu packenden Spielen herausgenommen", alreadyCombined: "schon gepackt in $1 (kreuze „Vorhandene Dateien ersetzen“ an, um es neu zu schreiben)", keptPartial: "das Original bleibt erhalten: die neue Datei konnte nur zum Teil geprüft werden", priorityNotLowered: "die Priorität konnte nicht gesenkt werden: ", noFileTo: "keine der angegebenen Dateien passt zu dieser Aktion", fileEmpty: "die Datei ist leer", sameNameAs: " bekäme denselben Namen wie ",
   },
 };

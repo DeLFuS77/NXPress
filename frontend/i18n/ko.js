@@ -115,5 +115,6 @@ texts.ko = {
     solidAndBlocks: ", 솔리드와 블록: ", solidColon: ", 솔리드: ", blocksColon: ", 블록: ",
     uncompressedColon: ", 압축 안 함: ", uncompressedParen: " 압축 전 (", solidComma: "솔리드, ", blocksComma: "블록, ",
     smaller: " 감소",
+    leftOut: "묶을 게임에서 제외됨", alreadyCombined: "이미 $1에 묶음('기존 파일 바꾸기'를 선택하면 다시 씁니다)", keptPartial: "원본은 남겨 둡니다: 새 파일은 일부만 확인할 수 있었어요", priorityNotLowered: "우선순위를 낮출 수 없었어요: ", noFileTo: "지정한 파일 중에 이 작업에 쓸 수 있는 파일이 없어요", fileEmpty: "파일이 비어 있어요", sameNameAs: " — 다음과 같은 이름이 됩니다: ",
   },
 };

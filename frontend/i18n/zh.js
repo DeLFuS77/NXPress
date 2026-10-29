@@ -115,5 +115,6 @@ texts.zh = {
     solidAndBlocks: "，固实和分块：", solidColon: "，固实：", blocksColon: "，分块：",
     uncompressedColon: "，未压缩：", uncompressedParen: " 未压缩（", solidComma: "固实，", blocksComma: "分块，",
     smaller: " 更小",
+    leftOut: "已从要打包的游戏中排除", alreadyCombined: "已打包到 $1（勾选“替换已有文件”可重新写入）", keptPartial: "保留原文件：新文件只能部分校验", priorityNotLowered: "无法降低优先级：", noFileTo: "给出的文件中没有适用于此操作的文件", fileEmpty: "文件为空", sameNameAs: " 的新名称将与以下文件相同：",
   },
 };

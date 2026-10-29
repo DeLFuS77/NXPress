@@ -115,5 +115,6 @@ texts.pt = {
     solidAndBlocks: ", sólido e em blocos: ", solidColon: ", sólido: ", blocksColon: ", em blocos: ",
     uncompressedColon: ", sem compressão: ", uncompressedParen: " sem compressão (", solidComma: "sólido, ", blocksComma: "em blocos, ",
     smaller: " a menos",
+    leftOut: "deixado fora dos jogos para juntar", alreadyCombined: "já juntado em $1 (marque «Substituir arquivos existentes» para o escrever de novo)", keptPartial: "o original é mantido: o arquivo novo só pôde ser verificado em parte", priorityNotLowered: "não foi possível baixar a prioridade: ", noFileTo: "nenhum dos arquivos indicados serve para esta ação", fileEmpty: "o arquivo está vazio", sameNameAs: " receberia o mesmo nome que ",
   },
 };

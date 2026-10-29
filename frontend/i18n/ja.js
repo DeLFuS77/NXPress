@@ -115,5 +115,6 @@ texts.ja = {
     solidAndBlocks: "、ソリッドとブロック: ", solidColon: "、ソリッド: ", blocksColon: "、ブロック: ",
     uncompressedColon: "、非圧縮: ", uncompressedParen: "（非圧縮時 ", solidComma: "ソリッド、", blocksComma: "ブロック、",
     smaller: " 削減",
+    leftOut: "まとめるゲームから外されています", alreadyCombined: "$1 にまとめ済みです（もう一度書くには「既存のファイルを置き換える」をオン）", keptPartial: "元のファイルは残します: 新しいファイルは一部しか確認できませんでした", priorityNotLowered: "優先度を下げられませんでした: ", noFileTo: "指定したファイルの中に、この操作に使えるものがありません", fileEmpty: "ファイルが空です", sameNameAs: " は次と同じ名前になります: ",
   },
 };
