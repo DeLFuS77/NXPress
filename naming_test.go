@@ -9,10 +9,10 @@ import (
 func TestNewName(t *testing.T) {
 	title := gameTitle{Name: "Some: Game?", TitleID: "0100000000010000", Version: 65536, Type: "BASE", Titles: 2}
 	for template, want := range map[string]string{
-		"":                                  "Some Game [0100000000010000][v65536].nsz",
-		"{name} ({titles} titles)":          "Some Game (2 titles).nsz",
+		"":                                  "Some - Game [0100000000010000][v65536].nsz",
+		"{name} ({titles} titles)":          "Some - Game (2 titles).nsz",
 		"{id} {type}":                       "0100000000010000 BASE.nsz",
-		"{name} [{id}][v{version}] / copy.": "Some Game [0100000000010000][v65536] copy.nsz",
+		"{name} [{id}][v{version}] / copy.": "Some - Game [0100000000010000][v65536] - copy.nsz",
 	} {
 		if got := newName("C:/games/x.nsz", title, template); got != want {
 			t.Fatalf("%q: %q, want %q", template, got, want)
