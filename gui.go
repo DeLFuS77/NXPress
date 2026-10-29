@@ -56,8 +56,8 @@ func runWindow(files []string) int {
 		AssetServer:      &assetserver.Options{Assets: frontend},
 		OnStartup:        app.startup,
 		OnDomReady:       placeWindow,
-		OnBeforeClose:    func(ctx context.Context) bool { keepWindowPlace(ctx); return false },
-		OnShutdown:       func(context.Context) { app.Cancel() },
+		OnBeforeClose:    app.beforeClose,
+		OnShutdown:       app.closed,
 		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
 		Bind:             []any{app},
 		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
@@ -80,6 +80,8 @@ type App struct {
 	mutex  sync.Mutex
 	keys   string
 	cancel context.CancelFunc
+	// closed once the work stopped, its half written files removed
+	finished chan struct{}
 	// the files NXPress was started with
 	files []string
 	// the work waits while paused
@@ -396,7 +398,7 @@ func (a *App) Start(request Request) error {
 	// below the normal priority when asked, normal again when not (Linux may refuse to raise
 	// it back: NXPress then stays low until it is opened again)
 	if err := setLowPriority(request.LowPriority); err != nil && request.LowPriority {
-		wailsruntime.EventsEmit(a.ctx, "say", "the priority could not be lowered: "+err.Error())
+		emit(a.ctx, "say", "the priority could not be lowered: "+err.Error())
 	}
 	switch request.Mode {
 	case "compress":
@@ -454,7 +456,8 @@ func (a *App) Start(request Request) error {
 		return errors.New("the files are still at work")
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.cancel = cancel
+	finished := make(chan struct{})
+	a.cancel, a.finished = cancel, finished
 	go func() {
 		started := time.Now()
 		a.paused.Store(false)
@@ -464,14 +467,60 @@ func (a *App) Start(request Request) error {
 		}
 		failed := jobs(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
 		a.mutex.Lock()
-		a.cancel = nil
+		a.cancel, a.finished = nil, nil
 		a.mutex.Unlock()
-		wailsruntime.EventsEmit(a.ctx, "finished", map[string]any{
+		close(finished)
+		emit(a.ctx, "finished", map[string]any{
 			"failed": failed, "cancelled": ctx.Err() != nil, "seconds": int(time.Since(started).Seconds()),
 		})
 		cancel()
 	}()
 	return nil
+}
+
+// closeWait is how long NXPress waits as it closes for the files at work to stop, so their half
+// written files are removed (big ones take a while on a slow disk).
+var closeWait = 10 * time.Second
+
+// beforeClose asks, while files are at work (or paused), whether to stop them and close; the
+// window stays open (true) unless the answer is yes.
+func (a *App) beforeClose(ctx context.Context) bool {
+	if a.working() {
+		answer, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
+			Type:    wailsruntime.QuestionDialog,
+			Title:   "NXPress",
+			Message: "Files are still at work. Stop them and close NXPress?",
+			Buttons: []string{"Yes", "No"}, DefaultButton: "No", CancelButton: "No",
+		})
+		if err == nil && answer != "Yes" {
+			return true
+		}
+	}
+	keepWindowPlace(ctx)
+	return false
+}
+
+// closed stops the files at work as NXPress closes, and waits for them to remove what they had
+// half written: NXPress ends right after, and its work with it.
+func (a *App) closed(context.Context) {
+	a.mutex.Lock()
+	finished := a.finished
+	a.mutex.Unlock()
+	a.Cancel()
+	if finished == nil {
+		return
+	}
+	select {
+	case <-finished:
+	case <-time.After(closeWait):
+	}
+}
+
+// working tells whether files are at work, paused or not.
+func (a *App) working() bool {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	return a.cancel != nil
 }
 
 // Cancel stops the files at work; their half written files are removed.
@@ -517,10 +566,10 @@ func (a *App) ShutDownIn(seconds int, force bool) {
 	}
 	a.shutdown = time.AfterFunc(time.Duration(seconds)*time.Second, func() {
 		if err := shutDown(force); err != nil {
-			wailsruntime.EventsEmit(a.ctx, "shutdownFailed", err.Error())
+			emit(a.ctx, "shutdownFailed", err.Error())
 			return
 		}
-		time.AfterFunc(shutdownWait, func() { wailsruntime.EventsEmit(a.ctx, "shutdownFailed", "") })
+		time.AfterFunc(shutdownWait, func() { emit(a.ctx, "shutdownFailed", "") })
 	})
 }
 
@@ -538,6 +587,9 @@ func (a *App) CancelShutDown() {
 func (a *App) ShowFile(path string) {
 	showFile(path)
 }
+
+// emit sends an event to the page.
+var emit = wailsruntime.EventsEmit
 
 // window sends the progress and the results of the files to the page.
 type window struct {
@@ -578,7 +630,7 @@ func (w *window) progress(path string, step string) func(done int64, total int64
 		}
 		last, lastShare = now, share
 		mutex.Unlock()
-		wailsruntime.EventsEmit(w.ctx, "progress", map[string]any{"file": path, "step": step, "done": done, "total": total})
+		emit(w.ctx, "progress", map[string]any{"file": path, "step": step, "done": done, "total": total})
 	}
 }
 
@@ -597,11 +649,11 @@ func (w *window) done(path string, output string, note string, err error) {
 			result["error"] = "cancelled"
 		}
 	}
-	wailsruntime.EventsEmit(w.ctx, "done", result)
+	emit(w.ctx, "done", result)
 }
 
 func (w *window) say(format string, args ...any) {
-	wailsruntime.EventsEmit(w.ctx, "say", fmt.Sprintf(format, args...))
+	emit(w.ctx, "say", fmt.Sprintf(format, args...))
 }
 
 // measured gives the page what a measure found: the setting chosen, to put in its fields, and
@@ -616,7 +668,7 @@ func (w *window) measured(report measureReport) {
 	if report.faster != nil {
 		faster = map[string]any{"threads": report.faster.Threads, "multi": report.faster.Files, "speed": report.faster.Speed}
 	}
-	wailsruntime.EventsEmit(w.ctx, "measured", map[string]any{
+	emit(w.ctx, "measured", map[string]any{
 		"threads": report.best.Threads, "multi": report.best.Files, "speed": report.best.Speed,
 		"processors": report.processors, "level": report.level, "block": report.block,
 		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials, "faster": faster,
