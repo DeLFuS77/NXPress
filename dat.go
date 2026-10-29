@@ -185,13 +185,20 @@ func attribute(element xml.StartElement, name string) string {
 // match tells whether a file is a dump the DAT lists: by its size first, then by its hashes,
 // taken in one reading of the file.
 func (d *dat) match(ctx context.Context, path string, progress func(done int64, total int64)) (string, error) {
+	found, _, err := d.matchDump(ctx, path, progress)
+	return found, err
+}
+
+// matchDump is match, and tells too whether the file is the dump itself: listed by a hash of the
+// whole file stronger than its CRC (MD5, SHA-1 or SHA-256), which no other file shares.
+func (d *dat) matchDump(ctx context.Context, path string, progress func(done int64, total int64)) (string, bool, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	candidates := d.roms[info.Size()]
 	if len(candidates) == 0 {
-		return "not in the DAT: no dump of its size", nil
+		return "not in the DAT: no dump of its size", false, nil
 	}
 	needed := map[string]bool{}
 	for _, rom := range candidates {
@@ -209,11 +216,11 @@ func (d *dat) match(ctx context.Context, path string, progress func(done int64, 
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	defer file.Close()
 	if err := copyWithProgress(ctx, io.MultiWriter(writers...), file, info.Size(), progress); err != nil {
-		return "", err
+		return "", false, err
 	}
 	sums := map[string]string{}
 	for kind, h := range hashes {
@@ -229,8 +236,9 @@ func (d *dat) match(ctx context.Context, path string, progress func(done int64, 
 			}
 		}
 		if agree > 0 && differ == 0 {
-			return "in the DAT: " + rom.game, nil
+			whole := rom.hashes["md5"] != "" || rom.hashes["sha1"] != "" || rom.hashes["sha256"] != ""
+			return "in the DAT: " + rom.game, whole, nil
 		}
 	}
-	return fmt.Sprintf("not in the DAT: %d dumps of its size, with other hashes", len(candidates)), nil
+	return fmt.Sprintf("not in the DAT: %d dumps of its size, with other hashes", len(candidates)), false, nil
 }

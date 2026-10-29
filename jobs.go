@@ -462,6 +462,20 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		}
 		return "", note, nil
 	}
+	// with a DAT, a file it lists by a hash of the whole file is that very dump: the one reading
+	// that compares it tells so, without reading it again to check its NCA files
+	found := ""
+	if o.datFile != nil {
+		var whole bool
+		var err error
+		if found, whole, err = o.datFile.matchDump(ctx, path, out.progress(path, "Comparing")); err != nil {
+			return "", "", err
+		}
+		if whole {
+			checked.keep(path, "")
+			return "", strings.TrimPrefix(signed+"; "+found, "; "), nil
+		}
+	}
 	check, err := switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying"))
 	note := modifiedNote(check)
 	if err == nil {
@@ -473,11 +487,7 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	if err != nil || o.datFile == nil {
 		return "", note, err
 	}
-	found, err := o.datFile.match(ctx, path, out.progress(path, "Comparing"))
-	if note != "" {
-		found = note + "; " + found
-	}
-	return "", found, err
+	return "", strings.TrimPrefix(note+"; "+found, "; "), nil
 }
 
 // checkSignatures tells whether every NCA of a file is signed by Nintendo: an error names the
