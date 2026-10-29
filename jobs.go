@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -95,7 +97,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 	}
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
-			out.done(o.pack, "", "", err)
+			out.done(o.pack, "", "", shown(err))
 			return 1
 		}
 		return 0
@@ -108,7 +110,6 @@ func runJobs(ctx context.Context, o options, out output) int {
 		out.say("no file to %s among the ones given", action)
 		return len(missing)
 	}
-	// the measure tries its settings on the first game alone
 	// the measure tries its settings on the first game that can be compressed
 	if action == "measure" {
 		path, err := measurableGame(ctx, files, o)
@@ -116,7 +117,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 		if err == nil {
 			output, note, err = measure(ctx, path, o, out)
 		}
-		out.done(path, output, note, err)
+		out.done(path, output, note, shown(err))
 		if err != nil && !isSkipped(err) {
 			return len(missing) + 1
 		}
@@ -125,7 +126,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 	if o.dat != "" && o.datFile == nil {
 		loaded, err := loadDat(o.dat)
 		if err != nil {
-			out.done(o.dat, "", "", err)
+			out.done(o.dat, "", "", shown(err))
 			return len(files) + len(missing)
 		}
 		o.datFile = loaded
@@ -148,7 +149,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 				if err == nil && output != "" && checksOutput[action] {
 					checked.keep(output, "")
 				}
-				out.done(path, output, note, err)
+				out.done(path, output, note, shown(err))
 				if err != nil && !isSkipped(err) {
 					mutex.Lock()
 					failed++
@@ -412,7 +413,8 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
-		return "", info(path, out), nil
+		note, err := info(path, out)
+		return "", note, err
 	}
 	// the signature of Nintendo on every NCA, read from the headers only (#9)
 	signed := ""
@@ -963,7 +965,7 @@ func incompleteNote(o options, check switchfs.FileCheck, pack string, sources []
 	lacks, err := packLacks(pack, sources)
 	switch {
 	case err != nil:
-		return "the originals are kept: the pack cannot be read again: " + err.Error()
+		return "the originals are kept: the pack cannot be read again: " + printable(err.Error())
 	case len(lacks) > 0:
 		return "the originals are kept: the pack lacks " + strings.Join(lacks, ", ")
 	}
@@ -1224,7 +1226,7 @@ func packGames(ctx context.Context, o options, out output) int {
 	order, groups, unread := gameGroups(sources)
 	for _, source := range sources {
 		if err, ok := unread[source]; ok {
-			out.done(source, "", "", err)
+			out.done(source, "", "", shown(err))
 			failed++
 		}
 	}
@@ -1255,6 +1257,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			continue
 		}
 		name, note, check, err := packGame(ctx, o, files, template, out)
+		err = shown(err)
 		if isSkipped(err) {
 			for _, file := range files {
 				out.done(file, "", "", err)
@@ -1282,7 +1285,7 @@ func packGames(ctx context.Context, o options, out output) int {
 		}
 		for _, file := range files {
 			if _, _, err := removeSource(o, file, check, name, ""); err != nil {
-				out.done(file, "", "", err)
+				out.done(file, "", "", shown(err))
 				failed++
 			}
 		}
@@ -1475,15 +1478,15 @@ func writePack(ctx context.Context, sources []string, written string, label stri
 	return note, check, nil
 }
 
-// info tells the titles a file holds.
-func info(path string, out output) string {
+// info tells the titles a file holds; a file that cannot be read fails.
+func info(path string, out output) (string, error) {
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
 	}
 	titles, err := read(path)
 	if err != nil {
-		return "cannot be read: " + err.Error()
+		return "", fmt.Errorf("cannot be read: %w", err)
 	}
 	ids := make([]string, 0, len(titles))
 	for id := range titles {
@@ -1505,9 +1508,35 @@ func info(path string, out output) string {
 	lines = append(lines, describe(path)...)
 	out.say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	if len(titles) == 1 {
-		return "1 title"
+		return "1 title", nil
 	}
-	return fmt.Sprintf("%d titles", len(titles))
+	return fmt.Sprintf("%d titles", len(titles)), nil
+}
+
+// shown is an error as people see it: the bytes of a damaged file quoted in it (what was read
+// where a header should be) are shown as ?, not as the characters they happen to make.
+func shown(err error) error {
+	if err == nil {
+		return nil
+	}
+	text := printable(err.Error())
+	switch {
+	case text == err.Error():
+		return err
+	case isSkipped(err):
+		return skipped(text)
+	}
+	return errors.New(text)
+}
+
+// printable is text with each byte that is not a printable character as ?.
+func printable(text string) string {
+	return strings.Map(func(r rune) rune {
+		if r == utf8.RuneError || !unicode.IsPrint(r) {
+			return '?'
+		}
+		return r
+	}, text)
 }
 
 // contentOrder is the order the NCA files of a title are told in.
