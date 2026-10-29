@@ -245,8 +245,9 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .field.row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 10px 0 0; }
-label.check.danger:has(input:checked) { color: var(--bad); }
-.warning { font-size: 12px; color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 6px 10px; margin: 8px 0 0; }
+/* a choice to think twice about is told in orange beside it: red is for what went wrong */
+.warning { font-size: 12px; color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); border-radius: 6px; padding: 6px 10px; margin: 8px 0 0; }
+.warning::before { content: "⚠ "; }
 label.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 0 0 8px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; background: var(--raised); transition: border-color .12s, background .12s; }
 label.choice:hover { border-color: var(--muted); }
 label.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
