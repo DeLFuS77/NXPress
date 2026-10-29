@@ -111,10 +111,8 @@ nav button.on b { color: var(--text); }
 
 /* the work: title, list, actions */
 #work { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-#work[hidden], aside[hidden] { display: none; }
 /* the page of the settings, by group */
 #preferences { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
-#preferences[hidden] { display: none; }
 .pref-group { max-width: 560px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .pref-group h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
 .pref-row { display: flex; align-items: center; gap: 12px; width: 100%; }
@@ -260,7 +258,6 @@ label.choice small { display: block; font-size: 12px; color: var(--muted); margi
 .tags i.no { color: var(--muted); background: var(--hover); text-decoration: line-through; }
 .path { display: flex; gap: 6px; align-items: center; }
 .presets-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
-.presets-row:first-of-type { margin-top: 0; }
 /* a template is longer than the panel is wide: it wraps, whole, with its button under it */
 textarea.template { display: block; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .template-row { display: flex; justify-content: flex-end; margin-top: 4px; }
@@ -289,10 +286,6 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 .title-row { display: flex; align-items: center; gap: 12px; }
 .title-row .tile { width: 36px; height: 36px; border-radius: 10px; background: var(--tone); color: var(--tile-on); }
 .title-row .tile .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-#work[data-tone] .page-head { box-shadow: inset 0 -1px 0 transparent; }
-#work[data-tone="space"] { --tone: var(--tone-space); }
-#work[data-tone="organize"] { --tone: var(--tone-organize); }
-#work[data-tone="check"] { --tone: var(--tone-check); }
 #work .bar div { background-color: var(--accent); }
 
 /* 1: the space saved, the original shrinking to the new file */
@@ -310,7 +303,6 @@ table.grid .game.refill { transition: none; }
 
 /* 2: the drop over the whole window, and covers that load */
 #drop-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(3px); --wails-drop-target: drop; }
-#drop-overlay[hidden] { display: none; }
 .drop-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 48px; border: 2px dashed var(--accent); border-radius: 16px; background: var(--panel); font-size: 18px; pointer-events: none; }
 .drop-icon { width: 48px; height: 48px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: lift .7s ease-in-out infinite; }
 @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
@@ -320,14 +312,12 @@ table.grid .game.refill { transition: none; }
 
 /* 4: a notice with Undo */
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: var(--radius); background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
-.toast[hidden] { display: none; }
 .toast button.link { margin: 0; color: var(--bg); text-decoration: underline; }
 .toast.enter { animation: toast-in .2s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
 
 /* the menu of a file, with a right click */
 .row-menu { position: fixed; z-index: 46; display: flex; flex-direction: column; min-width: 200px; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
-.row-menu[hidden] { display: none; }
 .row-menu button { justify-content: flex-start; text-align: left; margin: 0; padding: 7px 10px; border: none; border-radius: var(--radius-small); background: none; color: var(--text); font-weight: normal; }
 .row-menu button:hover:not(:disabled), .row-menu button:focus-visible { background: var(--hover); outline: none; }
 .row-menu button:disabled { color: var(--muted); opacity: .6; }
@@ -336,7 +326,6 @@ table.grid .game.refill { transition: none; }
 
 /* a card over the cover of a game: what it is, at a glance */
 .game-pop { --pop-tone: var(--accent); position: fixed; z-index: 45; display: flex; gap: 14px; width: 380px; max-width: calc(100vw - 16px); padding: 14px; border: 1px solid color-mix(in srgb, var(--pop-tone) 35%, var(--line)); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--pop-tone) 22%, var(--raised)), var(--raised) 65%); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; transition: background .3s, border-color .3s; }
-.game-pop[hidden] { display: none; }
 .game-pop img { flex: none; width: 112px; height: 112px; border-radius: var(--radius-small); object-fit: cover; box-shadow: 0 6px 18px color-mix(in srgb, var(--pop-tone) 45%, transparent); }
 .game-pop > div { min-width: 0; flex: 1; }
 .game-pop .pop-name { font-weight: 600; font-size: 15px; line-height: 1.3; }
@@ -346,7 +335,6 @@ table.grid .game.refill { transition: none; }
 .game-pop dt { color: var(--muted); }
 .game-pop dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .game-pop .pop-languages { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
-.game-pop .pop-languages[hidden] { display: none; }
 .game-pop .pop-languages i { font-style: normal; font-size: 11px; font-weight: 600; padding: 1px 5px; border-radius: 4px; color: var(--accent); background: var(--accent-soft); }
 
 /* 5: an error that tells what to do */

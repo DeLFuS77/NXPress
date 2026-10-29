@@ -68,7 +68,7 @@ texts.zh = {
   measureKept: (th, m, s) => `${th} 线程 × 同时 ${m} 个达到 ${s} MB/s，快不到 5%：保留更轻的设置，它占用内存更少，每个文件也更早完成。`, takesUpdates: "更新",
   measureChange: "可在“高级”中修改;它们会随设置一起保存。",
   auto: "自动", watch: "监视已添加的文件夹", watchHint: "复制进这些文件夹的新文件会自动处理，直到你按下“停止”。",
-  watchNeedsFolder: "请添加一个要监视的文件夹。", watching: "正在等待新文件", stop: "停止",
+  watching: "正在等待新文件", stop: "停止",
   noCache: "重新校验已校验过的文件", noCacheHint: "NXPress 会记住已校验或写入的文件，文件没有变化时不再重新读取。",
   lowPriority: "低优先级", lowPriorityHint: "NXPress 会让位于其他程序，处理大量文件时电脑仍能流畅响应；其他程序需要处理器时会稍慢一些。在 Linux 上，关闭后要到下次打开 NXPress 才生效。",
   keepNamed: "保留已包含 Title ID 的名称",

@@ -68,7 +68,7 @@ texts.nl = {
   measureKept: (th, m, s) => `${th} threads × ${m} tegelijk haalden ${s} MB/s, minder dan 5% sneller: de lichtere instelling blijft, die gebruikt minder geheugen en heeft elk bestand eerder af.`, takesUpdates: "updates",
   measureChange: "Je kunt ze wijzigen onder Geavanceerd; ze worden met je instellingen bewaard.",
   auto: "Automatisch", watch: "Toegevoegde mappen in de gaten houden", watchHint: "Nieuwe bestanden die erin gekopieerd worden, worden vanzelf verwerkt, tot je op Stoppen drukt.",
-  watchNeedsFolder: "Voeg een map toe om die in de gaten te houden.", watching: "Wacht op nieuwe bestanden", stop: "Stoppen",
+  watching: "Wacht op nieuwe bestanden", stop: "Stoppen",
   noCache: "Al gecontroleerde bestanden opnieuw controleren", noCacheHint: "NXPress onthoudt de bestanden die het controleerde of schreef, en leest ze niet opnieuw zolang ze niet veranderen.",
   lowPriority: "Lage prioriteit", lowPriorityHint: "NXPress loopt achter de andere programma's aan, zodat de computer reageert terwijl het veel bestanden verwerkt; het gaat wat trager als die de processor nodig hebben. Op Linux werkt uitzetten pas bij de volgende start van NXPress.",
   keepNamed: "Namen houden die hun Title ID al hebben",

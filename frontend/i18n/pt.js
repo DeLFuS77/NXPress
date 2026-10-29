@@ -68,7 +68,7 @@ texts.pt = {
   measureKept: (th, m, s) => `${th} threads × ${m} de cada vez chegaram a ${s} MB/s, menos de 5% mais rápido: fica o ajuste mais leve, que usa menos memória e termina cada arquivo antes.`, takesUpdates: "atualizações",
   measureChange: "Pode alterá-los em Avançado; ficam guardados com as suas definições.",
   auto: "Automático", watch: "Vigiar as pastas adicionadas", watchHint: "Arquivos novos copiados para elas são processados sozinhos, até você clicar em Parar.",
-  watchNeedsFolder: "Adicione uma pasta para vigiá-la.", watching: "Vigiando arquivos novos", stop: "Parar",
+  watching: "Vigiando arquivos novos", stop: "Parar",
   noCache: "Verificar de novo arquivos já verificados", noCacheHint: "O NXPress lembra os arquivos que verificou ou gravou, e não os lê de novo enquanto não mudarem.",
   lowPriority: "Prioridade baixa", lowPriorityHint: "O NXPress fica atrás dos outros programas, para que o computador continue a responder enquanto trabalha em muitos arquivos; fica um pouco mais lento quando eles precisam do processador. No Linux, desativá-la só vale da próxima vez que abrir o NXPress.",
   keepNamed: "Manter os nomes que já têm o Title ID",

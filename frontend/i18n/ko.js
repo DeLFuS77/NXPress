@@ -68,7 +68,7 @@ texts.ko = {
   measureKept: (th, m, s) => `${th}스레드 × 동시 ${m}개는 ${s} MB/s로 5% 미만 빨랐어요. 메모리를 덜 쓰고 파일마다 더 빨리 끝나는 가벼운 설정을 유지해요.`, takesUpdates: "업데이트",
   measureChange: "고급에서 바꿀 수 있어요. 설정과 함께 저장돼요.",
   auto: "자동", watch: "추가한 폴더 감시", watchHint: "폴더에 복사된 새 파일을 알아서 처리합니다. '중지'를 누를 때까지 계속됩니다.",
-  watchNeedsFolder: "감시할 폴더를 추가하세요.", watching: "새 파일 기다리는 중", stop: "중지",
+  watching: "새 파일 기다리는 중", stop: "중지",
   noCache: "이미 검증한 파일도 다시 검증", noCacheHint: "NXPress는 검증했거나 쓴 파일을 기억하고, 바뀌지 않는 한 다시 읽지 않습니다.",
   lowPriority: "낮은 우선순위", lowPriorityHint: "NXPress가 다른 프로그램보다 뒤로 물러나서, 많은 파일을 처리하는 동안에도 컴퓨터가 잘 반응해요. 다른 프로그램이 프로세서를 쓸 때는 조금 느려져요. Linux에서는 끄면 다음에 NXPress를 열 때부터 적용돼요.",
   keepNamed: "Title ID가 이미 들어 있는 이름은 유지",

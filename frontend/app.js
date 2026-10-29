@@ -618,7 +618,6 @@ function render() {
   const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
   $("title-tile").className = `tile tone-${tones[group] || "neutral"}`;
   $("title-tile").innerHTML = icon(state.mode);
-  $("work").dataset.tone = tones[group] || "neutral";
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
   for (const entry of takesShown[state.mode].split(" ")) {

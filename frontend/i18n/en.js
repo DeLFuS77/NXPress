@@ -68,7 +68,7 @@ texts.en = {
   measureKept: (th, m, s) => `${th} threads × ${m} at once went ${s} MB/s, less than 5% faster: the lighter setting stays, as it uses less memory and finishes each file sooner.`, takesUpdates: "updates",
   measureChange: "You can change them under Advanced; they are kept with your settings.",
   auto: "Automatic", watch: "Watch the folders added", watchHint: "New files copied into them are worked on by themselves, until you press Stop.",
-  watchNeedsFolder: "Add a folder to watch it.", watching: "Watching for new files", stop: "Stop",
+  watching: "Watching for new files", stop: "Stop",
   noCache: "Check again files already checked", noCacheHint: "NXPress remembers the files it checked or wrote, and does not read them again while they do not change.",
   lowPriority: "Low priority", lowPriorityHint: "NXPress runs below the other programs, so the computer stays responsive while it works on many files; it goes a little slower when they need the processor. On Linux, once turned off it takes effect when NXPress opens again.",
   keepNamed: "Keep the names that already have their title ID",
