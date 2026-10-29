@@ -88,19 +88,20 @@ func fat32(ctx context.Context, path string, o options, out output) (string, str
 }
 
 func splitParts(ctx context.Context, path string, size int64, o options, out output) (string, string, error) {
-	name, err := target(o, path)
+	name, inPlace, err := sameOrNewFile(ctx, o, path)
 	if err != nil {
 		return "", "", err
 	}
-	inPlace := strings.EqualFold(filepath.Clean(name), filepath.Clean(path))
-	if !inPlace {
-		if err := free(o, name); err != nil {
-			return "", "", err
-		}
-	}
 	written := temporary(name)
 	os.RemoveAll(written)
-	defer os.RemoveAll(written)
+	// the parts are removed when the work fails, but kept with the original when it could not
+	// be put back
+	keep := false
+	defer func() {
+		if !keep {
+			os.RemoveAll(written)
+		}
+	}()
 	if err := os.Mkdir(written, 0o755); err != nil {
 		return "", "", err
 	}
@@ -133,21 +134,17 @@ func splitParts(ctx context.Context, path string, size int64, o options, out out
 	if err := checkSum(ctx, filepath.Join(written, "00"), size, sum.Sum(nil), out.progress(path, "Verifying")); err != nil {
 		return "", "", err
 	}
-	// Windows deletes no file still open
+	// Windows moves no file still open
 	input.Close()
-	// the parts are on the disk before the original goes
-	if err := syncPath(written); err != nil {
-		return "", "", err
+	// the folder takes the name of the file (or of what -w replaces): the one there is moved
+	// aside, and deleted once the parts are on the disk with their name
+	if inPlace || o.overwrite {
+		err = place(written, name)
+	} else {
+		err = commitNew(written, name)
 	}
-	if inPlace {
-		// the folder takes the name of the file: the file goes first
-		if err := os.Remove(path); err != nil {
-			return "", "", err
-		}
-	} else if o.overwrite {
-		os.RemoveAll(name)
-	}
-	if err := commitFile(written, name); err != nil {
+	if err != nil {
+		keep = errors.Is(err, errOriginalAside)
 		return "", "", err
 	}
 	note := fmt.Sprintf("%d parts in a folder", parts)
@@ -176,17 +173,27 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 		return "", "", err
 	}
 	name, err := target(o, whole)
+	if err == nil {
+		err = claim(ctx, path, name)
+	}
 	if err != nil {
 		return "", "", err
 	}
-	inPlace := o.output == ""
-	if !inPlace || !strings.EqualFold(filepath.Clean(name), filepath.Clean(path)) {
+	// in place, into the folder of the parts however it is written, the parts give way to the
+	// whole file; a folder of parts gives it its own name
+	inPlace := o.output == "" || sameFile(filepath.Dir(name), filepath.Dir(path))
+	if !sameFile(name, path) {
 		if err := free(o, name); err != nil {
 			return "", "", err
 		}
 	}
 	written := temporary(name)
-	defer os.Remove(written)
+	keep := false
+	defer func() {
+		if !keep {
+			os.Remove(written)
+		}
+	}()
 	output, err := os.Create(written)
 	if err != nil {
 		return "", "", err
@@ -204,23 +211,28 @@ func joinParts(ctx context.Context, path string, whole string, o options, out ou
 		return "", "", err
 	}
 	reader.Close()
-	// the whole file is on the disk before the parts go
-	if err := syncPath(written); err != nil {
-		return "", "", err
-	}
-	// the parts give way to the whole file, in place or when asked to
-	if inPlace || o.rmSource {
-		if err := removeParts(path); err != nil {
+	note := fmt.Sprintf("%d parts joined", parts)
+	if info, err := os.Stat(name); err == nil && info.IsDir() {
+		// a folder of parts has the name, the one joined in place or one -w replaces: it is
+		// moved aside, and deleted once the whole file is on the disk with its name
+		joined := sameFile(name, path)
+		if err := place(written, name); err != nil {
+			keep = errors.Is(err, errOriginalAside)
 			return "", "", err
 		}
-	}
-	if o.overwrite {
-		os.Remove(name)
-	}
-	if err := commitFile(written, name); err != nil {
+		if joined {
+			return name, note, nil
+		}
+	} else if err := finish(o, written, name); err != nil {
 		return "", "", err
 	}
-	return name, fmt.Sprintf("%d parts joined", parts), nil
+	// the parts give way to the whole file once it has its name, in place or when asked to
+	if inPlace || o.rmSource {
+		if err := removeParts(path); err != nil {
+			return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
+		}
+	}
+	return name, note, nil
 }
 
 // partsSize is the size of a file in parts, and how many parts it has.

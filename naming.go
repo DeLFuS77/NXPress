@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -47,6 +49,9 @@ type gameTitle struct {
 
 // readTitles reads the titles a game file holds.
 func readTitles(path string) ([]*switchfs.ContentMetaAttributes, error) {
+	if isEmpty(path) {
+		return nil, errEmpty
+	}
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
@@ -181,7 +186,8 @@ var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
 // 1.0.5), {type} {TYPE}, {titles}, {contents} {PACKAGE_CONTENTS} (1G+1U+2D), {size_gb}
 // {SIZE_GB}, {size_mb} {SIZE_MB} and {dlc_number} {DLC_NUMBER} (1 for the first DLC of its
 // game, empty for other files). {REGION} and {DLC_NAME}, which that program takes from
-// its database of titles, are left empty, as brackets left with nothing. Its extension is kept.
+// its database of titles, are left empty, as brackets left with nothing, and a field it does
+// not know is left out. Its extension is kept, and it fits the 255 bytes of a file name.
 func newName(path string, title gameTitle, template string) string {
 	if template == "" {
 		template = defaultTemplate
@@ -192,41 +198,102 @@ func newName(path string, title gameTitle, template string) string {
 		name = strings.TrimSpace(trailingTags.ReplaceAllString(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), ""))
 	}
 	sizeGB, sizeMB := switchfs.SizeGB(title.Size), switchfs.SizeMB(title.Size)
-	fields := []string{
-		"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
-		"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
-		"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{dlc_number}", "",
-	}
-	if title.Type == "DLC" && title.Titles == 1 {
-		fields[len(fields)-1] = dlcNumber(title.TitleID)
-	}
-	// the same fields as Switch Library Manager writes them, added after the ones above
-	lower := len(fields)
-	for i := 0; i < lower; i += 2 {
-		upper := map[string]string{"{name}": "{TITLE_NAME}", "{id}": "{TITLE_ID}", "{contents}": "{PACKAGE_CONTENTS}"}[fields[i]]
-		if upper == "" {
-			upper = strings.ToUpper(fields[i])
+	values := func(name string) []string {
+		fields := []string{
+			"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
+			"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
+			"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{dlc_number}", "",
 		}
-		if upper != "{TITLES}" {
-			fields = append(fields, upper, fields[i+1])
+		if title.Type == "DLC" && title.Titles == 1 {
+			fields[len(fields)-1] = dlcNumber(title.TitleID)
+		}
+		// the same fields as Switch Library Manager writes them, added after the ones above
+		lower := len(fields)
+		for i := 0; i < lower; i += 2 {
+			upper := map[string]string{"{name}": "{TITLE_NAME}", "{id}": "{TITLE_ID}", "{contents}": "{PACKAGE_CONTENTS}"}[fields[i]]
+			if upper == "" {
+				upper = strings.ToUpper(fields[i])
+			}
+			if upper != "{TITLES}" {
+				fields = append(fields, upper, fields[i+1])
+			}
+		}
+		return append(fields, "{REGION}", "", "{region}", "", "{DLC_NAME}", "", "{dlc_name}", "")
+	}
+	// a field no template knows ({titel}) is left out, not written as it is
+	known := map[string]bool{}
+	for fields, i := values(""), 0; i < len(fields); i += 2 {
+		known[fields[i]] = true
+	}
+	template = templateField.ReplaceAllStringFunc(template, func(field string) string {
+		if known[field] {
+			return field
+		}
+		return ""
+	})
+	render := func(name string) string {
+		return cleanName(strings.NewReplacer(values(name)...).Replace(template))
+	}
+	extension := filepath.Ext(path)
+	result := render(name)
+	if over := len(result) + len(extension) - maxNameBytes; over > 0 {
+		// too long for a file system: the name of the game gives way first, so the tags stay
+		result = render(cutBytes(name, len(name)-over))
+		if len(result)+len(extension) > maxNameBytes {
+			result = strings.TrimRight(cutBytes(result, maxNameBytes-len(extension)), ". ")
 		}
 	}
-	fields = append(fields, "{REGION}", "", "{region}", "", "{DLC_NAME}", "", "{dlc_name}", "")
-	result := strings.NewReplacer(fields...).Replace(template)
-	result = emptyPairs.ReplaceAllString(result, "")
-	// what file systems do not take in a name
-	result = strings.Map(func(r rune) rune {
-		if strings.ContainsRune(`<>:"/\|?*`, r) || r < 32 {
-			return -1
-		}
-		return r
-	}, result)
-	result = strings.Join(strings.Fields(result), " ")
-	result = strings.TrimRight(result, ". ")
 	if result == "" {
 		result = title.TitleID
 	}
-	return result + filepath.Ext(path)
+	return result + extension
+}
+
+// maxNameBytes is the longest name a new file gets, in bytes of UTF-8: the 255 of file systems,
+// less the dot and the suffix of the hidden name a file is written under.
+const maxNameBytes = 255 - len(".") - len(".nxpress")
+
+// templateField is a field of a template, known or not.
+var templateField = regexp.MustCompile(`\{[^{}]*\}`)
+
+// separators are the slashes and colons of a name, which no file system takes in one: they part
+// its words ("Fate/EXTELLA: Link" is "Fate - EXTELLA - Link").
+var separators = regexp.MustCompile(`\s*[/:]+\s*`)
+
+// reservedName is a name Windows keeps for a device, alone or before the first dot of a name.
+var reservedName = regexp.MustCompile(`(?i)^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])$`)
+
+// cleanName is a name as file systems take it: the brackets a field with no value left empty
+// go, slashes and colons part words, the characters no file system takes go, and so do the
+// dots and spaces at its ends (a dot first hides a file); a name Windows keeps gets "_" first.
+func cleanName(name string) string {
+	name = emptyPairs.ReplaceAllString(name, "")
+	name = separators.ReplaceAllString(name, " - ")
+	name = strings.Map(func(r rune) rune {
+		if strings.ContainsRune(`<>"\|?*`, r) || r < 32 {
+			return -1
+		}
+		return r
+	}, name)
+	name = strings.Trim(strings.Join(strings.Fields(name), " "), ". ")
+	if stem, _, _ := strings.Cut(name, "."); reservedName.MatchString(strings.TrimRight(stem, " ")) {
+		name = "_" + name
+	}
+	return name
+}
+
+// cutBytes is text cut to size bytes at most, between two characters.
+func cutBytes(text string, size int) string {
+	if size <= 0 {
+		return ""
+	}
+	if len(text) <= size {
+		return text
+	}
+	for size > 0 && !utf8.RuneStart(text[size]) {
+		size--
+	}
+	return text[:size]
 }
 
 // dlcNumber is the number of a DLC among the ones of its game: its title ID is the one of the
@@ -258,12 +325,26 @@ func rename(ctx context.Context, path string, o options, out output) (string, st
 	if name == path {
 		return "", "the name is already that one", nil
 	}
-	if !strings.EqualFold(name, path) {
+	// held for this file in the work: two files never get the same name
+	if err := claim(ctx, path, name); err != nil {
+		return "", "", err
+	}
+	// the same file under another case is renamed; another file there is replaced only with -w,
+	// and without it the rename itself fails when a file takes the name meanwhile
+	same := sameFile(name, path)
+	if !same {
 		if err := free(o, name); err != nil {
 			return "", "", err
 		}
 	}
-	if err := os.Rename(path, name); err != nil {
+	if same || o.overwrite {
+		err = os.Rename(path, name)
+	} else if err = renameNew(path, name); errors.Is(err, fs.ErrExist) {
+		if there := free(o, name); there != nil {
+			err = there
+		}
+	}
+	if err != nil {
 		return "", "", err
 	}
 	return name, "renamed to " + filepath.Base(name), nil
