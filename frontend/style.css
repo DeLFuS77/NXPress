@@ -421,10 +421,14 @@ table.grid .game .file, table.grid td.name .note, table.grid .error-more, table.
 table.grid td.size { padding-top: 0; font-size: 12px; }
 table.grid td.remove { position: absolute; top: 4px; right: 4px; padding: 0; }
 table.grid td.remove button { background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 999px; }
-/* in the grid, the cover of a file at work fills up from the bottom, with its share on it */
+/* in the grid, the cover of a file at work fills up in blue from the bottom over its own colors,
+   with its share on it; the files still waiting are dimmed, as in the library app */
 table.grid .game { position: relative; }
-table.grid .game::after { content: attr(data-share); position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 1; display: grid; place-items: center; font: 700 26px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); background: linear-gradient(to top, color-mix(in srgb, var(--accent) 45%, transparent) var(--share, 0%), rgba(0, 0, 0, .45) var(--share, 0%)); opacity: 0; pointer-events: none; transition: opacity .4s; }
+table.grid .game::after { content: attr(data-share); position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 1; display: grid; place-items: center; font: 700 26px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); background: linear-gradient(to top, color-mix(in srgb, var(--accent) 55%, transparent) var(--share, 0%), transparent var(--share, 0%)); opacity: 0; pointer-events: none; transition: opacity .4s; }
 table.grid .game.working::after { opacity: 1; }
+table.grid tr.waiting { filter: brightness(.6) saturate(.7); }
+:root[data-theme="light"] table.grid tr.waiting { filter: brightness(.82) saturate(.7); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) table.grid tr.waiting { filter: brightness(.82) saturate(.7); } }
 
 /* a smaller window: the panel of options narrower, the buttons smaller, and on a low one the
 sentence under the title gives its room to the list */

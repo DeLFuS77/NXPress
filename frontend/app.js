@@ -957,6 +957,7 @@ function paint(row) {
   // in the grid, the cover fills up with the progress of its file
   const game = row.tr.querySelector(".game");
   game.classList.toggle("working", row.status === "work");
+  row.tr.classList.toggle("waiting", row.status === "waiting");
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
     // a file in steps (the work, then the check) has its bar split in them, each in its colour:
