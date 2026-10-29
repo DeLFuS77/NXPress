@@ -550,6 +550,14 @@ type window struct {
 // how often the progress of a file is sent at most, unless its percentage changes
 const windowEvery = 500 * time.Millisecond
 
+// waitWhilePaused holds the work while it is paused, until it goes on or is cancelled: before
+// each file, and at every step that tells its progress.
+func (w *window) waitWhilePaused() {
+	for w.app != nil && w.app.paused.Load() && w.job.Err() == nil {
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
 func (w *window) progress(path string, step string) func(done int64, total int64) {
 	var (
 		mutex     sync.Mutex
@@ -557,10 +565,7 @@ func (w *window) progress(path string, step string) func(done int64, total int64
 		lastShare = int64(-1)
 	)
 	return func(done int64, total int64) {
-		// paused, the work waits here, where every step tells its progress
-		for w.app != nil && w.app.paused.Load() && w.job.Err() == nil {
-			time.Sleep(200 * time.Millisecond)
-		}
+		w.waitWhilePaused()
 		share := int64(0)
 		if total > 0 {
 			share = done * 1000 / total
