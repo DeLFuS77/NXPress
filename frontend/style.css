@@ -126,6 +126,8 @@ nav button.on b { color: var(--text); }
 .page-head p { margin: 6px 0 0; max-width: 70ch; }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 20px 0; padding: 10px 14px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid var(--line); color: var(--text); }
 .banner.bad { background: var(--bad-soft); border-color: var(--bad); }
+/* something asked for that needs a look, not a fault: the orange of a skipped file */
+.banner.warn { background: color-mix(in srgb, var(--warn) 12%, transparent); border-color: var(--warn); }
 .banner-buttons { display: flex; gap: 6px; flex: none; }
 .topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; background: var(--ok-soft); border-bottom: 1px solid var(--line); font-weight: 600; }
 .toolbar { display: flex; gap: 8px; align-items: center; padding: 12px 24px 0; }
