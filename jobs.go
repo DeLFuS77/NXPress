@@ -37,6 +37,24 @@ var takes = map[string][]string{
 	"info":  {".nsp", ".nsz", ".xci", ".xcz"},
 }
 
+// checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA
+// by its hashes) before it gets its name, so the cache of the files checked keeps it. A file
+// made whole from its parts is only compared with them, and a file renamed is not read.
+var checksOutput = map[string]bool{
+	"compress":   true,
+	"decompress": true,
+	"convert":    true,
+	"recompress": true,
+	"trim":       true,
+	"fat32":      false,
+	"rename":     false,
+	"split":      false,
+	"estimate":   false,
+	"measure":    false,
+	"info":       false,
+	"verify":     false,
+}
+
 func (o options) action() string {
 	switch {
 	case o.compress:
@@ -126,8 +144,8 @@ func runJobs(ctx context.Context, o options, out output) int {
 			defer wait.Done()
 			for path := range work {
 				output, note, err := doJob(ctx, action, path, o, threads, out)
-				// every new file is checked before it gets its name: it need not be read again
-				if err == nil && output != "" && action != "rename" {
+				// a new file checked as a game before it got its name need not be read again
+				if err == nil && output != "" && checksOutput[action] {
 					checked.keep(output, "")
 				}
 				out.done(path, output, note, err)
