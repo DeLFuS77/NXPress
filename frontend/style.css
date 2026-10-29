@@ -14,8 +14,8 @@ wrong, green for space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22
   :root:not([data-theme="dark"]) {
     --bg: #eef0f3; --panel: #fff; --raised: #f7f8fa; --line: #dde1e7; --text: #16191f; --muted: #5d6470;
     --accent: #0a6fb0; --accent-soft: rgba(10, 111, 176, .09); --accent-text: #fff;
-    --ok: #1f8a4c; --ok-soft: rgba(31, 138, 76, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
-    --warn: #a35f00; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
+    --ok: #187a41; --ok-soft: rgba(24, 122, 65, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
+    --warn: #8a5000; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
     --tone-space: #0a6fb0; --tone-organize: #6a43c9; --tone-check: #0b7f7a; --tone-neutral: #5d6470; --tile-on: #fff;
     color-scheme: light;
   }
@@ -23,8 +23,8 @@ wrong, green for space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22
 :root[data-theme="light"] {
     --bg: #eef0f3; --panel: #fff; --raised: #f7f8fa; --line: #dde1e7; --text: #16191f; --muted: #5d6470;
     --accent: #0a6fb0; --accent-soft: rgba(10, 111, 176, .09); --accent-text: #fff;
-    --ok: #1f8a4c; --ok-soft: rgba(31, 138, 76, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
-    --warn: #a35f00; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
+    --ok: #187a41; --ok-soft: rgba(24, 122, 65, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
+    --warn: #8a5000; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
     --tone-space: #0a6fb0; --tone-organize: #6a43c9; --tone-check: #0b7f7a; --tone-neutral: #5d6470; --tile-on: #fff;
     color-scheme: light;
 }
@@ -241,7 +241,7 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 .segmented button + button { border-left: 1px solid var(--line); }
 .segmented button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 /* the levels each button covers, under its name */
-.segmented.levels small { display: block; font-size: 11px; font-weight: 400; opacity: .8; font-variant-numeric: tabular-nums; }
+.segmented.levels small { display: block; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .field.row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 10px 0 0; }
