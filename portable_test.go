@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -25,8 +26,17 @@ func TestDataFolderPortable(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if folder == portable || webviewFolder() != "" {
+	if folder == portable {
 		t.Errorf("without the folder, NXPress is portable: %s", folder)
+	}
+	// the page keeps its settings where WebView2 kept them for nxpress.exe, whatever the program
+	// is named (the test is not nxpress.exe)
+	webview := ""
+	if runtime.GOOS == "windows" {
+		webview = filepath.Join(os.Getenv("AppData"), "nxpress.exe")
+	}
+	if got := webviewFolder(); got != webview {
+		t.Errorf("webviewFolder = %q, want %q", got, webview)
 	}
 
 	if err := os.Mkdir(portable, 0o755); err != nil {
