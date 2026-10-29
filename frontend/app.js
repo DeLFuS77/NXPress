@@ -62,9 +62,30 @@ const state = {
   setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
-function load(name, fallback) {
-  try { const value = localStorage.getItem("nxpress." + name); return value === null ? fallback : JSON.parse(value); } catch { return fallback; }
+// load gives a value kept by the page, or fallback when there is none or it is not what valid
+// expects (by default, a value of the kind of fallback): a value spoilt by hand or by another
+// version must not stop the window
+function load(name, fallback, valid = sameKind(fallback)) {
+  try {
+    const value = localStorage.getItem("nxpress." + name);
+    if (value === null) return fallback;
+    const parsed = JSON.parse(value);
+    return valid(parsed) ? parsed : fallback;
+  } catch { return fallback; }
 }
+function sameKind(fallback) {
+  if (fallback === null) return () => true;
+  if (Array.isArray(fallback)) return Array.isArray;
+  if (typeof fallback === "object") return value => !!value && typeof value === "object" && !Array.isArray(value);
+  return value => typeof value === typeof fallback;
+}
+// the checks of the values kept that hold more than one value
+const isObject = value => !!value && typeof value === "object" && !Array.isArray(value);
+const isLifetime = value => isObject(value) && Number.isFinite(value.bytes) && Number.isFinite(value.files);
+const isReport = value => isObject(value) && Array.isArray(value.rows) && value.rows.every(row => isObject(row) && ["ok", "failed", "skipped", "cancelled"].includes(row.status));
+const isPending = value => isObject(value) && modes.includes(value.mode) && isObject(value.request) && Array.isArray(value.request.files);
+// the settings saved with a name, the ones that can be read
+const savedPresets = () => load("presets", []).filter(preset => isObject(preset) && typeof preset.name === "string" && Number.isFinite(preset.level));
 function save(name, value) {
   try { localStorage.setItem("nxpress." + name, JSON.stringify(value)); } catch { }
 }
@@ -102,7 +123,7 @@ function adviceFor(error) {
 const milestones = [100, 250, 500, 1024, 2048, 5120, 10240].map(gb => gb * 2 ** 30);
 function keepSaved(bytes, files) {
   if (bytes <= 0) return;
-  const before = load("lifetime", { bytes: 0, files: 0 });
+  const before = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const after = { bytes: before.bytes + bytes, files: before.files + files };
   save("lifetime", after);
   // crossing a milestone is told once, with the bar of actions glowing
@@ -112,7 +133,7 @@ function keepSaved(bytes, files) {
 // the space saved since always, on the empty list; it counts up the first time it shows
 let lifetimeShown = false, lifetimeAt = 0;
 function renderLifetime() {
-  const kept = load("lifetime", { bytes: 0, files: 0 });
+  const kept = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const element = $("lifetime");
   element.hidden = !(kept.bytes > 0);
   if (element.hidden) return;
@@ -1059,7 +1080,7 @@ function fitTemplate(field) {
 
 function renderPresets() {
   const select = $("preset");
-  const all = [...builtinPresets(), ...load("presets", [])];
+  const all = [...builtinPresets(), ...savedPresets()];
   // when NXPress opens, the preset last chosen is shown again
   let chosen = select.value;
   if (state.restorePreset !== undefined) {
@@ -1076,7 +1097,7 @@ function renderPresets() {
   save("preset", select.value === "" ? "" : presetKey(all, +select.value));
 }
 function applyPreset() {
-  const preset = [...builtinPresets(), ...load("presets", [])][+$("preset").value];
+  const preset = [...builtinPresets(), ...savedPresets()][+$("preset").value];
   if (!preset) return;
   $("level").value = preset.level;
   $(preset.block ? "target-block" : "target-solid").checked = true;
@@ -1125,7 +1146,7 @@ async function start(mode, extra) {
   // the work is marked as running before NXPress is asked to start it, as its first events (and
   // the end of a quick one) can come before the answer; what changes is put back if it does not
   // start, so another work still running keeps its rows
-  const before = { lastRun: state.lastRun, paused: state.paused, pending: load("pending", null), rows: [] };
+  const before = { lastRun: state.lastRun, paused: state.paused, pending: load("pending", null, isPending), rows: [] };
   // the rows of the work wear its start, to count them and only them
   const started = Date.now();
   const fresh = { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0, run: started };
@@ -1258,7 +1279,7 @@ function listen() {
       state.rows.set(row.output, row);
       state.sources = state.sources.map(path => path === old ? row.output : path);
     }
-    const pending = load("pending", null);
+    const pending = load("pending", null, isPending);
     if (pending && !event.error) {
       pending.request.files = pending.request.files.filter(path => path !== event.file);
       save("pending", pending.request.files.length ? pending : null);
@@ -1344,14 +1365,14 @@ function keepReport(event) {
   save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
 }
 function keepReportStatus(status) {
-  const kept = load("lastReport", null);
+  const kept = load("lastReport", null, isReport);
   if (!kept) return;
   kept.status = status;
   kept.text = report();
   save("lastReport", kept);
 }
 function showReport() {
-  const kept = load("lastReport", null);
+  const kept = load("lastReport", null, isReport);
   $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : t(kept.mode) || kept.mode}` : "";
   $("report-status").textContent = kept ? kept.status : t("noReport");
   $("report-copy").hidden = !kept;
@@ -1473,7 +1494,7 @@ async function main() {
   state.setup = await app().Setup();
   state.keys = state.setup.keys;
   // the theme: the one of the system, or the one chosen
-  state.theme = load("theme", "auto");
+  state.theme = load("theme", "auto", value => ["auto", "light", "dark"].includes(value));
   // on Windows 11 the menu shows the Mica of the system, in the theme chosen
   document.documentElement.classList.toggle("mica", !!state.setup.mica);
   const theme = () => {
@@ -1495,11 +1516,14 @@ async function main() {
   $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); };
   state.mode = modes.includes(load("mode", "")) ? load("mode", "") : "compress";
   const chosen = load("settings", {});
+  // a field of the settings kept is taken only when it is of its kind
+  const number = value => Number.isInteger(value) && value > 0 ? value : 0;
+  const text = value => typeof value === "string" ? value : "";
   $("version").textContent = state.setup.version;
   $("level").max = state.setup.maxLevel;
-  $("level").value = chosen.level || state.setup.level;
+  $("level").value = number(chosen.level) || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;
-  $("threads").value = chosen.threads || state.setup.threads;
+  $("threads").value = number(chosen.threads) || state.setup.threads;
   state.restorePreset = load("preset", "");
   if (load("showReport", false)) {
     save("showReport", false);
@@ -1509,7 +1533,7 @@ async function main() {
   $("advanced").open = load("advancedOpen", true);
   $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
   $("threads").max = state.setup.cpus;
-  $("multi").value = chosen.multi || 1;
+  $("multi").value = number(chosen.multi) || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("watch").checked = !!chosen.watch;
@@ -1521,13 +1545,13 @@ async function main() {
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
   if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
-  state.output = chosen.output || "";
-  state.dat = chosen.dat || "";
-  state.template = chosen.template || await app().DefaultTemplate();
+  state.output = text(chosen.output);
+  state.dat = text(chosen.dat);
+  state.template = text(chosen.template) || await app().DefaultTemplate();
   $("template").value = state.template;
   // a pack per game unless one file with everything was chosen last
   $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
-  state.packTemplate = chosen.packTemplate || await app().DefaultPackTemplate();
+  state.packTemplate = text(chosen.packTemplate) || await app().DefaultPackTemplate();
   $("pack-template").value = state.packTemplate;
 
   $("level").oninput = () => { $("preset").value = ""; render(); };
@@ -1661,7 +1685,7 @@ async function main() {
   $("measure-close").onclick = () => $("measure-dialog").close();
   $("last-report").onclick = showReport;
   $("report-close").onclick = () => $("report-dialog").close();
-  $("report-copy").onclick = () => { const kept = load("lastReport", null); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
+  $("report-copy").onclick = () => { const kept = load("lastReport", null, isReport); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
   $("pause").onclick = () => {
     state.paused = !state.paused;
     app().SetPaused(state.paused);
@@ -1677,7 +1701,7 @@ async function main() {
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();
     if (!name) { $("preset-name").focus(); return; }
-    const presets = load("presets", []).filter(preset => preset.name !== name);
+    const presets = savedPresets().filter(preset => preset.name !== name);
     const now = settings();
     presets.push({ name, level: now.level, block: now.block, threads: now.threads, multi: now.multi });
     save("presets", presets);
@@ -1688,7 +1712,7 @@ async function main() {
   };
   $("preset-delete").onclick = () => {
     const index = +$("preset").value - builtinPresets().length;
-    const presets = load("presets", []);
+    const presets = savedPresets();
     if (index >= 0) { presets.splice(index, 1); save("presets", presets); }
     $("preset").value = "";
     render();
@@ -1699,7 +1723,7 @@ async function main() {
   listen();
 
   // the files left unfinished last time
-  const pending = load("pending", null);
+  const pending = load("pending", null, isPending);
   if (pending && pending.request && pending.request.files && pending.request.files.length) {
     state.pendingCount = pending.request.files.length;
     $("resume-banner").hidden = false;
