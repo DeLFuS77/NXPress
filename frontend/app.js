@@ -82,6 +82,10 @@ function size(bytes) {
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
   return value.toFixed(unit ? 1 : 0) + " " + units[unit];
 }
+// a path in a field cut at its start (direction: rtl) keeps its order with a mark of left to
+// right at both ends: else "E:\Games" shows as "\Games:E" and brackets turn round
+const ltr = path => "\u200E" + path + "\u200E";
+
 // what to do about an error, by what it says
 function adviceFor(error) {
   const text = error.toLowerCase();
@@ -597,7 +601,7 @@ function render() {
   // what the level trades, as a picture: higher levels make smaller files, more slowly
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
   $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
-  $("output").textContent = state.output || t("nextTo");
+  $("output").textContent = state.output ? ltr(state.output) : t("nextTo");
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
   $("output").classList.toggle("empty", !state.output);
@@ -609,10 +613,10 @@ function render() {
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
   // one file with everything is saved where it is chosen; a pack per game where Save in says
   if (state.mode === "pack" && !$("pack-games").checked) $("output-field").hidden = true;
-  $("pack").textContent = state.pack || t("noPack");
+  $("pack").textContent = state.pack ? ltr(state.pack) : t("noPack");
   $("pack").title = state.pack;
   $("pack").classList.toggle("empty", !state.pack);
-  $("dat").textContent = state.dat || t("noDat");
+  $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
   $("dat").title = state.dat;
   $("dat").classList.toggle("empty", !state.dat);
   $("reset-dat").hidden = !state.dat;
