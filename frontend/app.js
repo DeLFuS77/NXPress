@@ -59,7 +59,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
 function load(name, fallback) {
@@ -595,11 +595,12 @@ function render() {
   const watching = state.busy && state.lastRun && state.lastRun.watch;
   $("start").textContent = state.busy ? (watching ? t("stop") : t("cancel")) : t("start")(state.mode);
   $("start").className = "primary big" + (state.busy ? " stop" : "");
-  $("start").disabled = !state.busy && state.items.length === 0;
-  $("estimate").disabled = state.busy || state.items.length === 0;
-  $("compare-levels").disabled = state.busy || state.items.length === 0;
+  // while a work starts (the space is looked at) its buttons wait for it
+  $("start").disabled = !!state.starting || !state.busy && state.items.length === 0;
+  $("estimate").disabled = state.busy || !!state.starting || state.items.length === 0;
+  $("compare-levels").disabled = state.busy || !!state.starting || state.items.length === 0;
   // with no file it still answers, telling what it needs
-  $("measure").disabled = state.busy;
+  $("measure").disabled = state.busy || !!state.starting;
   // the computer is named as its system names it
   const system = (state.setup.platform || "").split("/")[0];
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
@@ -1026,6 +1027,8 @@ function applyPreset() {
 }
 
 async function start(mode, extra) {
+  // a work is starting: a second press waits for it instead of asking for another
+  if (state.starting) return;
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
   // what the work needs is told by its own mode: Verify only this, in a section that needs no
@@ -1035,9 +1038,9 @@ async function start(mode, extra) {
   if (mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
-  const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
+  const watches = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
   // a watch looks at the folders added; the files alone are taken too
-  let files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
+  let files = watches ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
   // the measure takes the first game it can compress among the NSP and XCI of the list; the
   // one it takes shows its progress, the others keep their state
   const measuring = mode === "measure";
@@ -1045,24 +1048,45 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
   }
-  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  const request = { mode, files, pack: state.pack, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   files = request.files;
-  if (!await spaceAllows(request)) return;
-  for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
+  // Verify only this asks for no watch, whatever the box says
+  const watch = !!request.watch;
+  // while the space is looked at, the work is starting: its buttons wait
+  state.starting = true;
+  render();
+  let allowed = false;
+  try { allowed = await spaceAllows(request); } finally { state.starting = false; }
+  if (!allowed) { render(); return; }
+  // the work is marked as running before NXPress is asked to start it, as its first events (and
+  // the end of a quick one) can come before the answer; what changes is put back if it does not
+  // start, so another work still running keeps its rows
+  const before = { lastRun: state.lastRun, paused: state.paused, pending: load("pending", null), rows: [] };
+  const fresh = { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 };
+  for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) {
+    before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
+    Object.assign(row, fresh);
+  }
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
+  resetSpeed();
+  state.busy = true;
+  state.paused = false;
+  state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
+  // the files left are kept, to go on with them after a close
+  if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
+  app().SetTaskbar("normal", 0, 1);
+  render();
   try {
     await app().Start(request);
-    resetSpeed();
-    app().SetTaskbar("normal", 0, 1);
-    state.busy = true;
-    state.paused = false;
-    state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
-    // the files left are kept, to go on with them after a close
-    if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   } catch (error) {
-    for (const row of state.rows.values()) row.status = "";
+    state.busy = false;
+    state.paused = before.paused;
+    state.lastRun = before.lastRun;
+    save("pending", before.pending);
+    for (const [row, fields] of before.rows) Object.assign(row, fields);
+    app().SetTaskbar("none", 0, 0);
     $("status").textContent = String(error);
   }
   render();
