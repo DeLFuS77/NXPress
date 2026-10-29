@@ -240,6 +240,8 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 .segmented button { flex: 1; border: none; border-radius: 0; font-size: 12px; padding: 5px; background: transparent; }
 .segmented button + button { border-left: 1px solid var(--line); }
 .segmented button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+/* the focus ring inside the button, where the rounded group does not cut it */
+.segmented button:focus-visible { outline-offset: -3px; border-radius: 4px; }
 /* the levels each button covers, under its name */
 .segmented.levels small { display: block; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
