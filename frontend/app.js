@@ -1052,6 +1052,8 @@ async function start(mode, extra) {
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
+  // a new work keeps the computer on: the count of the turning off asked by the work before stops
+  if (state.shutdownAt) keepOn();
   // while the space is looked at, the work is starting: its buttons wait
   state.starting = true;
   render();
@@ -1252,11 +1254,13 @@ function listen() {
   });
   // the computer did not turn off: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
-    $("shutdown-banner").hidden = true;
+    hideShutdown();
     const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
     $("status").textContent = text;
     app().Notify("NXPress", text);
   });
+  // NXPress called the turning off off by itself (a work started): its count goes
+  events.EventsOn("shutdownCancelled", hideShutdown);
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
@@ -1373,6 +1377,18 @@ function startShutdown() {
     if (left > 0) shutdownTimer = setTimeout(tick, 1000);
   };
   tick();
+}
+// the count of the turning off goes away: it was called off here or by NXPress, or it failed
+function hideShutdown() {
+  clearTimeout(shutdownTimer);
+  state.shutdownAt = 0;
+  $("shutdown-banner").hidden = true;
+}
+// the computer stays on: with the button, or with a new work started during the count
+function keepOn() {
+  save("showReport", false);
+  app().CancelShutDown();
+  hideShutdown();
 }
 
 async function checkUpdate() {
@@ -1564,8 +1580,7 @@ async function main() {
   $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
   $("shutdown").onchange = () => render();
-  $("shutdown-cancel").onclick = () => {
-    save("showReport", false); app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };
+  $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();
