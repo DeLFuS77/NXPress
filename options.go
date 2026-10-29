@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -90,7 +91,13 @@ func parseOptions(args []string) (options, error) {
 		name, value, hasValue := strings.Cut(arg, "=")
 		if what, ok := valued[name]; ok {
 			if !hasValue {
-				if i+1 >= len(args) {
+				// an option after it is not its value: -o alone puts the new files next to their
+				// originals, as in nsz, and the other options need theirs
+				if i+1 >= len(args) || isOption(args[i+1]) {
+					if what == "output" {
+						o.output = ""
+						continue
+					}
 					return o, fmt.Errorf("%s needs a value", name)
 				}
 				i++
@@ -164,6 +171,16 @@ func parseOptions(args []string) (options, error) {
 		}
 	}
 	return o, nil
+}
+
+// negativeNumber finds what argparse takes for a negative number, a value and not an option:
+// -1, -.5
+var negativeNumber = regexp.MustCompile(`^-\d+$|^-\d*\.\d+$`)
+
+// isOption tells whether an argument is an option, which cannot be the value of the one before
+// it: "-" alone is a file, and a negative number a value (-t -1).
+func isOption(arg string) bool {
+	return strings.HasPrefix(arg, "-") && arg != "-" && !negativeNumber.MatchString(arg)
 }
 
 func (o *options) set(what string, name string, value string) error {
@@ -278,7 +295,7 @@ Usage: nxpress [options] file or folder...
   --low-priority      run below the normal priority of the processor, so the computer stays
                       responsive while NXPress works
   -m, --multi N       files at once (default 1)
-  -o, --output DIR    folder of the new files (default: next to each file)
+  -o, --output [DIR]  folder of the new files (default, and -o alone: next to each file)
   --watch             keep looking at the folders given and work on each new file once it
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
