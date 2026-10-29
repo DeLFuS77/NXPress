@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/dtrunk90/switch-library-manager-web/settings"
 )
@@ -44,6 +45,11 @@ func onlyPaths(args []string) bool {
 func run(args []string) int {
 	return runCommand(args, os.Stdout, os.Stderr)
 }
+
+// stopSignals stop the files at work: Ctrl+C, and SIGTERM, which Go gives on Windows too when
+// the console is closed, the user signs out or the computer shuts down (the system then waits
+// a few seconds for NXPress to remove its half written files)
+var stopSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
 // runCommand does what the command line asks, printing to stdout and stderr, and gives the
 // exit code.
@@ -88,8 +94,9 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 		}
 	}
 
-	// Ctrl+C stops the files at work; their half written files are removed
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// Ctrl+C stops the files at work, and so does the end of NXPress the system asks for; their
+	// half written files are removed
+	ctx, stop := signal.NotifyContext(context.Background(), stopSignals...)
 	defer stop()
 	// a program reading --machine-readable is told now and then that NXPress is at work
 	stopHeartbeat := func() {}
