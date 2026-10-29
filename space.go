@@ -22,9 +22,8 @@ func (a *App) SpaceCheck(request Request) []SpaceShort {
 	return spaceShort(request, freeSpace)
 }
 
-// spaceShort weighs each new file by the most it can take: as big as its original, and an NSZ
-// or XCZ decompressed as big as its content. A file that replaces its original on the same
-// drive gives its room back once it is done, so of those only the ones made at once count.
+// spaceShort weighs each new file by the most it can take: as big as its original (all its
+// parts, for a file in parts), and an NSZ or XCZ decompressed as big as its content.
 func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort {
 	switch request.Mode {
 	case "compress", "decompress", "recompress", "trim", "convert", "fat32", "split", "pack":
@@ -32,22 +31,16 @@ func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort 
 		return nil
 	}
 	replaces := request.RemoveSource || request.Output == "" && (request.Mode == "recompress" || request.Mode == "trim" || request.Mode == "fat32")
-	type drive struct {
-		folder string
-		kept   int64
-		freed  []int64
-	}
-	drives := map[string]*drive{}
-	order := []string{}
+	files := []spaceFile{}
 	for _, path := range request.Files {
-		info, err := os.Stat(path)
-		if err != nil || !info.Mode().IsRegular() {
+		size, ok := originalSize(path)
+		if !ok {
 			continue
 		}
-		need := info.Size()
+		most := size
 		if request.Mode == "decompress" {
-			if facts, err := switchfs.DescribeFile(path); err == nil && facts.DecompressedSize > need {
-				need = facts.DecompressedSize
+			if facts, err := switchfs.DescribeFile(path); err == nil && facts.DecompressedSize > most {
+				most = facts.DecompressedSize
 			}
 		}
 		folder := filepath.Dir(path)
@@ -57,24 +50,58 @@ func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort 
 		case request.Output != "":
 			folder = request.Output
 		}
-		key := volumeOf(folder)
-		if drives[key] == nil {
-			drives[key] = &drive{folder: folder}
-			order = append(order, key)
+		drive := volumeOf(folder)
+		files = append(files, spaceFile{
+			folder: folder, drive: drive, size: size, most: most,
+			replaces: replaces && request.Mode != "pack" && drive == volumeOf(filepath.Dir(path)),
+		})
+	}
+	return spaceNeeded(files, max(1, request.Multi), free)
+}
+
+// spaceFile is a new file of a work: the folder and the drive it goes to, the size of its
+// original and the most it may take, and whether it replaces its original on that drive.
+type spaceFile struct {
+	folder, drive string
+	size, most    int64
+	replaces      bool
+}
+
+// spaceNeeded gives the drives where the new files may not fit at the worst moment of a work,
+// whatever the order the files are done in. A file kept beside its original takes all of it for
+// good. A file that replaces its original gives that room back once done, so it keeps only what
+// it grew by, and that adds up file after file (decompressing with the originals deleted); while
+// it is made it stands beside its original, and of those the ones made at once count.
+func spaceNeeded(files []spaceFile, multi int, free func(string) (int64, error)) []SpaceShort {
+	type drive struct {
+		folder string
+		need   int64
+		beside []int64
+	}
+	drives := map[string]*drive{}
+	order := []string{}
+	for _, file := range files {
+		d := drives[file.drive]
+		if d == nil {
+			d = &drive{folder: file.folder}
+			drives[file.drive] = d
+			order = append(order, file.drive)
 		}
-		if replaces && request.Mode != "pack" && key == volumeOf(filepath.Dir(path)) {
-			drives[key].freed = append(drives[key].freed, need)
-		} else {
-			drives[key].kept += need
+		if !file.replaces {
+			d.need += file.most
+			continue
 		}
+		grows := max(0, file.most-file.size)
+		d.need += grows
+		d.beside = append(d.beside, file.most-grows)
 	}
 	short := []SpaceShort{}
 	for _, key := range order {
 		d := drives[key]
-		sort.Slice(d.freed, func(i, j int) bool { return d.freed[i] > d.freed[j] })
-		need := d.kept
-		for i := 0; i < len(d.freed) && i < max(1, request.Multi); i++ {
-			need += d.freed[i]
+		sort.Slice(d.beside, func(i, j int) bool { return d.beside[i] > d.beside[j] })
+		need := d.need
+		for i := 0; i < len(d.beside) && i < multi; i++ {
+			need += d.beside[i]
 		}
 		left, err := free(d.folder)
 		if err == nil && need > left {
@@ -82,6 +109,19 @@ func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort 
 		}
 	}
 	return short
+}
+
+// originalSize is the size of a file of a work: all its parts, for a file in parts.
+func originalSize(path string) (int64, bool) {
+	if _, ok := splitContainer(path); ok {
+		size, _, err := partsSize(path)
+		return size, err == nil
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return 0, false
+	}
+	return info.Size(), true
 }
 
 // volumeOf names the drive of a folder: its letter or share on Windows, the folder elsewhere.
