@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/settings"
@@ -83,6 +84,46 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// unreadFolder is a folder that could not be read, and why.
+type unreadFolder struct {
+	path string
+	err  error
+}
+
+// folderFiles are the files in a folder and its folders of parts, in order of name, of every
+// kind (the caller takes the ones it works on); with recursive, the ones in its folders too,
+// and in theirs. unread are the folders that could not be read, and nested tells whether
+// folders were left out, without recursive.
+func folderFiles(folder string, recursive bool) (found []string, unread []unreadFolder, nested bool) {
+	filepath.WalkDir(folder, func(walked string, entry os.DirEntry, err error) error {
+		if err != nil {
+			// told, not passed over: a folder without permission would leave its games out
+			// without a word
+			unread = append(unread, unreadFolder{path: walked, err: err})
+			return nil
+		}
+		if walked == folder {
+			return nil
+		}
+		if !entry.IsDir() {
+			found = append(found, walked)
+			return nil
+		}
+		// a folder of parts is one file: its parts are not looked into
+		if _, ok := splitContainer(walked); ok {
+			found = append(found, walked)
+			return filepath.SkipDir
+		}
+		if !recursive {
+			nested = true
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	sort.Strings(found)
+	return found, unread, nested
 }
 
 // loadKeys makes the keys active, and gives the file they were read from: the ones given, else
