@@ -509,7 +509,8 @@ function render() {
       const since = performance.now() - (state.chosenAt || 0);
       if (mode === state.mode && !state.view && since < 300) { button.classList.add("chosen"); button.style.setProperty("--since", -since + "ms"); }
       button.onclick = () => {
-        if (state.busy) return;
+        // while a work runs a section changes nothing, but it leaves the settings for the work
+        if (state.busy) { if (state.view) { state.view = ""; render(); } return; }
         const changed = state.view || mode !== state.mode;
         // a section leaves the page of the settings
         if (state.view) { state.view = ""; render(); }
@@ -1031,6 +1032,8 @@ async function start(mode, extra) {
   if (state.starting) return;
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
+  // the work shows on its page, with what it needs or what it does: the settings give way to it
+  if (state.view) { state.view = ""; render(); }
   // what the work needs is told by its own mode: Verify only this, in a section that needs no
   // keys or no pack, still needs the keys and no pack
   if (!state.keys && !["recompress", "fat32"].includes(mode)) { $("status").textContent = t("needKeys"); return; }
@@ -1485,7 +1488,8 @@ async function main() {
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
   for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("view", button.dataset.view); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
-  $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
+  // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
+  $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => {
     const items = state.items.slice();
@@ -1534,7 +1538,7 @@ async function main() {
     const typing = /^(input|textarea|select)$/i.test(document.activeElement.tagName) && document.activeElement.type !== "checkbox";
     if (key === "o" && !state.busy) { event.preventDefault(); (event.shiftKey ? addFolder : addFiles)(); }
     else if (key === "enter") { event.preventDefault(); start(); }
-    else if (key === ",") { event.preventDefault(); $("open-preferences").click(); }
+    else if (key === ",") { event.preventDefault(); if (!state.busy) $("open-preferences").click(); }
     else if (key === "z" && !typing && undoLast) { event.preventDefault(); undo(); }
   });
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); previewPacks(); };
