@@ -59,7 +59,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
 function load(name, fallback) {
@@ -385,10 +385,12 @@ function undo() {
   $("toast").hidden = true;
   action();
 }
-// files taken out of the list come back with Undo, where they were
-function takenOut(items, name) {
+// files taken out of the list come back with Undo, where they were, and with where they came from
+// (restore puts it back)
+function takenOut(items, name, restore) {
   const kept = items.slice();
   showToast(kept.length === 1 ? t("toastRemoved")(name || kept[0].name) : t("toastCleared")(kept.length), () => {
+    if (restore) restore();
     for (const item of kept) add(item);
     previewPacks();
     render();
@@ -686,31 +688,43 @@ function setMode(mode) {
   if (state.busy || mode === state.mode) return;
   state.mode = mode;
   save("mode", mode);
-  // the files the new mode does not take leave the list
-  refill(state.sources.length ? state.sources : state.items.map(item => item.path), true);
+  // the list is made again from all it came from, for the new mode: the files it does not take
+  // leave, the ones it takes come, and the files taken out by hand stay out
+  refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
   render();
 }
 
-// refill adds what the paths given hold for the mode; the folders are kept, to watch them.
-async function refill(paths, replace) {
+// refill adds what the paths given hold for the mode, and keeps the paths as the origins of the
+// list: the folders, to watch them, and all of them to fill the list again in another section.
+// replace starts a new list; with sameOrigins it is the same list, for another section.
+async function refill(paths, replace, sameOrigins) {
   const items = paths.length ? await app().Expand(paths, state.mode) : [];
-  if (replace) clearList();
-  for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
-  for (const item of items) add(item);
+  if (replace && sameOrigins) clearRows();
+  else if (replace) clearList();
+  addOrigins(paths);
+  for (const item of items) if (!sameOrigins || !state.removed.has(item.path)) add(item);
   if (state.mode === "rename") previewNames();
   previewPacks();
   render();
 }
+function addOrigins(paths) {
+  for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
+}
 
-function clearList() {
+// clearRows empties the list; clearList also forgets where its files came from
+function clearRows() {
   state.items = [];
   state.rows.clear();
-  state.sources = [];
   state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
+}
+function clearList() {
+  clearRows();
+  state.sources = [];
+  state.removed = new Set();
 }
 
 // add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
@@ -718,6 +732,8 @@ function clearList() {
 function add(item) {
   if (state.rows.has(item.path)) return;
   if (!item.result) state.items.push(item);
+  // a file added again is no longer one taken out
+  state.removed.delete(item.path);
   const tr = document.createElement("tr");
   tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file
@@ -739,10 +755,15 @@ function add(item) {
     const gone = state.rows.get(item.path);
     state.items = state.items.filter(other => other.path !== item.path);
     state.rows.delete(item.path);
+    // taken out by hand, it stays out when another section fills the list again from its
+    // origins, and a watch is not given it
+    const origin = state.sources.includes(item.path);
+    state.sources = state.sources.filter(path => path !== item.path);
+    state.removed.add(item.path);
     // the row folds away before it goes, and comes back with Undo
     tr.classList.add("row-out");
     setTimeout(() => { tr.remove(); render(); }, calm() ? 0 : 180);
-    takenOut([item], shownName(gone || { item, game: null }));
+    takenOut([item], shownName(gone || { item, game: null }), () => { if (origin) addOrigins([item.path]); });
   };
   tr.querySelector(".remove button").onclick = remove;
   tr.addEventListener("contextmenu", event => {
@@ -1505,16 +1526,26 @@ async function main() {
     try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
     render();
   };
-  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); if (state.mode === "rename") previewNames(); previewPacks(); render(); };
-  const addFolder = async () => {
-    const items = await app().ChooseFolder(state.mode) || [];
+  // the files and the folder added are kept as origins of the list, to take them again in another
+  // section; the folder also to watch it
+  const addFiles = async () => {
+    const items = await app().ChooseFiles(state.mode) || [];
+    addOrigins(items.map(item => item.path));
     for (const item of items) add(item);
-    // the folder itself, to watch it, from where its files are
-    if (items.length) {
-      const folder = items[0].path.replace(/[\\/][^\\/]+$/, "");
-      if (!state.sources.includes(folder)) state.sources.push(folder);
-    }
     if (state.mode === "rename") previewNames();
+    previewPacks();
+    render();
+  };
+  const addFolder = async () => {
+    // the folder dialog of Save to gives the folder chosen itself, not only the files of it this
+    // section takes: one in a subfolder would else stand for it
+    const folder = await app().ChooseOutput();
+    if (!folder) return;
+    const items = await app().Expand([folder], state.mode) || [];
+    addOrigins([folder]);
+    for (const item of items) add(item);
+    if (state.mode === "rename") previewNames();
+    previewPacks();
     render();
   };
   $("add-files").onclick = $("empty-files").onclick = addFiles;
@@ -1526,10 +1557,10 @@ async function main() {
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => {
-    const items = state.items.slice();
+    const items = state.items.slice(), sources = state.sources.slice(), removed = [...state.removed];
     clearList();
     render();
-    if (items.length) takenOut(items);
+    if (items.length) takenOut(items, "", () => { addOrigins(sources); for (const path of removed) state.removed.add(path); });
   };
   $("toast-undo").onclick = undo;
   app().SetTaskbar("none", 0, 0);
