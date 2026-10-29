@@ -84,6 +84,7 @@ texts.nl = {
   needFiles: "Voeg eerst bestanden toe.", needPack: "Kies de naam van het nieuwe bestand.",
   finished: (n, f, s, k) => `${n - f - (k || 0)} van ${n} klaar` + (k ? `, ${k} overgeslagen` : "") + (f ? `, ${f} mislukt` : "") + ` in ${time(s)}.`,
   stopped: "Geannuleerd.",
+  modesLabel: "Onderdelen",
   steps: { Measuring: "Meten",
     Comparing: "Vergelijken", Estimating: "Schatten", Trimming: "Inkorten", Recompressing: "Opnieuw comprimeren", Compressing: "Comprimeren",
     Verifying: "Controleren", Decompressing: "Uitpakken", Converting: "Omzetten", Packing: "Samenvoegen", Splitting: "Splitsen", Joining: "Samenvoegen",
@@ -116,5 +117,6 @@ texts.nl = {
     uncompressedColon: ", ongecomprimeerd: ", uncompressedParen: " ongecomprimeerd (", solidComma: "solid, ", blocksComma: "in blokken, ",
     smaller: " kleiner",
     leftOut: "weggelaten uit de te bundelen games", alreadyCombined: "al gebundeld in $1 (vink „Bestaande bestanden vervangen” aan om het opnieuw te schrijven)", keptPartial: "het origineel blijft bewaard: het nieuwe bestand kon maar deels gecontroleerd worden", priorityNotLowered: "de prioriteit kon niet worden verlaagd: ", noFileTo: "geen van de opgegeven bestanden past bij deze actie", fileEmpty: "het bestand is leeg", sameNameAs: " zou dezelfde naam krijgen als ",
+    arrow: " → ", decimal: "$1,$2",
   },
 };

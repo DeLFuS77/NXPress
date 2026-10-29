@@ -84,6 +84,7 @@ texts.it = {
   needFiles: "Aggiungi prima qualche file.", needPack: "Scegli il nome del nuovo file.",
   finished: (n, f, s, k) => `${n - f - (k || 0)} di ${n} completati` + (k ? `, ${k} saltati` : "") + (f ? `, ${f} con errore` : "") + ` in ${time(s)}.`,
   stopped: "Annullato.",
+  modesLabel: "Sezioni",
   steps: { Measuring: "Misurazione",
     Comparing: "Confronto", Estimating: "Stima", Trimming: "Alleggerimento", Recompressing: "Ricompressione", Compressing: "Compressione",
     Verifying: "Verifica", Decompressing: "Decompressione", Converting: "Conversione", Packing: "Unione", Splitting: "Divisione", Joining: "Riunione",
@@ -116,5 +117,6 @@ texts.it = {
     uncompressedColon: ", non compresso: ", uncompressedParen: " non compresso (", solidComma: "solido, ", blocksComma: "a blocchi, ",
     smaller: " in meno",
     leftOut: "escluso dai giochi da unire", alreadyCombined: "già unito in $1 (spunta «Sostituisci i file esistenti» per scriverlo di nuovo)", keptPartial: "l'originale viene conservato: il nuovo file è stato controllato solo in parte", priorityNotLowered: "non è stato possibile abbassare la priorità: ", noFileTo: "nessuno dei file indicati va bene per questa azione", fileEmpty: "il file è vuoto", sameNameAs: " riceverebbe lo stesso nome di ",
+    arrow: " → ", decimal: "$1,$2",
   },
 };

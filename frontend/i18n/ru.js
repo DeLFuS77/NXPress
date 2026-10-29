@@ -91,6 +91,7 @@ texts.ru = {
   needFiles: "Сначала добавьте файлы.", needPack: "Выберите имя нового файла.",
   finished: (n, f, s, k) => `Готово ${n - f - (k || 0)} из ${n}` + (k ? `, пропущено: ${k}` : "") + (f ? `, с ошибкой: ${f}` : "") + ` за ${time(s)}.`,
   stopped: "Отменено.",
+  modesLabel: "Разделы",
   steps: { Measuring: "Измерение",
     Comparing: "Сравнение", Estimating: "Оценка", Trimming: "Обрезка", Recompressing: "Пересжатие", Compressing: "Сжатие",
     Verifying: "Проверка", Decompressing: "Распаковка", Converting: "Конвертация", Packing: "Объединение", Splitting: "Разбиение", Joining: "Сборка",
@@ -123,5 +124,6 @@ texts.ru = {
     uncompressedColon: ", без сжатия: ", uncompressedParen: " без сжатия (", solidComma: "сплошное, ", blocksComma: "блоками, ",
     smaller: " меньше",
     leftOut: "исключено из игр для упаковки", alreadyCombined: "уже упаковано в $1 (отметьте «Заменять существующие файлы», чтобы записать заново)", keptPartial: "оригинал сохранён: новый файл удалось проверить лишь частично", priorityNotLowered: "не удалось понизить приоритет: ", noFileTo: "ни один из указанных файлов не подходит для этого действия", fileEmpty: "файл пуст", sameNameAs: " получил бы то же имя, что и ",
+    arrow: " → ", decimal: "$1,$2",
   },
 };

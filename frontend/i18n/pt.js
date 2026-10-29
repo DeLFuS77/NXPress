@@ -84,6 +84,7 @@ texts.pt = {
   needFiles: "Adicione antes algum arquivo.", needPack: "Escolha o nome do arquivo novo.",
   finished: (n, f, s, k) => `${n - f - (k || 0)} de ${n} concluídos` + (k ? `, ${k} ignorados` : "") + (f ? `, ${f} com erro` : "") + ` em ${time(s)}.`,
   stopped: "Cancelado.",
+  modesLabel: "Seções",
   steps: { Measuring: "Medindo",
     Comparing: "Comparando", Estimating: "Estimando", Trimming: "Aparando", Recompressing: "Recomprimindo", Compressing: "Comprimindo",
     Verifying: "Verificando", Decompressing: "Descomprimindo", Converting: "Convertendo", Packing: "Juntando", Splitting: "Dividindo", Joining: "Unindo",
@@ -116,5 +117,6 @@ texts.pt = {
     uncompressedColon: ", sem compressão: ", uncompressedParen: " sem compressão (", solidComma: "sólido, ", blocksComma: "em blocos, ",
     smaller: " a menos",
     leftOut: "deixado fora dos jogos para juntar", alreadyCombined: "já juntado em $1 (marque «Substituir arquivos existentes» para o escrever de novo)", keptPartial: "o original é mantido: o arquivo novo só pôde ser verificado em parte", priorityNotLowered: "não foi possível baixar a prioridade: ", noFileTo: "nenhum dos arquivos indicados serve para esta ação", fileEmpty: "o arquivo está vazio", sameNameAs: " receberia o mesmo nome que ",
+    arrow: " → ", decimal: "$1,$2",
   },
 };

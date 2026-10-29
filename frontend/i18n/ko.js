@@ -84,6 +84,7 @@ texts.ko = {
   needFiles: "먼저 파일을 추가하세요.", needPack: "새 파일의 이름을 정하세요.",
   finished: (n, f, s, k) => `${n}개 중 ${n - f - (k || 0)}개 완료` + (k ? `, ${k}개 건너뜀` : "") + (f ? `, ${f}개 실패` : "") + ` (${time(s)}).`,
   stopped: "취소했습니다.",
+  modesLabel: "기능",
   steps: { Measuring: "측정 중",
     Comparing: "비교 중", Estimating: "예상 중", Trimming: "다듬는 중", Recompressing: "다시 압축 중", Compressing: "압축 중",
     Verifying: "검증 중", Decompressing: "압축 해제 중", Converting: "변환 중", Packing: "합치는 중", Splitting: "나누는 중", Joining: "합치는 중",
@@ -116,5 +117,6 @@ texts.ko = {
     uncompressedColon: ", 압축 안 함: ", uncompressedParen: " 압축 전 (", solidComma: "솔리드, ", blocksComma: "블록, ",
     smaller: " 감소",
     leftOut: "묶을 게임에서 제외됨", alreadyCombined: "이미 $1에 묶음('기존 파일 바꾸기'를 선택하면 다시 씁니다)", keptPartial: "원본은 남겨 둡니다: 새 파일은 일부만 확인할 수 있었어요", priorityNotLowered: "우선순위를 낮출 수 없었어요: ", noFileTo: "지정한 파일 중에 이 작업에 쓸 수 있는 파일이 없어요", fileEmpty: "파일이 비어 있어요", sameNameAs: " — 다음과 같은 이름이 됩니다: ",
+    arrow: " → ", decimal: "$1.$2",
   },
 };

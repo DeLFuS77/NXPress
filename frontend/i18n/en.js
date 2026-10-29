@@ -84,6 +84,7 @@ texts.en = {
   needFiles: "Add some files first.", needPack: "Choose the name of the new file.",
   finished: (n, f, s, k) => `${n - f - (k || 0)} of ${n} done` + (k ? `, ${k} skipped` : "") + (f ? `, ${f} failed` : "") + ` in ${time(s)}.`,
   stopped: "Cancelled.",
+  modesLabel: "Sections",
   steps: { Measuring: "Measuring",},
   notes: {
     onlyFileOfGame: "it is the only file of its game here: there is nothing to combine it with", packedInto: "combined into ",
@@ -91,5 +92,6 @@ texts.en = {
     notCompressibleWhy: "nothing to compress in it, left as it is", sparseSkip: "This game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is", sparseWhy: "it uses sparse storage, which no compressor reads yet", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
     measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", notMeasurableAny: "nothing in the games of the list can be compressed: add another game to measure with", alreadyThere: " is already there (tick “Replace files already there”)",
     alreadyCombined: "already combined in $1 (tick “Replace files already there” to write it again)",
+    arrow: " → ",
   },
 };

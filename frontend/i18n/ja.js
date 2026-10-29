@@ -84,6 +84,7 @@ texts.ja = {
   needFiles: "先にファイルを追加してください。", needPack: "新しいファイルの名前を選んでください。",
   finished: (n, f, s, k) => `${n} 個中 ${n - f - (k || 0)} 個完了` + (k ? `、${k} 個スキップ` : "") + (f ? `、${f} 個失敗` : "") + `（${time(s)}）。`,
   stopped: "キャンセルしました。",
+  modesLabel: "機能",
   steps: { Measuring: "測定中",
     Comparing: "照合中", Estimating: "見積もり中", Trimming: "スリム化中", Recompressing: "再圧縮中", Compressing: "圧縮中",
     Verifying: "検証中", Decompressing: "展開中", Converting: "変換中", Packing: "まとめ中", Splitting: "分割中", Joining: "結合中",
@@ -116,5 +117,6 @@ texts.ja = {
     uncompressedColon: "、非圧縮: ", uncompressedParen: "（非圧縮時 ", solidComma: "ソリッド、", blocksComma: "ブロック、",
     smaller: " 削減",
     leftOut: "まとめるゲームから外されています", alreadyCombined: "$1 にまとめ済みです（もう一度書くには「既存のファイルを置き換える」をオン）", keptPartial: "元のファイルは残します: 新しいファイルは一部しか確認できませんでした", priorityNotLowered: "優先度を下げられませんでした: ", noFileTo: "指定したファイルの中に、この操作に使えるものがありません", fileEmpty: "ファイルが空です", sameNameAs: " は次と同じ名前になります: ",
+    arrow: " → ", decimal: "$1.$2",
   },
 };

@@ -84,6 +84,7 @@ texts.zh = {
   needFiles: "请先添加文件。", needPack: "请选择新文件的名称。",
   finished: (n, f, s, k) => `已完成 ${n - f - (k || 0)}/${n}` + (k ? `,${k} 个已跳过` : "") + (f ? `，${f} 个失败` : "") + `，用时 ${time(s)}。`,
   stopped: "已取消。",
+  modesLabel: "功能",
   steps: { Measuring: "测试中",
     Comparing: "比对中", Estimating: "估算中", Trimming: "精简中", Recompressing: "重新压缩中", Compressing: "压缩中",
     Verifying: "校验中", Decompressing: "解压中", Converting: "转换中", Packing: "合并中", Splitting: "分片中", Joining: "合并分片中",
@@ -116,5 +117,6 @@ texts.zh = {
     uncompressedColon: "，未压缩：", uncompressedParen: " 未压缩（", solidComma: "固实，", blocksComma: "分块，",
     smaller: " 更小",
     leftOut: "已从要打包的游戏中排除", alreadyCombined: "已打包到 $1（勾选“替换已有文件”可重新写入）", keptPartial: "保留原文件：新文件只能部分校验", priorityNotLowered: "无法降低优先级：", noFileTo: "给出的文件中没有适用于此操作的文件", fileEmpty: "文件为空", sameNameAs: " 的新名称将与以下文件相同：",
+    arrow: " → ", decimal: "$1.$2",
   },
 };

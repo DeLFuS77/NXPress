@@ -80,4 +80,7 @@ const noteRules = [
   [/^solid, /, "solidComma"],
   [/^in blocks, /, "blocksComma"],
   [/ smaller/g, "smaller"],
+  // the figures of the notes as the language writes them: its decimal mark, and an arrow
+  [/(\d)\.(\d)(?= ?(?:B|KB|MB|GB|TB)\b|%)/g, "decimal"],
+  [/ -> /g, "arrow"],
 ];

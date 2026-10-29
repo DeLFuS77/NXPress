@@ -115,13 +115,21 @@ const samples = [
   ["Game.nsp would get the same name as Game (2).nsp", "would get the same name"],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 40 s at level 3", " at level "],
+  ["8.0 MB -> 42.3 KB, 99.5% smaller", " -> "],
 ];
+// in English too: what the window says in its own words
+const ownEnglish = ["-w", " -> "];
 for (const [note, english] of samples) {
   for (const code of codes) {
     const text = noteText(note, code);
     if (/\$\d/.test(text)) say(code + ": " + note + " gives " + text);
-    if ((code !== "en" || english === "-w") && text.includes(english)) say(code + ": " + note + " keeps " + english + ": " + text);
+    if ((code !== "en" || ownEnglish.includes(english)) && text.includes(english)) say(code + ": " + note + " keeps " + english + ": " + text);
   }
+}
+// the decimal mark of the language, as the page writes its own sizes
+for (const code of ["es", "fr", "de", "it", "pt", "nl", "ru"]) {
+  const text = noteText("8.0 MB -> 42.3 KB, 99.5% smaller", code);
+  if (!text.includes("8,0 MB") || !text.includes("42,3 KB") || !text.includes("99,5%")) say(code + ": the figures of a note keep their point: " + text);
 }
 
 // the texts the page asks for by name are there

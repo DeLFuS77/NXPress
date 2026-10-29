@@ -84,6 +84,7 @@ texts.de = {
   needFiles: "Füge zuerst Dateien hinzu.", needPack: "Wähle den Namen der neuen Datei.",
   finished: (n, f, s, k) => `${n - f - (k || 0)} von ${n} fertig` + (k ? `, ${k} übersprungen` : "") + (f ? `, ${f} mit Fehler` : "") + ` in ${time(s)}.`,
   stopped: "Abgebrochen.",
+  modesLabel: "Bereiche",
   steps: { Measuring: "Messe",
     Comparing: "Vergleiche", Estimating: "Schätze", Trimming: "Verkleinere", Recompressing: "Komprimiere neu", Compressing: "Komprimiere",
     Verifying: "Prüfe", Decompressing: "Entpacke", Converting: "Wandle um", Packing: "Fasse zusammen", Splitting: "Teile", Joining: "Verbinde",
@@ -116,5 +117,6 @@ texts.de = {
     uncompressedColon: ", unkomprimiert: ", uncompressedParen: " unkomprimiert (", solidComma: "solid, ", blocksComma: "in Blöcken, ",
     smaller: " kleiner",
     leftOut: "aus den zu packenden Spielen herausgenommen", alreadyCombined: "schon gepackt in $1 (kreuze „Vorhandene Dateien ersetzen“ an, um es neu zu schreiben)", keptPartial: "das Original bleibt erhalten: die neue Datei konnte nur zum Teil geprüft werden", priorityNotLowered: "die Priorität konnte nicht gesenkt werden: ", noFileTo: "keine der angegebenen Dateien passt zu dieser Aktion", fileEmpty: "die Datei ist leer", sameNameAs: " bekäme denselben Namen wie ",
+    arrow: " → ", decimal: "$1,$2",
   },
 };

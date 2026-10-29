@@ -97,11 +97,15 @@ function time(seconds) {
   const m = Math.floor(seconds / 60), s = seconds % 60;
   return m < 60 ? `${m} min ${s} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
 }
+// a size with the decimal mark of the language chosen (8,0 MB in Spanish)
+const sizeFormats = {};
 function size(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes, unit = 0;
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
-  return value.toFixed(unit ? 1 : 0) + " " + units[unit];
+  const digits = unit ? 1 : 0, key = state.language + digits;
+  sizeFormats[key] = sizeFormats[key] || new Intl.NumberFormat(state.language, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
+  return sizeFormats[key].format(value) + " " + units[unit];
 }
 // a path in a field cut at its start (direction: rtl) keeps its order with a mark of left to
 // right at both ends: else "E:\Games" shows as "\Games:E" and brackets turn round
@@ -626,6 +630,7 @@ function render() {
   }
   $("language-select").value = state.language;
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
+  if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   // the list as rows, or as a grid of covers
   const view = load("view", "list") === "grid" ? "grid" : "list";
@@ -908,12 +913,12 @@ function paint(row) {
   const icon = row.tr.querySelector(".icon");
   if (row.game && row.game.name) {
     title.textContent = row.game.name;
-    file.textContent = `${row.game.titleId} · v${row.game.version} · ${row.game.type} · ${row.item.name}`;
+    file.textContent = `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)} · ${row.item.name}`;
   } else {
     // the name of the file without its [title ID][version] tags, which go under it
     const tags = row.item.name.match(/(\s*\[[^\]]*\])+\s*$/);
     title.textContent = tags ? row.item.name.slice(0, tags.index).trim() || row.item.name : row.item.name;
-    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : tags ? tags[0].trim() : "";
+    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)}` : tags ? tags[0].trim() : "";
   }
   // a warning of the list shows until the file is worked on
   let warn = row.tr.querySelector(".list-warn");
@@ -1415,7 +1420,7 @@ function keepReportStatus(status) {
 }
 function showReport() {
   const kept = load("lastReport", null, isReport);
-  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : t(kept.mode) || kept.mode}` : "";
+  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : kept.mode === "estimate" ? t("estimateButton") : t(kept.mode) || kept.mode}` : "";
   $("report-status").textContent = kept ? kept.status : t("noReport");
   $("report-copy").hidden = !kept;
   // a long report: how many of each, the problems first, and only them when there are some
@@ -1526,6 +1531,8 @@ async function checkUpdate() {
   if (!$("updates").checked) return;
   const update = await app().CheckUpdate();
   if (!update || !update.version || load("dismissedUpdate", "") === update.version) return;
+  // kept, to tell it again in another language
+  state.update = update;
   $("update-text").textContent = t("updateFound")(update.version);
   $("update-get").onclick = () => app().OpenURL(update.url);
   $("update-close").onclick = () => { save("dismissedUpdate", update.version); $("update-banner").hidden = true; };
@@ -1555,7 +1562,8 @@ async function main() {
   state.language = load("language", texts[system] ? system : "en");
   if (!texts[state.language]) state.language = "en";
   for (const [code, name] of languages) if (texts[code]) $("language-select").append(new Option(name, code));
-  $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); };
+  // another language tells again what is shown: the new version and the games to combine too
+  $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); previewPacks(); };
   state.mode = modes.includes(load("mode", "")) ? load("mode", "") : "compress";
   const chosen = load("settings", {});
   // a field of the settings kept is taken only when it is of its kind
