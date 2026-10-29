@@ -374,6 +374,10 @@ function shownName(row) {
 let toastTimer = 0;
 let undoLast = null;
 function showToast(text, undo) {
+  // a notice waits for the dialog open (the card at the end of a work) to close, so it is not
+  // shown under it, as the library app does
+  const dialog = document.querySelector("dialog[open]");
+  if (dialog) { dialog.addEventListener("close", () => showToast(text, undo), { once: true }); return; }
   clearTimeout(toastTimer);
   $("toast-text").textContent = text;
   $("toast-undo").hidden = !undo;
