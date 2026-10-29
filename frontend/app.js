@@ -474,10 +474,12 @@ function showDone(event, status) {
   const output = rows.find(row => row.output);
   $("done-folder").hidden = !output;
   $("done-folder").onclick = () => { if (output) app().ShowFile(output.output); };
-  // the card wears the color of the game that saved the most
-  const best = savings.length ? savings[0].row : rows.find(row => row.game && row.game.icon);
+  // the card wears the color of the game that saved the most; with nothing saved it stays
+  // neutral, and red only when every file failed
+  const best = savings.length ? savings[0].row : null;
   const tone = best && best.game && coverTone(best.game);
-  $("done-dialog").style.setProperty("--done-tone", tone || "var(--ok)");
+  const allFailed = rows.every(row => row.status === "failed");
+  $("done-dialog").style.setProperty("--done-tone", saved > 0 ? tone || "var(--ok)" : allFailed ? "var(--bad)" : "var(--tone-neutral)");
   // after the third work that saved space, once and never again: a star on GitHub
   const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
   save("worksSaved", works);
