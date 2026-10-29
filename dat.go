@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
@@ -15,6 +18,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 )
 
 // datRom is a file a DAT lists: the dump of a game, with its size and hashes.
@@ -33,15 +37,42 @@ type dat struct {
 	count int
 }
 
-// loadDat reads a DAT file.
+// errClrmamepro is told for a DAT in the text format of clrmamepro, which is not XML.
+var errClrmamepro = errors.New("the DAT is in the text format of clrmamepro: only DATs in the XML of Logiqx can be read, as No-Intro publishes them")
+
+// loadDat reads a DAT file: in UTF-8, in UTF-16 (told by its first bytes) or in ISO-8859-1 and
+// windows-1252, as its XML declaration says.
 func loadDat(path string) (*dat, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
+	input := bufio.NewReader(file)
+	var text io.Reader = input
+	start, _ := input.Peek(512)
+	start = bytes.Clone(start)
+	switch {
+	case bytes.HasPrefix(start, []byte{0xEF, 0xBB, 0xBF}):
+		// the mark of UTF-8, left out to see what the DAT begins with
+		input.Discard(3)
+		start = start[3:]
+	case bytes.HasPrefix(start, []byte{0xFF, 0xFE}), bytes.HasPrefix(start, []byte{0xFE, 0xFF}),
+		bytes.HasPrefix(start, []byte{'<', 0}), bytes.HasPrefix(start, []byte{0, '<'}):
+		all, err := io.ReadAll(input)
+		if err != nil {
+			return nil, err
+		}
+		decoded := []byte(fromUTF16(all))
+		text = bytes.NewReader(decoded)
+		start = decoded[:min(len(decoded), 512)]
+	}
+	if begin := bytes.ToLower(bytes.TrimSpace(start)); bytes.HasPrefix(begin, []byte("clrmamepro")) || bytes.HasPrefix(begin, []byte("game (")) {
+		return nil, errClrmamepro
+	}
 	result := &dat{roms: map[int64][]datRom{}}
-	decoder := xml.NewDecoder(file)
+	decoder := xml.NewDecoder(text)
+	decoder.CharsetReader = datCharset
 	game := ""
 	inHeader := false
 	for {
@@ -92,6 +123,54 @@ func loadDat(path string) (*dat, error) {
 		return nil, errors.New("the DAT lists no file with its hashes")
 	}
 	return result, nil
+}
+
+// fromUTF16 turns text in UTF-16 into a string: little endian, unless its mark or its first
+// letter tells big endian. The mark is left out.
+func fromUTF16(data []byte) string {
+	order := binary.ByteOrder(binary.LittleEndian)
+	if bytes.HasPrefix(data, []byte{0xFE, 0xFF}) || bytes.HasPrefix(data, []byte{0, '<'}) {
+		order = binary.BigEndian
+	}
+	units := make([]uint16, 0, len(data)/2)
+	for i := 0; i+1 < len(data); i += 2 {
+		units = append(units, order.Uint16(data[i:]))
+	}
+	if len(units) > 0 && units[0] == 0xFEFF {
+		units = units[1:]
+	}
+	return string(utf16.Decode(units))
+}
+
+// windows1252 are the letters windows-1252 has from 0x80 to 0x9F, where ISO-8859-1 has control
+// characters that DATs do not use: a DAT said to be in ISO-8859-1 is read as windows-1252, as
+// browsers read such pages.
+var windows1252 = [32]rune{
+	'€', 0x81, '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', 0x8D, 'Ž', 0x8F,
+	0x90, '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', 0x9D, 'ž', 'Ÿ',
+}
+
+// datCharset reads the rest of a DAT in the encoding its XML declaration says.
+func datCharset(charset string, input io.Reader) (io.Reader, error) {
+	switch strings.ToLower(charset) {
+	case "iso-8859-1", "iso8859-1", "iso_8859-1", "latin1", "latin-1", "l1", "windows-1252", "cp1252", "us-ascii", "ascii":
+		data, err := io.ReadAll(input)
+		if err != nil {
+			return nil, err
+		}
+		text := make([]rune, len(data))
+		for i, b := range data {
+			text[i] = rune(b)
+			if b >= 0x80 && b < 0xA0 {
+				text[i] = windows1252[b-0x80]
+			}
+		}
+		return strings.NewReader(string(text)), nil
+	case "utf-16", "utf-16le", "utf-16be", "unicode":
+		// turned into UTF-8 already, told by its first bytes
+		return input, nil
+	}
+	return nil, errors.New("DATs in UTF-8, UTF-16, ISO-8859-1 and windows-1252 can be read")
 }
 
 func attribute(element xml.StartElement, name string) string {
