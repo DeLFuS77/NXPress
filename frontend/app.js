@@ -832,6 +832,7 @@ function sortRows() {
   for (const th of document.querySelectorAll("#files th[data-sort]")) {
     th.classList.toggle("sorted", th.dataset.sort === key);
     th.classList.toggle("desc", th.dataset.sort === key && dir < 0);
+    th.setAttribute("aria-sort", th.dataset.sort !== key ? "none" : dir < 0 ? "descending" : "ascending");
   }
   if (state.busy && key === "state") return;
   const rows = [...state.rows.values()];
@@ -1677,7 +1678,8 @@ async function main() {
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
-  // a click on a column sorts the list by it (see sortRows)
+  // a click on a column sorts the list by it (see sortRows); Enter or Space on the button of its
+  // header click it too
   for (const th of document.querySelectorAll("#files th[data-sort]")) th.onclick = () => {
     const { key, dir } = state.sort;
     state.sort = key !== th.dataset.sort ? { key: th.dataset.sort, dir: 1 } : dir > 0 ? { key, dir: -1 } : { key: "", dir: 1 };

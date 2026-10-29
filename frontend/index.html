@@ -76,7 +76,8 @@
         <p class="lifetime" id="lifetime" hidden></p>
       </div>
       <table id="files" hidden>
-        <thead><tr><th data-t="file" data-sort="name" data-t-title="sortHint"></th><th class="size" data-t="size" data-sort="size" data-t-title="sortHint"></th><th class="state" data-t="state" data-sort="state" data-t-title="sortHint"></th><th></th></tr></thead>
+        <!-- a column sorts with a button in its header, for the keyboard too; the button wears the letter and the color of the header -->
+        <thead><tr><th data-sort="name" data-t-title="sortHint" aria-sort="none"><button data-t="file" style="font: inherit; color: inherit; background: none; border: 0; border-radius: 0; padding: 0; transform: none"></button></th><th class="size" data-sort="size" data-t-title="sortHint" aria-sort="none"><button data-t="size" style="font: inherit; color: inherit; background: none; border: 0; border-radius: 0; padding: 0; transform: none"></button></th><th class="state" data-sort="state" data-t-title="sortHint" aria-sort="none"><button data-t="state" style="font: inherit; color: inherit; background: none; border: 0; border-radius: 0; padding: 0; transform: none"></button></th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
