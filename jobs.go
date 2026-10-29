@@ -392,7 +392,19 @@ func free(o options, path string) error {
 	return nil
 }
 
+// errEmpty is a file of 0 bytes, a copy that never happened: told plainly, before it is read.
+var errEmpty = errors.New("the file is empty")
+
+// isEmpty tells whether path is a file of 0 bytes (a folder of parts is not).
+func isEmpty(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular() && info.Size() == 0
+}
+
 func doJob(ctx context.Context, action string, path string, o options, threads int, out output) (string, string, error) {
+	if isEmpty(path) {
+		return "", "", errEmpty
+	}
 	switch action {
 	case "compress":
 		return compress(ctx, path, o, threads, out)
@@ -1409,6 +1421,9 @@ func packKind(sources []string) (string, error) {
 	}
 	compressed := false
 	for _, source := range sources {
+		if isEmpty(source) {
+			return "", fmt.Errorf("%s: %w", filepath.Base(source), errEmpty)
+		}
 		if facts, err := switchfs.DescribeFile(source); err != nil {
 			return "", err
 		} else if facts.Solid+facts.Blocks > 0 {

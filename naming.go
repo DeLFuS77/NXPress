@@ -48,6 +48,9 @@ type gameTitle struct {
 
 // readTitles reads the titles a game file holds.
 func readTitles(path string) ([]*switchfs.ContentMetaAttributes, error) {
+	if isEmpty(path) {
+		return nil, errEmpty
+	}
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
