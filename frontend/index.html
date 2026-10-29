@@ -17,14 +17,14 @@
 <div id="update-banner" class="topbar" hidden>
   <span id="update-text"></span>
   <button id="update-get" class="primary small" data-t="updateGet"></button>
-  <button id="update-close" class="quiet icon" data-t-title="dismiss">✕</button>
+  <button id="update-close" class="quiet icon" data-t-title="dismiss" data-t-label="dismiss">✕</button>
 </div>
 
 <main>
   <nav aria-label="Modes">
     <div id="modes"></div>
     <div class="side-foot">
-      <button id="open-preferences" class="side-item"><span class="tile tone-neutral"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b data-t="preferences"></b></button>
+      <button id="open-preferences" class="side-item" data-t-label="preferences" data-t-title="preferences"><span class="tile tone-neutral"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b data-t="preferences"></b></button>
       <button id="keys" class="side-keys"></button>
     </div>
   </nav>
@@ -108,7 +108,7 @@
         <div class="label" data-t="presets"></div>
         <div class="presets-row">
           <select id="preset"></select>
-          <button id="preset-delete" class="quiet icon" data-t-title="presetDelete">🗑</button>
+          <button id="preset-delete" class="quiet icon" data-t-title="presetDelete" data-t-label="presetDelete">🗑</button>
         </div>
         <div class="presets-row" id="preset-new">
           <input id="preset-name" type="text" maxlength="40">
@@ -116,8 +116,8 @@
         </div>
       </div>
       <div class="field">
-        <div class="level-head"><span data-t="level"></span><b id="level-value"></b></div>
-        <input id="level" type="range" min="1" max="19" aria-labelledby="level-value">
+        <div class="level-head"><span id="level-name" data-t="level"></span><b id="level-value"></b></div>
+        <input id="level" type="range" min="1" max="19" aria-labelledby="level-name">
         <div class="ends muted"><span data-t="faster"></span><span data-t="smaller"></span></div>
         <div class="segmented levels"><button data-level="3"><span data-t="light"></span><small>1–6</small></button><button data-level="12"><span data-t="medium"></span><small>7–14</small></button><button data-level="19"><span data-t="maximum"></span><small>15–19</small></button></div>
         <div class="gauge" aria-hidden="true">
@@ -165,7 +165,7 @@
 
     <section class="block" data-for="verify">
       <h2 data-t="datTitle"></h2>
-      <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon">✕</button></div>
+      <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon" data-t-title="noDat" data-t-label="noDat">✕</button></div>
       <p class="hint" data-t="datHint"></p>
       <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
       <p class="hint" data-t="noCacheHint"></p>
@@ -197,7 +197,7 @@
       <h2 data-t="result"></h2>
       <div class="field" id="output-field" data-for="compress decompress recompress trim convert split fat32 pack">
         <div class="label" data-t="output"></div>
-        <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon">✕</button></div>
+        <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon" data-t-label="nextTo">✕</button></div>
       </div>
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
       <label class="check danger" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>

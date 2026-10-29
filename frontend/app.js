@@ -379,10 +379,29 @@ function showRowMenu(row, remove, x, y) {
   menu.style.left = Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8)) + "px";
   menu.style.top = Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8)) + "px";
   replay("enter", menu);
+  // what had the focus gets it back when the menu closes
+  if (!menu.contains(document.activeElement)) menuOpener = document.activeElement;
   menu.querySelector("button:not(:disabled)")?.focus();
 }
+let menuOpener = null;
 function hideRowMenu() {
-  $("row-menu").hidden = true;
+  const menu = $("row-menu");
+  if (menu.hidden) return;
+  const inside = menu.contains(document.activeElement);
+  menu.hidden = true;
+  if (inside) refocus(menuOpener);
+  menuOpener = null;
+}
+// refocus gives the focus back to an element that had it, when it can still take it
+function refocus(element) {
+  if (element && element !== document.body && element.isConnected && !element.disabled && !element.closest("[hidden]")) element.focus({ preventScroll: true });
+}
+// openDialog opens a dialog over the window and, once closed, gives the focus back to what
+// opened it (once the work it started has drawn the window again)
+function openDialog(dialog, opener = document.activeElement) {
+  if (dialog.open) return;
+  dialog.addEventListener("close", () => setTimeout(() => refocus(opener)), { once: true });
+  dialog.showModal();
 }
 
 // the name of a file to show: the one of its game when read, else its name without [ID][version]
@@ -459,7 +478,7 @@ function showDone(event, status) {
   const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
   save("worksSaved", works);
   $("done-star").hidden = works < 3 || load("starAsked", false);
-  $("done-dialog").showModal();
+  openDialog($("done-dialog"));
 }
 
 // the notes of the results, which come in English, in the language chosen
@@ -546,6 +565,10 @@ function render() {
   document.documentElement.lang = state.language;
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
+  // the name of a button that shows an icon, or no text on a narrow window
+  document.querySelectorAll("[data-t-label]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.tLabel)); });
+  // the section chosen with the keyboard keeps the focus while the menu is drawn again
+  const focused = $("modes").contains(document.activeElement) ? document.activeElement.dataset.mode : "";
   $("modes").innerHTML = "";
   for (const [group, members] of groups) {
     const title = document.createElement("div");
@@ -555,6 +578,7 @@ function render() {
     for (const mode of members) {
       const button = document.createElement("button");
       button.innerHTML = tile(mode, group) + "<span><b></b><small></small></span>";
+      button.dataset.mode = mode;
       button.querySelector("b").textContent = t(mode);
       // the menu keeps its tiles only on a narrow window: the name shows on hover
       button.title = t(mode);
@@ -576,6 +600,7 @@ function render() {
       $("modes").append(button);
     }
   }
+  if (focused) $("modes").querySelector(`[data-mode="${focused}"]`)?.focus({ preventScroll: true });
   document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
   // the page of the settings takes the place of the section and its options
   const preferences = state.view === "preferences";
@@ -627,6 +652,8 @@ function render() {
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
   $("level-value").textContent = $("level").value;
+  // the slider tells its level with the band it falls in
+  $("level").setAttribute("aria-valuetext", `${level} · ${t({ 3: "light", 12: "medium", 19: "maximum" }[band])}`);
   $("level-hint").textContent = t("levelHint")(level);
   // what the level trades, as a picture: higher levels make smaller files, more slowly
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
@@ -994,12 +1021,18 @@ function paint(row) {
   renderCard(row);
   if (row.output) {
     if (note.textContent) note.append(" · ");
+    // a link with somewhere to go, so the keyboard reaches it; it opens the folder, not a page
     const link = document.createElement("a");
+    link.href = "#";
     link.textContent = t("showFolder");
     link.title = row.output;
-    link.onclick = () => app().ShowFile(row.output);
+    link.onclick = event => { event.preventDefault(); app().ShowFile(row.output); };
     note.append(link);
   }
+  // the button that takes the file out of the list says so, in the language chosen
+  const remove = row.tr.querySelector(".remove button");
+  remove.title = t("menuRemove");
+  remove.setAttribute("aria-label", t("menuRemove"));
 }
 
 // rowOf is the row of a file the work tells about, added when the list has none: a file a watch
@@ -1144,11 +1177,13 @@ async function start(mode, extra) {
   const watch = !!request.watch;
   // a new work keeps the computer on: the count of the turning off asked by the work before stops
   if (state.shutdownAt) keepOn();
-  // while the space is looked at, the work is starting: its buttons wait
+  // while the space is looked at, the work is starting: its buttons wait (the one pressed gets
+  // the focus back after the dialog of the space)
+  const opener = document.activeElement;
   state.starting = true;
   render();
   let allowed = false;
-  try { allowed = await spaceAllows(request); } finally { state.starting = false; }
+  try { allowed = await spaceAllows(request, opener); } finally { state.starting = false; }
   if (!allowed) { render(); return; }
   // the work is marked as running before NXPress is asked to start it, as its first events (and
   // the end of a quick one) can come before the answer; what changes is put back if it does not
@@ -1192,7 +1227,7 @@ async function start(mode, extra) {
 
 // spaceAllows tells, before anything is written, the drives where the new files may not fit,
 // and starts only when asked to; a file that fills its drive fails, and its original stays
-function spaceAllows(request) {
+function spaceAllows(request, opener) {
   return app().SpaceCheck(request).then(short => {
     if (!short || !short.length) return true;
     const list = $("space-list");
@@ -1207,7 +1242,7 @@ function spaceAllows(request) {
     return new Promise(resolve => {
       $("space-start").onclick = () => { resolve(true); $("space-dialog").close(); };
       $("space-dialog").onclose = () => resolve(false);
-      $("space-dialog").showModal();
+      openDialog($("space-dialog"), opener);
     });
   }).catch(() => true);
 }
@@ -1233,7 +1268,7 @@ function showMeasure(report) {
   // a heavier setting a little faster was not taken: the window tells why
   $("measure-kept").hidden = !report.faster;
   if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
-  $("measure-dialog").showModal();
+  openDialog($("measure-dialog"));
 }
 
 // the report of the last work, to paste in an issue or a thread
@@ -1401,7 +1436,7 @@ function showReport() {
   $("report-problems").checked = problems > 0 && problems < all.length;
   $("report-problems").onchange = () => paintReport(all, order);
   paintReport(all, order);
-  $("report-dialog").showModal();
+  openDialog($("report-dialog"));
 }
 function paintReport(all, order) {
   const onlyProblems = $("report-problems").checked;
