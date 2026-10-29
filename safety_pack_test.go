@@ -21,9 +21,9 @@ func safetyTicket(fill byte) []byte {
 	return data
 }
 
-// A SuperNSP with two versions of an update, packed with a DLC and --rm-source: the pack
-// loses the ticket of the update it keeps, so the originals stay, and the note says why.
-func TestPackKeepsTheOriginalsWhenItLacksATicket(t *testing.T) {
+// A SuperNSP with two versions of an update, packed with a DLC and --rm-source: the pack keeps
+// the ticket of the update it keeps, so it holds everything and the originals go.
+func TestPackOfTwoVersionsKeepsTheTicketOfTheNewest(t *testing.T) {
 	safetyIsolate(t)
 	folder := t.TempDir()
 	ticket := "0100000000010800000000000000000a.tik"
@@ -39,19 +39,36 @@ func TestPackKeepsTheOriginalsWhenItLacksATicket(t *testing.T) {
 	os.Remove(v2)
 	dlc := safetyTitleNsp(t, filepath.Join(folder, "d.nsp"), safetyDlcID, 0, switchfs.ContentMetaType_AddOnContent, 3, nil)
 	packed := filepath.Join(folder, "pack.nsp")
-	out := &safetyResults{}
-	if err := pack(context.Background(), options{pack: packed, rmSource: true, files: []string{super, dlc}}, out); err != nil {
+	if err := pack(context.Background(), options{pack: packed, rmSource: true, files: []string{super, dlc}}, quiet{}); err != nil {
 		t.Fatal(err)
 	}
-	lacks, err := packLacks(packed, []string{super, dlc})
+	contents, err := switchfs.ReadPfs0File(packed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasTicket := false
+	for _, file := range contents.Files {
+		hasTicket = hasTicket || file.Name == ticket
+	}
+	if !hasTicket {
+		t.Fatalf("the pack lost the ticket of the update it keeps")
+	}
+	if left := safetyList(folder); !reflect.DeepEqual(left, []string{"pack.nsp"}) {
+		t.Fatalf("left: %v", left)
+	}
+}
+
+// A pack without the ticket an original had is told as lacking it, whatever made it so: its
+// originals then stay.
+func TestPackLacksTellsAMissingTicket(t *testing.T) {
+	safetyIsolate(t)
+	folder := t.TempDir()
+	ticket := "0100000000010800000000000000000a.tik"
+	original := safetyTitleNsp(t, filepath.Join(folder, "u.nsp"), safetyUpdateID, 65536, switchfs.ContentMetaType_Patch, 2, map[string][]byte{ticket: safetyTicket(1)})
+	without := safetyTitleNsp(t, filepath.Join(folder, "pack.nsp"), safetyUpdateID, 65536, switchfs.ContentMetaType_Patch, 2, nil)
+	lacks, err := packLacks(without, []string{original})
 	if err != nil || !reflect.DeepEqual(lacks, []string{"the ticket of 0100000000010800"}) {
 		t.Fatalf("the pack lacks %v, %v", lacks, err)
-	}
-	if !safetyExists(super) || !safetyExists(dlc) {
-		t.Fatalf("an original was deleted: %v", safetyList(folder))
-	}
-	if note := out.results[packed].note; !strings.Contains(note, "the originals are kept: the pack lacks the ticket of 0100000000010800") {
-		t.Fatalf("note %q", note)
 	}
 }
 
