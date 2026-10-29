@@ -59,12 +59,33 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
-  setup: null, sources: [], paused: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
-function load(name, fallback) {
-  try { const value = localStorage.getItem("nxpress." + name); return value === null ? fallback : JSON.parse(value); } catch { return fallback; }
+// load gives a value kept by the page, or fallback when there is none or it is not what valid
+// expects (by default, a value of the kind of fallback): a value spoilt by hand or by another
+// version must not stop the window
+function load(name, fallback, valid = sameKind(fallback)) {
+  try {
+    const value = localStorage.getItem("nxpress." + name);
+    if (value === null) return fallback;
+    const parsed = JSON.parse(value);
+    return valid(parsed) ? parsed : fallback;
+  } catch { return fallback; }
 }
+function sameKind(fallback) {
+  if (fallback === null) return () => true;
+  if (Array.isArray(fallback)) return Array.isArray;
+  if (typeof fallback === "object") return value => !!value && typeof value === "object" && !Array.isArray(value);
+  return value => typeof value === typeof fallback;
+}
+// the checks of the values kept that hold more than one value
+const isObject = value => !!value && typeof value === "object" && !Array.isArray(value);
+const isLifetime = value => isObject(value) && Number.isFinite(value.bytes) && Number.isFinite(value.files);
+const isReport = value => isObject(value) && Array.isArray(value.rows) && value.rows.every(row => isObject(row) && ["ok", "failed", "skipped", "cancelled"].includes(row.status));
+const isPending = value => isObject(value) && modes.includes(value.mode) && isObject(value.request) && Array.isArray(value.request.files);
+// the settings saved with a name, the ones that can be read
+const savedPresets = () => load("presets", []).filter(preset => isObject(preset) && typeof preset.name === "string" && Number.isFinite(preset.level));
 function save(name, value) {
   try { localStorage.setItem("nxpress." + name, JSON.stringify(value)); } catch { }
 }
@@ -76,12 +97,20 @@ function time(seconds) {
   const m = Math.floor(seconds / 60), s = seconds % 60;
   return m < 60 ? `${m} min ${s} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
 }
+// a size with the decimal mark of the language chosen (8,0 MB in Spanish)
+const sizeFormats = {};
 function size(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes, unit = 0;
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
-  return value.toFixed(unit ? 1 : 0) + " " + units[unit];
+  const digits = unit ? 1 : 0, key = state.language + digits;
+  sizeFormats[key] = sizeFormats[key] || new Intl.NumberFormat(state.language, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
+  return sizeFormats[key].format(value) + " " + units[unit];
 }
+// a path in a field cut at its start (direction: rtl) keeps its order with a mark of left to
+// right at both ends: else "E:\Games" shows as "\Games:E" and brackets turn round
+const ltr = path => "\u200E" + path + "\u200E";
+
 // what to do about an error, by what it says
 function adviceFor(error) {
   const text = error.toLowerCase();
@@ -98,7 +127,7 @@ function adviceFor(error) {
 const milestones = [100, 250, 500, 1024, 2048, 5120, 10240].map(gb => gb * 2 ** 30);
 function keepSaved(bytes, files) {
   if (bytes <= 0) return;
-  const before = load("lifetime", { bytes: 0, files: 0 });
+  const before = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const after = { bytes: before.bytes + bytes, files: before.files + files };
   save("lifetime", after);
   // crossing a milestone is told once, with the bar of actions glowing
@@ -108,7 +137,7 @@ function keepSaved(bytes, files) {
 // the space saved since always, on the empty list; it counts up the first time it shows
 let lifetimeShown = false, lifetimeAt = 0;
 function renderLifetime() {
-  const kept = load("lifetime", { bytes: 0, files: 0 });
+  const kept = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const element = $("lifetime");
   element.hidden = !(kept.bytes > 0);
   if (element.hidden) return;
@@ -125,13 +154,32 @@ function renderLifetime() {
 // the speed of the work: the bytes done each second, for a line of the last minute and the time
 // left; and the progress on the button of the taskbar
 const speed = { samples: [], last: 0, at: 0, taskbarAt: 0 };
+// workRows are the rows of the work running, by the start they wear: the files it was given
+// (renamed ones too) and the ones a watch or a measure took; of a pack of one file only its new
+// file, which tells the progress of all
+function workRows() {
+  const run = state.lastRun;
+  if (!run) return [];
+  const rows = [...state.rows.values()].filter(row => row.run === run.started);
+  return onePack(run) ? rows.filter(row => row.item.result) : rows;
+}
+// rowShare is how far a file of the work is, from 0 to 1: a file in steps (the work, then the
+// check of what it wrote) counts each step as its part, so it does not fall back at the check
+function rowShare(row) {
+  if (["ok", "failed", "skipped"].includes(row.status)) return 1;
+  if (row.status !== "work" || !row.total) return 0;
+  const share = Math.min(1, row.done / row.total);
+  const steps = stepsOf(row);
+  const index = steps.indexOf((row.step || "").split(" ")[0]);
+  return steps.length > 1 && index >= 0 ? (index + share) / steps.length : share;
+}
 function workDone() {
   let done = 0, total = 0;
-  for (const row of state.rows.values()) {
-    if (!["waiting", "work", "ok", "failed", "skipped"].includes(row.status)) continue;
-    const bytes = row.total || row.item.size || 0;
+  for (const row of workRows()) {
+    // a file weighs its size; the new file of a pack, the size of the files it is made of
+    const bytes = (row.item.result ? state.lastRun.bytes : row.item.size) || row.total || 0;
     total += bytes;
-    done += ["ok", "failed", "skipped"].includes(row.status) ? bytes : Math.min(row.done || 0, bytes);
+    done += rowShare(row) * bytes;
   }
   return { done, total };
 }
@@ -335,10 +383,29 @@ function showRowMenu(row, remove, x, y) {
   menu.style.left = Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8)) + "px";
   menu.style.top = Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8)) + "px";
   replay("enter", menu);
+  // what had the focus gets it back when the menu closes
+  if (!menu.contains(document.activeElement)) menuOpener = document.activeElement;
   menu.querySelector("button:not(:disabled)")?.focus();
 }
+let menuOpener = null;
 function hideRowMenu() {
-  $("row-menu").hidden = true;
+  const menu = $("row-menu");
+  if (menu.hidden) return;
+  const inside = menu.contains(document.activeElement);
+  menu.hidden = true;
+  if (inside) refocus(menuOpener);
+  menuOpener = null;
+}
+// refocus gives the focus back to an element that had it, when it can still take it
+function refocus(element) {
+  if (element && element !== document.body && element.isConnected && !element.disabled && !element.closest("[hidden]")) element.focus({ preventScroll: true });
+}
+// openDialog opens a dialog over the window and, once closed, gives the focus back to what
+// opened it (once the work it started has drawn the window again)
+function openDialog(dialog, opener = document.activeElement) {
+  if (dialog.open) return;
+  dialog.addEventListener("close", () => setTimeout(() => refocus(opener)), { once: true });
+  dialog.showModal();
 }
 
 // the name of a file to show: the one of its game when read, else its name without [ID][version]
@@ -351,6 +418,10 @@ function shownName(row) {
 let toastTimer = 0;
 let undoLast = null;
 function showToast(text, undo) {
+  // a notice waits for the dialog open (the card at the end of a work) to close, so it is not
+  // shown under it, as the library app does
+  const dialog = document.querySelector("dialog[open]");
+  if (dialog) { dialog.addEventListener("close", () => showToast(text, undo), { once: true }); return; }
   clearTimeout(toastTimer);
   $("toast-text").textContent = text;
   $("toast-undo").hidden = !undo;
@@ -366,10 +437,12 @@ function undo() {
   $("toast").hidden = true;
   action();
 }
-// files taken out of the list come back with Undo, where they were
-function takenOut(items, name) {
+// files taken out of the list come back with Undo, where they were, and with where they came from
+// (restore puts it back)
+function takenOut(items, name, restore) {
   const kept = items.slice();
   showToast(kept.length === 1 ? t("toastRemoved")(name || kept[0].name) : t("toastCleared")(kept.length), () => {
+    if (restore) restore();
     for (const item of kept) add(item);
     previewPacks();
     render();
@@ -409,7 +482,7 @@ function showDone(event, status) {
   const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
   save("worksSaved", works);
   $("done-star").hidden = works < 3 || load("starAsked", false);
-  $("done-dialog").showModal();
+  openDialog($("done-dialog"));
 }
 
 // the notes of the results, which come in English, in the language chosen
@@ -422,6 +495,9 @@ function noteText(note) {
   }
   return note;
 }
+// onePack tells a work that writes one file with all the files given: its result is that file
+const onePack = run => !!run && run.mode === "pack" && !run.request.packGames;
+
 // stepsOf are the steps of a file in the work running, in their order: the work, then the check
 // of what it wrote; a trimmed NSP is checked while it is written, so it has one step
 function stepsOf(row) {
@@ -449,7 +525,7 @@ function stepText(step) {
 // twice; in Pack also an update or a DLC without its game, and a DLC that needs a newer game
 // than the list brings
 function listWarnings() {
-  const read = [...state.rows.values()].filter(row => row.game && row.game.titleId);
+  const read = [...state.rows.values()].filter(row => !row.item.result && row.game && row.game.titleId);
   const games = new Map();
   for (const row of read) {
     const id = row.game.type === "BASE" ? row.game.titleId : row.game.gameId;
@@ -460,12 +536,17 @@ function listWarnings() {
     if (row.game.type !== "DLC") game.reach = Math.max(game.reach, row.game.latest || 0);
   }
   const warnings = new Map();
+  // in Rename a title given twice matters when both files would get the same name: the same
+  // version, with the same extension and in the same folder (an NSP and its NSZ do not clash)
+  const extension = row => (row.item.path.match(/\.\w+$/) || [""])[0].toLowerCase();
+  const folder = row => row.item.path.replace(/[\\/][^\\/]*$/, "").toLowerCase();
+  const twice = (row, other) => other.game.version === row.game.version && (state.mode !== "rename" || extension(other) === extension(row) && folder(other) === folder(row));
   for (const row of read) {
     const same = read.filter(other => other !== row && other.game.titleId === row.game.titleId && other.game.type === row.game.type);
     const newer = row.game.type === "UPD" ? same.filter(other => other.game.version > row.game.version).sort((a, b) => b.game.version - a.game.version)[0] : null;
     const game = games.get(row.game.type === "BASE" ? row.game.titleId : row.game.gameId);
     if (newer) warnings.set(row, t("warnNewer")(newer.game.versionTxt || "v" + newer.game.version));
-    else if (same.some(other => other.game.version === row.game.version)) warnings.set(row, t("warnTwice"));
+    else if (same.some(other => twice(row, other))) warnings.set(row, t("warnTwice"));
     else if (state.mode === "pack" && row.game.type !== "BASE" && row.game.titles === 1 && game && !game.base) warnings.set(row, t("warnNoGame"));
     else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
   }
@@ -488,6 +569,10 @@ function render() {
   document.documentElement.lang = state.language;
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
+  // the name of a button that shows an icon, or no text on a narrow window
+  document.querySelectorAll("[data-t-label]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.tLabel)); });
+  // the section chosen with the keyboard keeps the focus while the menu is drawn again
+  const focused = $("modes").contains(document.activeElement) ? document.activeElement.dataset.mode : "";
   $("modes").innerHTML = "";
   for (const [group, members] of groups) {
     const title = document.createElement("div");
@@ -497,6 +582,7 @@ function render() {
     for (const mode of members) {
       const button = document.createElement("button");
       button.innerHTML = tile(mode, group) + "<span><b></b><small></small></span>";
+      button.dataset.mode = mode;
       button.querySelector("b").textContent = t(mode);
       // the menu keeps its tiles only on a narrow window: the name shows on hover
       button.title = t(mode);
@@ -506,7 +592,8 @@ function render() {
       const since = performance.now() - (state.chosenAt || 0);
       if (mode === state.mode && !state.view && since < 300) { button.classList.add("chosen"); button.style.setProperty("--since", -since + "ms"); }
       button.onclick = () => {
-        if (state.busy) return;
+        // while a work runs a section changes nothing, but it leaves the settings for the work
+        if (state.busy) { if (state.view) { state.view = ""; render(); } return; }
         const changed = state.view || mode !== state.mode;
         // a section leaves the page of the settings
         if (state.view) { state.view = ""; render(); }
@@ -517,6 +604,7 @@ function render() {
       $("modes").append(button);
     }
   }
+  if (focused) $("modes").querySelector(`[data-mode="${focused}"]`)?.focus({ preventScroll: true });
   document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
   // the page of the settings takes the place of the section and its options
   const preferences = state.view === "preferences";
@@ -530,7 +618,6 @@ function render() {
   const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
   $("title-tile").className = `tile tone-${tones[group] || "neutral"}`;
   $("title-tile").innerHTML = icon(state.mode);
-  $("work").dataset.tone = tones[group] || "neutral";
   $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
   $("takes").innerHTML = "";
   for (const entry of takesShown[state.mode].split(" ")) {
@@ -542,6 +629,7 @@ function render() {
   }
   $("language-select").value = state.language;
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
+  if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   // the list as rows, or as a grid of covers
   const view = load("view", "list") === "grid" ? "grid" : "list";
@@ -556,6 +644,8 @@ function render() {
   $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
   $("keys-banner").hidden = !!state.keys || state.mode === "recompress" || state.mode === "fat32";
   $("toolbar").hidden = state.items.length === 0;
+  // the list stays as it is while its files are at work, also from the keyboard
+  for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
   $("drop").classList.toggle("filled", state.items.length > 0);
   // the level falls in light (1 to 6), medium (7 to 14) or maximum (15 to 19)
   const level = +$("level").value;
@@ -566,11 +656,13 @@ function render() {
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
   $("level-value").textContent = $("level").value;
+  // the slider tells its level with the band it falls in
+  $("level").setAttribute("aria-valuetext", `${level} · ${t({ 3: "light", 12: "medium", 19: "maximum" }[band])}`);
   $("level-hint").textContent = t("levelHint")(level);
   // what the level trades, as a picture: higher levels make smaller files, more slowly
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
   $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
-  $("output").textContent = state.output || t("nextTo");
+  $("output").textContent = state.output ? ltr(state.output) : t("nextTo");
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
   $("output").classList.toggle("empty", !state.output);
@@ -582,21 +674,22 @@ function render() {
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
   // one file with everything is saved where it is chosen; a pack per game where Save in says
   if (state.mode === "pack" && !$("pack-games").checked) $("output-field").hidden = true;
-  $("pack").textContent = state.pack || t("noPack");
+  $("pack").textContent = state.pack ? ltr(state.pack) : t("noPack");
   $("pack").title = state.pack;
   $("pack").classList.toggle("empty", !state.pack);
-  $("dat").textContent = state.dat || t("noDat");
+  $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
   $("dat").title = state.dat;
   $("dat").classList.toggle("empty", !state.dat);
   $("reset-dat").hidden = !state.dat;
   const watching = state.busy && state.lastRun && state.lastRun.watch;
   $("start").textContent = state.busy ? (watching ? t("stop") : t("cancel")) : t("start")(state.mode);
   $("start").className = "primary big" + (state.busy ? " stop" : "");
-  $("start").disabled = !state.busy && state.items.length === 0;
-  $("estimate").disabled = state.busy || state.items.length === 0;
-  $("compare-levels").disabled = state.busy || state.items.length === 0;
+  // while a work starts (the space is looked at) its buttons wait for it
+  $("start").disabled = !!state.starting || !state.busy && state.items.length === 0;
+  $("estimate").disabled = state.busy || !!state.starting || state.items.length === 0;
+  $("compare-levels").disabled = state.busy || !!state.starting || state.items.length === 0;
   // with no file it still answers, telling what it needs
-  $("measure").disabled = state.busy;
+  $("measure").disabled = state.busy || !!state.starting;
   // the computer is named as its system names it
   const system = (state.setup.platform || "").split("/")[0];
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
@@ -628,13 +721,15 @@ function summary() {
   text.textContent = "";
   bar.hidden = true;
   if (state.busy) {
-    // the files of this work: all the list, or the one file verified alone
-    const given = state.lastRun && !state.lastRun.watch ? new Set(state.lastRun.request.files) : null;
-    const working = given ? rows.filter(row => given.has(row.item.path)) : rows;
+    // the files of this work, not the ones done by a work before: all the list, the one file
+    // verified alone, the files a watch finds; a pack of one file and a measure are one result
+    const run = state.lastRun;
+    const working = workRows();
+    const count = onePack(run) || (run && run.mode === "measure") ? 1 : working.length;
     const ended = row => ["ok", "failed", "skipped"].includes(row.status);
-    const done = working.filter(ended).length;
-    const share = working.reduce((sum, row) => sum + (ended(row) ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, working.length);
-    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, working.length, Math.floor(share * 100));
+    const done = Math.min(count, working.filter(ended).length);
+    const share = Math.min(1, working.reduce((sum, row) => sum + rowShare(row), 0) / Math.max(1, count));
+    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, count, Math.floor(share * 100));
     if (state.lastRun && state.lastRun.watch) text.textContent = t("watching") + " · " + text.textContent;
     bar.hidden = false;
     bar.firstElementChild.style.width = (share * 100).toFixed(1) + "%";
@@ -644,7 +739,7 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(rows.length, state.items.reduce((sum, item) => sum + item.size, 0));
+  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + (item.size || 0), 0));
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -660,36 +755,52 @@ function setMode(mode) {
   if (state.busy || mode === state.mode) return;
   state.mode = mode;
   save("mode", mode);
-  // the files the new mode does not take leave the list
-  refill(state.sources.length ? state.sources : state.items.map(item => item.path), true);
+  // the list is made again from all it came from, for the new mode: the files it does not take
+  // leave, the ones it takes come, and the files taken out by hand stay out
+  refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
   render();
 }
 
-// refill adds what the paths given hold for the mode; the folders are kept, to watch them.
-async function refill(paths, replace) {
+// refill adds what the paths given hold for the mode, and keeps the paths as the origins of the
+// list: the folders, to watch them, and all of them to fill the list again in another section.
+// replace starts a new list; with sameOrigins it is the same list, for another section.
+async function refill(paths, replace, sameOrigins) {
   const items = paths.length ? await app().Expand(paths, state.mode) : [];
-  if (replace) clearList();
-  for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
-  for (const item of items) add(item);
+  if (replace && sameOrigins) clearRows();
+  else if (replace) clearList();
+  addOrigins(paths);
+  for (const item of items) if (!sameOrigins || !state.removed.has(item.path)) add(item);
   if (state.mode === "rename") previewNames();
   previewPacks();
   render();
 }
+function addOrigins(paths) {
+  for (const path of paths) if (!state.sources.includes(path)) state.sources.push(path);
+}
 
-function clearList() {
+// clearRows empties the list; clearList also forgets where its files came from
+function clearRows() {
   state.items = [];
   state.rows.clear();
-  state.sources = [];
   state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
 }
+function clearList() {
+  clearRows();
+  state.sources = [];
+  state.removed = new Set();
+}
 
+// add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
+// to work on, so it stays out of the files a work is given
 function add(item) {
   if (state.rows.has(item.path)) return;
-  state.items.push(item);
+  if (!item.result) state.items.push(item);
+  // a file added again is no longer one taken out
+  state.removed.delete(item.path);
   const tr = document.createElement("tr");
   tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file
@@ -704,17 +815,23 @@ function add(item) {
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
   });
   game.addEventListener("mouseleave", hidePop);
-  tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
+  // an empty file shows its 0 B; a file a work told about, whose size is not known, nothing
+  tr.querySelector(".size").textContent = item.size === null ? "" : size(item.size || 0);
   const remove = () => {
     if (state.busy) return;
     hidePop();
     const gone = state.rows.get(item.path);
     state.items = state.items.filter(other => other.path !== item.path);
     state.rows.delete(item.path);
+    // taken out by hand, it stays out when another section fills the list again from its
+    // origins, and a watch is not given it
+    const origin = state.sources.includes(item.path);
+    state.sources = state.sources.filter(path => path !== item.path);
+    state.removed.add(item.path);
     // the row folds away before it goes, and comes back with Undo
     tr.classList.add("row-out");
     setTimeout(() => { tr.remove(); render(); }, calm() ? 0 : 180);
-    takenOut([item], shownName(gone || { item, game: null }));
+    takenOut([item], shownName(gone || { item, game: null }), () => { if (origin) addOrigins([item.path]); });
   };
   tr.querySelector(".remove button").onclick = remove;
   tr.addEventListener("contextmenu", event => {
@@ -746,6 +863,7 @@ function sortRows() {
   for (const th of document.querySelectorAll("#files th[data-sort]")) {
     th.classList.toggle("sorted", th.dataset.sort === key);
     th.classList.toggle("desc", th.dataset.sort === key && dir < 0);
+    th.setAttribute("aria-sort", th.dataset.sort !== key ? "none" : dir < 0 ? "descending" : "ascending");
   }
   if (state.busy && key === "state") return;
   const rows = [...state.rows.values()];
@@ -755,7 +873,7 @@ function sortRows() {
   });
   const body = $("files").tBodies[0];
   if (rows.some((row, i) => body.rows[i] !== row.tr)) for (const row of rows) body.append(row.tr);
-  if (!state.busy) state.items = rows.map(row => row.item);
+  if (!state.busy) state.items = rows.filter(row => !row.item.result).map(row => row.item);
 }
 // the names of the games come in a few at a time: the list is sorted again once they settle
 let sortTimer = 0;
@@ -794,12 +912,12 @@ function paint(row) {
   const icon = row.tr.querySelector(".icon");
   if (row.game && row.game.name) {
     title.textContent = row.game.name;
-    file.textContent = `${row.game.titleId} · v${row.game.version} · ${row.game.type} · ${row.item.name}`;
+    file.textContent = `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)} · ${row.item.name}`;
   } else {
     // the name of the file without its [title ID][version] tags, which go under it
     const tags = row.item.name.match(/(\s*\[[^\]]*\])+\s*$/);
     title.textContent = tags ? row.item.name.slice(0, tags.index).trim() || row.item.name : row.item.name;
-    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${row.game.type}` : tags ? tags[0].trim() : "";
+    file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)}` : tags ? tags[0].trim() : "";
   }
   // a warning of the list shows until the file is worked on
   let warn = row.tr.querySelector(".list-warn");
@@ -907,16 +1025,27 @@ function paint(row) {
   renderCard(row);
   if (row.output) {
     if (note.textContent) note.append(" · ");
+    // a link with somewhere to go, so the keyboard reaches it; it opens the folder, not a page
     const link = document.createElement("a");
+    link.href = "#";
     link.textContent = t("showFolder");
     link.title = row.output;
-    link.onclick = () => app().ShowFile(row.output);
+    link.onclick = event => { event.preventDefault(); app().ShowFile(row.output); };
     note.append(link);
   }
+  // the button that takes the file out of the list says so, in the language chosen
+  const remove = row.tr.querySelector(".remove button");
+  remove.title = t("menuRemove");
+  remove.setAttribute("aria-label", t("menuRemove"));
 }
 
+// rowOf is the row of a file the work tells about, added when the list has none: a file a watch
+// found, or the new file of a pack of one file, which is a result and not a file to work on
 function rowOf(file) {
-  if (!state.rows.has(file)) add({ path: file, name: file.split(/[\\/]/).pop(), size: 0 });
+  if (!state.rows.has(file)) {
+    const run = state.lastRun;
+    add({ path: file, name: file.split(/[\\/]/).pop(), size: null, result: onePack(run) && file === run.request.pack });
+  }
   return state.rows.get(file);
 }
 
@@ -995,7 +1124,7 @@ function fitTemplate(field) {
 
 function renderPresets() {
   const select = $("preset");
-  const all = [...builtinPresets(), ...load("presets", [])];
+  const all = [...builtinPresets(), ...savedPresets()];
   // when NXPress opens, the preset last chosen is shown again
   let chosen = select.value;
   if (state.restorePreset !== undefined) {
@@ -1012,7 +1141,7 @@ function renderPresets() {
   save("preset", select.value === "" ? "" : presetKey(all, +select.value));
 }
 function applyPreset() {
-  const preset = [...builtinPresets(), ...load("presets", [])][+$("preset").value];
+  const preset = [...builtinPresets(), ...savedPresets()][+$("preset").value];
   if (!preset) return;
   $("level").value = preset.level;
   $(preset.block ? "target-block" : "target-solid").checked = true;
@@ -1023,16 +1152,22 @@ function applyPreset() {
 }
 
 async function start(mode, extra) {
+  // a work is starting: a second press waits for it instead of asking for another
+  if (state.starting) return;
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
-  if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
+  // the work shows on its page, with what it needs or what it does: the settings give way to it
+  if (state.view) { state.view = ""; render(); }
+  // what the work needs is told by its own mode: Verify only this, in a section that needs no
+  // keys or no pack, still needs the keys and no pack
+  if (!state.keys && !["recompress", "fat32"].includes(mode)) { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
-  if (state.mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
+  if (mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
-  const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
+  const watches = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
   // a watch looks at the folders added; the files alone are taken too
-  let files = watch ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
+  let files = watches ? [...new Set([...state.sources, ...state.items.map(item => item.path)])] : state.items.map(item => item.path);
   // the measure takes the first game it can compress among the NSP and XCI of the list; the
   // one it takes shows its progress, the others keep their state
   const measuring = mode === "measure";
@@ -1040,24 +1175,57 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
   }
-  const request = { mode, files, pack: state.pack, ...chosen, watch, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  const request = { mode, files, pack: state.pack, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   files = request.files;
-  if (!await spaceAllows(request)) return;
-  for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) Object.assign(row, { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 });
+  // Verify only this asks for no watch, whatever the box says
+  const watch = !!request.watch;
+  // a new work keeps the computer on: the count of the turning off asked by the work before stops
+  if (state.shutdownAt) keepOn();
+  // while the space is looked at, the work is starting: its buttons wait (the one pressed gets
+  // the focus back after the dialog of the space)
+  const opener = document.activeElement;
+  state.starting = true;
+  render();
+  let allowed = false;
+  try { allowed = await spaceAllows(request, opener); } finally { state.starting = false; }
+  // the button pressed lost the focus while it waited: it gets it back
+  if (!allowed) { render(); refocus(opener); return; }
+  // the work is marked as running before NXPress is asked to start it, as its first events (and
+  // the end of a quick one) can come before the answer; what changes is put back if it does not
+  // start, so another work still running keeps its rows
+  const before = { lastRun: state.lastRun, paused: state.paused, pending: load("pending", null, isPending), rows: [] };
+  // the rows of the work wear its start, to count them and only them
+  const started = Date.now();
+  const fresh = { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0, run: started };
+  for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) {
+    before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
+    Object.assign(row, fresh);
+  }
   $("log").textContent = "";
   $("log").hidden = true;
   $("status").textContent = "";
+  resetSpeed();
+  state.busy = true;
+  state.paused = false;
+  // bytes: the size of the files given, which the new file of a pack weighs in the progress
+  const bytes = state.items.filter(item => files.includes(item.path)).reduce((sum, item) => sum + (item.size || 0), 0);
+  state.lastRun = { mode, request, started, watch, skipped: 0, bytes };
+  // the files left are kept, to go on with them after a close
+  if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
+  app().SetTaskbar("normal", 0, 1);
+  render();
+  if (document.activeElement === document.body) refocus(opener);
   try {
     await app().Start(request);
-    resetSpeed();
-    app().SetTaskbar("normal", 0, 1);
-    state.busy = true;
-    state.paused = false;
-    state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
-    // the files left are kept, to go on with them after a close
-    if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
+    // a new pack shows its own new file: the one of a pack before leaves the list
+    if (mode === "pack") for (const row of [...state.rows.values()]) if (row.item.result && row.run !== started) { row.tr.remove(); state.rows.delete(row.item.path); }
   } catch (error) {
-    for (const row of state.rows.values()) row.status = "";
+    state.busy = false;
+    state.paused = before.paused;
+    state.lastRun = before.lastRun;
+    save("pending", before.pending);
+    for (const [row, fields] of before.rows) Object.assign(row, fields);
+    app().SetTaskbar("none", 0, 0);
     $("status").textContent = String(error);
   }
   render();
@@ -1065,7 +1233,7 @@ async function start(mode, extra) {
 
 // spaceAllows tells, before anything is written, the drives where the new files may not fit,
 // and starts only when asked to; a file that fills its drive fails, and its original stays
-function spaceAllows(request) {
+function spaceAllows(request, opener) {
   return app().SpaceCheck(request).then(short => {
     if (!short || !short.length) return true;
     const list = $("space-list");
@@ -1080,7 +1248,7 @@ function spaceAllows(request) {
     return new Promise(resolve => {
       $("space-start").onclick = () => { resolve(true); $("space-dialog").close(); };
       $("space-dialog").onclose = () => resolve(false);
-      $("space-dialog").showModal();
+      openDialog($("space-dialog"), opener);
     });
   }).catch(() => true);
 }
@@ -1106,7 +1274,7 @@ function showMeasure(report) {
   // a heavier setting a little faster was not taken: the window tells why
   $("measure-kept").hidden = !report.faster;
   if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
-  $("measure-dialog").showModal();
+  openDialog($("measure-dialog"));
 }
 
 // the report of the last work, to paste in an issue or a thread
@@ -1121,7 +1289,7 @@ function report() {
   ];
   for (const row of state.rows.values()) {
     const game = row.game ? ` [${row.game.titleId} v${row.game.version} ${row.game.type}${row.game.titles > 1 ? ", " + row.game.titles + " titles" : ""}]` : "";
-    lines.push(`- ${row.item.name} (${size(row.item.size)})${game}: ${row.status || "-"}` + (row.error ? ` — ${row.error}` : row.note ? ` — ${row.note}` : ""));
+    lines.push(`- ${row.item.name}${row.item.size === null ? "" : ` (${size(row.item.size)})`}${game}: ${row.status || "-"}` + (row.error ? ` — ${row.error}` : row.note ? ` — ${row.note}` : ""));
   }
   if ($("log").textContent) lines.push("", $("log").textContent.trim());
   return lines.join("\n");
@@ -1131,15 +1299,19 @@ function listen() {
   const events = window.runtime;
   events.EventsOn("progress", event => {
     const row = rowOf(event.file);
-    Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total });
+    Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
   });
   events.EventsOn("done", event => {
-    if (state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames)) {
-      // a pack is one result for all its files
-      for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: state.lastRun && state.lastRun.started });
+    // the mode of the work, which is not the section shown when only one file is verified
+    const run = state.lastRun;
+    const mode = run ? run.mode : state.mode;
+    if (onePack(run)) {
+      // a pack is one result for all its files: the files it was given
+      const given = new Set(run.request.files);
+      for (const row of state.rows.values()) if (given.has(row.item.path) && row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: run.started });
     }
     const row = rowOf(event.file);
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
@@ -1147,7 +1319,7 @@ function listen() {
     row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
-    if (state.mode === "rename" && row.output && !event.error) {
+    if (mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
       row.item.name = row.output.split(/[\\/]/).pop();
       row.item.path = row.output;
@@ -1155,13 +1327,13 @@ function listen() {
       state.rows.set(row.output, row);
       state.sources = state.sources.map(path => path === old ? row.output : path);
     }
-    const pending = load("pending", null);
+    const pending = load("pending", null, isPending);
     if (pending && !event.error) {
       pending.request.files = pending.request.files.filter(path => path !== event.file);
       save("pending", pending.request.files.length ? pending : null);
     }
     paint(row);
-    if (state.mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
+    if (mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
     trackSpeed();
     summary();
   });
@@ -1190,11 +1362,11 @@ function listen() {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
-    const onePack = state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames);
-    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
+    const single = onePack(state.lastRun);
+    const total = single || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
     keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
-    const skippedRows = onePack || !state.lastRun ? 0 : state.lastRun.skipped;
+    const skippedRows = single || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
@@ -1219,11 +1391,13 @@ function listen() {
   });
   // the computer did not turn off: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
-    $("shutdown-banner").hidden = true;
+    hideShutdown();
     const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
     $("status").textContent = text;
     app().Notify("NXPress", text);
   });
+  // NXPress called the turning off off by itself (a work started): its count goes
+  events.EventsOn("shutdownCancelled", hideShutdown);
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
@@ -1239,15 +1413,15 @@ function keepReport(event) {
   save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
 }
 function keepReportStatus(status) {
-  const kept = load("lastReport", null);
+  const kept = load("lastReport", null, isReport);
   if (!kept) return;
   kept.status = status;
   kept.text = report();
   save("lastReport", kept);
 }
 function showReport() {
-  const kept = load("lastReport", null);
-  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : t(kept.mode) || kept.mode}` : "";
+  const kept = load("lastReport", null, isReport);
+  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : kept.mode === "estimate" ? t("estimateButton") : t(kept.mode) || kept.mode}` : "";
   $("report-status").textContent = kept ? kept.status : t("noReport");
   $("report-copy").hidden = !kept;
   // a long report: how many of each, the problems first, and only them when there are some
@@ -1268,7 +1442,7 @@ function showReport() {
   $("report-problems").checked = problems > 0 && problems < all.length;
   $("report-problems").onchange = () => paintReport(all, order);
   paintReport(all, order);
-  $("report-dialog").showModal();
+  openDialog($("report-dialog"));
 }
 function paintReport(all, order) {
   const onlyProblems = $("report-problems").checked;
@@ -1341,11 +1515,25 @@ function startShutdown() {
   };
   tick();
 }
+// the count of the turning off goes away: it was called off here or by NXPress, or it failed
+function hideShutdown() {
+  clearTimeout(shutdownTimer);
+  state.shutdownAt = 0;
+  $("shutdown-banner").hidden = true;
+}
+// the computer stays on: with the button, or with a new work started during the count
+function keepOn() {
+  save("showReport", false);
+  app().CancelShutDown();
+  hideShutdown();
+}
 
 async function checkUpdate() {
   if (!$("updates").checked) return;
   const update = await app().CheckUpdate();
   if (!update || !update.version || load("dismissedUpdate", "") === update.version) return;
+  // kept, to tell it again in another language
+  state.update = update;
   $("update-text").textContent = t("updateFound")(update.version);
   $("update-get").onclick = () => app().OpenURL(update.url);
   $("update-close").onclick = () => { save("dismissedUpdate", update.version); $("update-banner").hidden = true; };
@@ -1356,7 +1544,7 @@ async function main() {
   state.setup = await app().Setup();
   state.keys = state.setup.keys;
   // the theme: the one of the system, or the one chosen
-  state.theme = load("theme", "auto");
+  state.theme = load("theme", "auto", value => ["auto", "light", "dark"].includes(value));
   // on Windows 11 the menu shows the Mica of the system, in the theme chosen
   document.documentElement.classList.toggle("mica", !!state.setup.mica);
   const theme = () => {
@@ -1375,14 +1563,18 @@ async function main() {
   state.language = load("language", texts[system] ? system : "en");
   if (!texts[state.language]) state.language = "en";
   for (const [code, name] of languages) if (texts[code]) $("language-select").append(new Option(name, code));
-  $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); };
+  // another language tells again what is shown: the new version and the games to combine too
+  $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); previewPacks(); };
   state.mode = modes.includes(load("mode", "")) ? load("mode", "") : "compress";
   const chosen = load("settings", {});
+  // a field of the settings kept is taken only when it is of its kind
+  const number = value => Number.isInteger(value) && value > 0 ? value : 0;
+  const text = value => typeof value === "string" ? value : "";
   $("version").textContent = state.setup.version;
   $("level").max = state.setup.maxLevel;
-  $("level").value = chosen.level || state.setup.level;
+  $("level").value = number(chosen.level) || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;
-  $("threads").value = chosen.threads || state.setup.threads;
+  $("threads").value = number(chosen.threads) || state.setup.threads;
   state.restorePreset = load("preset", "");
   if (load("showReport", false)) {
     save("showReport", false);
@@ -1392,7 +1584,7 @@ async function main() {
   $("advanced").open = load("advancedOpen", true);
   $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
   $("threads").max = state.setup.cpus;
-  $("multi").value = chosen.multi || 1;
+  $("multi").value = number(chosen.multi) || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("watch").checked = !!chosen.watch;
@@ -1404,31 +1596,46 @@ async function main() {
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
   if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
-  state.output = chosen.output || "";
-  state.dat = chosen.dat || "";
-  state.template = chosen.template || await app().DefaultTemplate();
+  state.output = text(chosen.output);
+  state.dat = text(chosen.dat);
+  state.template = text(chosen.template) || await app().DefaultTemplate();
   $("template").value = state.template;
   // a pack per game unless one file with everything was chosen last
   $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
-  state.packTemplate = chosen.packTemplate || await app().DefaultPackTemplate();
+  state.packTemplate = text(chosen.packTemplate) || await app().DefaultPackTemplate();
   $("pack-template").value = state.packTemplate;
 
   $("level").oninput = () => { $("preset").value = ""; render(); };
-  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; render(); }; });
+  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; save("settings", settings()); render(); }; });
+  // a field of the panel is kept as soon as it changes, not only when a work starts: closing
+  // NXPress without working keeps it too, in step with the settings saved with a name
+  for (const type of ["input", "change"]) $("settings").addEventListener(type, () => save("settings", settings()));
   $("keys").onclick = async () => {
     try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
     render();
   };
-  const addFiles = async () => { for (const item of await app().ChooseFiles(state.mode) || []) add(item); if (state.mode === "rename") previewNames(); previewPacks(); render(); };
-  const addFolder = async () => {
-    const items = await app().ChooseFolder(state.mode) || [];
+  // the files and the folder added are kept as origins of the list, to take them again in another
+  // section; the folder also to watch it
+  const addFiles = async () => {
+    if (state.busy) return;
+    const items = await app().ChooseFiles(state.mode) || [];
+    addOrigins(items.map(item => item.path));
     for (const item of items) add(item);
-    // the folder itself, to watch it, from where its files are
-    if (items.length) {
-      const folder = items[0].path.replace(/[\\/][^\\/]+$/, "");
-      if (!state.sources.includes(folder)) state.sources.push(folder);
-    }
     if (state.mode === "rename") previewNames();
+    previewPacks();
+    render();
+  };
+  const addFolder = async () => {
+    if (state.busy) return;
+    // the folder dialog of Save to gives the folder chosen itself, not only the files of it this
+    // section takes: one in a subfolder would else stand for it
+    const folder = await app().ChooseOutput();
+    if (!folder) return;
+    const items = await app().Expand([folder], state.mode) || [];
+    addOrigins([folder]);
+    for (const item of items) add(item);
+    if (state.mode === "rename") previewNames();
+    previewPacks();
     render();
   };
   $("add-files").onclick = $("empty-files").onclick = addFiles;
@@ -1436,13 +1643,15 @@ async function main() {
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
   for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("view", button.dataset.view); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
-  $("open-preferences").onclick = () => { if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
+  // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
+  $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
   $("clear").onclick = () => {
-    const items = state.items.slice();
+    if (state.busy) return;
+    const items = state.items.slice(), sources = state.sources.slice(), removed = [...state.removed];
     clearList();
     render();
-    if (items.length) takenOut(items);
+    if (items.length) takenOut(items, "", () => { addOrigins(sources); for (const path of removed) state.removed.add(path); });
   };
   $("toast-undo").onclick = undo;
   app().SetTaskbar("none", 0, 0);
@@ -1485,7 +1694,7 @@ async function main() {
     const typing = /^(input|textarea|select)$/i.test(document.activeElement.tagName) && document.activeElement.type !== "checkbox";
     if (key === "o" && !state.busy) { event.preventDefault(); (event.shiftKey ? addFolder : addFiles)(); }
     else if (key === "enter") { event.preventDefault(); start(); }
-    else if (key === ",") { event.preventDefault(); $("open-preferences").click(); }
+    else if (key === ",") { event.preventDefault(); if (!state.busy) $("open-preferences").click(); }
     else if (key === "z" && !typing && undoLast) { event.preventDefault(); undo(); }
   });
   $("choose-output").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.output = path; save("settings", settings()); render(); previewPacks(); };
@@ -1513,7 +1722,8 @@ async function main() {
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
-  // a click on a column sorts the list by it (see sortRows)
+  // a click on a column sorts the list by it (see sortRows); Enter or Space on the button of its
+  // header click it too
   for (const th of document.querySelectorAll("#files th[data-sort]")) th.onclick = () => {
     const { key, dir } = state.sort;
     state.sort = key !== th.dataset.sort ? { key: th.dataset.sort, dir: 1 } : dir > 0 ? { key, dir: -1 } : { key: "", dir: 1 };
@@ -1527,17 +1737,23 @@ async function main() {
   $("measure-close").onclick = () => $("measure-dialog").close();
   $("last-report").onclick = showReport;
   $("report-close").onclick = () => $("report-dialog").close();
-  $("report-copy").onclick = () => { const kept = load("lastReport", null); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
-  $("pause").onclick = () => { state.paused = !state.paused; app().SetPaused(state.paused); render(); };
+  $("report-copy").onclick = () => { const kept = load("lastReport", null, isReport); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
+  $("pause").onclick = () => {
+    state.paused = !state.paused;
+    app().SetPaused(state.paused);
+    // the taskbar says it at once: no progress comes while the work waits to tell it
+    const { done, total } = workDone();
+    app().SetTaskbar(state.paused ? "paused" : "normal", done, total);
+    render();
+  };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
   $("shutdown").onchange = () => render();
-  $("shutdown-cancel").onclick = () => {
-    save("showReport", false); app().CancelShutDown(); clearTimeout(shutdownTimer); $("shutdown-banner").hidden = true; };
+  $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();
     if (!name) { $("preset-name").focus(); return; }
-    const presets = load("presets", []).filter(preset => preset.name !== name);
+    const presets = savedPresets().filter(preset => preset.name !== name);
     const now = settings();
     presets.push({ name, level: now.level, block: now.block, threads: now.threads, multi: now.multi });
     save("presets", presets);
@@ -1548,7 +1764,7 @@ async function main() {
   };
   $("preset-delete").onclick = () => {
     const index = +$("preset").value - builtinPresets().length;
-    const presets = load("presets", []);
+    const presets = savedPresets();
     if (index >= 0) { presets.splice(index, 1); save("presets", presets); }
     $("preset").value = "";
     render();
@@ -1559,7 +1775,7 @@ async function main() {
   listen();
 
   // the files left unfinished last time
-  const pending = load("pending", null);
+  const pending = load("pending", null, isPending);
   if (pending && pending.request && pending.request.files && pending.request.files.length) {
     state.pendingCount = pending.request.files.length;
     $("resume-banner").hidden = false;
