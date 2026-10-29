@@ -264,3 +264,23 @@ func TestWatchOutputPassesThePauseOn(t *testing.T) {
 	// the console has no pause: nothing waits
 	(&watchOutput{output: &watchRecorder{}}).waitWhilePaused()
 }
+
+// The files the work writes in the folder watched are not taken as new files: recompressed into
+// a folder within it, each new file would be recompressed once more.
+func TestWatchLeavesTheFilesItWrites(t *testing.T) {
+	folder := t.TempDir()
+	recompressed := filepath.Join(folder, "Recompressed")
+	runs := &watchRuns{}
+	runs.end = func(path string) (string, error) {
+		os.MkdirAll(recompressed, 0o755)
+		written := filepath.Join(recompressed, filepath.Base(path))
+		return written, os.WriteFile(written, make([]byte, 50), 0o644)
+	}
+	startWatch(t, options{recompress: true, files: []string{folder}}, runs)
+	writeFile(t, filepath.Join(folder, "game.nsz"), 100)
+	eventually(t, "the new file was not taken", func() bool { return runs.times("game.nsz") == 1 })
+	time.Sleep(300 * time.Millisecond)
+	if n := runs.times("game.nsz"); n != 1 {
+		t.Fatalf("the file written by the work was taken: game.nsz given %d times", n)
+	}
+}

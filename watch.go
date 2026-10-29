@@ -126,9 +126,13 @@ func (w *folderWatch) look(files []string) (ready []string, taken map[string]fil
 }
 
 // ended takes in how the files taken ended: a file that failed is no longer seen, and is taken
-// again once it changes.
+// again once it changes. The files the work wrote are not new files to take, when it writes
+// them in the folder watched.
 func (w *folderWatch) ended(ends []watchEnd, taken map[string]fileLook) {
 	for _, end := range ends {
+		if end.written != "" {
+			w.seen[watchKey(end.written)] = true
+		}
 		if !end.failed {
 			continue
 		}
