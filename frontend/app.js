@@ -497,6 +497,25 @@ function noteText(note) {
   }
   return note;
 }
+
+// the line of state under the list, kept as what it says, a text of the window with its figures
+// ({key, args, after}) or a note of NXPress, so it is said again in another language
+let statusParts = [];
+function setStatus(...parts) {
+  statusParts = parts;
+  paintStatus();
+}
+function addStatus(part) {
+  statusParts.push(part);
+  paintStatus();
+}
+function paintStatus() {
+  $("status").textContent = statusParts.map(part => {
+    if (typeof part === "string") return noteText(part);
+    const text = t(part.key);
+    return (typeof text === "function" ? text(...(part.args || [])) : text) + (part.after || "");
+  }).filter(Boolean).join(" · ");
+}
 // onePack tells a work that writes one file with all the files given: its result is that file
 const onePack = run => !!run && run.mode === "pack" && !run.request.packGames;
 
@@ -584,6 +603,7 @@ function render() {
     state.closeLanguage = state.language;
     app().CloseTexts(t("closeAsk"), t("closeYes"), t("closeNo")).catch(() => { });
   }
+  paintStatus();
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
   // the name of a button that shows an icon, or no text on a narrow window
@@ -803,7 +823,7 @@ function clearRows() {
   $("files").tBodies[0].innerHTML = "";
   $("log").textContent = "";
   $("log").hidden = true;
-  $("status").textContent = "";
+  setStatus();
 }
 function clearList() {
   clearRows();
@@ -1180,9 +1200,9 @@ async function start(mode, extra) {
   if (state.view) { state.view = ""; render(); }
   // what the work needs is told by its own mode: Verify only this, in a section that needs no
   // keys or no pack, still needs the keys and no pack
-  if (!state.keys && !["recompress", "fat32"].includes(mode)) { $("status").textContent = t("needKeys"); return; }
-  if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
-  if (mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
+  if (!state.keys && !["recompress", "fat32"].includes(mode)) { setStatus({ key: "needKeys" }); return; }
+  if (!state.items.length) { setStatus({ key: mode === "measure" ? "measureNeedsGame" : "needFiles" }); return; }
+  if (mode === "pack" && !$("pack-games").checked && !state.pack) { setStatus({ key: "needPack" }); return; }
   const chosen = settings();
   save("settings", chosen);
   const watches = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
@@ -1193,7 +1213,7 @@ async function start(mode, extra) {
   const measuring = mode === "measure";
   if (measuring) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
-    if (!files.length) { $("status").textContent = t("measureNeedsGame"); return; }
+    if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
   const request = { mode, files, pack: state.pack, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   files = request.files;
@@ -1223,7 +1243,7 @@ async function start(mode, extra) {
   }
   $("log").textContent = "";
   $("log").hidden = true;
-  $("status").textContent = "";
+  setStatus();
   resetSpeed();
   state.busy = true;
   state.paused = false;
@@ -1246,7 +1266,7 @@ async function start(mode, extra) {
     save("pending", before.pending);
     for (const [row, fields] of before.rows) Object.assign(row, fields);
     app().SetTaskbar("none", 0, 0);
-    $("status").textContent = String(error);
+    setStatus(String(error));
   }
   render();
 }
@@ -1388,7 +1408,7 @@ function listen() {
     // the files skipped by this work, not the ones left so by the work before
     const skippedRows = single || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
-    $("status").textContent = status;
+    setStatus(event.cancelled ? { key: "stopped" } : { key: "finished", args: [total, event.failed, event.seconds, skippedRows] });
     if (state.lastRun) state.lastRun.status = status;
     keepReportStatus(status);
     if (event.cancelled || !event.failed) save("pending", null);
@@ -1413,7 +1433,7 @@ function listen() {
   events.EventsOn("shutdownFailed", reason => {
     hideShutdown();
     const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
-    $("status").textContent = text;
+    setStatus({ key: "shutdownFailed", args: [$("shutdown-force").checked], after: reason ? ` (${reason})` : "" });
     app().Notify("NXPress", text);
   });
   // NXPress called the turning off off by itself (a work started): its count goes
@@ -1493,7 +1513,7 @@ async function playSound() {
       await new Audio(soundKept.url).play();
       return;
     } catch {
-      $("status").textContent += ($("status").textContent ? " · " : "") + t("soundFailed");
+      addStatus({ key: "soundFailed" });
     }
   }
   chime();
@@ -1631,7 +1651,7 @@ async function main() {
   // NXPress without working keeps it too, in step with the settings saved with a name
   for (const type of ["input", "change"]) $("settings").addEventListener(type, () => save("settings", settings()));
   $("keys").onclick = async () => {
-    try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
+    try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { setStatus(String(error)); }
     render();
   };
   // the files and the folder added are kept as origins of the list, to take them again in another
@@ -1734,7 +1754,7 @@ async function main() {
     try {
       await app().SetSendTo(!state.setup.sendToEnabled);
       state.setup.sendToEnabled = !state.setup.sendToEnabled;
-    } catch (error) { $("status").textContent = String(error); }
+    } catch (error) { setStatus(String(error)); }
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
@@ -1757,7 +1777,7 @@ async function main() {
   $("measure-close").onclick = () => $("measure-dialog").close();
   $("last-report").onclick = showReport;
   $("report-close").onclick = () => $("report-dialog").close();
-  $("report-copy").onclick = () => { const kept = load("lastReport", null, isReport); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); $("status").textContent = t("reportCopied"); };
+  $("report-copy").onclick = () => { const kept = load("lastReport", null, isReport); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); setStatus({ key: "reportCopied" }); };
   $("pause").onclick = () => {
     state.paused = !state.paused;
     app().SetPaused(state.paused);
@@ -1766,7 +1786,7 @@ async function main() {
     app().SetTaskbar(state.paused ? "paused" : "normal", done, total);
     render();
   };
-  $("report").onclick = () => { window.runtime.ClipboardSetText(report()); $("status").textContent = t("reportCopied"); };
+  $("report").onclick = () => { window.runtime.ClipboardSetText(report()); setStatus({ key: "reportCopied" }); };
   $("shutdown").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
