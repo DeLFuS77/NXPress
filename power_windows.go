@@ -11,9 +11,8 @@ const (
 	esSystemRequired = 0x00000001
 )
 
-// keepAwake keeps the computer from going to sleep while files are at work, until the
-// function it gives is called.
-func keepAwake() func() {
+// preventSleep keeps the computer from going to sleep until the function it gives is called.
+func preventSleep() func() {
 	state := kernel32.NewProc("SetThreadExecutionState")
 	done := make(chan struct{})
 	released := make(chan struct{})

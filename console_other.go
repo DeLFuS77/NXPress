@@ -13,13 +13,16 @@ import (
 // file manager.
 func hideConsole() {}
 
-// showFile opens the folder of a file in the file manager.
+// showFile opens the folder of a file in the file manager. The command is waited for, so it
+// leaves no process behind once it ends.
 func showFile(path string) {
+	command := exec.Command("xdg-open", filepath.Dir(path))
 	if runtime.GOOS == "darwin" {
-		exec.Command("open", "-R", path).Start()
-		return
+		command = exec.Command("open", "-R", path)
 	}
-	exec.Command("xdg-open", filepath.Dir(path)).Start()
+	if command.Start() == nil {
+		go command.Wait()
+	}
 }
 
 // sendToFolder is empty: only the Explorer of Windows has a "Send to" menu.
