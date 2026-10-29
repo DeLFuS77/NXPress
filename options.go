@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -25,7 +27,10 @@ type options struct {
 	fat32      bool
 	template   string
 	watch      bool
-	noCache    bool
+	// the files in the folders inside the folders given too (the command line takes only the
+	// ones of the folders given, as nsz)
+	recursive bool
+	noCache   bool
 	// --rename leaves the files whose name has their title ID
 	keepNamed bool
 	// --pack-games leaves out the games with these title IDs, in capitals (from the window)
@@ -56,6 +61,8 @@ type options struct {
 	files       []string
 	// the options of nsz accepted without effect, told once
 	ignored []string
+	// what the options given do not do together, told once
+	notes []string
 }
 
 const (
@@ -63,18 +70,47 @@ const (
 	maxLevel     = 19
 )
 
-// the options that take a value, by every name they have
-var valued = map[string]string{
-	"-l": "level", "--level": "level", "-t": "threads", "--threads": "threads", "-m": "multi", "--multi": "multi",
-	"-o": "output", "--output": "output", "-s": "bs", "--bs": "bs", "--keys": "keys", "--pack": "pack", "--pack-name": "packName", "--depth": "depth", "--dat": "dat", "--rename": "rename", "--verify-level": "verifyLevel",
+// optionName is an option of the command line: its name (--verify, or -C for the two that
+// have only a letter), its letter (0 for none), whether it takes a value, and whether nsz has
+// it too.
+type optionName struct {
+	name   string
+	letter byte
+	value  bool
+	nsz    bool
+}
+
+// every option: what each does is in flag and set
+var optionNames = []optionName{
+	{"-C", 'C', false, true}, {"-D", 'D', false, true},
+	{"--verify", 'V', false, true}, {"--quick-verify", 'Q', false, true}, {"--verify-level", 0, true, false},
+	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
+	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
+	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
+	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
+	{"--overwrite", 'w', false, true},
+	{"--rm-source", 0, false, true}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
+	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
+	{"--version", 0, false, false}, {"--help", 'h', false, true},
+	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
+	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
+	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
+	{"--pack-name", 0, true, false},
+	// the ones of nsz that NXPress accepts and has no use for
+	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
+	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
+	{"--bs", 's', true, true}, {"--depth", 0, true, true},
 }
 
 // the options of nsz that NXPress accepts and has no use for
-var noEffect = map[string]string{
-	"-L": "--long", "--long": "--long", "-K": "--keep", "--keep": "--keep", "-F": "--fix-padding", "--fix-padding": "--fix-padding",
-	"-P": "--alwaysParseCnmt", "--alwaysParseCnmt": "--alwaysParseCnmt", "-r": "--rm-old-version", "--rm-old-version": "--rm-old-version",
+var noEffect = map[string]bool{
+	"--long": true, "--keep": true, "--fix-padding": true, "--alwaysParseCnmt": true, "--rm-old-version": true, "--bs": true, "--depth": true,
 }
 
+// parseOptions reads the command line as argparse reads the one of nsz: letters together
+// (-CV), a value after its option, after "=" or right after its letter (-l18, -oDIR), and a
+// long option by the start of its name when only one begins so (--lev).
 func parseOptions(args []string) (options, error) {
 	o := options{level: defaultLevel, threads: 0, multi: 1}
 	for i := 0; i < len(args); i++ {
@@ -83,129 +119,236 @@ func parseOptions(args []string) (options, error) {
 			o.files = append(o.files, args[i+1:]...)
 			break
 		}
-		if !strings.HasPrefix(arg, "-") || arg == "-" {
+		if !isOption(arg) {
 			o.files = append(o.files, arg)
 			continue
 		}
-		name, value, hasValue := strings.Cut(arg, "=")
-		if what, ok := valued[name]; ok {
-			if !hasValue {
-				if i+1 >= len(args) {
-					return o, fmt.Errorf("%s needs a value", name)
-				}
+		// the value of an option given apart: the next argument, unless it is an option itself
+		next := func() (string, bool) {
+			if i+1 < len(args) && !isOption(args[i+1]) {
 				i++
-				value = args[i]
+				return args[i], true
 			}
-			if err := o.set(what, name, value); err != nil {
+			return "", false
+		}
+		if strings.HasPrefix(arg, "--") {
+			typed, value, hasValue := strings.Cut(arg, "=")
+			option, err := longOption(typed)
+			if err != nil {
+				return o, err
+			}
+			if !option.value {
+				if hasValue {
+					return o, fmt.Errorf("%s takes no value", option.name)
+				}
+				o.flag(option)
+				continue
+			}
+			if !hasValue {
+				value, hasValue = next()
+			}
+			if err := o.set(option, option.name, value, hasValue); err != nil {
 				return o, err
 			}
 			continue
 		}
-		if hasValue {
-			return o, fmt.Errorf("%s takes no value", name)
-		}
-		switch name {
-		case "-C":
-			o.compress = true
-		case "-D":
-			o.decompress = true
-		case "-V", "--verify", "-Q", "--quick-verify":
-			o.verify = true
-		case "-B", "--block":
-			o.block = true
-		case "--low-priority":
-			o.lowPriority = true
-		case "-S", "--solid":
-			o.block = false
-		case "-w", "--overwrite":
-			o.overwrite = true
-		case "--rm-source":
-			o.rmSource = true
-		case "-i", "--info":
-			o.info = true
-		case "--convert":
-			o.convert = true
-		case "--recompress":
-			o.recompress = true
-		case "--trim":
-			o.trim = true
-		case "--estimate":
-			o.estimate = true
-		case "--measure":
-			o.measure = true
-		case "--fat32":
-			o.fat32 = true
-		case "--watch":
-			o.watch = true
-		case "--no-cache":
-			o.noCache = true
-		case "--keep-named":
-			o.keepNamed = true
-		case "--levels":
-			o.levels = true
-		case "--split":
-			o.split = true
-		case "--pack-games":
-			o.packGames = true
-		case "--minimal-output":
-			o.minimal = true
-		case "--machine-readable":
-			o.machine = true
-		case "--version":
-			o.version = true
-		case "-h", "--help":
-			o.help = true
-		default:
-			if long, ok := noEffect[name]; ok {
-				o.ignored = append(o.ignored, long)
+		// letters together; one that takes a value takes the rest of the argument, or the next
+		for j := 1; j < len(arg); j++ {
+			option, ok := letterOption(arg[j])
+			if !ok {
+				if j == 1 {
+					return o, fmt.Errorf("unknown option %s (see nxpress --help)", arg)
+				}
+				letter, _ := utf8.DecodeRuneInString(arg[j:])
+				return o, fmt.Errorf("unknown option -%c (see nxpress --help)", letter)
+			}
+			told := "-" + arg[j:j+1]
+			if !option.value {
+				if j+1 < len(arg) && arg[j+1] == '=' {
+					return o, fmt.Errorf("%s takes no value", told)
+				}
+				o.flag(option)
 				continue
 			}
-			return o, fmt.Errorf("unknown option %s (see nxpress --help)", name)
+			value, hasValue := strings.TrimPrefix(arg[j+1:], "="), j+1 < len(arg)
+			if !hasValue {
+				value, hasValue = next()
+			}
+			if err := o.set(option, told, value, hasValue); err != nil {
+				return o, err
+			}
+			break
 		}
 	}
 	return o, nil
 }
 
-func (o *options) set(what string, name string, value string) error {
+// longOption is the option a long name stands for: the one of that name, or the only one whose
+// name begins so. When several do, the one of nsz is taken if only one of them is, so a script
+// written for nsz works the same: --lev is --level there, and here too beside --levels.
+func longOption(typed string) (optionName, error) {
+	found := []optionName{}
+	for _, option := range optionNames {
+		if option.name == typed {
+			return option, nil
+		}
+		if strings.HasPrefix(option.name, "--") && strings.HasPrefix(option.name, typed) {
+			found = append(found, option)
+		}
+	}
+	if len(found) > 1 {
+		names := []string{}
+		ofNsz := []optionName{}
+		for _, option := range found {
+			names = append(names, option.name)
+			if option.nsz {
+				ofNsz = append(ofNsz, option)
+			}
+		}
+		if len(ofNsz) == 1 {
+			return ofNsz[0], nil
+		}
+		return optionName{}, fmt.Errorf("ambiguous option %s: it could be %s", typed, strings.Join(names, ", "))
+	}
+	if len(found) == 1 {
+		return found[0], nil
+	}
+	return optionName{}, fmt.Errorf("unknown option %s (see nxpress --help)", typed)
+}
+
+// letterOption is the option of a letter: -V is --verify.
+func letterOption(letter byte) (optionName, bool) {
+	for _, option := range optionNames {
+		if option.letter == letter {
+			return option, true
+		}
+	}
+	return optionName{}, false
+}
+
+// negativeNumber finds what argparse takes for a negative number, a value and not an option:
+// -1, -.5
+var negativeNumber = regexp.MustCompile(`^-\d+$|^-\d*\.\d+$`)
+
+// isOption tells whether an argument is an option, which cannot be the value of the one before
+// it: "-" alone is a file, and a negative number a value (-t -1).
+func isOption(arg string) bool {
+	return strings.HasPrefix(arg, "-") && arg != "-" && !negativeNumber.MatchString(arg)
+}
+
+// flag turns on an option without a value.
+func (o *options) flag(option optionName) {
+	switch option.name {
+	case "-C":
+		o.compress = true
+	case "-D":
+		o.decompress = true
+	case "--verify", "--quick-verify":
+		o.verify = true
+	case "--block":
+		o.block = true
+	case "--low-priority":
+		o.lowPriority = true
+	case "--solid":
+		o.block = false
+	case "--overwrite":
+		o.overwrite = true
+	case "--rm-source":
+		o.rmSource = true
+	case "--info":
+		o.info = true
+	case "--convert":
+		o.convert = true
+	case "--recompress":
+		o.recompress = true
+	case "--trim":
+		o.trim = true
+	case "--estimate":
+		o.estimate = true
+	case "--measure":
+		o.measure = true
+	case "--fat32":
+		o.fat32 = true
+	case "--watch":
+		o.watch = true
+	case "--recursive":
+		o.recursive = true
+	case "--no-cache":
+		o.noCache = true
+	case "--keep-named":
+		o.keepNamed = true
+	case "--levels":
+		o.levels = true
+	case "--split":
+		o.split = true
+	case "--pack-games":
+		o.packGames = true
+	case "--minimal-output":
+		o.minimal = true
+	case "--machine-readable":
+		o.machine = true
+	case "--version":
+		o.version = true
+	case "--help":
+		o.help = true
+	default:
+		if noEffect[option.name] {
+			o.ignored = append(o.ignored, option.name)
+		}
+	}
+}
+
+// set gives an option its value; told is the option as it was given. Without one, -o puts the
+// new files next to their originals, as in nsz, and the other options need theirs.
+func (o *options) set(option optionName, told string, value string, hasValue bool) error {
+	if !hasValue {
+		if option.name == "--output" {
+			o.output = ""
+			return nil
+		}
+		return fmt.Errorf("%s needs a value", told)
+	}
 	number := func(min int) (int, error) {
 		n, err := strconv.Atoi(value)
 		if err != nil || n < min {
-			return 0, fmt.Errorf("%s needs a number, not %q", name, value)
+			return 0, fmt.Errorf("%s needs a number, not %q", told, value)
 		}
 		return n, nil
 	}
 	var err error
-	switch what {
-	case "level":
+	switch option.name {
+	case "--level":
 		o.level, err = number(1)
-	case "threads":
+	case "--threads":
 		// nsz takes a number below 1 as "choose for me"
 		if n, convErr := strconv.Atoi(value); convErr == nil && n < 1 {
 			o.threads = 0
 			return nil
 		}
 		o.threads, err = number(1)
-	case "multi":
+	case "--multi":
 		o.multi, err = number(1)
-	case "output":
+	case "--output":
 		o.output = value
-	case "keys":
+	case "--keys":
 		o.keys = value
-	case "dat":
+	case "--dat":
 		o.dat = value
-	case "rename":
+	case "--rename":
 		o.template = value
-	case "pack":
+	case "--pack":
 		o.pack = value
-	case "packName":
+	case "--pack-name":
 		o.packName = value
-	case "verifyLevel":
+	case "--verify-level":
 		if value != "full" && value != "signature" && value != "both" {
 			return errors.New("--verify-level is full, signature or both")
 		}
 		o.verifyLevel = value
-	case "bs", "depth":
-		o.ignored = append(o.ignored, name)
+	default:
+		if noEffect[option.name] {
+			o.ignored = append(o.ignored, option.name)
+		}
 	}
 	return err
 }
@@ -218,8 +361,14 @@ func defaultThreads(files int) int {
 	return max(1, switchfs.UsableProcessors()/max(1, files))
 }
 
+// errOutputModes is told when both outputs for other programs are asked, as nsz tells it.
+var errOutputModes = errors.New("--minimal-output and --machine-readable cannot be used together")
+
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
+	if o.minimal && o.machine {
+		return errOutputModes
+	}
 	actions := 0
 	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.packGames, o.info} {
 		if on {
@@ -228,6 +377,10 @@ func (o *options) check() error {
 	}
 	if actions > 1 {
 		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack and --pack-games")
+	}
+	// a watch would look for new files a pack does not take, without end
+	if o.watch && (o.pack != "" || o.packGames) {
+		return errors.New("--watch does not go with --pack or --pack-games: a pack is made of the files given at once")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -242,8 +395,27 @@ func (o *options) check() error {
 		return errors.New("no file or folder given")
 	}
 	if o.level > maxLevel {
-		o.ignored = append(o.ignored, fmt.Sprintf("-l %d (levels above %d make a zstd window larger than the 8 MiB installers decompress with: %d is used)", o.level, maxLevel, maxLevel))
+		o.notes = append(o.notes, fmt.Sprintf("-l %d: levels above %d make a zstd window larger than the 8 MiB installers decompress with, so %d is used", o.level, maxLevel, maxLevel))
 		o.level = maxLevel
+	}
+	// an option that does nothing with the others is told, not passed over
+	if o.levels && !o.estimate {
+		o.notes = append(o.notes, "--levels has no effect without --estimate")
+	}
+	if o.keepNamed && o.template == "" {
+		o.notes = append(o.notes, "--keep-named has no effect without --rename")
+	}
+	if o.packName != "" && !o.packGames {
+		o.notes = append(o.notes, "--pack-name has no effect without --pack-games")
+	}
+	// these write no file
+	for _, action := range []struct {
+		on   bool
+		name string
+	}{{o.template != "", "--rename"}, {o.info, "-i"}, {o.estimate, "--estimate"}, {actions == 0, "-V"}} {
+		if o.output != "" && action.on {
+			o.notes = append(o.notes, "-o has no effect with "+action.name)
+		}
 	}
 	if o.threads == 0 {
 		o.threads = defaultThreads(o.multi)
@@ -278,7 +450,9 @@ Usage: nxpress [options] file or folder...
   --low-priority      run below the normal priority of the processor, so the computer stays
                       responsive while NXPress works
   -m, --multi N       files at once (default 1)
-  -o, --output DIR    folder of the new files (default: next to each file)
+  -o, --output [DIR]  folder of the new files (default, and -o alone: next to each file)
+  --recursive         take the files in the folders inside the folders given too, and in
+                      theirs (without it, only the files of the folders given, as nsz)
   --watch             keep looking at the folders given and work on each new file once it
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
@@ -291,8 +465,10 @@ Usage: nxpress [options] file or folder...
                       XCI, at the level of -l (and -B), and tell the fastest for -t and -m
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
-  --minimal-output    print only "<percentage>%% <step>"
-  --machine-readable  print one JSON object per line
+  --minimal-output    print the progress on one line written over, "<percentage>%% <step>",
+                      and "100%% Done" at the end, as nsz does
+  --machine-readable  print one JSON object per line, as nsz does: progress, complete, error,
+                      info, warning, heartbeat and, at the end, summary
   --version           show the version
 
   --convert           turn XCI and XCZ files into NSP and NSZ

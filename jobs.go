@@ -169,10 +169,12 @@ func isSkipped(err error) bool {
 const splitFiles = "parts"
 
 // inputs are the files given and the ones in the folders given (and in their folders), of the
-// extensions taken, each once and in order of name; missing are the paths not found. A folder
-// of parts is one file, taken only with splitFiles.
+// extensions taken, each once and in order of name; missing are the paths not found, and the
+// folders that could not be read. A folder of parts is one file, taken only with splitFiles.
 func inputs(paths []string, extensions []string) (files []string, missing []string) {
 	seen := map[string]bool{}
+	// the files taken by their size, to find one given twice under two names
+	bySize := map[int64][]os.FileInfo{}
 	withParts := false
 	for _, taken := range extensions {
 		withParts = withParts || taken == splitFiles
@@ -196,10 +198,21 @@ func inputs(paths []string, extensions []string) (files []string, missing []stri
 		if absolute, err := filepath.Abs(path); err == nil {
 			path = absolute
 		}
-		if !seen[path] {
-			seen[path] = true
-			files = append(files, path)
+		if seen[path] {
+			return
 		}
+		seen[path] = true
+		// the same file by another name is done once: a.nsp and A.NSP on Windows and macOS, or a
+		// link to it
+		if info, err := os.Stat(path); err == nil {
+			for _, other := range bySize[info.Size()] {
+				if os.SameFile(info, other) {
+					return
+				}
+			}
+			bySize[info.Size()] = append(bySize[info.Size()], info)
+		}
+		files = append(files, path)
 	}
 	for _, path := range paths {
 		info, err := os.Stat(path)
@@ -213,29 +226,14 @@ func inputs(paths []string, extensions []string) (files []string, missing []stri
 			}
 			continue
 		}
-		found := []string{}
-		filepath.WalkDir(path, func(walked string, entry os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if entry.IsDir() {
-				// a folder of parts is one file: its parts are not looked into
-				if _, ok := splitContainer(walked); ok && walked != path {
-					if takes(walked) {
-						found = append(found, walked)
-					}
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			if takes(walked) {
-				found = append(found, walked)
-			}
-			return nil
-		})
-		sort.Strings(found)
+		found, unread, _ := folderFiles(path, true)
+		for _, folder := range unread {
+			missing = append(missing, folder.path)
+		}
 		for _, walked := range found {
-			add(walked)
+			if takes(walked) {
+				add(walked)
+			}
 		}
 	}
 	return files, missing

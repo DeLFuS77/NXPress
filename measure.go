@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +20,11 @@ import (
 
 // measureTrialTime is how long each setting is tried: six settings take about half a minute.
 const measureTrialTime = 4 * time.Second
+
+// measureWarmUp is how long the first setting runs before the trials, its speed left out: the
+// first compression of NXPress is slower (its memory taken, the disk and the processor waking
+// up), and a first trial came out at 1 MB/s where the others gave 84 to 479.
+const measureWarmUp = 2 * time.Second
 
 // fasterTrial is the fastest setting tried when it was not chosen, less than 5% faster than the
 // one chosen, so the window can tell why the lighter one stays; or nil.
@@ -79,12 +86,23 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 		// a minute: the file does not look left waiting meanwhile
 		progress := out.progress(path, fmt.Sprintf("Measuring %d/%d", i+1, len(trials)))
 		progress(int64(i), int64(len(trials)))
+		if i == 0 {
+			// from the end of the game, which the trials read last, so the first one does not
+			// find its part in memory
+			_, err := measureOne(ctx, path, folder, (float64(places)-0.5)/float64(places), switchfs.CompressOptions{Level: level, Workers: trials[0].Threads, Blocks: o.block}, measureWarmUp)
+			if errors.Is(err, switchfs.ErrNothingToMeasure) {
+				return "", "", notMeasurable(path)
+			}
+			if err != nil {
+				return "", "", err
+			}
+		}
 		start := time.Now()
 		for f := 0; f < trials[i].Files; f++ {
 			wait.Add(1)
 			go func(from float64) {
 				defer wait.Done()
-				done, err := measureOne(ctx, path, folder, from, switchfs.CompressOptions{Level: level, Workers: trials[i].Threads, Blocks: o.block})
+				done, err := measureOne(ctx, path, folder, from, switchfs.CompressOptions{Level: level, Workers: trials[i].Threads, Blocks: o.block}, measureTrialTime)
 				mutex.Lock()
 				defer mutex.Unlock()
 				total += done
@@ -96,7 +114,7 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 		}
 		wait.Wait()
 		if errors.Is(first, switchfs.ErrNothingToMeasure) {
-			return "", "", skipped("nothing in it can be compressed, it cannot be measured with")
+			return "", "", notMeasurable(path)
 		}
 		if first != nil {
 			return "", "", first
@@ -117,11 +135,20 @@ func measure(ctx context.Context, path string, o options, out output) (string, s
 	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.Threads, best.Files, best.Speed, duration(per10GB)), nil
 }
 
-// measurableGame is the first of the games given that a measure can compress, read without
-// compressing anything. When none can, the first one is skipped with why; when one could not
-// be read at all (damaged, no keys for it), that error is told instead.
+// measurableGame is the biggest of the games given that a measure can compress, read without
+// compressing anything: a small game is read whole in a trial, which then measures the start
+// of a compression more than the compression. When none can, the biggest one is skipped with
+// why; when one could not be read at all (damaged, no keys for it), that error is told instead.
 func measurableGame(ctx context.Context, files []string, o options) (string, error) {
 	options := switchfs.CompressOptions{Level: strconv.Itoa(o.level), Workers: 1, Blocks: o.block}
+	sizes := map[string]int64{}
+	for _, path := range files {
+		if info, err := os.Stat(path); err == nil {
+			sizes[path] = info.Size()
+		}
+	}
+	files = slices.Clone(files)
+	sort.SliceStable(files, func(i, j int) bool { return sizes[files[i]] > sizes[files[j]] })
 	var failed error
 	failedPath := ""
 	for _, path := range files {
@@ -139,21 +166,33 @@ func measurableGame(ctx context.Context, files []string, o options) (string, err
 	if failed != nil {
 		return failedPath, failed
 	}
-	reason := "nothing in it can be compressed, it cannot be measured with"
 	if len(files) > 1 {
-		reason = "nothing in the games of the list can be compressed, none can be measured with"
+		return files[0], skipped("nothing in the games of the list can be compressed, none can be measured with")
 	}
-	return files[0], skipped(reason)
+	return files[0], notMeasurable(files[0])
 }
 
-// measureOne compresses a part of the game for a trial into a hidden file in folder, and
-// deletes it; where nothing can be written, the measure leaves the writing out.
-func measureOne(ctx context.Context, path string, folder string, from float64, options switchfs.CompressOptions) (int64, error) {
+// notMeasurable skips a game the measure cannot compress, with why as a compression tells it:
+// sparse storage, compressed already...
+func notMeasurable(path string) error {
+	reason := "nothing in it can be compressed, it cannot be measured with"
+	if err := switchfs.NotCompressible(path); errors.Is(err, switchfs.ErrNotCompressible) {
+		if detail := strings.TrimPrefix(err.Error(), switchfs.ErrNotCompressible.Error()+": "); detail != err.Error() {
+			reason += ": " + detail
+		}
+	}
+	return skipped(reason)
+}
+
+// measureOne compresses a part of the game for a trial, for about the time given, into a hidden
+// file in folder, and deletes it; where nothing can be written, the measure leaves the writing
+// out.
+func measureOne(ctx context.Context, path string, folder string, from float64, options switchfs.CompressOptions, trial time.Duration) (int64, error) {
 	var output io.Writer = io.Discard
 	if file, err := os.CreateTemp(folder, ".nxpress-measure-*"); err == nil {
 		defer os.Remove(file.Name())
 		defer file.Close()
 		output = file
 	}
-	return switchfs.MeasureCompression(ctx, path, from, options, measureTrialTime, output)
+	return switchfs.MeasureCompression(ctx, path, from, options, trial, output)
 }
