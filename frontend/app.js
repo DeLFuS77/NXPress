@@ -125,13 +125,32 @@ function renderLifetime() {
 // the speed of the work: the bytes done each second, for a line of the last minute and the time
 // left; and the progress on the button of the taskbar
 const speed = { samples: [], last: 0, at: 0, taskbarAt: 0 };
+// workRows are the rows of the work running, by the start they wear: the files it was given
+// (renamed ones too) and the ones a watch or a measure took; of a pack of one file only its new
+// file, which tells the progress of all
+function workRows() {
+  const run = state.lastRun;
+  if (!run) return [];
+  const rows = [...state.rows.values()].filter(row => row.run === run.started);
+  return onePack(run) ? rows.filter(row => row.item.result) : rows;
+}
+// rowShare is how far a file of the work is, from 0 to 1: a file in steps (the work, then the
+// check of what it wrote) counts each step as its part, so it does not fall back at the check
+function rowShare(row) {
+  if (["ok", "failed", "skipped"].includes(row.status)) return 1;
+  if (row.status !== "work" || !row.total) return 0;
+  const share = Math.min(1, row.done / row.total);
+  const steps = stepsOf(row);
+  const index = steps.indexOf((row.step || "").split(" ")[0]);
+  return steps.length > 1 && index >= 0 ? (index + share) / steps.length : share;
+}
 function workDone() {
   let done = 0, total = 0;
-  for (const row of state.rows.values()) {
-    if (!["waiting", "work", "ok", "failed", "skipped"].includes(row.status)) continue;
-    const bytes = row.total || row.item.size || 0;
+  for (const row of workRows()) {
+    // a file weighs its size; the new file of a pack, the size of the files it is made of
+    const bytes = (row.item.result ? state.lastRun.bytes : row.item.size) || row.total || 0;
     total += bytes;
-    done += ["ok", "failed", "skipped"].includes(row.status) ? bytes : Math.min(row.done || 0, bytes);
+    done += rowShare(row) * bytes;
   }
   return { done, total };
 }
@@ -633,13 +652,15 @@ function summary() {
   text.textContent = "";
   bar.hidden = true;
   if (state.busy) {
-    // the files of this work: all the list, or the one file verified alone
-    const given = state.lastRun && !state.lastRun.watch ? new Set(state.lastRun.request.files) : null;
-    const working = given ? rows.filter(row => given.has(row.item.path)) : rows;
+    // the files of this work, not the ones done by a work before: all the list, the one file
+    // verified alone, the files a watch finds; a pack of one file and a measure are one result
+    const run = state.lastRun;
+    const working = workRows();
+    const count = onePack(run) || (run && run.mode === "measure") ? 1 : working.length;
     const ended = row => ["ok", "failed", "skipped"].includes(row.status);
-    const done = working.filter(ended).length;
-    const share = working.reduce((sum, row) => sum + (ended(row) ? 1 : row.total ? row.done / row.total : 0), 0) / Math.max(1, working.length);
-    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, working.length, Math.floor(share * 100));
+    const done = Math.min(count, working.filter(ended).length);
+    const share = Math.min(1, working.reduce((sum, row) => sum + rowShare(row), 0) / Math.max(1, count));
+    text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, count, Math.floor(share * 100));
     if (state.lastRun && state.lastRun.watch) text.textContent = t("watching") + " · " + text.textContent;
     bar.hidden = false;
     bar.firstElementChild.style.width = (share * 100).toFixed(1) + "%";
@@ -1074,7 +1095,9 @@ async function start(mode, extra) {
   // the end of a quick one) can come before the answer; what changes is put back if it does not
   // start, so another work still running keeps its rows
   const before = { lastRun: state.lastRun, paused: state.paused, pending: load("pending", null), rows: [] };
-  const fresh = { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0 };
+  // the rows of the work wear its start, to count them and only them
+  const started = Date.now();
+  const fresh = { status: "waiting", step: "", done: 0, total: 0, note: "", output: "", error: "", after: 0, run: started };
   for (const row of state.rows.values()) if (!measuring && (files.includes(row.item.path) || watch)) {
     before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
     Object.assign(row, fresh);
@@ -1085,12 +1108,13 @@ async function start(mode, extra) {
   resetSpeed();
   state.busy = true;
   state.paused = false;
-  state.lastRun = { mode, request, started: Date.now(), watch, skipped: 0 };
+  // bytes: the size of the files given, which the new file of a pack weighs in the progress
+  const bytes = state.items.filter(item => files.includes(item.path)).reduce((sum, item) => sum + (item.size || 0), 0);
+  state.lastRun = { mode, request, started, watch, skipped: 0, bytes };
   // the files left are kept, to go on with them after a close
   if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   app().SetTaskbar("normal", 0, 1);
   render();
-  const started = state.lastRun.started;
   try {
     await app().Start(request);
     // a new pack shows its own new file: the one of a pack before leaves the list
@@ -1175,7 +1199,7 @@ function listen() {
   const events = window.runtime;
   events.EventsOn("progress", event => {
     const row = rowOf(event.file);
-    Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total });
+    Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
