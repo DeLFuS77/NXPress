@@ -24,6 +24,9 @@ func watchJobs(ctx context.Context, o options, out output, every time.Duration) 
 
 // watchFolder is watchJobs with the work it does on the files given.
 func watchFolder(ctx context.Context, o options, out output, every time.Duration, run func(context.Context, options, output) int) int {
+	// every round of the watch claims its new names in one set: with -w, a round does not
+	// replace the new file of one before
+	ctx = withDestinations(ctx, nil)
 	extensions := takes[o.action()]
 	watch := folderWatch{seen: map[string]bool{}, looked: map[string]fileLook{}, failed: map[string]fileLook{}}
 	// the files there at the start are done first, as they are

@@ -327,8 +327,19 @@ type destinations struct {
 
 type destinationsKey struct{}
 
-// withDestinations gives ctx the destinations of a work on files.
+// withDestinations gives ctx the destinations of a work on files. A watched folder works in
+// rounds under one set, so a round never takes the name of a new file of a round before.
 func withDestinations(ctx context.Context, files []string) context.Context {
+	if d, ok := ctx.Value(destinationsKey{}).(*destinations); ok {
+		d.mutex.Lock()
+		defer d.mutex.Unlock()
+		for _, file := range files {
+			if _, taken := d.owners[d.key(file)]; !taken {
+				d.owners[d.key(file)] = file
+			}
+		}
+		return ctx
+	}
 	d := &destinations{owners: map[string]string{}, folders: map[string]string{}}
 	for _, file := range files {
 		d.owners[d.key(file)] = file
