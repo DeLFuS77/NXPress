@@ -703,7 +703,7 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + item.size, 0));
+  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + (item.size || 0), 0));
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -779,7 +779,8 @@ function add(item) {
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
   });
   game.addEventListener("mouseleave", hidePop);
-  tr.querySelector(".size").textContent = item.size ? size(item.size) : "";
+  // an empty file shows its 0 B; a file a work told about, whose size is not known, nothing
+  tr.querySelector(".size").textContent = item.size === null ? "" : size(item.size || 0);
   const remove = () => {
     if (state.busy) return;
     hidePop();
@@ -1000,7 +1001,7 @@ function paint(row) {
 function rowOf(file) {
   if (!state.rows.has(file)) {
     const run = state.lastRun;
-    add({ path: file, name: file.split(/[\\/]/).pop(), size: 0, result: onePack(run) && file === run.request.pack });
+    add({ path: file, name: file.split(/[\\/]/).pop(), size: null, result: onePack(run) && file === run.request.pack });
   }
   return state.rows.get(file);
 }
@@ -1241,7 +1242,7 @@ function report() {
   ];
   for (const row of state.rows.values()) {
     const game = row.game ? ` [${row.game.titleId} v${row.game.version} ${row.game.type}${row.game.titles > 1 ? ", " + row.game.titles + " titles" : ""}]` : "";
-    lines.push(`- ${row.item.name} (${size(row.item.size)})${game}: ${row.status || "-"}` + (row.error ? ` — ${row.error}` : row.note ? ` — ${row.note}` : ""));
+    lines.push(`- ${row.item.name}${row.item.size === null ? "" : ` (${size(row.item.size)})`}${game}: ${row.status || "-"}` + (row.error ? ` — ${row.error}` : row.note ? ` — ${row.note}` : ""));
   }
   if ($("log").textContent) lines.push("", $("log").textContent.trim());
   return lines.join("\n");
