@@ -8,19 +8,38 @@ import (
 	"time"
 )
 
-// The files already checked, kept between runs: a file checked again with the same size and
-// time of change is not read again. Every new file NXPress writes is checked, and is kept too.
+// The files already checked, kept between runs: a file checked again, still the same file with
+// the same size and times, is not read again. Every new file NXPress writes is checked, and is
+// kept too.
 type checkCache struct {
 	mutex sync.Mutex
 	path  string
 	files map[string]checkedFile
 }
 
-type checkedFile struct {
+// fileStamp tells a file apart: its size and date, the drive and the number the system gives it
+// there, and when its entry changed last. A copy keeps the size and the date, as Explorer and
+// robocopy make it, but it is another file, with its own number and changed when it was made.
+type fileStamp struct {
 	Size     int64     `json:"size"`
 	Modified time.Time `json:"modified"`
-	Checked  time.Time `json:"checked"`
-	Note     string    `json:"note,omitempty"`
+	Volume   uint64    `json:"volume"`
+	Index    uint64    `json:"index"`
+	Changed  time.Time `json:"changed"`
+	Folder   bool      `json:"-"`
+}
+
+// same tells whether two stamps are of the same file, not changed between them. A stamp kept
+// before the number and the time of change were has neither, so its file is checked again.
+func (s fileStamp) same(other fileStamp) bool {
+	return s.Size == other.Size && s.Modified.Equal(other.Modified) && s.Volume == other.Volume &&
+		s.Index == other.Index && s.Changed.Equal(other.Changed)
+}
+
+type checkedFile struct {
+	fileStamp
+	Checked time.Time `json:"checked"`
+	Note    string    `json:"note,omitempty"`
 }
 
 var checked = &checkCache{}
@@ -51,14 +70,14 @@ func (c *checkCache) load() {
 // find gives when a file was checked, if it did not change since.
 func (c *checkCache) find(path string) (checkedFile, bool) {
 	c.load()
-	info, err := os.Stat(path)
+	stamp, err := stampOf(path)
 	if err != nil {
 		return checkedFile{}, false
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	entry, ok := c.files[path]
-	if !ok || entry.Size != info.Size() || !entry.Modified.Equal(info.ModTime()) {
+	if !ok || !entry.same(stamp) {
 		return checkedFile{}, false
 	}
 	return entry, true
@@ -67,13 +86,13 @@ func (c *checkCache) find(path string) (checkedFile, bool) {
 // keep records a file as checked now, and writes the cache.
 func (c *checkCache) keep(path string, note string) {
 	c.load()
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
+	stamp, err := stampOf(path)
+	if err != nil || stamp.Folder {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.files[path] = checkedFile{Size: info.Size(), Modified: info.ModTime(), Checked: time.Now(), Note: note}
+	c.files[path] = checkedFile{fileStamp: stamp, Checked: time.Now(), Note: note}
 	// the files gone or changed are left out
 	for name, entry := range c.files {
 		if info, err := os.Stat(name); err != nil || info.Size() != entry.Size {
