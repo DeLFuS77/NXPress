@@ -33,13 +33,18 @@ func (c *checkCache) load() {
 		return
 	}
 	c.files = map[string]checkedFile{}
-	folder, err := dataFolder()
-	if err != nil {
-		return
+	if c.path == "" {
+		folder, err := dataFolder()
+		if err != nil {
+			return
+		}
+		c.path = filepath.Join(folder, "checked.json")
 	}
-	c.path = filepath.Join(folder, "checked.json")
 	if data, err := os.ReadFile(c.path); err == nil {
-		json.Unmarshal(data, &c.files)
+		// a cache that is null or broken starts again empty
+		if json.Unmarshal(data, &c.files) != nil || c.files == nil {
+			c.files = map[string]checkedFile{}
+		}
 	}
 }
 
