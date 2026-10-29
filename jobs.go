@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -825,13 +828,201 @@ func pack(ctx context.Context, o options, out output) error {
 	if err != nil {
 		return err
 	}
-	out.done(o.pack, name, keptNote(o, check, note), nil)
+	kept := incompleteNote(o, check, name, sources)
+	out.done(o.pack, name, joinNotes(keptNote(o, check, note), kept), nil)
+	if kept != "" {
+		return nil
+	}
 	for _, source := range sources {
 		if _, _, err := removeSource(o, source, check, name, ""); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// incompleteNote is why the originals of a pack stay with --rm-source although it is checked:
+// it lacks some of the titles it keeps. "" when it holds them whole, or nothing is deleted.
+func incompleteNote(o options, check switchfs.FileCheck, pack string, sources []string) string {
+	if !o.rmSource || check.Partial {
+		return ""
+	}
+	lacks, err := packLacks(pack, sources)
+	switch {
+	case err != nil:
+		return "the originals are kept: the pack cannot be read again: " + err.Error()
+	case len(lacks) > 0:
+		return "the originals are kept: the pack lacks " + strings.Join(lacks, ", ")
+	}
+	return ""
+}
+
+func joinNotes(notes ...string) string {
+	kept := []string{}
+	for _, note := range notes {
+		if note != "" {
+			kept = append(kept, note)
+		}
+	}
+	return strings.Join(kept, "; ")
+}
+
+// packLacks tells what a pack lacks of the titles it keeps: of each, the NCA files its CNMT
+// names (but its delta fragments, left out on purpose), and a ticket when an original has one
+// for it. The check of a pack compares each file it holds with the one it comes from, not
+// what should be there: a file merged in and lost on the way (the ticket of an update kept,
+// when a SuperNSP holds two versions of it under one name) would go with its originals.
+func packLacks(pack string, sources []string) ([]string, error) {
+	files, err := packageFiles(pack)
+	if err != nil {
+		return nil, err
+	}
+	held := map[string]bool{}
+	tickets := map[string]bool{}
+	for _, file := range files {
+		name := strings.ToLower(file)
+		held[name] = true
+		// a ticket is named by its rights ID, the title ID first
+		if strings.HasSuffix(name, ".tik") && len(name) > 16 {
+			tickets[name[:16]] = true
+		}
+	}
+	wanted := map[string]bool{}
+	for _, source := range sources {
+		files, err := packageFiles(source)
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range files {
+			if name := strings.ToLower(file); strings.HasSuffix(name, ".tik") && len(name) > 16 {
+				wanted[name[:16]] = true
+			}
+		}
+	}
+	titles, err := readTitles(pack)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(titles, func(i, j int) bool { return titles[i].TitleId < titles[j].TitleId })
+	lacks := []string{}
+	for _, title := range titles {
+		id := strings.ToLower(title.TitleId)
+		for _, kind := range contentOrder {
+			content, ok := title.Contents[kind]
+			if !ok || content.ID == "" || kind == "DeltaFragment" {
+				continue
+			}
+			nca := strings.ToLower(content.ID)
+			if !held[nca+".nca"] && !held[nca+".ncz"] && !held[nca+".cnmt.nca"] && !held[nca+".cnmt.ncz"] {
+				lacks = append(lacks, fmt.Sprintf("the %s NCA of %s v%d", kind, strings.ToUpper(id), title.Version))
+			}
+		}
+		if wanted[id] && !tickets[id] {
+			lacks = append(lacks, "the ticket of "+strings.ToUpper(id))
+		}
+	}
+	return lacks, nil
+}
+
+// packageFiles are the names of the files a game file holds: in its PFS0, or in the secure
+// partition of a game card.
+func packageFiles(path string) ([]string, error) {
+	if extension := strings.ToLower(filepath.Ext(path)); extension != ".xci" && extension != ".xcz" {
+		pfs0, err := switchfs.ReadPfs0File(path)
+		if err != nil {
+			return nil, err
+		}
+		names := make([]string, len(pfs0.Files))
+		for i, file := range pfs0.Files {
+			names[i] = file.Name
+		}
+		return names, nil
+	}
+	reader, err := switchfs.OpenFile(path)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	header := make([]byte, 0x200)
+	if err := readAt(reader, header, 0); err != nil {
+		return nil, err
+	}
+	if string(header[0x100:0x104]) != "HEAD" {
+		return nil, errors.New("it is not a game card")
+	}
+	root := int64(binary.LittleEndian.Uint64(header[0x130:0x138]))
+	partitions, err := hfs0Files(reader, root)
+	if err != nil {
+		return nil, err
+	}
+	for _, partition := range partitions {
+		if partition.name != "secure" {
+			continue
+		}
+		files, err := hfs0Files(reader, root+partition.offset)
+		if err != nil {
+			return nil, err
+		}
+		names := make([]string, len(files))
+		for i, file := range files {
+			names[i] = file.name
+		}
+		return names, nil
+	}
+	return nil, errors.New("the game card has no secure partition")
+}
+
+// hfs0File is a file of an HFS0, the file system of a game card, and where it starts.
+type hfs0File struct {
+	name   string
+	offset int64
+}
+
+// hfs0Files reads the table of the HFS0 at offset: its files, each from the start of the HFS0.
+func hfs0Files(reader io.ReaderAt, offset int64) ([]hfs0File, error) {
+	head := make([]byte, 0x10)
+	if err := readAt(reader, head, offset); err != nil {
+		return nil, err
+	}
+	if string(head[:4]) != "HFS0" {
+		return nil, errors.New("the game card has no HFS0 where its header says")
+	}
+	count := int64(binary.LittleEndian.Uint32(head[4:8]))
+	names := int64(binary.LittleEndian.Uint32(head[8:12]))
+	if count > 1<<16 || names > 4<<20 {
+		return nil, errors.New("the HFS0 of the game card is damaged")
+	}
+	table := make([]byte, count*0x40+names)
+	if err := readAt(reader, table, offset+0x10); err != nil {
+		return nil, err
+	}
+	data := 0x10 + int64(len(table))
+	files := make([]hfs0File, 0, count)
+	for i := int64(0); i < count; i++ {
+		entry := table[i*0x40:]
+		at := int64(binary.LittleEndian.Uint32(entry[16:20]))
+		if at >= names {
+			return nil, errors.New("the HFS0 of the game card is damaged")
+		}
+		name := table[count*0x40+at:]
+		if end := bytes.IndexByte(name, 0); end >= 0 {
+			name = name[:end]
+		}
+		files = append(files, hfs0File{name: string(name), offset: data + int64(binary.LittleEndian.Uint64(entry[0:8]))})
+	}
+	return files, nil
+}
+
+// readAt reads all of p at offset: a read that ends at the end of the file is whole too.
+func readAt(reader io.ReaderAt, p []byte, offset int64) error {
+	n, err := reader.ReadAt(p, offset)
+	if n == len(p) {
+		return nil
+	}
+	if err == nil || err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
+	return err
 }
 
 // defaultPackTemplate is the name of the pack of each game, as Switch Library Manager names a
@@ -976,7 +1167,11 @@ func packGames(ctx context.Context, o options, out output) int {
 			}
 			return name, err
 		}, out)
-		out.done(files[0], name, keptNote(o, check, note), err)
+		kept := ""
+		if err == nil {
+			kept = incompleteNote(o, check, name, files)
+		}
+		out.done(files[0], name, joinNotes(keptNote(o, check, note), kept), err)
 		for _, file := range files[1:] {
 			if err != nil {
 				out.done(file, "", "", err)
@@ -986,6 +1181,9 @@ func packGames(ctx context.Context, o options, out output) int {
 		}
 		if err != nil {
 			failed += len(files)
+			continue
+		}
+		if kept != "" {
 			continue
 		}
 		for _, file := range files {
