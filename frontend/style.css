@@ -137,7 +137,7 @@ nav button.on b { color: var(--text); }
 #drop.wails-drop-target-active { border-color: var(--accent); background: var(--accent-soft); }
 #empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; }
 .empty-icon { width: 56px; height: 56px; margin-bottom: 4px; }
-.empty-icon path { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.empty-icon path { fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 #empty .big { font-size: 18px; font-weight: 600; }
 .empty-buttons { display: flex; gap: 8px; margin: 8px 0 4px; }
 .types { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
@@ -156,9 +156,9 @@ tbody tr:last-child td { border-bottom: none; }
 td.name { word-break: break-word; }
 .game { display: flex; gap: 10px; align-items: center; }
 .game .icon { width: 40px; height: 40px; border-radius: 8px; flex: none; object-fit: cover; background: var(--hover); }
-/* the cover of a file whose game is not read yet: the shape of a game card with its kind */
-.game .cover { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 8px; font-size: 11px; font-weight: 700; color: var(--tone-space); background: color-mix(in srgb, var(--tone-space) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--tone-space) 30%, transparent); }
-.game .cover[data-kind="XCI"], .game .cover[data-kind="XCZ"] { color: var(--tone-organize); background: color-mix(in srgb, var(--tone-organize) 12%, var(--panel)); border-color: color-mix(in srgb, var(--tone-organize) 30%, transparent); }
+/* the cover of a file whose game is not read yet: the shape of a game card with its kind, in grey
+   until the game brings its own */
+.game .cover { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 8px; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--hover); border: 1px solid var(--line); }
 .game .title { font-weight: 600; }
 .game .file { font-size: 12px; color: var(--muted); }
 .game .list-warn { font-size: 12px; color: var(--warn); margin-top: 2px; }
@@ -311,7 +311,7 @@ table.grid .game.refill { transition: none; }
 .drop-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 48px; border: 2px dashed var(--accent); border-radius: 16px; background: var(--panel); font-size: 18px; pointer-events: none; }
 .drop-icon { width: 48px; height: 48px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: lift .7s ease-in-out infinite; }
 @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
-.game .cover.loading { background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+.game .cover.loading { background-image: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--text) 12%, transparent) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
 @keyframes icon-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
 .game img.icon:not([hidden]) { animation: icon-in .3s ease-out; }
 
