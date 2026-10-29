@@ -61,6 +61,8 @@ type options struct {
 	files       []string
 	// the options of nsz accepted without effect, told once
 	ignored []string
+	// what the options given do not do together, told once
+	notes []string
 }
 
 const (
@@ -370,6 +372,10 @@ func (o *options) check() error {
 	if actions > 1 {
 		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack and --pack-games")
 	}
+	// a watch would look for new files a pack does not take, without end
+	if o.watch && (o.pack != "" || o.packGames) {
+		return errors.New("--watch does not go with --pack or --pack-games: a pack is made of the files given at once")
+	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
 	}
@@ -383,8 +389,27 @@ func (o *options) check() error {
 		return errors.New("no file or folder given")
 	}
 	if o.level > maxLevel {
-		o.ignored = append(o.ignored, fmt.Sprintf("-l %d (levels above %d make a zstd window larger than the 8 MiB installers decompress with: %d is used)", o.level, maxLevel, maxLevel))
+		o.notes = append(o.notes, fmt.Sprintf("-l %d: levels above %d make a zstd window larger than the 8 MiB installers decompress with, so %d is used", o.level, maxLevel, maxLevel))
 		o.level = maxLevel
+	}
+	// an option that does nothing with the others is told, not passed over
+	if o.levels && !o.estimate {
+		o.notes = append(o.notes, "--levels has no effect without --estimate")
+	}
+	if o.keepNamed && o.template == "" {
+		o.notes = append(o.notes, "--keep-named has no effect without --rename")
+	}
+	if o.packName != "" && !o.packGames {
+		o.notes = append(o.notes, "--pack-name has no effect without --pack-games")
+	}
+	// these write no file
+	for _, action := range []struct {
+		on   bool
+		name string
+	}{{o.template != "", "--rename"}, {o.info, "-i"}, {o.estimate, "--estimate"}, {actions == 0, "-V"}} {
+		if o.output != "" && action.on {
+			o.notes = append(o.notes, "-o has no effect with "+action.name)
+		}
 	}
 	if o.threads == 0 {
 		o.threads = defaultThreads(o.multi)

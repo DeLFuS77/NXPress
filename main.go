@@ -67,6 +67,9 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	for _, ignored := range o.ignored {
 		out.say("note: %s has no effect in NXPress", ignored)
 	}
+	for _, note := range o.notes {
+		out.say("note: %s", note)
+	}
 	// recompressing needs no keys (the NCZ hold their data decrypted, with their keys), nor do
 	// files split for FAT32 or joined
 	if _, err := loadKeys(o.keys); err != nil && !o.recompress && !o.fat32 {

@@ -68,7 +68,7 @@ func TestCheckOptions(t *testing.T) {
 		t.Fatalf("--dat checks: %v %+v", err, o)
 	}
 	o, _ = parseOptions([]string{"-C", "-l", "22", "-m", "2", "x"})
-	if err := o.check(); err != nil || o.level != maxLevel || len(o.ignored) != 1 || o.threads != defaultThreads(2) {
+	if err := o.check(); err != nil || o.level != maxLevel || len(o.notes) != 1 || o.threads != defaultThreads(2) {
 		t.Fatalf("level and threads: %v %+v", err, o)
 	}
 	for args, want := range map[string]string{"-C": "compress", "-D": "decompress", "--fat32": "fat32", "--pack-games": "pack", "-V": "verify", "-i": "info"} {

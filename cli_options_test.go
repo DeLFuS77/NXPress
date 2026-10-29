@@ -107,3 +107,41 @@ func TestOptionsAsArgparse(t *testing.T) {
 		}
 	}
 }
+
+// An option that does nothing with the others is told once, and a watch does not go with a
+// pack, which would wait for files it never takes.
+func TestCheckTellsWhatHasNoEffect(t *testing.T) {
+	for args, want := range map[string][]string{
+		"--levels -C":                     {"--levels has no effect without --estimate"},
+		"--levels --estimate":             nil,
+		"--keep-named -C":                 {"--keep-named has no effect without --rename"},
+		"--pack-name {name} -C":           {"--pack-name has no effect without --pack-games"},
+		"--pack-name {name} --pack-games": nil,
+		"-o out --rename {name}":          {"-o has no effect with --rename"},
+		"-o out -i":                       {"-o has no effect with -i"},
+		"-o out --estimate":               {"-o has no effect with --estimate"},
+		"-o out -V":                       {"-o has no effect with -V"},
+		"-o out --dat d.dat":              {"-o has no effect with -V"},
+		"-o out -C":                       nil,
+		"-o out --measure":                nil,
+		"-o -i":                           nil,
+		"-C -l 25":                        {"-l 25: levels above 19 make a zstd window larger than the 8 MiB installers decompress with, so 19 is used"},
+	} {
+		o, err := parseOptions(append(strings.Fields(args), "x"))
+		if err == nil {
+			err = o.check()
+		}
+		if err != nil || !reflect.DeepEqual(o.notes, want) || len(o.ignored) > 0 {
+			t.Errorf("%s: notes %q, ignored %q, %v", args, o.notes, o.ignored, err)
+		}
+	}
+	for _, args := range []string{"--watch --pack p.nsp", "--watch --pack-games"} {
+		o, err := parseOptions(append(strings.Fields(args), "x"))
+		if err == nil {
+			err = o.check()
+		}
+		if err == nil || !strings.HasPrefix(err.Error(), "--watch does not go with --pack") {
+			t.Errorf("%s: %v", args, err)
+		}
+	}
+}
