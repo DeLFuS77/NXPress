@@ -27,7 +27,10 @@ type options struct {
 	fat32      bool
 	template   string
 	watch      bool
-	noCache    bool
+	// the files in the folders inside the folders given too (the command line takes only the
+	// ones of the folders given, as nsz)
+	recursive bool
+	noCache   bool
 	// --rename leaves the files whose name has their title ID
 	keepNamed bool
 	// --pack-games leaves out the games with these title IDs, in capitals (from the window)
@@ -82,7 +85,8 @@ var optionNames = []optionName{
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
-	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--overwrite", 'w', false, true},
+	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
+	{"--overwrite", 'w', false, true},
 	{"--rm-source", 0, false, true}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
@@ -265,6 +269,8 @@ func (o *options) flag(option optionName) {
 		o.fat32 = true
 	case "--watch":
 		o.watch = true
+	case "--recursive":
+		o.recursive = true
 	case "--no-cache":
 		o.noCache = true
 	case "--keep-named":
@@ -414,6 +420,8 @@ Usage: nxpress [options] file or folder...
                       responsive while NXPress works
   -m, --multi N       files at once (default 1)
   -o, --output [DIR]  folder of the new files (default, and -o alone: next to each file)
+  --recursive         take the files in the folders inside the folders given too, and in
+                      theirs (without it, only the files of the folders given, as nsz)
   --watch             keep looking at the folders given and work on each new file once it
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
