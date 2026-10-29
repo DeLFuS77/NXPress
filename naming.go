@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -262,13 +263,22 @@ func rename(ctx context.Context, path string, o options, out output) (string, st
 	if err := claim(ctx, path, name); err != nil {
 		return "", "", err
 	}
-	// the same file under another case is renamed; another file there is replaced only with -w
-	if !sameFile(name, path) {
+	// the same file under another case is renamed; another file there is replaced only with -w,
+	// and without it the rename itself fails when a file takes the name meanwhile
+	same := sameFile(name, path)
+	if !same {
 		if err := free(o, name); err != nil {
 			return "", "", err
 		}
 	}
-	if err := os.Rename(path, name); err != nil {
+	if same || o.overwrite {
+		err = os.Rename(path, name)
+	} else if err = renameNew(path, name); errors.Is(err, fs.ErrExist) {
+		if there := free(o, name); there != nil {
+			err = there
+		}
+	}
+	if err != nil {
 		return "", "", err
 	}
 	return name, "renamed to " + filepath.Base(name), nil
