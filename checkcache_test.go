@@ -270,3 +270,31 @@ func TestCheckCachePurge(t *testing.T) {
 		}
 	}
 }
+
+// a game that changes while it is read is not kept as checked: keep takes it only as find saw
+// it before; once the work ends, the new file a later work writes in its place is kept
+func TestCheckCacheChangedWhileRead(t *testing.T) {
+	cache, folder := testCheckCache(t, "")
+	game := testGame(t, folder, "a.nsp", 100)
+	cache.find(game)
+	if err := os.WriteFile(game, make([]byte, 200), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cache.keep(game, "")
+	if _, ok := cache.find(game); ok {
+		t.Error("a game changed while it is read is kept as checked")
+	}
+	cache.keep(game, "")
+	if _, ok := cache.find(game); !ok {
+		t.Error("a game read as it was seen is not kept")
+	}
+	// found once, then written again in its place by a later work
+	cache.flush()
+	if err := os.WriteFile(game, make([]byte, 300), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cache.keep(game, "")
+	if _, ok := cache.find(game); !ok {
+		t.Error("the new file of a later work is not kept")
+	}
+}

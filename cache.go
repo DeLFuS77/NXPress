@@ -17,6 +17,8 @@ type checkCache struct {
 	mutex sync.Mutex
 	path  string
 	files map[string]checkedFile
+	// what find saw of each file before it was read, until the end of the work
+	seen map[string]fileStamp
 	// a change is written a while after it, with the ones that follow, and at the end of a work
 	dirty  bool
 	timer  *time.Timer
@@ -65,6 +67,7 @@ func (c *checkCache) load() {
 		return
 	}
 	c.files = map[string]checkedFile{}
+	c.seen = map[string]fileStamp{}
 	if c.path == "" {
 		folder, err := dataFolder()
 		if err != nil {
@@ -172,7 +175,9 @@ func (d drivesHere) find(folder string) driveHere {
 	return drive
 }
 
-// find gives when a file was checked, if it did not change since.
+// find gives when a file was checked, if it did not change since. What it sees of the file is
+// remembered until the end of the work: keep takes the file only if it is still the same, so a
+// file that changed while it was read is not kept as checked.
 func (c *checkCache) find(path string) (checkedFile, bool) {
 	c.load()
 	stamp, err := stampOf(path)
@@ -181,6 +186,7 @@ func (c *checkCache) find(path string) (checkedFile, bool) {
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	c.seen[path] = stamp
 	entry, ok := c.files[path]
 	if !ok || !entry.same(stamp) {
 		return checkedFile{}, false
@@ -198,6 +204,12 @@ func (c *checkCache) keep(path string, note string) {
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	if before, ok := c.seen[path]; ok {
+		delete(c.seen, path)
+		if !before.same(stamp) {
+			return
+		}
+	}
 	c.files[path] = checkedFile{fileStamp: stamp, Checked: time.Now(), Note: note}
 	c.changed()
 }
@@ -211,8 +223,12 @@ func (c *checkCache) changed() {
 	}
 }
 
-// flush writes what the cache has left to write, at the end of a work.
+// flush writes what the cache has left to write, at the end of a work, and forgets what find saw:
+// a file a later work writes in the place of one is kept as it is then.
 func (c *checkCache) flush() {
+	c.mutex.Lock()
+	clear(c.seen)
+	c.mutex.Unlock()
 	c.save()
 }
 
