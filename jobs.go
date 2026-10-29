@@ -760,13 +760,22 @@ func estimate(ctx context.Context, path string, o options, threads int, out outp
 		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Estimating"),
 	}, estimateSamples, estimateSampleSize)
 	if errors.Is(err, switchfs.ErrNothingToMeasure) {
-		return "", "nothing in it can be compressed", nil
+		return nothingToEstimate(path)
 	}
 	if err != nil {
 		return "", "", err
 	}
 	return "", fmt.Sprintf("about %s -> %s, %s smaller, %s at level %d", size(result.InputSize), size(result.OutputSize),
 		percent(result.InputSize-result.OutputSize, result.InputSize), duration(result.Duration), o.level), nil
+}
+
+// nothingToEstimate ends the estimate of a game with nothing to compress: a game in sparse
+// storage is skipped with why, as compressing skips it.
+func nothingToEstimate(path string) (string, string, error) {
+	if errors.Is(switchfs.NotCompressible(path), switchfs.ErrSparseStorage) {
+		return "", "", skipped(sparseSkipped)
+	}
+	return "", "nothing in it can be compressed", nil
 }
 
 // the levels compared, from light to maximum
@@ -781,7 +790,7 @@ func compareLevels(ctx context.Context, path string, o options, threads int, out
 			Level: strconv.Itoa(level), Workers: threads, Blocks: o.block,
 		}, estimateSamples/2, estimateSampleSize)
 		if errors.Is(err, switchfs.ErrNothingToMeasure) {
-			return "", "nothing in it can be compressed", nil
+			return nothingToEstimate(path)
 		}
 		if err != nil {
 			return "", "", err
