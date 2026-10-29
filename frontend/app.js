@@ -452,7 +452,7 @@ function stepText(step) {
 // twice; in Pack also an update or a DLC without its game, and a DLC that needs a newer game
 // than the list brings
 function listWarnings() {
-  const read = [...state.rows.values()].filter(row => row.game && row.game.titleId);
+  const read = [...state.rows.values()].filter(row => !row.item.result && row.game && row.game.titleId);
   const games = new Map();
   for (const row of read) {
     const id = row.game.type === "BASE" ? row.game.titleId : row.game.gameId;
@@ -649,7 +649,7 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(rows.length, state.items.reduce((sum, item) => sum + item.size, 0));
+  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + item.size, 0));
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -692,9 +692,11 @@ function clearList() {
   $("status").textContent = "";
 }
 
+// add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
+// to work on, so it stays out of the files a work is given
 function add(item) {
   if (state.rows.has(item.path)) return;
-  state.items.push(item);
+  if (!item.result) state.items.push(item);
   const tr = document.createElement("tr");
   tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file
@@ -760,7 +762,7 @@ function sortRows() {
   });
   const body = $("files").tBodies[0];
   if (rows.some((row, i) => body.rows[i] !== row.tr)) for (const row of rows) body.append(row.tr);
-  if (!state.busy) state.items = rows.map(row => row.item);
+  if (!state.busy) state.items = rows.filter(row => !row.item.result).map(row => row.item);
 }
 // the names of the games come in a few at a time: the list is sorted again once they settle
 let sortTimer = 0;
@@ -920,8 +922,13 @@ function paint(row) {
   }
 }
 
+// rowOf is the row of a file the work tells about, added when the list has none: a file a watch
+// found, or the new file of a pack of one file, which is a result and not a file to work on
 function rowOf(file) {
-  if (!state.rows.has(file)) add({ path: file, name: file.split(/[\\/]/).pop(), size: 0 });
+  if (!state.rows.has(file)) {
+    const run = state.lastRun;
+    add({ path: file, name: file.split(/[\\/]/).pop(), size: 0, result: onePack(run) && file === run.request.pack });
+  }
   return state.rows.get(file);
 }
 
@@ -1083,8 +1090,11 @@ async function start(mode, extra) {
   if (!watch && ["compress", "decompress", "recompress", "trim", "convert", "fat32"].includes(mode)) save("pending", { mode, request });
   app().SetTaskbar("normal", 0, 1);
   render();
+  const started = state.lastRun.started;
   try {
     await app().Start(request);
+    // a new pack shows its own new file: the one of a pack before leaves the list
+    if (mode === "pack") for (const row of [...state.rows.values()]) if (row.item.result && row.run !== started) { row.tr.remove(); state.rows.delete(row.item.path); }
   } catch (error) {
     state.busy = false;
     state.paused = before.paused;
