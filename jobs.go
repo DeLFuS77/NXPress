@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -345,15 +346,20 @@ func temporary(path string) string {
 	return filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+".nxpress")
 }
 
-// finish gives the checked temporary file its name, replacing a file there with -w.
+// finish gives the checked temporary file its name. With -w the rename replaces a file there,
+// and nothing is deleted before it; without -w the rename fails when a file took the name
+// meanwhile.
 func finish(o options, written string, path string) error {
-	if err := syncPath(written); err != nil {
-		return err
-	}
 	if o.overwrite {
-		os.Remove(path)
+		return commitFile(written, path)
 	}
-	return commitFile(written, path)
+	err := commitNew(written, path)
+	if errors.Is(err, fs.ErrExist) {
+		if there := free(o, path); there != nil {
+			return there
+		}
+	}
+	return err
 }
 
 // free tells whether a new file can be written at path.
