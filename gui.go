@@ -197,9 +197,15 @@ func extensions(mode string) []string {
 }
 
 // Expand gives the files a mode takes among the paths given, the files of the folders given
-// included.
+// included. A folder that cannot be read is told on the page: its games would else be left out
+// without a word.
 func (a *App) Expand(paths []string, mode string) []Item {
-	files, _ := inputs(paths, extensions(mode))
+	files, missing := inputs(paths, extensions(mode))
+	for _, path := range missing {
+		if a.ctx != nil {
+			emit(a.ctx, "say", path+" cannot be read: its files are left out")
+		}
+	}
 	items := make([]Item, 0, len(files))
 	for _, path := range files {
 		item := Item{Path: path, Name: filepath.Base(path)}

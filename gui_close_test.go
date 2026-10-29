@@ -118,3 +118,26 @@ func TestClosingAsksInTheLanguageOfThePage(t *testing.T) {
 		t.Fatalf("kept: %q", question)
 	}
 }
+
+// A folder added to the window that cannot be read is told on the page, with the files that can.
+func TestExpandTellsUnreadableFolders(t *testing.T) {
+	caught := catchEvents(t)
+	folder := t.TempDir()
+	game := filepath.Join(folder, "a.nsp")
+	os.WriteFile(game, []byte("x"), 0o644)
+	locked := unreadableFolder(t, folder)
+	a := &App{ctx: context.Background()}
+	items := a.Expand([]string{folder}, "verify")
+	if len(items) != 1 || items[0].Path != game {
+		t.Fatalf("items %v", items)
+	}
+	if caught.count("say") != 1 {
+		t.Fatalf("said %d times", caught.count("say"))
+	}
+	caught.mutex.Lock()
+	said := caught.data[0].([]any)[0].(string)
+	caught.mutex.Unlock()
+	if said != locked+" cannot be read: its files are left out" {
+		t.Fatalf("said %q", said)
+	}
+}
