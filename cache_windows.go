@@ -4,8 +4,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 	"unsafe"
 
@@ -58,16 +56,4 @@ func stampOf(path string) (fileStamp, error) {
 		stamp.Changed = time.Unix(0, changed.Nanoseconds())
 	}
 	return stamp, nil
-}
-
-// longPath lets a path longer than 260 characters open on any Windows, as os does on its own.
-func longPath(path string) string {
-	if len(path) < 248 || !filepath.IsAbs(path) || strings.HasPrefix(path, `\\?\`) {
-		return path
-	}
-	path = filepath.Clean(path)
-	if strings.HasPrefix(path, `\\`) {
-		return `\\?\UNC\` + path[2:]
-	}
-	return `\\?\` + path
 }
