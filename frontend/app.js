@@ -1521,7 +1521,10 @@ async function main() {
   $("pack-template").value = state.packTemplate;
 
   $("level").oninput = () => { $("preset").value = ""; render(); };
-  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; render(); }; });
+  document.querySelectorAll("[data-level]").forEach(button => { button.onclick = () => { $("level").value = button.dataset.level; $("preset").value = ""; save("settings", settings()); render(); }; });
+  // a field of the panel is kept as soon as it changes, not only when a work starts: closing
+  // NXPress without working keeps it too, in step with the settings saved with a name
+  for (const type of ["input", "change"]) $("settings").addEventListener(type, () => save("settings", settings()));
   $("keys").onclick = async () => {
     try { const path = await app().ChooseKeys(); if (path) { state.keys = path; for (const row of state.rows.values()) describe(row); } } catch (error) { $("status").textContent = String(error); }
     render();
