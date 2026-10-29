@@ -4,6 +4,7 @@ package main
 
 import (
 	"runtime"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -74,13 +75,21 @@ func init() {
 	}()
 }
 
-// the window found by ownWindow; the callback is made once, as Windows takes a few only
+// the window found by findOwnWindow, and whether a hidden one is looked for; the callback is made
+// once, as Windows takes a few only
 var (
+	findMutex   sync.Mutex
 	foundWindow windows.HWND
+	findHidden  bool
 	findWindow  = syscall.NewCallback(func(window windows.HWND, _ uintptr) uintptr {
 		var owner uint32
 		windows.GetWindowThreadProcessId(window, &owner)
-		if owner != windows.GetCurrentProcessId() || !windows.IsWindowVisible(window) {
+		if owner != windows.GetCurrentProcessId() || !findHidden && !windows.IsWindowVisible(window) {
+			return 1
+		}
+		// the window of Wails, not a message titled NXPress
+		class := make([]uint16, 64)
+		if length, _ := windows.GetClassName(window, &class[0], int32(len(class))); windows.UTF16ToString(class[:max(length, 0)]) != "wailsWindow" {
 			return 1
 		}
 		title := make([]uint16, 64)
@@ -95,7 +104,15 @@ var (
 
 // ownWindow is the main window of this process: the visible one titled NXPress.
 func ownWindow() windows.HWND {
-	foundWindow = 0
+	return findOwnWindow(false)
+}
+
+// findOwnWindow is the main window of this process, titled NXPress; with hidden, also before it
+// is shown.
+func findOwnWindow(hidden bool) windows.HWND {
+	findMutex.Lock()
+	defer findMutex.Unlock()
+	foundWindow, findHidden = 0, hidden
 	windows.EnumWindows(findWindow, nil)
 	return foundWindow
 }
