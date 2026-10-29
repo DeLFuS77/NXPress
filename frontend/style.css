@@ -216,7 +216,7 @@ input.changed { animation: changed 2.5s ease-out; }
 .summary { flex: 1 1 240px; min-width: 0; }
 /* while the files are at work, the estimate cannot start: its button makes room for the others */
 .busy #estimate { display: none; }
-.summary-extra { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+.summary-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 4px; }
 button.link.small-link { margin: 0; font-size: 12px; }
 #summary-text { font-weight: 600; font-variant-numeric: tabular-nums; }
 /* the space saved is what the work is for: it is the largest figure of the window */
