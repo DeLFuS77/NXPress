@@ -14,18 +14,32 @@ import (
 // the titles of the synthetic game, its update and its DLC together
 var safetyWholeGame = []string{"0100000000010000 v0", "0100000000010800 v65536", "0100000000011001 v0"}
 
-// A pack written under the name of one of its files, with -w and --rm-source: that file is
-// the pack now, and it is not deleted as an original.
+// A pack chosen under the name of one of its files, with -w and --rm-source: nothing is
+// written over that file, nor deleted. A pack made before of the others, given again, is
+// written again.
 func TestPackUnderTheNameOfOneOfItsFilesKeepsIt(t *testing.T) {
 	safetyIsolate(t)
 	folder := t.TempDir()
 	base, update, dlc := safetyGame(t, folder)
-	pack(context.Background(), options{pack: base, overwrite: true, rmSource: true, files: []string{base, update, dlc}}, quiet{})
-	if !safetyExists(base) {
-		t.Fatalf("the pack was deleted as one of its originals; left: %v", safetyList(folder))
+	if err := pack(context.Background(), options{pack: base, overwrite: true, rmSource: true, files: []string{base, update, dlc}}, quiet{}); err == nil {
+		t.Error("the pack took the name of the game")
 	}
-	if got := safetyTitles(t, base); !reflect.DeepEqual(got, safetyWholeGame) {
-		t.Fatalf("the pack holds %v", got)
+	if got := safetyTitles(t, base); !reflect.DeepEqual(got, safetyWholeGame[:1]) || !safetyExists(update) || !safetyExists(dlc) {
+		t.Fatalf("the game holds %v; left: %v", got, safetyList(folder))
+	}
+
+	packed := filepath.Join(folder, "pack.nsp")
+	if err := pack(context.Background(), options{pack: packed, files: []string{base, update, dlc}}, quiet{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := pack(context.Background(), options{pack: packed, overwrite: true, rmSource: true, files: []string{base, update, dlc, packed}}, quiet{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := safetyTitles(t, packed); !reflect.DeepEqual(got, safetyWholeGame) {
+		t.Fatalf("the pack holds %v; left: %v", got, safetyList(folder))
+	}
+	if left := safetyList(folder); !reflect.DeepEqual(left, []string{"pack.nsp"}) {
+		t.Fatalf("left: %v", left)
 	}
 }
 

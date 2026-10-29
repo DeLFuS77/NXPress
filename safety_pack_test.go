@@ -73,6 +73,82 @@ func TestPackWithEverythingDeletesItsOriginals(t *testing.T) {
 	}
 }
 
+// safetyWatcher looks at the folders when a pack starts to be written, for its hidden file.
+type safetyWatcher struct {
+	quiet
+	folders []string
+	seen    map[string][]string
+}
+
+func (w *safetyWatcher) progress(path string, step string) func(int64, int64) {
+	return func(int64, int64) {
+		if w.seen != nil {
+			return
+		}
+		w.seen = map[string][]string{}
+		for _, folder := range w.folders {
+			w.seen[folder] = safetyList(folder)
+		}
+	}
+}
+
+// The file chosen for a pack is where it goes, whatever the output folder: written there under
+// a hidden name, never among its files, and the name is looked at before anything is written.
+func TestPackGoesWhereItIsChosen(t *testing.T) {
+	safetyIsolate(t)
+	root := t.TempDir()
+	games := filepath.Join(root, "games")
+	base, update, dlc := safetyGame(t, games)
+	chosen := filepath.Join(root, "sd", "Game.nsp")
+	out := &safetyWatcher{folders: []string{games, filepath.Dir(chosen)}}
+	if err := pack(context.Background(), options{pack: chosen, output: filepath.Join(root, "other"), files: []string{base, update, dlc}}, out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.seen[games]) != 3 || len(out.seen[filepath.Dir(chosen)]) != 1 || !strings.HasPrefix(out.seen[filepath.Dir(chosen)][0], ".nxpress-pack-") {
+		t.Fatalf("while written: %v", out.seen)
+	}
+	if got := safetyTitles(t, chosen); !reflect.DeepEqual(got, safetyWholeGame) || safetyExists(filepath.Join(root, "other")) {
+		t.Fatalf("the pack holds %v; other folder there %v", got, safetyExists(filepath.Join(root, "other")))
+	}
+
+	// the name taken: nothing is written
+	if err := pack(context.Background(), options{pack: chosen, files: []string{base, update, dlc}}, &safetyWatcher{}); err == nil || !strings.Contains(err.Error(), "already there") {
+		t.Fatalf("onto a pack there: %v", err)
+	}
+	// the file chosen given among the files is not one of them
+	err := pack(context.Background(), options{pack: base, overwrite: true, rmSource: true, files: []string{base, dlc}}, quiet{})
+	if err == nil || !safetyExists(base) || !safetyExists(dlc) {
+		t.Fatalf("a pack of itself: %v; left: %v", err, safetyList(games))
+	}
+	if got := safetyTitles(t, base); len(got) != 1 {
+		t.Fatalf("the game holds %v", got)
+	}
+}
+
+// Packing a folder by game again, with the pack made before among its files: without -w the
+// game is told combined already, and nothing is written.
+func TestPackGamesAgainIsCombinedAlready(t *testing.T) {
+	safetyIsolate(t)
+	folder := t.TempDir()
+	safetyGame(t, folder)
+	if failed := packGames(context.Background(), options{packGames: true, files: []string{folder}}, quiet{}); failed != 0 {
+		t.Fatalf("first run: %d failed", failed)
+	}
+	before := safetyList(folder)
+	out := &safetyResults{}
+	if failed := packGames(context.Background(), options{packGames: true, rmSource: true, files: []string{folder}}, out); failed != 0 {
+		t.Fatalf("second run: %d failed: %v", failed, out.results)
+	}
+	for path, result := range out.results {
+		if !isSkipped(result.err) || !strings.HasPrefix(result.err.Error(), "already combined in ") {
+			t.Errorf("%s: %+v", filepath.Base(path), result)
+		}
+	}
+	if after := safetyList(folder); !reflect.DeepEqual(after, before) {
+		t.Fatalf("before %v, after %v", before, after)
+	}
+}
+
 // The files of a game card are the ones of its secure partition.
 func TestPackageFilesOfAGameCard(t *testing.T) {
 	hfs0 := func(names []string, sizes []int) []byte {
