@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -150,5 +151,14 @@ func TestMeasureTellsWhyAGameIsLeftOut(t *testing.T) {
 	}
 	if !strings.HasPrefix(notMeasurable(sparse).Error(), want) {
 		t.Fatalf("%v", notMeasurable(sparse))
+	}
+}
+
+// Measuring with an empty file tells it is empty, as every other action does.
+func TestMeasureTellsAnEmptyFile(t *testing.T) {
+	empty := filepath.Join(t.TempDir(), "Empty [0100000000070000][v0].nsp")
+	os.WriteFile(empty, nil, 0o644)
+	if _, err := measurableGame(context.Background(), []string{empty}, options{level: 3}); !errors.Is(err, errEmpty) {
+		t.Fatalf("measuring an empty file: %v", err)
 	}
 }

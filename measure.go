@@ -152,7 +152,11 @@ func measurableGame(ctx context.Context, files []string, o options) (string, err
 	var failed error
 	failedPath := ""
 	for _, path := range files {
-		_, err := switchfs.MeasureCompression(ctx, path, 0, options, 0, io.Discard)
+		// an empty file is told as such, as the other actions tell it, not as one that cannot be read
+		err := errEmpty
+		if !isEmpty(path) {
+			_, err = switchfs.MeasureCompression(ctx, path, 0, options, 0, io.Discard)
+		}
 		if err == nil {
 			return path, nil
 		}
