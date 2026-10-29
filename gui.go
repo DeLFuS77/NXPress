@@ -86,8 +86,10 @@ type App struct {
 	files []string
 	// the work waits while paused
 	paused atomic.Bool
-	// the turning off asked for once the files are done, until it is cancelled
-	shutdown *time.Timer
+	// the turning off asked for once the files are done, until it is cancelled, and which time
+	// it was asked
+	shutdown      *time.Timer
+	shutdownRound int
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -458,7 +460,12 @@ func (a *App) Start(request Request) error {
 	ctx, cancel := context.WithCancel(a.ctx)
 	finished := make(chan struct{})
 	a.cancel, a.finished = cancel, finished
+	// a turning off still to come was for the work before: it would cut this one off
+	stopped := a.stopShutdown()
 	go func() {
+		if stopped {
+			emit(a.ctx, "shutdownCancelled")
+		}
 		started := time.Now()
 		a.paused.Store(false)
 		jobs := runJobs
@@ -555,16 +562,19 @@ func (a *App) Notify(title string, body string) {
 // it means something kept it on, a program with work not saved most often.
 const shutdownWait = 90 * time.Second
 
-// ShutDownIn turns the computer off in the seconds given, unless CancelShutDown comes first;
-// forced, the programs left open are closed without saving. When it does not turn off, the page
-// is told ("shutdownFailed"), to say so.
+// ShutDownIn turns the computer off in the seconds given, unless CancelShutDown or new work
+// comes first; forced, the programs left open are closed without saving. When it does not turn
+// off, the page is told ("shutdownFailed"), to say so.
 func (a *App) ShutDownIn(seconds int, force bool) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.shutdown != nil {
-		a.shutdown.Stop()
-	}
+	a.stopShutdown()
+	a.shutdownRound++
+	round := a.shutdownRound
 	a.shutdown = time.AfterFunc(time.Duration(seconds)*time.Second, func() {
+		if !a.shutdownDue(round) {
+			return
+		}
 		if err := shutDown(force); err != nil {
 			emit(a.ctx, "shutdownFailed", err.Error())
 			return
@@ -573,14 +583,39 @@ func (a *App) ShutDownIn(seconds int, force bool) {
 	})
 }
 
+// shutdownDue tells, as its time comes, whether the turning off asked for the time given is still
+// to be done: not once cancelled or asked again, nor with files at work, which it would cut off
+// (the page is told it is cancelled then).
+func (a *App) shutdownDue(round int) bool {
+	a.mutex.Lock()
+	asked := a.shutdown != nil && a.shutdownRound == round
+	working := a.cancel != nil
+	if asked {
+		a.shutdown = nil
+	}
+	a.mutex.Unlock()
+	if asked && working {
+		emit(a.ctx, "shutdownCancelled")
+	}
+	return asked && !working
+}
+
+// stopShutdown stops the turning off still to come, and tells whether there was one; the mutex
+// is held.
+func (a *App) stopShutdown() bool {
+	if a.shutdown == nil {
+		return false
+	}
+	a.shutdown.Stop()
+	a.shutdown = nil
+	return true
+}
+
 // CancelShutDown keeps the computer on.
 func (a *App) CancelShutDown() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.shutdown != nil {
-		a.shutdown.Stop()
-		a.shutdown = nil
-	}
+	a.stopShutdown()
 }
 
 // ShowFile opens the folder of a file in the file manager.
