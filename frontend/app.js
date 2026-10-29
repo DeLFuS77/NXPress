@@ -513,12 +513,17 @@ function listWarnings() {
     if (row.game.type !== "DLC") game.reach = Math.max(game.reach, row.game.latest || 0);
   }
   const warnings = new Map();
+  // in Rename a title given twice matters when both files would get the same name: the same
+  // version, with the same extension and in the same folder (an NSP and its NSZ do not clash)
+  const extension = row => (row.item.path.match(/\.\w+$/) || [""])[0].toLowerCase();
+  const folder = row => row.item.path.replace(/[\\/][^\\/]*$/, "").toLowerCase();
+  const twice = (row, other) => other.game.version === row.game.version && (state.mode !== "rename" || extension(other) === extension(row) && folder(other) === folder(row));
   for (const row of read) {
     const same = read.filter(other => other !== row && other.game.titleId === row.game.titleId && other.game.type === row.game.type);
     const newer = row.game.type === "UPD" ? same.filter(other => other.game.version > row.game.version).sort((a, b) => b.game.version - a.game.version)[0] : null;
     const game = games.get(row.game.type === "BASE" ? row.game.titleId : row.game.gameId);
     if (newer) warnings.set(row, t("warnNewer")(newer.game.versionTxt || "v" + newer.game.version));
-    else if (same.some(other => other.game.version === row.game.version)) warnings.set(row, t("warnTwice"));
+    else if (same.some(other => twice(row, other))) warnings.set(row, t("warnTwice"));
     else if (state.mode === "pack" && row.game.type !== "BASE" && row.game.titles === 1 && game && !game.base) warnings.set(row, t("warnNoGame"));
     else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
   }
