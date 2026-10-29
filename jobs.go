@@ -775,19 +775,21 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 		}
 		parts[i] = name
 	}
-	names := []string{}
-	var checked switchfs.FileCheck
+	// every part is written and checked under its hidden name, and only then do they all get
+	// their names: the original is read whole before any file there is replaced
+	var whole switchfs.FileCheck
 	for i, part := range plan.Parts {
-		name := parts[i]
-		written := temporary(name)
-		var check switchfs.FileCheck
-		check, err = switchfs.WriteSplitPartAndCheck(ctx, path, part, written, out.progress(path, "Splitting "+part.Type))
-		checked.Partial = checked.Partial || check.Partial
-		if err == nil {
-			err = finish(o, written, name)
-		}
-		os.Remove(written)
+		written := temporary(parts[i])
+		defer os.Remove(written)
+		check, err := switchfs.WriteSplitPartAndCheck(ctx, path, part, written, out.progress(path, "Splitting "+part.Type))
 		if err != nil {
+			return "", "", err
+		}
+		whole.Partial = whole.Partial || check.Partial
+	}
+	names := []string{}
+	for _, name := range parts {
+		if err := finish(o, temporary(name), name); err != nil {
 			return "", "", err
 		}
 		names = append(names, filepath.Base(name))
@@ -797,7 +799,7 @@ func split(ctx context.Context, path string, o options, out output) (string, str
 		// files of the original that no title lists: it is kept, whatever --rm-source says
 		return "", note + "; some of its files are in no part, so it is kept", nil
 	}
-	_, note, err = removeSource(o, path, checked, "", note)
+	_, note, err = removeSource(o, path, whole, "", note)
 	return "", note, err
 }
 
