@@ -90,6 +90,8 @@ type App struct {
 	// it was asked
 	shutdown      *time.Timer
 	shutdownRound int
+	// below the normal priority, as the work asked for last
+	lowPriority bool
 	// the notices of the system, readied as the first is sent, and whether they can be
 	notices      sync.Once
 	noticesReady bool
@@ -408,11 +410,6 @@ func (a *App) Start(request Request) error {
 	o.watch = request.Watch
 	o.noCache = request.NoCache
 	o.levels = request.Levels
-	// below the normal priority when asked, normal again when not (Linux may refuse to raise
-	// it back: NXPress then stays low until it is opened again)
-	if err := setLowPriority(request.LowPriority); err != nil && request.LowPriority {
-		emit(a.ctx, "say", "the priority could not be lowered: "+err.Error())
-	}
 	switch request.Mode {
 	case "compress":
 		o.compress = true
@@ -473,9 +470,13 @@ func (a *App) Start(request Request) error {
 	a.cancel, a.finished = cancel, finished
 	// a turning off still to come was for the work before: it would cut this one off
 	stopped := a.stopShutdown()
+	priority := a.setPriority(request.LowPriority)
 	go func() {
 		if stopped {
 			emit(a.ctx, "shutdownCancelled")
+		}
+		if priority != "" {
+			emit(a.ctx, "say", priority)
 		}
 		started := time.Now()
 		a.setPaused(false)
@@ -494,6 +495,28 @@ func (a *App) Start(request Request) error {
 		cancel()
 	}()
 	return nil
+}
+
+// changePriority puts NXPress below the normal priority, or back to it.
+var changePriority = setLowPriority
+
+// setPriority puts NXPress below the normal priority when asked, and back to it when not, as the
+// work asked for is taken, and only when that changes; it gives a note when it could not.
+// Linux and macOS may refuse to raise it back: NXPress then stays low until it is opened again.
+// The mutex is held.
+func (a *App) setPriority(low bool) string {
+	if low == a.lowPriority {
+		return ""
+	}
+	a.lowPriority = low
+	err := changePriority(low)
+	switch {
+	case err == nil:
+		return ""
+	case low:
+		return "the priority could not be lowered: " + err.Error()
+	}
+	return "the priority could not go back to normal: " + err.Error()
 }
 
 // closeWait is how long NXPress waits as it closes for the files at work to stop, so their half
