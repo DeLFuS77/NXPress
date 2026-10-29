@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -60,15 +61,19 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 		err = o.check()
 	}
 	if err != nil {
+		// nsz tells this one in JSON too, to the program that asked for it
+		if errors.Is(err, errOutputModes) {
+			(&reporter{out: stdout}).json(jsonObject{"type", "error", "code", codeOutputModes, "message", err.Error()})
+		}
 		fmt.Fprintln(stderr, "nxpress:", err)
 		return 2
 	}
-	out := &reporter{out: stdout, minimal: o.minimal, machine: o.machine}
+	out := &reporter{out: stdout, minimal: o.minimal, machine: o.machine, action: o.action()}
 	for _, ignored := range o.ignored {
-		out.say("note: %s has no effect in NXPress", ignored)
+		out.note("%s has no effect in NXPress", ignored)
 	}
 	for _, note := range o.notes {
-		out.say("note: %s", note)
+		out.note("%s", note)
 	}
 	// recompressing needs no keys (the NCZ hold their data decrypted, with their keys), nor do
 	// files split for FAT32 or joined
@@ -79,13 +84,18 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 
 	if o.lowPriority {
 		if err := setLowPriority(true); err != nil {
-			out.say("note: the priority could not be lowered: %v", err)
+			out.note("the priority could not be lowered: %v", err)
 		}
 	}
 
 	// Ctrl+C stops the files at work; their half written files are removed
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+	// a program reading --machine-readable is told now and then that NXPress is at work
+	stopHeartbeat := func() {}
+	if o.machine {
+		stopHeartbeat = out.heartbeat(heartbeatEvery)
+	}
 	failed := 0
 	jobs := runJobs
 	if o.watch {
@@ -94,7 +104,10 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	} else {
 		o.files, failed = commandLineFiles(o, out)
 	}
-	if failed += jobs(ctx, o, out); failed > 0 {
+	failed += jobs(ctx, o, out)
+	stopHeartbeat()
+	out.finish()
+	if failed > 0 {
 		return 1
 	}
 	return 0
@@ -105,7 +118,7 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 // in theirs. A script written for nsz with --rm-source must not delete the originals of every
 // folder below. The window, which does not come here, always looks into them all. It gives too
 // how many folders could not be read, each told as failed.
-func commandLineFiles(o options, out output) ([]string, int) {
+func commandLineFiles(o options, out *reporter) ([]string, int) {
 	files := []string{}
 	failed := 0
 	for _, path := range o.files {
@@ -120,7 +133,7 @@ func commandLineFiles(o options, out output) ([]string, int) {
 			failed++
 		}
 		if nested {
-			out.say("note: the folders in %s are left out (--recursive looks into them)", path)
+			out.note("the folders in %s are left out (--recursive looks into them)", path)
 		}
 		files = append(files, found...)
 	}

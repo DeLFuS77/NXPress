@@ -129,14 +129,14 @@ func TestReporter(t *testing.T) {
 	progress(0, 100)
 	progress(50, 100)
 	progress(100, 100)
-	short.say("left out")
-	if minimal.String() != "0% Compressing\n100% Compressing\n" {
+	short.say("told")
+	if minimal.String() != "\r| 0% Compressing\r/ 100% Compressing\r"+strings.Repeat(" ", 18)+"\rtold\n" {
 		t.Fatalf("minimal: %q", minimal.String())
 	}
 
 	var machine bytes.Buffer
 	(&reporter{out: &machine, machine: true}).done("a.nsp", "a.nsz", "", nil)
-	if got := strings.TrimSpace(machine.String()); got != `{"file":"a.nsp","output":"a.nsz","result":"ok"}` {
+	if got := strings.TrimSpace(machine.String()); got != `{"type": "complete", "file": "a.nsp", "result": "ok", "output": "a.nsz"}` {
 		t.Fatalf("machine: %s", got)
 	}
 }

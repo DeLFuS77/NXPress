@@ -361,8 +361,14 @@ func defaultThreads(files int) int {
 	return max(1, switchfs.UsableProcessors()/max(1, files))
 }
 
+// errOutputModes is told when both outputs for other programs are asked, as nsz tells it.
+var errOutputModes = errors.New("--minimal-output and --machine-readable cannot be used together")
+
 // check tells an impossible request, and settles the values left to choose.
 func (o *options) check() error {
+	if o.minimal && o.machine {
+		return errOutputModes
+	}
 	actions := 0
 	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.packGames, o.info} {
 		if on {
@@ -459,8 +465,10 @@ Usage: nxpress [options] file or folder...
                       XCI, at the level of -l (and -B), and tell the fastest for -t and -m
   --keys PATH         prod.keys or keys.txt, or a folder holding one (default: the folder
                       of NXPress, then ~/.switch)
-  --minimal-output    print only "<percentage>%% <step>"
-  --machine-readable  print one JSON object per line
+  --minimal-output    print the progress on one line written over, "<percentage>%% <step>",
+                      and "100%% Done" at the end, as nsz does
+  --machine-readable  print one JSON object per line, as nsz does: progress, complete, error,
+                      info, warning, heartbeat and, at the end, summary
   --version           show the version
 
   --convert           turn XCI and XCZ files into NSP and NSZ
