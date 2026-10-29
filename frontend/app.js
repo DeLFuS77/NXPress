@@ -422,6 +422,9 @@ function noteText(note) {
   }
   return note;
 }
+// onePack tells a work that writes one file with all the files given: its result is that file
+const onePack = run => !!run && run.mode === "pack" && !run.request.packGames;
+
 // stepsOf are the steps of a file in the work running, in their order: the work, then the check
 // of what it wrote; a trimmed NSP is checked while it is written, so it has one step
 function stepsOf(row) {
@@ -1025,9 +1028,11 @@ function applyPreset() {
 async function start(mode, extra) {
   if (state.busy) { app().Cancel(); return; }
   mode = typeof mode === "string" ? mode : state.mode;
-  if (!state.keys && !["recompress", "fat32"].includes(state.mode)) { $("status").textContent = t("needKeys"); return; }
+  // what the work needs is told by its own mode: Verify only this, in a section that needs no
+  // keys or no pack, still needs the keys and no pack
+  if (!state.keys && !["recompress", "fat32"].includes(mode)) { $("status").textContent = t("needKeys"); return; }
   if (!state.items.length) { $("status").textContent = t(mode === "measure" ? "measureNeedsGame" : "needFiles"); return; }
-  if (state.mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
+  if (mode === "pack" && !$("pack-games").checked && !state.pack) { $("status").textContent = t("needPack"); return; }
   const chosen = settings();
   save("settings", chosen);
   const watch = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
@@ -1137,9 +1142,13 @@ function listen() {
     summary();
   });
   events.EventsOn("done", event => {
-    if (state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames)) {
-      // a pack is one result for all its files
-      for (const row of state.rows.values()) if (row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: state.lastRun && state.lastRun.started });
+    // the mode of the work, which is not the section shown when only one file is verified
+    const run = state.lastRun;
+    const mode = run ? run.mode : state.mode;
+    if (onePack(run)) {
+      // a pack is one result for all its files: the files it was given
+      const given = new Set(run.request.files);
+      for (const row of state.rows.values()) if (given.has(row.item.path) && row.item.path !== event.file) Object.assign(row, { status: event.error ? "" : "ok", run: run.started });
     }
     const row = rowOf(event.file);
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
@@ -1147,7 +1156,7 @@ function listen() {
     row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
-    if (state.mode === "rename" && row.output && !event.error) {
+    if (mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
       row.item.name = row.output.split(/[\\/]/).pop();
       row.item.path = row.output;
@@ -1161,7 +1170,7 @@ function listen() {
       save("pending", pending.request.files.length ? pending : null);
     }
     paint(row);
-    if (state.mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
+    if (mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
     trackSpeed();
     summary();
   });
@@ -1190,11 +1199,11 @@ function listen() {
     state.busy = false;
     state.paused = false;
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
-    const onePack = state.mode === "pack" && !(state.lastRun && state.lastRun.request.packGames);
-    const total = onePack || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
+    const single = onePack(state.lastRun);
+    const total = single || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
     keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
-    const skippedRows = onePack || !state.lastRun ? 0 : state.lastRun.skipped;
+    const skippedRows = single || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     $("status").textContent = status;
     if (state.lastRun) state.lastRun.status = status;
