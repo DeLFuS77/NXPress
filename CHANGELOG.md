@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.3.0
+
+> **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.
+
+### New
+
+- Combine, A SuperNSP per game: a whole collection is packed by game, each game with its updates and DLC, found by the title IDs inside the files and named by a template ("{name} [{id}][v{version}] ({contents})" by default). The games are shown first, each with a box to leave it out; a game with one file only, or combined already, is SKIPPED. On the command line, `--pack-games` and `--pack-name` (thanks @NikoMuffin, #3)
+- New fields for Rename and Combine: {version_txt} (1.0.5), {contents} (1G+1U+2D), {size_gb}, {size_mb} and {dlc_number}, and the fields as Switch Library Manager writes them ({TITLE_NAME}, {VERSION_TXT}, {PACKAGE_CONTENTS}...). Rename can keep the names that already have their title ID (`--keep-named`) (thanks @NikoMuffin, #18, #19)
+- Verify in levels: Whole (every NCA by its hashes), Signature (the signature of Nintendo on every NCA header, in seconds) or Both; `--verify-level` on the command line (thanks @NikoMuffin, #9)
+- Low priority, under Advanced (`--low-priority`): the computer stays responsive while NXPress works (thanks @NikoMuffin, #10)
+- The list sorts by name, size or state with a click on a column, and the work follows that order (thanks @NikoMuffin, #17)
+- Settings as a page of its own below the sections, and an icon for each section of the menu (thanks @NikoMuffin, #27, #30)
+- A menu on each file with a right click (Show in folder, Copy title ID, name or path, Verify only this, Remove from list), a card with the details of a game over its cover, warnings in the list (an older update, a title given twice, a DLC without its game) and a grid of covers
+- Before a work starts, NXPress checks that the new files fit on each drive and says where they may not
+
+### Improvements
+
+- Pack is called Combine now (thanks @NikoMuffin, #35), and One file with everything no longer asks for the file first: as in the other sections, it goes next to the files or into Save to, named by a template; `--pack-one` on the command line (thanks @NikoMuffin, #37)
+- Measure this PC takes a heavier setting when it is at least 5% faster, shows the speed of all the files together and says why a slightly faster one is not taken (thanks @NikoMuffin, #22)
+- The level buttons show their ranges, Light 1–6, Medium 7–14 and Maximum 15–19 (thanks @NikoMuffin, #28); Trim shows "NSP/NSZ (updates)" (thanks @NikoMuffin, #23); and a game in sparse storage is SKIPPED with a plain sentence (thanks @NikoMuffin, #29)
+- Info shows the firmware a title needs, the version of its game a DLC needs and its NCA files (thanks @NikoMuffin, #20)
+- A new look: blue for what is chosen and started, red only for errors, tiles in the color of each group, motion that tells what changed (less of it when Windows asks for less), Mica on Windows 11, the progress on the button of the taskbar (thanks @NikoMuffin, #31), the space saved over all the works and a card at the end of each work
+- New files are on the disk before they take their name and before an original is deleted, so a power cut no longer loses a game
+- The command line takes only the files of the folders given, as nsz does; `--recursive` looks into their folders too
+- The title of the window shows the version
+
+### Fixes
+
+- A new file never takes the place of an original or of another file of the same work: with Replace files already there and Delete originals, some cases could lose a game (files of the same name sent to one folder, a pack named as one of its files, an output folder written another way). They are now errors that touch nothing
+- With Delete originals, a file that could be checked only in part no longer replaces its original
+- Combine keeps the ticket of the update it keeps, and deletes the originals only when the pack holds everything
+- Splitting or joining for FAT32 in place no longer loses both files when another program holds a part
+- Closing the window or stopping the command line during a work asks first and removes the half written files; a turning off never cuts a work
+- The list of checked files stays fast when it is long, keeps the games of drives not plugged in and starts again when it is broken; a watched folder waits until a file is copied in whole
+- The command line works as nsz does with files already there, letters together (`-CV`) and its output options
+- Names made by a template are safe on every system; the window is never smaller than 960 x 600 and fits small screens; and smaller fixes of the window, the keyboard, screen readers and the 11 languages
+
+### Next, in 1.4.0
+
+- Extra compression, experimental and for NXPress only: games in sparse storage, which no compressor reads today, compressed too, and the blocks Nintendo compressed with LZ4 kept decompressed so that zstd gets more out of them (5–9% smaller in the tests, on the games and updates that use them). Installers cannot read these files yet, so it will be off by default, under Advanced, and the files go back to NSP before installing
+
 ## 1.2.3
 
 ### Improvements

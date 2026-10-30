@@ -32,8 +32,8 @@ For Windows there is also a portable download (`…-windows-x64-portable.zip`): 
 Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. Each game shows with its name, icon, title ID and version. Its modes are grouped by what they are for:
 
 - **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
-- **Organize**: pack a game, its updates and DLC into one SuperNSP or into its XCI; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
-- **Check**: verify files, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with
+- **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
+- **Check**: verify files by their hashes, by the signature of Nintendo or both, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with
 
 ![A compression done, with the space saved](docs/screenshots/compress-done.png)
 
@@ -43,11 +43,9 @@ While it works it can pause, keeps the computer awake, tells with a notice of th
 |---|---|
 | ![Details](docs/screenshots/details.png) | ![Rename](docs/screenshots/rename.png) |
 
-It follows the light or dark theme of the system, or the one chosen in its menu, and speaks 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese.
+It follows the light or dark theme of the system, or the one chosen in Settings, and speaks 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese.
 
-![The menu, with the theme and the language](docs/screenshots/menu.png)
-
-NXPress goes on the internet for one thing only: the window asks GitHub whether a new version is out. It can be turned off in its menu; the command line never does it.
+NXPress goes on the internet for one thing only: the window asks GitHub whether a new version is out. It can be turned off in Settings; the command line never does it.
 
 ## Solid or in blocks
 
@@ -62,8 +60,11 @@ nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
+nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds
 nxpress --split super.nsp           split a multi-title file into one file per title
 nxpress --pack super.nsp a.nsp b.nsp  merge into one SuperNSP (with an XCI among them: an XCI with everything)
+nxpress --pack-one a.nsp b.nsp      the same, next to the files and named by --pack-name
+nxpress --pack-games games         a SuperNSP per game of a folder, named by --pack-name
 nxpress --convert game.xci          turn an XCI into an NSP
 nxpress --recompress -B game.nsz    write an NSZ again in blocks (or -S, solid), no NSP in between
 nxpress --trim game.xci update.nsp  take away the padding of an XCI and the delta fragments of an update

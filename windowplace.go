@@ -14,14 +14,23 @@ type windowPlace struct {
 	X, Y          int
 	Width, Height int
 	Maximised     bool
+	// on Windows, the place of the window when neither maximised nor minimised, as Windows
+	// itself keeps it and puts it back
+	Normal *windowRect `json:",omitempty"`
+}
+
+// windowRect is a place on the screens, by its edges.
+type windowRect struct {
+	Left, Top, Right, Bottom int32
 }
 
 // the size the window opens with the first time, and the least it takes
 const (
-	windowWidth     = 1120
-	windowHeight    = 720
-	windowMinWidth  = 900
-	windowMinHeight = 520
+	windowWidth  = 1120
+	windowHeight = 720
+	// the smallest window where the list, the bar of actions and the whole menu fit
+	windowMinWidth  = 960
+	windowMinHeight = 600
 )
 
 func windowPlacePath() string {
@@ -46,8 +55,8 @@ func loadWindowPlace() (windowPlace, bool) {
 
 // placeWindow puts the window where it was left, then shows it: it opens hidden, so it does not
 // show in the middle first. A maximised one is put in its place before, so it goes back there.
-// A place no screen holds any longer (a screen taken away) is left out, and the window stays
-// in the middle.
+// It is no bigger than the screen. A place no screen holds any longer (a screen taken away) is
+// left out, and the window stays in the middle (on Windows, Windows brings it onto a screen).
 func placeWindow(ctx context.Context) {
 	defer wailsruntime.WindowShow(ctx)
 	place, ok := loadWindowPlace()
@@ -57,9 +66,21 @@ func placeWindow(ctx context.Context) {
 	if place.Maximised {
 		defer wailsruntime.WindowMaximise(ctx)
 	}
+	if place.Normal != nil && restorePlacement(*place.Normal) {
+		return
+	}
 	screens, err := wailsruntime.ScreenGetAll(ctx)
 	if err != nil || len(screens) == 0 {
 		return
+	}
+	screen := screens[0]
+	for _, each := range screens {
+		if each.IsCurrent {
+			screen = each
+		}
+	}
+	if width, height := min(place.Width, screen.Size.Width), min(place.Height, screen.Size.Height); width < place.Width || height < place.Height {
+		wailsruntime.WindowSetSize(ctx, width, height)
 	}
 	// the screens give their sizes, not where they are: the place must fall within all of
 	// them side by side, on either side of the main one
@@ -75,17 +96,25 @@ func placeWindow(ctx context.Context) {
 }
 
 // keepWindowPlace writes where the window is and how big, as it closes. A maximised window keeps
-// the size and place it had before, to go back to them.
+// the size and place it had before, to go back to them. Windows tells them also of a minimised
+// one; elsewhere a minimised one keeps the place written before.
 func keepWindowPlace(ctx context.Context) {
 	path := windowPlacePath()
-	if path == "" || wailsruntime.WindowIsMinimised(ctx) {
+	if path == "" {
 		return
 	}
 	place, _ := loadWindowPlace()
+	minimised := wailsruntime.WindowIsMinimised(ctx)
 	place.Maximised = wailsruntime.WindowIsMaximised(ctx)
-	if !place.Maximised {
+	if !place.Maximised && !minimised {
 		place.Width, place.Height = wailsruntime.WindowGetSize(ctx)
 		place.X, place.Y = wailsruntime.WindowGetPosition(ctx)
+	}
+	place.Normal = nil
+	if normal, maximised, ok := ownPlacement(); ok {
+		place.Normal, place.Maximised = &normal, maximised
+	} else if minimised {
+		return
 	}
 	data, err := json.Marshal(place)
 	if err != nil {

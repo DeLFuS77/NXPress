@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // portableFolder is the folder "settings" next to the program, when there is one: NXPress then
@@ -37,10 +38,16 @@ func dataFolder() (string, error) {
 }
 
 // webviewFolder is where the page keeps its settings: in the portable folder when there is one,
-// else where the window toolkit puts it ("").
+// else where the window toolkit puts it (""). On Windows that is a folder named after the
+// program in the folder of the settings of the user: the one of nxpress.exe is kept, whatever
+// the program is named, so a program named otherwise (as "nxpress (1).exe", by a browser that
+// had one already) does not lose them.
 func webviewFolder() string {
 	if folder := portableFolder(); folder != "" {
 		return filepath.Join(folder, "webview")
+	}
+	if folder, err := os.UserConfigDir(); err == nil && runtime.GOOS == "windows" {
+		return filepath.Join(folder, "nxpress.exe")
 	}
 	return ""
 }
