@@ -17,33 +17,43 @@ Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, mu
 
 It is one program with no Python or other dependencies. Opened with no arguments it shows a window: drop files or folders on it, choose what to do and start. With arguments it is a command line that takes the same options as nsz, so it can replace it in scripts and in tools that call nsz.
 
-![NXPress compressing a file](docs/demo.gif)
+![NXPress compressing four games: the list with their covers, the bar of each file and the space saved at the end](docs/demo.gif)
 
 ## Download
 
-The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI. On Linux, unpack it and run `install.sh` to put NXPress in the menu of applications with its icon.
+The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI.
+
+On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have; once unpacked, `install.sh` puts NXPress in the menu of applications with its icon.
 
 For Windows there is also a portable download (`…-windows-x64-portable.zip`): a folder with the program and its `settings` folder, ready to unpack anywhere. Any copy becomes portable with a folder named `settings` next to the program: NXPress then keeps its settings, its window and the files already checked in it, and nothing in your user folders. With `prod.keys` next to the program as well, the whole folder can go on a USB stick.
 
 ## The window
 
-![The list with the games and the settings of a compression](docs/screenshots/compress-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/compress-dark.png">
+  <img src="docs/screenshots/compress-light.png" alt="Compress at work: the list of games with their covers, the bar of each file in its steps, the speed and the time left">
+</picture>
 
-Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. Each game shows with its name, icon, title ID and version. Its modes are grouped by what they are for:
+Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. Each game shows with its cover, name, title ID and version, in a list or as a grid of covers; the list sorts by name, size or state, and each file has a menu on a right click. The menu on the left groups the sections by what they are for:
 
 - **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
-- **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
+- **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game, named by a template; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
 - **Check**: verify files by their hashes, by the signature of Nintendo or both, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with
 
-![A compression done, with the space saved](docs/screenshots/compress-done.png)
+While it works, each file has its bar split in its steps (the work, then the check of what it wrote), the window tells the speed and the time left, and on Windows the button of the taskbar shows the progress. It can pause, keeps the computer awake, tells with a notice of the system when long work is done and can turn the computer off after. Before it starts it checks that the new files fit on each drive, and at the end a card tells the space saved and what saved the most. The files left unfinished when it was closed are offered when it opens again, and Copy report puts the result of every file on the clipboard, to paste in an issue.
 
-While it works it can pause, keeps the computer awake, tells with a notice of the system when long work is done and can turn the computer off after. The files left unfinished when it was closed are offered when it opens again, and Copy report puts the result of every file on the clipboard, to paste in an issue.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/done-dark.png">
+  <img src="docs/screenshots/done-light.png" alt="The card at the end of a work: the space saved and the files that saved the most">
+</picture>
 
-| Details of a file | Rename by what a file holds |
+| Combine, a SuperNSP per game | Details of a file |
 |---|---|
-| ![Details](docs/screenshots/details.png) | ![Rename](docs/screenshots/rename.png) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/combine-dark.png"><img src="docs/screenshots/combine-light.png" alt="Combine: the games to combine, each with its files"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/details-dark.png"><img src="docs/screenshots/details-light.png" alt="Details: each file beside its size as NSP or XCI, and what it works with"></picture> |
+| **Rename by what a file holds** | **The list as a grid of covers** |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/rename-dark.png"><img src="docs/screenshots/rename-light.png" alt="Rename: the new name of each file, shown before anything is renamed"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/grid-dark.png"><img src="docs/screenshots/grid-light.png" alt="The list as a grid of covers, filling up with the progress of each file"></picture> |
 
-It follows the light or dark theme of the system, or the one chosen in Settings, and speaks 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese.
+It follows the light or dark theme of the system, or the one chosen in Settings, and speaks 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese. Settings is a page of its own, with a sound when the work is done (the one of NXPress or one of your own), the last report and the keyboard shortcuts.
 
 NXPress goes on the internet for one thing only: the window asks GitHub whether a new version is out. It can be turned off in Settings; the command line never does it.
 
@@ -51,7 +61,9 @@ NXPress goes on the internet for one thing only: the window asks GitHub whether 
 
 A solid NSZ (the default) is the smallest and every installer takes it (DBI, Tinfoil, Awoo, CyberFoil, Sphaira). With `-B`, or "Emulators and installers" in the window, it is written in blocks, which emulators that read NSZ can run as it is, without installing it; every installer but Awoo takes it too. XCZ files are always in blocks, as nsz writes them.
 
-Every new file is written under a hidden name, checked, and only then given its name. With `--rm-source` the original is deleted only once its new file passed the check.
+The level goes from 1 to 19, in three bands: Light 1–6, Medium 7–14 and Maximum 15–19. 18, the default of nsz, is also the one of NXPress. "Compare the levels on this computer" tells the size and the time of each level from samples of the files, and "Measure this PC" tries threads and files at once and keeps the fastest.
+
+Every new file is written under a hidden name, saved to the disk, checked, and only then given its name. With `--rm-source` the original is deleted only once its new file passed the check.
 
 ## Command line
 
@@ -76,6 +88,8 @@ nxpress -V --dat switch.dat games   tell which files are dumps a DAT (No-Intro) 
 nxpress --fat32 game.nsp            a file over 4 GB to a folder of parts for a FAT32 microSD (and back)
 nxpress --rename "{name} [{id}][v{version}]" games   rename files by what they hold
 nxpress -C --watch -o out inbox     compress every new file copied into inbox, until Ctrl+C
+nxpress -C --low-priority games     compress at low priority, so the computer stays responsive
+nxpress -C --recursive games        take the files in the folders inside too
 ```
 
 `nxpress --help` lists every option. The options of nsz work the same, so NXPress can take its place in scripts.
@@ -92,6 +106,10 @@ go build -tags desktop,production -ldflags "-s -w" .                            
 ```
 
 The screenshots show made-up games.
+
+## More
+
+The [wiki](https://github.com/DeLFuS77/NXPress/wiki) has a guide to each section, which installers and emulators read each format, every option of the command line, frequent questions and what to do when something fails.
 
 ## License
 
