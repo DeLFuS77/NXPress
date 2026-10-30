@@ -34,7 +34,9 @@ func TestSendToShortcutInAnyFolder(t *testing.T) {
 		if err := makeShortcut(shortcut, target); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if got, err := shortcutTarget(shortcut); err != nil || !strings.EqualFold(got, target) {
+		// the temporary folder may be given by its short name (C:\Users\RUNNER~1 on GitHub), and
+		// the shortcut holds the long one
+		if got, err := shortcutTarget(shortcut); err != nil || !strings.EqualFold(got, target) && !sameFile(got, target) {
 			t.Fatalf("%s: the shortcut points to %q (%v)", name, got, err)
 		}
 		if !shortcutTo(shortcut, target) || shortcutTo(shortcut, filepath.Join(base, "other.exe")) {
