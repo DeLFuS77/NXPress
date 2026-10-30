@@ -209,7 +209,7 @@ dialog p { margin: 8px 0; }
 .measure-table tr.best .bar div { background: var(--ok); }
 .measure-table .speed .bar { margin-top: 4px; }
 /* the speed of a setting in the letter of its row, not in the one of the line of speed under the list */
-.measure-table .speed { font-size: inherit; color: inherit; }
+.measure-table .speed { font-size: inherit; color: inherit; margin-top: 0; }
 @keyframes changed { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
 input.changed { animation: changed 2.5s ease-out; }
 .badge.skipped { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
