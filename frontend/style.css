@@ -201,6 +201,13 @@ dialog p { margin: 8px 0; }
 .report-name { font-weight: 600; word-break: break-word; }
 .report-note { font-size: 12px; color: var(--muted); margin-top: 2px; user-select: text; -webkit-user-select: text; }
 #report-dialog { max-width: 640px; }
+/* the warning of an experimental option: what it changes, point by point */
+.warn-dialog { max-width: 580px; border-top: 3px solid var(--warn); }
+.warn-dialog h2 { display: flex; align-items: center; gap: 8px; }
+.warn-icon { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--warn); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.warn-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.warn-list li { position: relative; padding: 8px 10px 8px 28px; border-radius: 8px; background: color-mix(in srgb, var(--warn) 9%, transparent); line-height: 1.45; }
+.warn-list li::before { content: ""; position: absolute; left: 11px; top: 15px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
 .measure-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-variant-numeric: tabular-nums; }
 .measure-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .measure-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); }

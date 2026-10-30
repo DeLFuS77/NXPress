@@ -1139,6 +1139,8 @@ function settings() {
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     lowPriority: $("low-priority").checked,
+    // one box for the two experimental formats: each file gets the one it needs, or none
+    sparse: $("extra").checked, archive: $("extra").checked,
   };
 }
 
@@ -1632,6 +1634,8 @@ async function main() {
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
   $("keep-named").checked = !!chosen.keepNamed;
   $("low-priority").checked = !!chosen.lowPriority;
+  // experimental, and off unless it was turned on
+  $("extra").checked = !!(chosen.sparse || chosen.archive);
   $("updates").checked = load("updates", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
@@ -1686,6 +1690,21 @@ async function main() {
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = render;
+  // the experimental option tells first, in detail, what it changes: it is on only once that
+  // is accepted, and stays off when the window is closed or Esc is pressed
+  $("extra").onchange = () => {
+    if (!$("extra").checked) return;
+    $("extra").checked = false;
+    save("settings", settings());
+    $("extra-dialog").showModal();
+    $("extra-cancel").focus();
+  };
+  $("extra-on").onclick = () => {
+    $("extra").checked = true;
+    $("extra-dialog").close();
+    save("settings", settings());
+  };
+  $("extra-cancel").onclick = () => $("extra-dialog").close();
   $("clear").onclick = () => {
     if (state.busy) return;
     const items = state.items.slice(), sources = state.sources.slice(), removed = [...state.removed];

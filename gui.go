@@ -402,6 +402,8 @@ type Request struct {
 	VerifyLevel  string   `json:"verifyLevel"`
 	Levels       bool     `json:"levels"`
 	LowPriority  bool     `json:"lowPriority"`
+	Sparse       bool     `json:"sparse"`
+	Archive      bool     `json:"archive"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -418,6 +420,8 @@ func (a *App) Start(request Request) error {
 	o.watch = request.Watch
 	o.noCache = request.NoCache
 	o.levels = request.Levels
+	o.sparse = request.Sparse
+	o.archive = request.Archive
 	switch request.Mode {
 	case "compress":
 		o.compress = true

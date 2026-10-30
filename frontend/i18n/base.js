@@ -14,10 +14,10 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
-  [/^this game uses sparse storage, which no compressor can read yet \(nsz included\): it installs as it is$/, "sparseSkip"],
+  [/^this game uses sparse storage: it installs as it is, and only the experimental format NCZSECT2, an option under Advanced, can compress it$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
-  [/it uses sparse storage, which cannot be compressed yet/g, "sparseWhy"],
+  [/it uses sparse storage, which only the experimental format NCZSECT2 compresses/g, "sparseWhy"],
   [/its sections use an encryption the app does not read/g, "encryptionWhy"],
   [/it holds no game data(?= \()/g, "noGameDataWhy"],
   [/it is compressed already \(it holds NCZ files\), an NSZ or XCZ under another name/g, "alreadyCompressedWhy"],
@@ -48,6 +48,10 @@ const noteRules = [
   [/works with: every installer \(DBI, Tinfoil, Awoo, CyberFoil, Sphaira\); emulators need it decompressed/g, "worksSolid"],
   [/works with: every installer but Awoo; emulators that read NSZ run it as it is/g, "worksBlocks"],
   [/works with: every installer and emulator/g, "worksAll"],
+  [/works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it/g, "worksSparse"],
+  [/(\d+) NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it/g, "sparseNote"],
+  [/works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "worksArchive"],
+  [/(\d+) LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "archiveNote"],
   [/padding: (.+?) that trimming takes away/g, "paddingInfo"],
   [/delta fragments: (.+?) that trimming takes away/g, "deltasInfo"],
   [/ of padding taken away/g, "paddingTaken"],

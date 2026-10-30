@@ -521,9 +521,9 @@ func checkSignatures(path string) (string, error) {
 	return note, nil
 }
 
-// sparseSkipped is why a game in sparse storage is left as it is: no compressor reads that
-// layout yet, nsz included, and the game installs as it is.
-const sparseSkipped = "this game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is"
+// sparseSkipped is why a game in sparse storage is left as it is: it installs as it is, and only
+// the experimental format NCZSECT2, asked with --sparse or under Advanced, compresses it.
+const sparseSkipped = "this game uses sparse storage: it installs as it is, and only the experimental format NCZSECT2, an option under Advanced, can compress it"
 
 // newFile is the name of the new file of path, in the output folder when there is one, held
 // for it in the work and free to write.
@@ -546,7 +546,7 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 	written := temporary(name)
 	defer os.Remove(written)
 	result, err := switchfs.CompressGame(ctx, path, written, switchfs.CompressOptions{
-		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Compressing"),
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Sparse: o.sparse, Rebuild: o.archive, Progress: out.progress(path, "Compressing"),
 	})
 	// the most common reason, told plainly
 	if errors.Is(err, switchfs.ErrSparseStorage) {
@@ -576,6 +576,12 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 		return "", "", err
 	}
 	note := fmt.Sprintf("%s -> %s, %s smaller", size(result.InputSize), size(result.OutputSize), percent(result.InputSize-result.OutputSize, result.InputSize))
+	if result.Sparse > 0 {
+		note += fmt.Sprintf(", %d NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", result.Sparse)
+	}
+	if result.Rebuilt > 0 {
+		note += fmt.Sprintf(", %d LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it", result.Rebuilt)
+	}
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}
@@ -793,7 +799,7 @@ func estimate(ctx context.Context, path string, o options, threads int, out outp
 		return compareLevels(ctx, path, o, threads, out)
 	}
 	result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
-		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Estimating"),
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Sparse: o.sparse, Progress: out.progress(path, "Estimating"),
 	}, estimateSamples, estimateSampleSize)
 	if errors.Is(err, switchfs.ErrNothingToMeasure) {
 		return nothingToEstimate(path)
@@ -1708,6 +1714,10 @@ func describe(path string) []string {
 		lines = append(lines, fmt.Sprintf("%s, uncompressed: %s", facts.Kind, size(facts.Size)))
 	}
 	switch {
+	case facts.Archive > 0:
+		lines = append(lines, "works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it")
+	case facts.Sparse > 0:
+		lines = append(lines, "works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it")
 	case facts.Solid > 0:
 		lines = append(lines, "works with: every installer (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators need it decompressed")
 	case facts.Blocks > 0:

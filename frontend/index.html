@@ -219,6 +219,10 @@
         <p class="hint" data-t="lowPriorityHint"></p>
       </div>
       <div class="field" data-for="compress">
+        <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
+        <p class="hint" data-t="extraHint"></p>
+      </div>
+      <div class="field" data-for="compress">
         <button id="measure" class="link"></button>
         <p class="hint" data-t="measureHint"></p>
       </div>
@@ -288,6 +292,18 @@
   <p class="muted" data-t="spaceIntro"></p>
   <ul class="space-list" id="space-list"></ul>
   <div class="dialog-actions"><button id="space-cancel" data-t="cancel"></button><button id="space-start" class="primary" data-t="spaceStart"></button></div>
+</dialog>
+<dialog id="extra-dialog" class="warn-dialog" aria-labelledby="extra-title" aria-describedby="extra-intro">
+  <h2 id="extra-title"><svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 9.5v4.5M12 16.8v.2"/></svg><span data-t="extraWarnTitle"></span></h2>
+  <p id="extra-intro" class="muted" data-t="extraWarnIntro"></p>
+  <ul class="warn-list">
+    <li data-t="extraWarnWhat"></li>
+    <li data-t="extraWarnInstall"></li>
+    <li data-t="extraWarnTime"></li>
+    <li data-t="extraWarnOriginals"></li>
+    <li data-t="extraWarnFormat"></li>
+  </ul>
+  <div class="dialog-actions"><button id="extra-cancel" data-t="cancel"></button><button id="extra-on" class="primary" data-t="extraWarnOn"></button></div>
 </dialog>
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>

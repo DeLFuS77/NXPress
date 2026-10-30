@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- Extra compression, experimental and NXPress only: `--extra`, or "Extra compression, NXPress only" under Advanced, off by default. It compresses what other compressors leave as it is, and gives it back byte for byte
+- Base games in sparse storage (released cut down to go with their day-one update, such as No More Heroes 3 or BlazBlue Entropy Effect X), which no compressor could shrink, are written in an extension of NCZ, NCZSECT2 (docs/ncz-sparse.md): 6 to 9% smaller
+- The blocks Nintendo compressed with LZ4 inside many recent games and updates are kept decompressed and made again, byte for byte, with the two LZ4 compressors of Nintendo when the file is decompressed: NCZSECT3 (docs/lz4-archive.md). The update of Hauntii is 486 MB instead of 516 MB
+- Each file gets what it needs, and one that needs neither stays a plain NSZ. Installers and emulators do not read the two extensions yet: such a file is decompressed with NXPress before installing it. Turning the option on first shows a warning with what it changes. `--sparse` and `--archive` turn on one half each
+
 ## 1.3.0
 
 > **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.

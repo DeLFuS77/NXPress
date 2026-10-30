@@ -48,6 +48,8 @@ type options struct {
 	level       int
 	block       bool
 	lowPriority bool
+	sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
+	archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
 	threads     int
 	multi       int
 	output      string
@@ -88,6 +90,7 @@ var optionNames = []optionName{
 	{"--verify", 'V', false, true}, {"--quick-verify", 'Q', false, true}, {"--verify-level", 0, true, false},
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
+	{"--extra", 0, false, false}, {"--sparse", 0, false, false}, {"--archive", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
@@ -249,6 +252,12 @@ func (o *options) flag(option optionName) {
 		o.verify = true
 	case "--block":
 		o.block = true
+	case "--extra":
+		o.sparse, o.archive = true, true
+	case "--sparse":
+		o.sparse = true
+	case "--archive":
+		o.archive = true
 	case "--low-priority":
 		o.lowPriority = true
 	case "--solid":
@@ -412,6 +421,9 @@ func (o *options) check() error {
 	if o.packName != "" && !o.packGames && !o.packOne {
 		o.notes = append(o.notes, "--pack-name has no effect without --pack-games or --pack-one")
 	}
+	if (o.sparse || o.archive) && !o.compress && !o.estimate {
+		o.notes = append(o.notes, "--extra, --sparse and --archive have no effect without -C")
+	}
 	// these write no file
 	for _, action := range []struct {
 		on   bool
@@ -448,6 +460,13 @@ Usage: nxpress [options] file or folder...
                       as it is; every installer takes it but Awoo
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
+  --extra             experimental, extra compression that only NXPress reads: base games
+                      in sparse storage (NCZSECT2, docs/ncz-sparse.md) and the LZ4 blocks
+                      Nintendo compressed inside games and updates, kept decompressed and
+                      made again byte for byte (NCZSECT3, docs/lz4-archive.md). Each file
+                      gets what it needs; one that needs neither stays a plain NSZ. Installers
+                      do not read the rest yet: decompress such a file with NXPress to install
+                      it. --sparse and --archive turn on one half each
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)
