@@ -2,6 +2,8 @@
 
 ## 1.3.0
 
+> **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.
+
 ### New
 
 - Combine, A SuperNSP per game: a whole collection is packed by game, each game with its updates and DLC, found by the title IDs inside the files and named by a template ("{name} [{id}][v{version}] ({contents})" by default). The games are shown first, each with a box to leave it out; a game with one file only, or combined already, is SKIPPED. On the command line, `--pack-games` and `--pack-name` (thanks @NikoMuffin, #3)
