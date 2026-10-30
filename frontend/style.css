@@ -214,7 +214,8 @@ dialog p { margin: 8px 0; }
 input.changed { animation: changed 2.5s ease-out; }
 .badge.skipped { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
-#log { margin: 0 20px 12px; max-height: 160px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
+/* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
+#log { margin: 0 20px 12px; max-height: min(160px, 16vh); overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 24px; border-top: 1px solid var(--line); background: var(--panel); }
 .actions > button { flex: none; }
