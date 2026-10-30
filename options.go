@@ -42,6 +42,8 @@ type options struct {
 	split       bool
 	pack        string
 	packGames   bool
+	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
+	packOne     bool
 	packName    string
 	level       int
 	block       bool
@@ -96,7 +98,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-name", 0, true, false},
+	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
 	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
@@ -283,6 +285,8 @@ func (o *options) flag(option optionName) {
 		o.split = true
 	case "--pack-games":
 		o.packGames = true
+	case "--pack-one":
+		o.packOne = true
 	case "--minimal-output":
 		o.minimal = true
 	case "--machine-readable":
@@ -370,17 +374,17 @@ func (o *options) check() error {
 		return errOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.packGames, o.info} {
+	for _, on := range []bool{o.compress, o.decompress, o.convert, o.recompress, o.trim, o.estimate, o.measure, o.fat32, o.template != "", o.split, o.pack != "", o.packGames, o.packOne, o.info} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack and --pack-games")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one and --pack-games")
 	}
 	// a watch would look for new files a pack does not take, without end
-	if o.watch && (o.pack != "" || o.packGames) {
-		return errors.New("--watch does not go with --pack or --pack-games: a pack is made of the files given at once")
+	if o.watch && (o.pack != "" || o.packGames || o.packOne) {
+		return errors.New("--watch does not go with --pack, --pack-one or --pack-games: a pack is made of the files given at once")
 	}
 	if o.dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -405,8 +409,8 @@ func (o *options) check() error {
 	if o.keepNamed && o.template == "" {
 		o.notes = append(o.notes, "--keep-named has no effect without --rename")
 	}
-	if o.packName != "" && !o.packGames {
-		o.notes = append(o.notes, "--pack-name has no effect without --pack-games")
+	if o.packName != "" && !o.packGames && !o.packOne {
+		o.notes = append(o.notes, "--pack-name has no effect without --pack-games or --pack-one")
 	}
 	// these write no file
 	for _, action := range []struct {
@@ -500,7 +504,11 @@ Usage: nxpress [options] file or folder...
   --pack-games        pack the files given by game: each game with its updates and DLC in a
                       SuperNSP of its own, next to its files (or in -o); a game with one
                       file only is left as it is
-  --pack-name T       the name of each pack of --pack-games, by the fields of --rename
+  --pack-one          merge the files given into one multi-title file as --pack does,
+                      named by --pack-name, next to the first file of the first game (or
+                      in -o)
+  --pack-name T       the name of each pack of --pack-games and --pack-one, by the fields
+                      of --rename
                       (default "{name} [{id}][v{version}] ({contents})")
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,

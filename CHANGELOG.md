@@ -18,6 +18,7 @@
 
 - The bar of a file at work, and its cover filling up in the grid, rise smoothly between two updates instead of in jumps
 - Pack is called Combine now, a plainer word for what it does: the section, its button, its list of games and the notes of its files (thanks @NikoMuffin, #35)
+- Combine, One file with everything, no longer asks first for the file to write: like the other sections and A SuperNSP per game, the new file goes next to the files (in the folder of the first one) or into Save to, named by a template; on the command line, `--pack-one` (thanks @NikoMuffin, #37)
 - The title of the window shows the version of NXPress, as the corner of the window already did
 - Measure this PC takes a heavier setting when it is at least 5% faster, not 10%: in a measure where 7 threads with 2 files at once went 60 MB/s and 14 threads with one 55, the first is chosen now. The speed is told as what it is, all the files at once together, and when a setting a little faster is not taken, the window says why: the lighter one uses less memory and finishes each file sooner (thanks @NikoMuffin, #22)
 - The level buttons show the levels each one covers, Light 1–6, Medium 7–14 and Maximum 15–19, and the hint tells that 18, the level of the presets and the default of nsz, is barely bigger than 19 and faster (thanks @NikoMuffin, #28)

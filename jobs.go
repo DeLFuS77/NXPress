@@ -81,7 +81,7 @@ func (o options) action() string {
 		return "split"
 	case o.info:
 		return "info"
-	case o.pack != "" || o.packGames:
+	case o.pack != "" || o.packGames || o.packOne:
 		return "pack"
 	}
 	return "verify"
@@ -95,6 +95,9 @@ func runJobs(ctx context.Context, o options, out output) int {
 	action := o.action()
 	if action == "pack" && o.packGames {
 		return packGames(ctx, o, out)
+	}
+	if action == "pack" && o.packOne {
+		return packOne(ctx, o, out)
 	}
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
@@ -1297,10 +1300,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			failed++
 		}
 	}
-	template := o.packName
-	if template == "" {
-		template = defaultPackTemplate
-	}
+	template := packTemplate(o)
 	for _, id := range order {
 		waitWhilePaused(out)
 		if ctx.Err() != nil {
@@ -1324,38 +1324,92 @@ func packGames(ctx context.Context, o options, out output) int {
 			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to combine it with"))
 			continue
 		}
-		name, note, check, err := packGame(ctx, o, files, template, out)
-		err = shown(err)
-		if isSkipped(err) {
-			for _, file := range files {
-				out.done(file, "", "", err)
-			}
-			continue
+		failed += combine(ctx, o, files, template, out)
+	}
+	return failed
+}
+
+// packOne packs every file given into one SuperNSP (into the game card, when one is given),
+// named by o.packName, next to the first file of the first game or in -o: the files of each
+// game together, the game itself first. Nothing is written when a file given cannot be read:
+// the pack would lack it. It gives how many files failed.
+func packOne(ctx context.Context, o options, out output) int {
+	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	ctx = withDestinations(ctx, sources)
+	order, groups, unread := groupGames(ctx, sources)
+	files := []string{}
+	for _, id := range order {
+		files = append(files, groups[id]...)
+	}
+	for _, path := range missing {
+		out.done(path, "", "", errors.New("no such file or folder"))
+	}
+	for _, source := range sources {
+		if err, ok := unread[source]; ok {
+			out.done(source, "", "", shown(err))
 		}
-		kept := ""
-		if err == nil {
-			kept = incompleteNote(o, check, name, files)
-		}
-		out.done(files[0], name, joinNotes(keptNote(o, check, note), kept), err)
-		for _, file := range files[1:] {
-			if err != nil {
-				out.done(file, "", "", err)
-				continue
-			}
-			out.done(file, "", "combined into "+filepath.Base(name), nil)
-		}
-		if err != nil {
-			failed += len(files)
-			continue
-		}
-		if kept != "" {
-			continue
-		}
+	}
+	if ctx.Err() != nil {
+		return len(missing) + len(unread)
+	}
+	if len(missing)+len(unread) > 0 {
 		for _, file := range files {
-			if _, _, err := removeSource(o, file, check, name, ""); err != nil {
-				out.done(file, "", "", shown(err))
-				failed++
-			}
+			out.done(file, "", "", errors.New("not combined: a file given could not be read, and the pack would lack it"))
+		}
+		return len(missing) + len(sources)
+	}
+	if len(files) < 2 {
+		for _, file := range files {
+			out.done(file, "", "", errors.New("a pack needs at least two files"))
+		}
+		return len(files)
+	}
+	return combine(ctx, o, files, packTemplate(o), out)
+}
+
+// packTemplate is the name of the packs of --pack-games and --pack-one.
+func packTemplate(o options) string {
+	if o.packName == "" {
+		return defaultPackTemplate
+	}
+	return o.packName
+}
+
+// combine writes the pack of files and tells each of them: the first one with the pack, the
+// others combined into it; the originals go (with --rm-source) once the pack holds everything
+// they hold. It gives how many files failed.
+func combine(ctx context.Context, o options, files []string, template string, out output) int {
+	name, note, check, err := packGame(ctx, o, files, template, out)
+	err = shown(err)
+	if isSkipped(err) {
+		for _, file := range files {
+			out.done(file, "", "", err)
+		}
+		return 0
+	}
+	kept := ""
+	if err == nil {
+		kept = incompleteNote(o, check, name, files)
+	}
+	out.done(files[0], name, joinNotes(keptNote(o, check, note), kept), err)
+	for _, file := range files[1:] {
+		if err != nil {
+			out.done(file, "", "", err)
+			continue
+		}
+		out.done(file, "", "combined into "+filepath.Base(name), nil)
+	}
+	if err != nil {
+		return len(files)
+	}
+	if kept != "" {
+		return 0
+	}
+	failed := 0
+	for _, file := range files {
+		if _, _, err := removeSource(o, file, check, name, ""); err != nil {
+			out.done(file, "", "", shown(err))
+			failed++
 		}
 	}
 	return failed

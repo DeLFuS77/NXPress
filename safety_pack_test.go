@@ -166,6 +166,59 @@ func TestPackGamesAgainIsCombinedAlready(t *testing.T) {
 	}
 }
 
+// One file with everything and no file chosen: the pack goes next to the game itself, wherever
+// its other files are, named by its template, or into the output folder; a file that cannot be
+// read leaves every file as it is.
+func TestPackOneGoesNextToTheFiles(t *testing.T) {
+	safetyIsolate(t)
+	root := t.TempDir()
+	games := filepath.Join(root, "games")
+	base, update, dlc := safetyGame(t, games)
+	moved := filepath.Join(root, "dlc", "dlc.nsp")
+	if err := os.MkdirAll(filepath.Dir(moved), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(dlc, moved); err != nil {
+		t.Fatal(err)
+	}
+	out := &safetyResults{}
+	if failed := runJobs(context.Background(), options{packOne: true, rmSource: true, files: []string{moved, update, base}}, out); failed != 0 {
+		t.Fatalf("%d failed: %v", failed, out.results)
+	}
+	left := safetyList(games)
+	if len(left) != 1 || safetyExists(moved) {
+		t.Fatalf("games %v, the DLC there %v", left, safetyExists(moved))
+	}
+	if got := safetyTitles(t, filepath.Join(games, left[0])); !reflect.DeepEqual(got, safetyWholeGame) {
+		t.Fatalf("the pack holds %v", got)
+	}
+
+	// into the output folder, named by the template, the files left where they are
+	again := filepath.Join(root, "again")
+	base, update, _ = safetyGame(t, again)
+	output := filepath.Join(root, "output")
+	if failed := runJobs(context.Background(), options{packOne: true, packName: "{name} pack", output: output, files: []string{base, update}}, &safetyResults{}); failed != 0 {
+		t.Fatalf("%d failed", failed)
+	}
+	if left := safetyList(output); len(left) != 1 || !strings.HasSuffix(left[0], "pack.nsp") || len(safetyList(again)) != 3 {
+		t.Fatalf("output %v, the files %v", left, safetyList(again))
+	}
+
+	// a file that cannot be read: no pack lacking it
+	broken := filepath.Join(root, "broken")
+	safetyGame(t, broken)
+	if err := os.WriteFile(filepath.Join(broken, "zz.nsp"), []byte("not a game"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := safetyList(broken)
+	if failed := runJobs(context.Background(), options{packOne: true, rmSource: true, files: []string{broken}}, &safetyResults{}); failed != 4 {
+		t.Errorf("%d failed, want 4", failed)
+	}
+	if after := safetyList(broken); !reflect.DeepEqual(after, before) {
+		t.Fatalf("before %v, after %v", before, after)
+	}
+}
+
 // The files of a game card are the ones of its secure partition.
 func TestPackageFilesOfAGameCard(t *testing.T) {
 	hfs0 := func(names []string, sizes []int) []byte {

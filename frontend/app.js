@@ -58,7 +58,7 @@ function countUp(element, bytes, format, html) {
 }
 const app = () => window.go.main.App;
 const state = {
-  theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", pack: "", dat: "",
+  theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
   setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
 };
 
@@ -516,8 +516,10 @@ function paintStatus() {
     return (typeof text === "function" ? text(...(part.args || [])) : text) + (part.after || "");
   }).filter(Boolean).join(" · ");
 }
-// onePack tells a work that writes one file with all the files given: its result is that file
-const onePack = run => !!run && run.mode === "pack" && !run.request.packGames;
+// onePack tells a work that writes one file with all the files given into a file chosen by
+// name, as the window did before 1.3.0 (a work of then, resumed): its result is that file. One
+// file with everything named by its template tells its files as a SuperNSP per game does
+const onePack = run => !!run && run.mode === "pack" && !run.request.packGames && !!run.request.pack;
 
 // stepsOf are the steps of a file in the work running, in their order: the work, then the check
 // of what it wrote; a trimmed NSP is checked while it is written, so it has one step
@@ -699,21 +701,19 @@ function render() {
   // what the level trades, as a picture: higher levels make smaller files, more slowly
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
   $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
-  $("output").textContent = state.output ? ltr(state.output) : t("nextTo");
+  // one file with everything goes next to the files, in the folder of the first one
+  const nextTo = t(state.mode === "pack" && !$("pack-games").checked ? "nextToFiles" : "nextTo");
+  $("output").textContent = state.output ? ltr(state.output) : nextTo;
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
   $("output").classList.toggle("empty", !state.output);
   $("reset-output").hidden = !state.output;
-  $("reset-output").title = t("nextTo");
-  // a SuperNSP per game, or one file with everything
-  $("pack-one-fields").hidden = $("pack-games").checked;
+  $("reset-output").title = nextTo;
+  $("reset-output").setAttribute("aria-label", nextTo);
+  // a SuperNSP per game, or one file with everything: both named by a template
+  $("pack-template-title").textContent = t($("pack-games").checked ? "packTemplate" : "packOneName");
   $("pack-games-fields").hidden = !$("pack-games").checked;
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
-  // one file with everything is saved where it is chosen; a pack per game where Save in says
-  if (state.mode === "pack" && !$("pack-games").checked) $("output-field").hidden = true;
-  $("pack").textContent = state.pack ? ltr(state.pack) : t("noPack");
-  $("pack").title = state.pack;
-  $("pack").classList.toggle("empty", !state.pack);
   $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
   $("dat").title = state.dat;
   $("dat").classList.toggle("empty", !state.dat);
@@ -1199,10 +1199,9 @@ async function start(mode, extra) {
   // the work shows on its page, with what it needs or what it does: the settings give way to it
   if (state.view) { state.view = ""; render(); }
   // what the work needs is told by its own mode: Verify only this, in a section that needs no
-  // keys or no pack, still needs the keys and no pack
+  // keys, still needs them
   if (!state.keys && !["recompress", "fat32"].includes(mode)) { setStatus({ key: "needKeys" }); return; }
   if (!state.items.length) { setStatus({ key: mode === "measure" ? "measureNeedsGame" : "needFiles" }); return; }
-  if (mode === "pack" && !$("pack-games").checked && !state.pack) { setStatus({ key: "needPack" }); return; }
   const chosen = settings();
   save("settings", chosen);
   const watches = chosen.watch && ["compress", "decompress", "recompress", "trim", "verify"].includes(mode);
@@ -1215,7 +1214,7 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
-  const request = { mode, files, pack: state.pack, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -1749,7 +1748,6 @@ async function main() {
   }
   $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); previewPacks(); };
   $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
-  $("choose-pack").onclick = async () => { const path = await app().ChoosePack(); if (path) state.pack = path; render(); };
   $("send-to").onclick = async () => {
     try {
       await app().SetSendTo(!state.setup.sendToEnabled);

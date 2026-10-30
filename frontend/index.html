@@ -178,15 +178,11 @@
         <label class="choice"><input type="radio" name="pack-kind" value="one" id="pack-one">
           <span><b data-t="packOne"></b><small data-t="packOneHint"></small></span></label>
       </div>
-      <div id="pack-one-fields">
-        <h2 data-t="packFile"></h2>
-        <div class="path"><span id="pack" class="muted"></span><button id="choose-pack" data-t="choose"></button></div>
-      </div>
+      <h2 id="pack-template-title"></h2>
+      <textarea id="pack-template" class="template" rows="1" spellcheck="false" aria-labelledby="pack-template-title"></textarea>
+      <div class="template-row"><button id="pack-template-reset" class="quiet" data-t="templateReset"></button></div>
+      <p class="hint" data-t="templateHint"></p>
       <div id="pack-games-fields">
-        <h2 data-t="packTemplate"></h2>
-        <textarea id="pack-template" class="template" rows="1" spellcheck="false"></textarea>
-        <div class="template-row"><button id="pack-template-reset" class="quiet" data-t="templateReset"></button></div>
-        <p class="hint" data-t="templateHint"></p>
         <h2 class="pack-plan-title" data-t="packPlan"></h2>
         <p class="hint" id="pack-plan-empty" data-t="packPlanEmpty"></p>
         <ul class="pack-plan" id="pack-plan"></ul>

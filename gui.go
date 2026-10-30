@@ -246,14 +246,6 @@ func (a *App) ChooseOutput() (string, error) {
 	return wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{CanCreateDirectories: true})
 }
 
-// ChoosePack asks for the name of the multi-title file a pack writes.
-func (a *App) ChoosePack() (string, error) {
-	return wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
-		DefaultFilename: "Pack.nsp",
-		Filters:         []wailsruntime.FileFilter{{DisplayName: "NSP, NSZ, XCI, XCZ", Pattern: "*.nsp;*.nsz;*.xci;*.xcz"}},
-	})
-}
-
 // Describe gives the main title of a file, with its icon, to show it in the list.
 func (a *App) Describe(path string) (gameTitle, error) {
 	if _, ok := splitContainer(path); ok {
@@ -458,15 +450,16 @@ func (a *App) Start(request Request) error {
 		for _, id := range request.SkipGames {
 			o.skipGames[strings.ToUpper(id)] = true
 		}
-		// a SuperNSP per game, named by its template; else one file with everything
-		if request.PackGames {
+		// a SuperNSP per game, or one file with everything, named by its template next to the
+		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
+		switch {
+		case request.PackGames:
 			o.packGames, o.packName = true, request.PackTemplate
-			break
+		case request.Pack != "":
+			o.pack = request.Pack
+		default:
+			o.packOne, o.packName = true, request.PackTemplate
 		}
-		if request.Pack == "" {
-			return errors.New("choose the name of the new file")
-		}
-		o.pack = request.Pack
 	default:
 		o.verify = true
 	}

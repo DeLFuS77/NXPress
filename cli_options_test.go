@@ -115,7 +115,7 @@ func TestCheckTellsWhatHasNoEffect(t *testing.T) {
 		"--levels -C":                     {"--levels has no effect without --estimate"},
 		"--levels --estimate":             nil,
 		"--keep-named -C":                 {"--keep-named has no effect without --rename"},
-		"--pack-name {name} -C":           {"--pack-name has no effect without --pack-games"},
+		"--pack-name {name} -C":           {"--pack-name has no effect without --pack-games or --pack-one"},
 		"--pack-name {name} --pack-games": nil,
 		"-o out --rename {name}":          {"-o has no effect with --rename"},
 		"-o out -i":                       {"-o has no effect with -i"},
