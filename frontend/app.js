@@ -648,7 +648,8 @@ function render() {
   // the page of the settings takes the place of the section and its options
   const preferences = state.view === "preferences";
   $("work").hidden = preferences;
-  $("settings").hidden = preferences;
+  // a section without options (Details) gives the room of their column to the list
+  $("settings").hidden = preferences || ![...$("settings").children].some(block => !block.hidden);
   $("preferences").hidden = !preferences;
   $("open-preferences").classList.toggle("on", preferences);
   $("keys-path").textContent = state.keys || t("keys")("");
