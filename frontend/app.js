@@ -692,6 +692,8 @@ function render() {
   const band = level <= 6 ? "3" : level <= 14 ? "12" : "19";
   for (const button of document.querySelectorAll("[data-level]")) button.classList.toggle("on", button.dataset.level === band);
   $("remove-warning").hidden = !$("remove").checked;
+  // the files that use the extra compression do not go with the installers above as they are
+  $("extra-target-warning").hidden = !$("extra").checked;
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
@@ -1693,7 +1695,7 @@ async function main() {
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
   $("extra").onchange = () => {
-    if (!$("extra").checked) return;
+    if (!$("extra").checked) return render();
     $("extra").checked = false;
     save("settings", settings());
     $("extra-dialog").showModal();
@@ -1703,6 +1705,7 @@ async function main() {
     $("extra").checked = true;
     $("extra-dialog").close();
     save("settings", settings());
+    render();
   };
   $("extra-cancel").onclick = () => $("extra-dialog").close();
   $("clear").onclick = () => {
