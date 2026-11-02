@@ -6,13 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
-
-// the titles of the synthetic game, its update and its DLC together
-var safetyWholeGame = []string{"0100000000010000 v0", "0100000000010800 v65536", "0100000000011001 v0"}
 
 // A pack chosen under the name of one of its files, with -w and --rm-source: nothing is
 // written over that file, nor deleted. A pack made before of the others, given again, is
@@ -158,7 +157,7 @@ func TestSameNameFromTwoFoldersIntoOneOutput(t *testing.T) {
 	output := filepath.Join(root, "out")
 	out := &safetyResults{}
 	failed := runJobs(context.Background(), options{compress: true, level: 3, output: output, overwrite: true, rmSource: true, files: []string{a, b}, multi: 1, threads: 1}, out)
-	if failed != 1 || !reflect.DeepEqual(out.failed(), []string{b}) {
+	if failed != 1 || !reflect.DeepEqual(out.failed(isSkipped), []string{b}) {
 		t.Fatalf("%d failed: %v", failed, out.results)
 	}
 	if safetyExists(a) || !safetyExists(b) {
@@ -189,4 +188,19 @@ func TestSameNameAtOnceIntoOneOutput(t *testing.T) {
 			t.Fatalf("round %d: %v", round, err)
 		}
 	}
+}
+
+// safetyTitles are the titles a game file holds, as "<title ID> v<version>", in order.
+func safetyTitles(t *testing.T, path string) []string {
+	t.Helper()
+	titles, err := readTitles(path)
+	if err != nil {
+		t.Fatalf("%s: %v", filepath.Base(path), err)
+	}
+	found := []string{}
+	for _, title := range titles {
+		found = append(found, fmt.Sprintf("%s v%d", strings.ToUpper(title.TitleId), title.Version))
+	}
+	sort.Strings(found)
+	return found
 }

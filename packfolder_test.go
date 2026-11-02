@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -138,7 +140,7 @@ func TestPackOfAFolderOnTheCommandLineGoesNextToIt(t *testing.T) {
 	if len(packs) != 1 || len(packsIn(t, game)) != 0 {
 		t.Fatalf("next to the folder: %v; inside: %v", safetyList(collection), safetyList(game))
 	}
-	if got := safetyTitles(t, filepath.Join(collection, packs[0])); !reflect.DeepEqual(got, safetyWholeGame) {
+	if got := packTitles(t, filepath.Join(collection, packs[0])); !reflect.DeepEqual(got, safetyWholeGame) {
 		t.Fatalf("the pack holds %v", got)
 	}
 
@@ -149,4 +151,19 @@ func TestPackOfAFolderOnTheCommandLineGoesNextToIt(t *testing.T) {
 	if packs := packsIn(t, other); len(packs) != 2 {
 		t.Fatalf("by game: %v", safetyList(other))
 	}
+}
+
+// packTitles are the titles a pack holds, as "<title ID> v<version>", in order.
+func packTitles(t *testing.T, path string) []string {
+	t.Helper()
+	titles, err := readTitles(path)
+	if err != nil {
+		t.Fatalf("%s: %v", filepath.Base(path), err)
+	}
+	found := []string{}
+	for _, title := range titles {
+		found = append(found, fmt.Sprintf("%s v%d", strings.ToUpper(title.TitleId), title.Version))
+	}
+	sort.Strings(found)
+	return found
 }

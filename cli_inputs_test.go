@@ -30,28 +30,6 @@ func TestInputsTakeTheSameFileOnce(t *testing.T) {
 	}
 }
 
-// unreadableFolder makes a folder in folder that cannot be read: one whose name ends in a dot on
-// Windows, which only the long form of its path reaches, and one without permissions elsewhere.
-func unreadableFolder(t *testing.T, folder string) string {
-	if runtime.GOOS == "windows" {
-		path := filepath.Join(folder, "locked.")
-		if err := os.Mkdir(`\\?\`+path, 0o755); err != nil {
-			t.Skip(err)
-		}
-		os.WriteFile(`\\?\`+path+`\game.nsp`, []byte("x"), 0o644)
-		return path
-	}
-	path := filepath.Join(folder, "locked")
-	os.Mkdir(path, 0o755)
-	os.WriteFile(filepath.Join(path, "game.nsp"), []byte("x"), 0o644)
-	os.Chmod(path, 0)
-	t.Cleanup(func() { os.Chmod(path, 0o755) })
-	if _, err := os.ReadDir(path); err == nil {
-		t.Skip("the folder can be read without permissions (root)")
-	}
-	return path
-}
-
 // A folder that cannot be read is told among the missing paths, not left out without a word.
 func TestInputsTellUnreadableFolders(t *testing.T) {
 	folder := t.TempDir()

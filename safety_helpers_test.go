@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -332,13 +333,13 @@ func (r *safetyResults) done(path string, output string, note string, err error)
 	r.results[path] = safetyResult{output: output, note: note, err: err}
 }
 
-// failed are the files of a work that failed, by path.
-func (r *safetyResults) failed() []string {
+// failed are the files of a work that failed, by path; skipped tells the errors that are no failure.
+func (r *safetyResults) failed(skipped func(error) bool) []string {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	paths := []string{}
 	for path, result := range r.results {
-		if result.err != nil && !isSkipped(result.err) {
+		if result.err != nil && !skipped(result.err) {
 			paths = append(paths, path)
 		}
 	}
@@ -346,17 +347,34 @@ func (r *safetyResults) failed() []string {
 	return paths
 }
 
-// safetyTitles are the titles a game file holds, as "<title ID> v<version>", in order.
-func safetyTitles(t *testing.T, path string) []string {
-	t.Helper()
-	titles, err := readTitles(path)
-	if err != nil {
-		t.Fatalf("%s: %v", filepath.Base(path), err)
+// quiet takes the progress and the results of a test without printing them.
+type quiet struct{}
+
+func (quiet) progress(string, string) func(int64, int64) { return func(int64, int64) {} }
+func (quiet) done(string, string, string, error)         {}
+func (quiet) say(string, ...any)                         {}
+
+// the titles of the synthetic game, its update and its DLC together
+var safetyWholeGame = []string{"0100000000010000 v0", "0100000000010800 v65536", "0100000000011001 v0"}
+
+// unreadableFolder makes a folder in folder that cannot be read: one whose name ends in a dot on
+// Windows, which only the long form of its path reaches, and one without permissions elsewhere.
+func unreadableFolder(t *testing.T, folder string) string {
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(folder, "locked.")
+		if err := os.Mkdir(`\\?\`+path, 0o755); err != nil {
+			t.Skip(err)
+		}
+		os.WriteFile(`\\?\`+path+`\game.nsp`, []byte("x"), 0o644)
+		return path
 	}
-	found := []string{}
-	for _, title := range titles {
-		found = append(found, fmt.Sprintf("%s v%d", strings.ToUpper(title.TitleId), title.Version))
+	path := filepath.Join(folder, "locked")
+	os.Mkdir(path, 0o755)
+	os.WriteFile(filepath.Join(path, "game.nsp"), []byte("x"), 0o644)
+	os.Chmod(path, 0)
+	t.Cleanup(func() { os.Chmod(path, 0o755) })
+	if _, err := os.ReadDir(path); err == nil {
+		t.Skip("the folder can be read without permissions (root)")
 	}
-	sort.Strings(found)
-	return found
+	return path
 }

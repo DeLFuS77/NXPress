@@ -9,13 +9,6 @@ import (
 	"testing"
 )
 
-// quiet takes the progress and the results of a test without printing them.
-type quiet struct{}
-
-func (quiet) progress(string, string) func(int64, int64) { return func(int64, int64) {} }
-func (quiet) done(string, string, string, error)         {}
-func (quiet) say(string, ...any)                         {}
-
 // A file bigger than a part goes to a folder of parts with its name, read as one file, and
 // back to one file again, in place.
 func TestFat32SplitsAndJoinsInPlace(t *testing.T) {
