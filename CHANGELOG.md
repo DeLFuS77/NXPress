@@ -20,6 +20,10 @@
 
 - On macOS, the layer shown while files are dragged over the window no longer stays after they are dropped, covering the window so that nothing could be clicked (thanks @ong19th, #46)
 
+### Security
+
+- golang.org/x/net 0.62.0 (GO-2026-6860 and GO-2026-6866)
+
 ## 1.3.0
 
 > **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.
