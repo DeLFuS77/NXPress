@@ -10,6 +10,9 @@ import (
 	"syscall"
 )
 
+// commandVersion is the version the command line tells: the one of the build, given by main
+var commandVersion = "dev"
+
 // stopSignals stop the files at work: Ctrl+C, and SIGTERM, which Go gives on Windows too when
 // the console is closed, the user signs out or the computer shuts down (the system then waits
 // a few seconds for NXPress to remove its half written files)
@@ -20,11 +23,11 @@ var stopSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	o, err := parseOptions(args)
 	if err == nil && o.help {
-		fmt.Fprintf(stdout, usage, version)
+		fmt.Fprintf(stdout, usage, commandVersion)
 		return 0
 	}
 	if err == nil && o.version {
-		fmt.Fprintln(stdout, "NXPress", version)
+		fmt.Fprintln(stdout, "NXPress", commandVersion)
 		return 0
 	}
 	if err == nil {

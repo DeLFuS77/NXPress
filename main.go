@@ -9,6 +9,7 @@ import (
 var version = "dev"
 
 func main() {
+	commandVersion = version
 	// with no arguments it is the window, and with only files or folders too: the ones dropped
 	// on NXPress, or sent to it from the Explorer. Started from the Explorer, the console
 	// Windows opened for it is closed
