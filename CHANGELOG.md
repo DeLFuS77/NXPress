@@ -16,6 +16,10 @@
 - The bar at the top with the name and the version is gone, as both are in the title of the window; the notice of a new version still shows there when one is out (thanks @NikoMuffin, #44)
 - Combine: the pack of a folder dropped or chosen goes next to the folder, not inside it, so a collection with each game in a folder of its own gets the SuperNSP of each game next to its folder. Files added one by one keep it next to them. The same on the command line (thanks @NikoMuffin, #45)
 
+### Fixes
+
+- On macOS, the layer shown while files are dragged over the window no longer stays after they are dropped, covering the window so that nothing could be clicked (thanks @ong19th, #46)
+
 ## 1.3.0
 
 > **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.

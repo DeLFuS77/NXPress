@@ -1620,6 +1620,25 @@ async function checkUpdate() {
   $("update-banner").hidden = false;
 }
 
+// watchDrops shows the layer of a drop (show(true, count)) while files are dragged over the
+// window (target), and ends it when they are dropped or the drag leaves it. On macOS NXPress takes
+// the drop itself and the page gets neither a drop nor a leave: the files the system hands over
+// (wails:file-drop of runtime) end it too, and so does the mouse moving on the layer, as no drag
+// is going on then; the layer would else stay over the window, and nothing could be clicked (#46).
+function watchDrops(target, runtime, layer, busy, show) {
+  let dragging = 0;
+  const end = () => { dragging = 0; show(false); };
+  target.addEventListener("dragenter", event => {
+    if (busy() || !event.dataTransfer || ![...event.dataTransfer.types].includes("Files")) return;
+    dragging++;
+    show(true, event.dataTransfer.items ? event.dataTransfer.items.length : 0);
+  });
+  target.addEventListener("dragleave", () => { dragging = Math.max(0, dragging - 1); if (!dragging) show(false); });
+  target.addEventListener("drop", end);
+  runtime.EventsOn("wails:file-drop", end);
+  layer.addEventListener("mousemove", end);
+}
+
 async function main() {
   fillFields();
   state.setup = await app().Setup();
@@ -1760,17 +1779,11 @@ async function main() {
   $("star-link").onclick = () => app().OpenURL(repository);
   $("space-cancel").onclick = () => $("space-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
-  let dragging = 0;
-  const dropShown = show => { $("drop-overlay").hidden = !show; if (show) replay("enter", $("drop-overlay").firstElementChild); };
-  window.addEventListener("dragenter", event => {
-    if (state.busy || !event.dataTransfer || ![...event.dataTransfer.types].includes("Files")) return;
-    dragging++;
-    const count = event.dataTransfer.items ? event.dataTransfer.items.length : 0;
-    $("drop-text").textContent = t("dropOverlay")(count);
-    dropShown(true);
+  watchDrops(window, window.runtime, $("drop-overlay"), () => state.busy, (show, count) => {
+    if (show) $("drop-text").textContent = t("dropOverlay")(count);
+    $("drop-overlay").hidden = !show;
+    if (show) replay("enter", $("drop-overlay").firstElementChild);
   });
-  window.addEventListener("dragleave", () => { dragging = Math.max(0, dragging - 1); if (!dragging) dropShown(false); });
-  window.addEventListener("drop", () => { dragging = 0; dropShown(false); });
   // 7: the keys of the window
   // the card over a game and the menu of a file go with Escape and with a scroll; the menu also
   // with a click out of it, and its arrows move between its items
