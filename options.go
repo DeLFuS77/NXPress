@@ -43,8 +43,8 @@ type options struct {
 	pack        string
 	packGames   bool
 	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
-	packOne     bool
-	packName    string
+	packOne  bool
+	packName string
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	origins     []string
