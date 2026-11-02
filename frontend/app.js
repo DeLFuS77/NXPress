@@ -125,8 +125,12 @@ function adviceFor(error) {
 // the space saved since always, kept in the window: what every work that wrote files saved
 // in the units the window shows sizes in (1 GB = 1024 MB), so they read round
 const milestones = [100, 250, 500, 1024, 2048, 5120, 10240].map(gb => gb * 2 ** 30);
+// a work of this window saved space: only then the empty list tells what NXPress has saved since
+// always, not each time the window opens (#48)
+let savedHere = false;
 function keepSaved(bytes, files) {
   if (bytes <= 0) return;
+  savedHere = true;
   const before = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const after = { bytes: before.bytes + bytes, files: before.files + files };
   save("lifetime", after);
@@ -134,12 +138,13 @@ function keepSaved(bytes, files) {
   const crossed = milestones.filter(mark => before.bytes < mark && after.bytes >= mark).pop();
   if (crossed) setTimeout(() => { showToast(t("milestone")(size(crossed))); replay("glow", document.querySelector(".actions")); }, 1600);
 }
-// the space saved since always, on the empty list; it counts up the first time it shows
+// the space saved since always, on the empty list once a work of this window saved some; it counts
+// up the first time it shows
 let lifetimeShown = false, lifetimeAt = 0;
 function renderLifetime() {
   const kept = load("lifetime", { bytes: 0, files: 0 }, isLifetime);
   const element = $("lifetime");
-  element.hidden = !(kept.bytes > 0);
+  element.hidden = !(savedHere && kept.bytes > 0);
   if (element.hidden) return;
   if (!lifetimeShown && !$("empty").hidden) {
     lifetimeShown = true;
