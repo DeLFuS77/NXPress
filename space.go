@@ -3,26 +3,28 @@ package main
 import (
 	"path/filepath"
 
+	"github.com/DeLFuS77/NXPress/internal/space"
+
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
 // SpaceCheck tells the drives where the new files of a request may not fit, before it starts.
-func (a *App) SpaceCheck(request Request) []SpaceShort {
-	return spaceShort(request, freeSpace)
+func (a *App) SpaceCheck(request Request) []space.Short {
+	return spaceShort(request, space.FreeSpace)
 }
 
 // spaceShort weighs each new file by the most it can take: as big as its original (all its
 // parts, for a file in parts), and an NSZ or XCZ decompressed as big as its content.
-func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort {
+func spaceShort(request Request, free func(string) (int64, error)) []space.Short {
 	switch request.Mode {
 	case "compress", "decompress", "recompress", "trim", "convert", "fat32", "split", "pack":
 	default:
 		return nil
 	}
 	replaces := request.RemoveSource || request.Output == "" && (request.Mode == "recompress" || request.Mode == "trim" || request.Mode == "fat32")
-	files := []spaceFile{}
+	files := []space.File{}
 	for _, path := range request.Files {
-		size, ok := originalSize(path)
+		size, ok := space.OriginalSize(path)
 		if !ok {
 			continue
 		}
@@ -39,11 +41,11 @@ func spaceShort(request Request, free func(string) (int64, error)) []SpaceShort 
 		case request.Output != "":
 			folder = request.Output
 		}
-		drive := volumeOf(folder)
-		files = append(files, spaceFile{
-			folder: folder, drive: drive, size: size, most: most,
-			replaces: replaces && request.Mode != "pack" && drive == volumeOf(filepath.Dir(path)),
+		drive := space.VolumeOf(folder)
+		files = append(files, space.File{
+			Folder: folder, Drive: drive, Size: size, Most: most,
+			Replaces: replaces && request.Mode != "pack" && drive == space.VolumeOf(filepath.Dir(path)),
 		})
 	}
-	return spaceNeeded(files, max(1, request.Multi), free)
+	return space.Needed(files, max(1, request.Multi), free)
 }

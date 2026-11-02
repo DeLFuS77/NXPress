@@ -3,22 +3,25 @@ package main
 import (
 	"os"
 	"strings"
+
+	"github.com/DeLFuS77/NXPress/internal/cli"
+	"github.com/DeLFuS77/NXPress/internal/system"
 )
 
 // version is set by the build of a release
 var version = "dev"
 
 func main() {
-	commandVersion = version
+	cli.Version = version
 	// with no arguments it is the window, and with only files or folders too: the ones dropped
 	// on NXPress, or sent to it from the Explorer. Started from the Explorer, the console
 	// Windows opened for it is closed
 	if len(os.Args) == 1 || onlyPaths(os.Args[1:]) {
-		hideConsole()
+		system.HideConsole()
 		os.Exit(runWindow(os.Args[1:]))
 	}
 	if fromNotification(os.Args[1:]) {
-		hideConsole()
+		system.HideConsole()
 		os.Exit(runWindow(nil))
 	}
 	os.Exit(run(os.Args[1:]))
@@ -50,5 +53,5 @@ func onlyPaths(args []string) bool {
 }
 
 func run(args []string) int {
-	return runCommand(args, os.Stdout, os.Stderr)
+	return cli.RunCommand(args, os.Stdout, os.Stderr)
 }

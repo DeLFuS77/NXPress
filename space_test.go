@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/DeLFuS77/NXPress/internal/space"
 )
 
 // the space a work needs: every new file kept, or of the files that replace their originals only
@@ -83,8 +85,8 @@ func TestSpaceOneDrive(t *testing.T) {
 	if err := os.Mkdir(games, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if volumeOf(games) != volumeOf(output) || volumeOf(games) != volumeOf(folder) {
-		t.Errorf("one drive, three names: %s, %s, %s", volumeOf(folder), volumeOf(games), volumeOf(output))
+	if space.VolumeOf(games) != space.VolumeOf(output) || space.VolumeOf(games) != space.VolumeOf(folder) {
+		t.Errorf("one drive, three names: %s, %s, %s", space.VolumeOf(folder), space.VolumeOf(games), space.VolumeOf(output))
 	}
 	files := []string{}
 	for i, size := range []int{300, 200, 100} {
