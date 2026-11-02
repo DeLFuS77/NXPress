@@ -1126,6 +1126,35 @@ function previewPacks() {
   }, 300);
 }
 
+// the fields of a template, one to a row: what each writes, an example, and its name as Switch
+// Library Manager writes it (#43). The rows are made once; their texts follow the language.
+const templateFields = [
+  ["{name}", "{TITLE_NAME}", "fieldName", "Moonlit Orchard"],
+  ["{id}", "{TITLE_ID}", "fieldId", "0100A1B2C3D40000"],
+  ["{version}", "{VERSION}", "fieldVersion", "131072"],
+  ["{version_txt}", "{VERSION_TXT}", "fieldVersionTxt", "1.0.5"],
+  ["{type}", "{TYPE}", "fieldType", "BASE · UPD · DLC"],
+  ["{titles}", "", "fieldTitles", "4"],
+  ["{contents}", "{PACKAGE_CONTENTS}", "fieldContents", "1G+1U+2D"],
+  ["{size_gb}", "{SIZE_GB}", "fieldSizeGb", "2.7GB"],
+  ["{size_mb}", "{SIZE_MB}", "fieldSizeMb", "2650MB"],
+  ["{dlc_number}", "{DLC_NUMBER}", "fieldDlcNumber", "1"],
+];
+function fillFields() {
+  for (const table of document.querySelectorAll("table.fields")) {
+    table.innerHTML = `<thead><tr><th data-t="fieldsField"></th><th data-t="fieldsWrites"></th></tr></thead><tbody></tbody>`;
+    for (const [field, upper, key, example] of templateFields) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><code></code><small></small></td><td><span></span><small class="example"></small></td>`;
+      tr.querySelector("code").textContent = field;
+      tr.querySelector("td small").textContent = upper;
+      tr.querySelector("span").dataset.t = key;
+      tr.querySelector(".example").textContent = example;
+      table.tBodies[0].append(tr);
+    }
+  }
+}
+
 // the new names of the files, for the template written
 let previewTimer = 0;
 function previewNames() {
@@ -1591,6 +1620,7 @@ async function checkUpdate() {
 }
 
 async function main() {
+  fillFields();
   state.setup = await app().Setup();
   state.keys = state.setup.keys;
   // the theme: the one of the system, or the one chosen

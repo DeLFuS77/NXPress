@@ -278,6 +278,15 @@ label.choice small { display: block; font-size: 12px; color: var(--muted); margi
 /* a template is longer than the panel is wide: it wraps, whole, with its button under it */
 textarea.template { display: block; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .template-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+/* the fields of a template, one to a row: the field and its name in Switch Library Manager, what
+it writes and an example (#43); they can be selected, to copy them into the template */
+table.fields { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; user-select: text; -webkit-user-select: text; }
+table.fields th { text-align: left; font-weight: 600; color: var(--muted); padding: 0 8px 4px 0; border-bottom: 1px solid var(--line); }
+table.fields td { vertical-align: top; padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); line-height: 1.35; }
+table.fields tr:last-child td { border-bottom: 0; }
+table.fields td:first-child { white-space: nowrap; }
+table.fields code { font: 12px "Cascadia Mono", Consolas, monospace; color: var(--text); }
+table.fields small { display: block; font: 11px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
