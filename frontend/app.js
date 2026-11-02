@@ -1650,7 +1650,6 @@ async function main() {
   // a field of the settings kept is taken only when it is of its kind
   const number = value => Number.isInteger(value) && value > 0 ? value : 0;
   const text = value => typeof value === "string" ? value : "";
-  $("version").textContent = state.setup.version;
   $("level").max = state.setup.maxLevel;
   $("level").value = number(chosen.level) || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;

@@ -1,8 +1,8 @@
-/* colors, by role: blue for what you choose and start, red for the brand and for what went
-wrong, green for space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
+/* colors, by role: blue for what you choose and start, red for what went wrong, green for
+space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
 :root {
   --bg: #101216; --panel: #181b21; --raised: #1f232a; --line: #2c313a; --text: #e9ecf1; --muted: #98a0ad;
-  --accent: #3db7ea; --accent-soft: rgba(61, 183, 234, .14); --accent-text: #061018; --brand: #e60012;
+  --accent: #3db7ea; --accent-soft: rgba(61, 183, 234, .14); --accent-text: #061018;
   --ok: #45c27a; --ok-soft: rgba(69, 194, 122, .14); --bad: #ff6464; --bad-soft: rgba(255, 100, 100, .12);
   --warn: #f0a33a; --bar: #2c313a; --hover: #252a32; --focus: #7fd0f2;
   --radius: 8px; --radius-small: 6px;
@@ -63,18 +63,10 @@ input[type=number] { width: 72px; font: inherit; color: var(--text); background:
 input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
-/* header */
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
-.brand small { font-weight: 400; font-size: 12px; color: var(--muted); }
-.logo { width: 24px; height: 24px; }
-.logo rect { fill: var(--brand, #e60012); }
-.logo path { fill: none; stroke: #fff; stroke-width: 2.9; stroke-linecap: round; stroke-linejoin: round; }
-
 /* layout */
 main { flex: 1; display: flex; min-height: 0; }
-/* Windows 11: the top bar and the menu show the Mica of the system, the work stays on its own ground */
-html.mica body, html.mica header, html.mica nav { background: transparent; }
+/* Windows 11: the menu shows the Mica of the system, the work stays on its own ground */
+html.mica body, html.mica nav { background: transparent; }
 html.mica #work, html.mica #preferences { background: var(--bg); }
 
 /* the modes, by group */
