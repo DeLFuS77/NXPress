@@ -354,8 +354,12 @@ func (o *options) set(option optionName, told string, value string, hasValue boo
 	case "--pack-name":
 		o.packName = value
 	case "--verify-level":
+		// hash was named full before 1.4.0, which scripts may still give (#42)
+		if value == "hash" {
+			value = "full"
+		}
 		if value != "full" && value != "signature" && value != "both" {
-			return errors.New("--verify-level is full, signature or both")
+			return errors.New("--verify-level is hash, signature or both")
 		}
 		o.verifyLevel = value
 	default:
@@ -448,9 +452,10 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
-  --verify-level L    what -V checks: full (every NCA by its hashes, the default),
-                      signature (the header of every NCA signed by Nintendo, in seconds:
-                      a tool that rewrote an NCA leaves it unsigned) or both
+  --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
+                      the same), signature (the header of every NCA signed by Nintendo, in
+                      seconds: a tool that rewrote an NCA leaves it unsigned, and the file
+                      is told MODIFIED, not FAILED) or both
   --no-cache          with -V, check every file again, also the ones checked before and not
                       changed since (NXPress remembers them, and every file it writes)
   --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of

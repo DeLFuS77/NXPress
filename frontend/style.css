@@ -219,7 +219,7 @@ dialog p { margin: 8px 0; }
 .measure-table .speed { font-size: inherit; color: inherit; margin-top: 0; }
 @keyframes changed { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
 input.changed { animation: changed 2.5s ease-out; }
-.badge.skipped { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.badge.skipped, .badge.modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 /* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
 #log { margin: 0 20px 12px; max-height: min(160px, 16vh); overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
@@ -484,8 +484,8 @@ tr.row-in { animation: row-in .22s ease-out both; }
 tr.row-out { animation: row-out .18s ease-in forwards; }
 tr.ended-ok { --flash: var(--ok-soft); animation: ended 1.4s ease-out; }
 tr.ended-failed { --flash: var(--bad-soft); animation: ended 1.8s ease-out; }
-tr.ended-skipped { --flash: color-mix(in srgb, var(--warn) 14%, transparent); animation: ended 1.4s ease-out; }
-tr.ended-ok .badge, tr.ended-failed .badge, tr.ended-skipped .badge { animation: pop .3s ease-out; }
+tr.ended-skipped, tr.ended-modified { --flash: color-mix(in srgb, var(--warn) 14%, transparent); animation: ended 1.4s ease-out; }
+tr.ended-ok .badge, tr.ended-failed .badge, tr.ended-skipped .badge, tr.ended-modified .badge { animation: pop .3s ease-out; }
 /* work in progress moves: the bar of a file at work and the bar of the whole list */
 td.state .bar div, td.state .seg div, .busy .bar.total div { background-image: linear-gradient(135deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%); background-size: 24px 24px; animation: stripes .8s linear infinite; }
 .actions.glow { animation: glow 1.6s ease-out; }

@@ -163,7 +163,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 					checked.keep(output, "")
 				}
 				out.done(path, output, note, shown(err))
-				if err != nil && !isSkipped(err) {
+				if isFailure(err) {
 					mutex.Lock()
 					failed++
 					mutex.Unlock()
@@ -206,6 +206,31 @@ func skipped(reason string) error {
 func isSkipped(err error) bool {
 	var s skippedError
 	return errors.As(err, &s)
+}
+
+// modifiedError is a file checked whose NCA files are not all signed by Nintendo, while none
+// of them is damaged: a tool rewrote them, and it usually installs and plays. It is no failure
+// (#42): it is told apart (MODIFIED, and in orange in the window), as a damaged file is not.
+type modifiedError struct {
+	reason string
+}
+
+func (e modifiedError) Error() string {
+	return e.reason
+}
+
+func modified(reason string) error {
+	return modifiedError{reason: reason}
+}
+
+func isModified(err error) bool {
+	var m modifiedError
+	return errors.As(err, &m)
+}
+
+// isFailure tells whether a file ended in an error: not skipped, and not only modified.
+func isFailure(err error) bool {
+	return err != nil && !isSkipped(err) && !isModified(err)
 }
 
 // splitFiles, among the extensions taken, takes the files in parts too: a folder of parts, or
@@ -459,22 +484,43 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		note, err := info(path, out)
 		return "", note, err
 	}
-	// the signature of Nintendo on every NCA, read from the headers only (#9)
+	return verify(ctx, path, o, out)
+}
+
+// verify checks a file at the level asked. The signature of Nintendo on every NCA is read from
+// the headers only (#9); NCA files not signed by it make the file modified, not failed (#42):
+// with both, its data is checked all the same, and only damage makes it fail.
+func verify(ctx context.Context, path string, o options, out output) (string, string, error) {
 	signed := ""
+	var unsigned error
 	if o.verifyLevel == "signature" || o.verifyLevel == "both" {
 		note, err := checkSignatures(path)
-		if err != nil || o.verifyLevel == "signature" {
+		switch {
+		case isModified(err) && o.verifyLevel == "both":
+			unsigned = err
+		case err != nil || o.verifyLevel == "signature":
 			return "", note, err
+		default:
+			signed = note
 		}
-		signed = note
 	}
+	note, err := verifyData(ctx, path, o, out, signed)
+	if err == nil && unsigned != nil {
+		return "", "", modified(joinNotes(unsigned.Error(), note))
+	}
+	return "", note, err
+}
+
+// verifyData checks the data of a file by its hashes (and against the DAT given), or tells it
+// was checked before; signed, what the check of the signatures found, is told with it.
+func verifyData(ctx context.Context, path string, o options, out output, signed string) (string, error) {
 	// a file checked before and not changed since is not read again, unless asked
 	if entry, ok := checked.find(path); ok && !o.noCache && o.datFile == nil {
 		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
 		if entry.Note != "" {
 			note += "; " + entry.Note
 		}
-		return "", note, nil
+		return note, nil
 	}
 	// with a DAT, a file it lists by a hash of the whole file is that very dump: the one reading
 	// that compares it tells so, without reading it again to check its NCA files
@@ -483,11 +529,11 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		var whole bool
 		var err error
 		if found, whole, err = o.datFile.matchDump(ctx, path, out.progress(path, "Comparing")); err != nil {
-			return "", "", err
+			return "", err
 		}
 		if whole {
 			checked.keep(path, "")
-			return "", strings.TrimPrefix(signed+"; "+found, "; "), nil
+			return joinNotes(signed, found), nil
 		}
 	}
 	check, err := switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying"))
@@ -495,24 +541,22 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	if err == nil {
 		checked.keep(path, note)
 	}
-	if signed != "" {
-		note = strings.TrimPrefix(note+"; "+signed, "; ")
-	}
+	note = joinNotes(note, signed)
 	if err != nil || o.datFile == nil {
-		return "", note, err
+		return note, err
 	}
-	return "", strings.TrimPrefix(note+"; "+found, "; "), nil
+	return joinNotes(note, found), nil
 }
 
-// checkSignatures tells whether every NCA of a file is signed by Nintendo: an error names the
-// ones that are not, as a tool that rewrote them leaves them.
+// checkSignatures tells whether every NCA of a file is signed by Nintendo: the ones that are
+// not, as a tool that rewrote them leaves them, make the file modified.
 func checkSignatures(path string) (string, error) {
 	check, err := switchfs.CheckSignatures(path)
 	if err != nil {
 		return "", err
 	}
 	if len(check.Unsigned) > 0 {
-		return "", fmt.Errorf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", "))
+		return "", modified(fmt.Sprintf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", ")))
 	}
 	note := fmt.Sprintf("%d NCA signed by Nintendo", check.Checked)
 	if len(check.Unknown) > 0 {
@@ -1656,6 +1700,8 @@ func shown(err error) error {
 		return err
 	case isSkipped(err):
 		return skipped(text)
+	case isModified(err):
+		return modified(text)
 	}
 	return errors.New(text)
 }

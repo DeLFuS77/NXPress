@@ -9,6 +9,10 @@
 - The blocks Nintendo compressed with LZ4 inside many recent games and updates are kept decompressed and made again, byte for byte, with the two LZ4 compressors of Nintendo when the file is decompressed: NCZSECT3 (docs/lz4-archive.md). The update of Hauntii is 486 MB instead of 516 MB
 - Each file gets what it needs, and one that needs neither stays a plain NSZ. Installers and emulators do not read the two extensions yet: such a file is decompressed with NXPress before installing it. Turning the option on first shows a warning with what it changes. `--sparse` and `--archive` turn on one half each
 
+### Improvements
+
+- Verify: Whole is called Hash now. A file whose NCA are not signed by Nintendo while nothing in it is damaged is MODIFIED, in orange, and no longer counts as failed: a tool rewrote it, and it usually installs and plays. A damaged file is still FAILED, in red. With Both, the hashes are checked even when the signature fails. On the command line, `--verify-level hash` (`full` still works) (thanks @NikoMuffin, #42)
+
 ## 1.3.0
 
 > **Caution:** this version brings many changes at once, and not every test planned for them has been done yet, so some bugs may remain. Keeping a copy of the games before using Delete originals is recommended, and any problem is welcome in the issues.

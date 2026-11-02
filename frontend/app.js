@@ -82,7 +82,7 @@ function sameKind(fallback) {
 // the checks of the values kept that hold more than one value
 const isObject = value => !!value && typeof value === "object" && !Array.isArray(value);
 const isLifetime = value => isObject(value) && Number.isFinite(value.bytes) && Number.isFinite(value.files);
-const isReport = value => isObject(value) && Array.isArray(value.rows) && value.rows.every(row => isObject(row) && ["ok", "failed", "skipped", "cancelled"].includes(row.status));
+const isReport = value => isObject(value) && Array.isArray(value.rows) && value.rows.every(row => isObject(row) && ["ok", "failed", "modified", "skipped", "cancelled"].includes(row.status));
 const isPending = value => isObject(value) && modes.includes(value.mode) && isObject(value.request) && Array.isArray(value.request.files);
 // the settings saved with a name, the ones that can be read
 const savedPresets = () => load("presets", []).filter(preset => isObject(preset) && typeof preset.name === "string" && Number.isFinite(preset.level));
@@ -166,7 +166,7 @@ function workRows() {
 // rowShare is how far a file of the work is, from 0 to 1: a file in steps (the work, then the
 // check of what it wrote) counts each step as its part, so it does not fall back at the check
 function rowShare(row) {
-  if (["ok", "failed", "skipped"].includes(row.status)) return 1;
+  if (["ok", "failed", "modified", "skipped"].includes(row.status)) return 1;
   if (row.status !== "work" || !row.total) return 0;
   const share = Math.min(1, row.done / row.total);
   const steps = stepsOf(row);
@@ -735,7 +735,7 @@ function render() {
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
   $("pause").hidden = !state.busy;
   $("pause").textContent = state.paused ? t("resume") : t("pause");
-  $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "skipped"].includes(row.status));
+  $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "modified", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
   $("shutdown-force-option").hidden = $("shutdown-option").hidden || !$("shutdown").checked;
   $("shutdown-force-option").title = t("shutdownForceHint");
@@ -766,7 +766,7 @@ function summary() {
     const run = state.lastRun;
     const working = workRows();
     const count = onePack(run) || (run && run.mode === "measure") ? 1 : working.length;
-    const ended = row => ["ok", "failed", "skipped"].includes(row.status);
+    const ended = row => ["ok", "failed", "modified", "skipped"].includes(row.status);
     const done = Math.min(count, working.filter(ended).length);
     const share = Math.min(1, working.reduce((sum, row) => sum + rowShare(row), 0) / Math.max(1, count));
     text.textContent = (state.paused ? t("paused") + " · " : "") + t("working")(done, count, Math.floor(share * 100));
@@ -892,10 +892,10 @@ function add(item) {
 // the list in the order a click on a column asks for: by name, size or state, the other way round
 // on a second click, and back to the order the files came in on a third (#17). The work goes in
 // the order shown; while it runs, sorting by state waits for its end, so rows do not jump about.
-const stateOrder = { work: 0, waiting: 1, failed: 2, skipped: 3, ok: 4 };
+const stateOrder = { work: 0, waiting: 1, failed: 2, modified: 3, skipped: 4, ok: 5 };
 function sortValue(row, key) {
   if (key === "size") return row.item.size;
-  if (key === "state") return stateOrder[row.status] ?? 5;
+  if (key === "state") return stateOrder[row.status] ?? 6;
   return (row.game && row.game.name) || row.item.name;
 }
 function sortRows() {
@@ -941,7 +941,7 @@ function pumpDescribe() {
 
 function paint(row) {
   const cell = row.tr.querySelector(".state");
-  if (row.painted !== undefined && row.painted !== row.status && ["ok", "failed", "skipped"].includes(row.status)) {
+  if (row.painted !== undefined && row.painted !== row.status && ["ok", "failed", "modified", "skipped"].includes(row.status)) {
     replay("ended-" + row.status, row.tr);
     row.endedAt = performance.now();
   }
@@ -1038,26 +1038,32 @@ function paint(row) {
     // left as it is, with why: neither done nor failed
     cell.innerHTML = `<span class="badge skipped"></span>`;
     cell.firstChild.textContent = t("skipped");
+  } else if (row.status === "modified") {
+    // checked, with NCA files a tool rewrote but nothing damaged: orange, as red is for errors (#42)
+    cell.innerHTML = `<span class="badge modified"></span>`;
+    cell.firstChild.textContent = t("modified");
   } else if (row.status === "failed") {
     cell.innerHTML = `<span class="badge ${row.error === "cancelled" ? "waiting" : "failed"}"></span>`;
     cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : t("failed");
   } else {
     cell.innerHTML = "";
   }
-  note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" ? " warn" : "");
+  note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" || row.status === "modified" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
-  // an error opens to say what to do, with its detail to copy; it stays open while drawn again
+  // an error, or a file modified, opens to say what to do, with its detail to copy; it stays
+  // open while drawn again
   row.tr.querySelector(".error-more")?.remove();
-  if (row.status === "failed" && row.error && row.error !== "cancelled") {
+  const detail = row.status === "modified" ? row.note : row.status === "failed" && row.error !== "cancelled" ? row.error : "";
+  if (detail) {
     const more = document.createElement("details");
     more.className = "error-more";
     more.open = !!row.open;
     more.ontoggle = () => { row.open = more.open; };
     more.innerHTML = `<summary></summary><p></p><button class="link small-link"></button>`;
     more.querySelector("summary").textContent = t("errorWhat");
-    more.querySelector("p").textContent = t(adviceFor(row.error));
+    more.querySelector("p").textContent = t(adviceFor(detail));
     more.querySelector("button").textContent = t("copyDetail");
-    more.querySelector("button").onclick = () => { window.runtime.ClipboardSetText(`${row.item.path}\n${row.error}`); showToast(t("detailCopied")); };
+    more.querySelector("button").onclick = () => { window.runtime.ClipboardSetText(`${row.item.path}\n${detail}`); showToast(t("detailCopied")); };
     note.after(more);
   }
   if (!row.status && state.mode === "rename" && row.preview && row.preview !== row.item.name) {
@@ -1361,7 +1367,7 @@ function listen() {
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
-    Object.assign(row, { status: event.error ? "failed" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
+    Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
     // a file renamed keeps its row, under its new name and path
     if (mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
@@ -1449,7 +1455,7 @@ function listen() {
 // the computer was turned off when it was done, when it shows by itself the next time
 function keepReport(event) {
   const run = state.lastRun && state.lastRun.started;
-  const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "skipped"].includes(row.status)).map(row => ({
+  const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "modified", "skipped"].includes(row.status)).map(row => ({
     name: row.game && row.game.name ? `${row.game.name} · ${row.item.name}` : row.item.name,
     status: row.status === "failed" && row.error === "cancelled" ? "cancelled" : row.status,
     note: noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note),
@@ -1470,12 +1476,12 @@ function showReport() {
   $("report-copy").hidden = !kept;
   // a long report: how many of each, the problems first, and only them when there are some
   const all = kept ? kept.rows : [];
-  const order = { failed: 0, cancelled: 1, skipped: 2, ok: 3 };
+  const order = { failed: 0, cancelled: 1, modified: 2, skipped: 3, ok: 4 };
   const counts = {};
   for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
   const problems = all.length - (counts.ok || 0);
   $("report-counts").innerHTML = "";
-  for (const status of ["ok", "skipped", "failed", "cancelled"]) {
+  for (const status of ["ok", "modified", "skipped", "failed", "cancelled"]) {
     if (!counts[status]) continue;
     const badge = document.createElement("span");
     badge.className = "badge " + (status === "cancelled" ? "waiting" : status);

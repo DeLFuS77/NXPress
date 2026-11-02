@@ -792,6 +792,8 @@ func (w *window) done(path string, output string, note string, err error) {
 	switch {
 	case isSkipped(err):
 		result["skipped"], result["note"] = true, err.Error()
+	case isModified(err):
+		result["modified"], result["note"] = true, err.Error()
 	case err != nil:
 		result["error"] = err.Error()
 		if errors.Is(err, context.Canceled) {
