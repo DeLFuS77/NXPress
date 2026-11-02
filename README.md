@@ -65,11 +65,21 @@ The level goes from 1 to 19, in three bands: Light 1–6, Medium 7–14 and Maxi
 
 Every new file is written under a hidden name, saved to the disk, checked, and only then given its name. With `--rm-source` the original is deleted only once its new file passed the check.
 
+## Extra compression (experimental)
+
+`--extra`, or "Extra compression, NXPress only" under Advanced, compresses two things other compressors leave as they are, and gives them back byte for byte:
+
+- **Base games in sparse storage**, released cut down to go with their day-one update. The NCZ format cannot hold them, so nsz and every other compressor leave them as they are. NXPress writes them in an extension of NCZ, NCZSECT2, described in [docs/ncz-sparse.md](docs/ncz-sparse.md).
+- **The data Nintendo compressed with LZ4** inside many recent games and updates, which zstd can hardly shrink. NXPress keeps those blocks decompressed and makes them again, byte for byte, with the two LZ4 compressors of Nintendo, when the file is decompressed: NCZSECT3, described in [docs/lz4-archive.md](docs/lz4-archive.md).
+
+Each file gets what it needs, and one that needs neither stays a plain NSZ that every installer reads. Installers do not read the two extensions yet: decompress such a file with NXPress before installing it. `--sparse` and `--archive` turn on one half each.
+
 ## Command line
 
 ```
 nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
+nxpress -C --extra game.nsp         compress with the experimental extra compression, NXPress only
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds

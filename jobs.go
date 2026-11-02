@@ -163,7 +163,7 @@ func runJobs(ctx context.Context, o options, out output) int {
 					checked.keep(output, "")
 				}
 				out.done(path, output, note, shown(err))
-				if err != nil && !isSkipped(err) {
+				if isFailure(err) {
 					mutex.Lock()
 					failed++
 					mutex.Unlock()
@@ -206,6 +206,31 @@ func skipped(reason string) error {
 func isSkipped(err error) bool {
 	var s skippedError
 	return errors.As(err, &s)
+}
+
+// modifiedError is a file checked whose NCA files are not all signed by Nintendo, while none
+// of them is damaged: a tool rewrote them, and it usually installs and plays. It is no failure
+// (#42): it is told apart (MODIFIED, and in orange in the window), as a damaged file is not.
+type modifiedError struct {
+	reason string
+}
+
+func (e modifiedError) Error() string {
+	return e.reason
+}
+
+func modified(reason string) error {
+	return modifiedError{reason: reason}
+}
+
+func isModified(err error) bool {
+	var m modifiedError
+	return errors.As(err, &m)
+}
+
+// isFailure tells whether a file ended in an error: not skipped, and not only modified.
+func isFailure(err error) bool {
+	return err != nil && !isSkipped(err) && !isModified(err)
 }
 
 // splitFiles, among the extensions taken, takes the files in parts too: a folder of parts, or
@@ -459,22 +484,43 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		note, err := info(path, out)
 		return "", note, err
 	}
-	// the signature of Nintendo on every NCA, read from the headers only (#9)
+	return verify(ctx, path, o, out)
+}
+
+// verify checks a file at the level asked. The signature of Nintendo on every NCA is read from
+// the headers only (#9); NCA files not signed by it make the file modified, not failed (#42):
+// with both, its data is checked all the same, and only damage makes it fail.
+func verify(ctx context.Context, path string, o options, out output) (string, string, error) {
 	signed := ""
+	var unsigned error
 	if o.verifyLevel == "signature" || o.verifyLevel == "both" {
 		note, err := checkSignatures(path)
-		if err != nil || o.verifyLevel == "signature" {
+		switch {
+		case isModified(err) && o.verifyLevel == "both":
+			unsigned = err
+		case err != nil || o.verifyLevel == "signature":
 			return "", note, err
+		default:
+			signed = note
 		}
-		signed = note
 	}
+	note, err := verifyData(ctx, path, o, out, signed)
+	if err == nil && unsigned != nil {
+		return "", "", modified(joinNotes(unsigned.Error(), note))
+	}
+	return "", note, err
+}
+
+// verifyData checks the data of a file by its hashes (and against the DAT given), or tells it
+// was checked before; signed, what the check of the signatures found, is told with it.
+func verifyData(ctx context.Context, path string, o options, out output, signed string) (string, error) {
 	// a file checked before and not changed since is not read again, unless asked
 	if entry, ok := checked.find(path); ok && !o.noCache && o.datFile == nil {
 		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
 		if entry.Note != "" {
 			note += "; " + entry.Note
 		}
-		return "", note, nil
+		return note, nil
 	}
 	// with a DAT, a file it lists by a hash of the whole file is that very dump: the one reading
 	// that compares it tells so, without reading it again to check its NCA files
@@ -483,11 +529,11 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 		var whole bool
 		var err error
 		if found, whole, err = o.datFile.matchDump(ctx, path, out.progress(path, "Comparing")); err != nil {
-			return "", "", err
+			return "", err
 		}
 		if whole {
 			checked.keep(path, "")
-			return "", strings.TrimPrefix(signed+"; "+found, "; "), nil
+			return joinNotes(signed, found), nil
 		}
 	}
 	check, err := switchfs.VerifyFile(ctx, path, out.progress(path, "Verifying"))
@@ -495,24 +541,22 @@ func doJob(ctx context.Context, action string, path string, o options, threads i
 	if err == nil {
 		checked.keep(path, note)
 	}
-	if signed != "" {
-		note = strings.TrimPrefix(note+"; "+signed, "; ")
-	}
+	note = joinNotes(note, signed)
 	if err != nil || o.datFile == nil {
-		return "", note, err
+		return note, err
 	}
-	return "", strings.TrimPrefix(note+"; "+found, "; "), nil
+	return joinNotes(note, found), nil
 }
 
-// checkSignatures tells whether every NCA of a file is signed by Nintendo: an error names the
-// ones that are not, as a tool that rewrote them leaves them.
+// checkSignatures tells whether every NCA of a file is signed by Nintendo: the ones that are
+// not, as a tool that rewrote them leaves them, make the file modified.
 func checkSignatures(path string) (string, error) {
 	check, err := switchfs.CheckSignatures(path)
 	if err != nil {
 		return "", err
 	}
 	if len(check.Unsigned) > 0 {
-		return "", fmt.Errorf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", "))
+		return "", modified(fmt.Sprintf("%d of %d NCA not signed by Nintendo (rewritten by a tool): %s", len(check.Unsigned), check.Checked, strings.Join(check.Unsigned, ", ")))
 	}
 	note := fmt.Sprintf("%d NCA signed by Nintendo", check.Checked)
 	if len(check.Unknown) > 0 {
@@ -521,9 +565,9 @@ func checkSignatures(path string) (string, error) {
 	return note, nil
 }
 
-// sparseSkipped is why a game in sparse storage is left as it is: no compressor reads that
-// layout yet, nsz included, and the game installs as it is.
-const sparseSkipped = "this game uses sparse storage, which no compressor can read yet (nsz included): it installs as it is"
+// sparseSkipped is why a game in sparse storage is left as it is: it installs as it is, and only
+// the experimental format NCZSECT2, asked with --sparse or under Advanced, compresses it.
+const sparseSkipped = "this game uses sparse storage: it installs as it is, and only the experimental format NCZSECT2, an option under Advanced, can compress it"
 
 // newFile is the name of the new file of path, in the output folder when there is one, held
 // for it in the work and free to write.
@@ -546,7 +590,7 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 	written := temporary(name)
 	defer os.Remove(written)
 	result, err := switchfs.CompressGame(ctx, path, written, switchfs.CompressOptions{
-		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Compressing"),
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Sparse: o.sparse, Rebuild: o.archive, Progress: out.progress(path, "Compressing"),
 	})
 	// the most common reason, told plainly
 	if errors.Is(err, switchfs.ErrSparseStorage) {
@@ -576,6 +620,12 @@ func compress(ctx context.Context, path string, o options, threads int, out outp
 		return "", "", err
 	}
 	note := fmt.Sprintf("%s -> %s, %s smaller", size(result.InputSize), size(result.OutputSize), percent(result.InputSize-result.OutputSize, result.InputSize))
+	if result.Sparse > 0 {
+		note += fmt.Sprintf(", %d NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", result.Sparse)
+	}
+	if result.Rebuilt > 0 {
+		note += fmt.Sprintf(", %d LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it", result.Rebuilt)
+	}
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}
@@ -793,7 +843,7 @@ func estimate(ctx context.Context, path string, o options, threads int, out outp
 		return compareLevels(ctx, path, o, threads, out)
 	}
 	result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
-		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Progress: out.progress(path, "Estimating"),
+		Level: strconv.Itoa(o.level), Workers: threads, Blocks: o.block, Sparse: o.sparse, Progress: out.progress(path, "Estimating"),
 	}, estimateSamples, estimateSampleSize)
 	if errors.Is(err, switchfs.ErrNothingToMeasure) {
 		return nothingToEstimate(path)
@@ -1246,15 +1296,16 @@ func groupGames(ctx context.Context, sources []string) ([]uint64, map[uint64][]s
 	return order, groups, unread
 }
 
-// packedAlready is a pack of the game id found where its pack would go: a file not given whose
-// name has the title ID of the game and that holds more than one title. "" when there is none.
-func packedAlready(o options, id uint64, files []string) string {
+// packedAlready is a pack of the game id found where its pack would go (in -o, else in next, see
+// packFolder): a file not given whose name has the title ID of the game and that holds more than
+// one title. "" when there is none.
+func packedAlready(o options, id uint64, files []string, next string) string {
 	folder, err := outputFolder(o)
 	if err != nil {
 		return ""
 	}
 	if folder == "" {
-		folder = filepath.Dir(files[0])
+		folder = next
 	}
 	entries, err := os.ReadDir(folder)
 	if err != nil {
@@ -1284,8 +1335,8 @@ func packedAlready(o options, id uint64, files []string) string {
 
 // packGames packs the files given by game: each game with its updates and DLC in a SuperNSP of
 // its own (into its game card, when it is one), named by o.packName, next to the files of the
-// game or in -o. A game with one file only is skipped: there is nothing to pack it with. It
-// gives how many files failed.
+// game (next to its folder, when it came in a folder given: see packFolder) or in -o. A game with
+// one file only is skipped: there is nothing to pack it with. It gives how many files failed.
 func packGames(ctx context.Context, o options, out output) int {
 	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
 	failed := len(missing)
@@ -1301,12 +1352,14 @@ func packGames(ctx context.Context, o options, out output) int {
 		}
 	}
 	template := packTemplate(o)
+	folders := givenFolders(o)
 	for _, id := range order {
 		waitWhilePaused(out)
 		if ctx.Err() != nil {
 			break
 		}
 		files := groups[id]
+		next := packFolder(files, sources, folders)
 		// a game left out in the window, and a game packed before, unless asked to write again
 		if o.skipGames[fmt.Sprintf("%016X", id)] {
 			for _, file := range files {
@@ -1314,7 +1367,7 @@ func packGames(ctx context.Context, o options, out output) int {
 			}
 			continue
 		}
-		if packed := packedAlready(o, id, files); packed != "" && !o.overwrite {
+		if packed := packedAlready(o, id, files, next); packed != "" && !o.overwrite {
 			for _, file := range files {
 				out.done(file, "", "", skipped("already combined in "+filepath.Base(packed)+" (-w writes it again)"))
 			}
@@ -1324,14 +1377,15 @@ func packGames(ctx context.Context, o options, out output) int {
 			out.done(files[0], "", "", skipped("it is the only file of its game here: there is nothing to combine it with"))
 			continue
 		}
-		failed += combine(ctx, o, files, template, out)
+		failed += combine(ctx, o, files, template, next, out)
 	}
 	return failed
 }
 
 // packOne packs every file given into one SuperNSP (into the game card, when one is given),
-// named by o.packName, next to the first file of the first game or in -o: the files of each
-// game together, the game itself first. Nothing is written when a file given cannot be read:
+// named by o.packName, next to the first file of the first game (next to the folder of the files,
+// when they came in a folder given: see packFolder) or in -o: the files of each game together,
+// the game itself first. Nothing is written when a file given cannot be read:
 // the pack would lack it. It gives how many files failed.
 func packOne(ctx context.Context, o options, out output) int {
 	sources, missing := inputs(o.files, []string{".nsp", ".nsz", ".xci", ".xcz"})
@@ -1364,7 +1418,7 @@ func packOne(ctx context.Context, o options, out output) int {
 		}
 		return len(files)
 	}
-	return combine(ctx, o, files, packTemplate(o), out)
+	return combine(ctx, o, files, packTemplate(o), packFolder(files, files, givenFolders(o)), out)
 }
 
 // packTemplate is the name of the packs of --pack-games and --pack-one.
@@ -1375,11 +1429,11 @@ func packTemplate(o options) string {
 	return o.packName
 }
 
-// combine writes the pack of files and tells each of them: the first one with the pack, the
-// others combined into it; the originals go (with --rm-source) once the pack holds everything
-// they hold. It gives how many files failed.
-func combine(ctx context.Context, o options, files []string, template string, out output) int {
-	name, note, check, err := packGame(ctx, o, files, template, out)
+// combine writes the pack of files, in -o or else in next, and tells each of them: the first one
+// with the pack, the others combined into it; the originals go (with --rm-source) once the pack
+// holds everything they hold. It gives how many files failed.
+func combine(ctx context.Context, o options, files []string, template string, next string, out output) int {
+	name, note, check, err := packGame(ctx, o, files, template, next, out)
 	err = shown(err)
 	if isSkipped(err) {
 		for _, file := range files {
@@ -1416,20 +1470,20 @@ func combine(ctx context.Context, o options, files []string, template string, ou
 }
 
 // packGame writes the pack of the files of a game, named by the titles it holds and its size,
-// next to the file of the game or in the output folder, and tells what it did. Its own pack,
-// made before and given among its files, is told (skipped) unless -w writes it again; then
-// the new pack takes its place only when it holds every title it keeps whole.
-func packGame(ctx context.Context, o options, files []string, template string, out output) (string, string, switchfs.FileCheck, error) {
+// in next (see packFolder) or in the output folder, and tells what it did. Its own pack, made
+// before and given among its files, is told (skipped) unless -w writes it again; then the new
+// pack takes its place only when it holds every title it keeps whole.
+func packGame(ctx context.Context, o options, files []string, template string, next string, out output) (string, string, switchfs.FileCheck, error) {
 	extension, err := packKind(files)
 	if err != nil {
 		return "", "", switchfs.FileCheck{}, err
 	}
-	if again := packedAmong(o, files, template, extension); again != "" && !o.overwrite {
+	if again := packedAmong(o, files, template, extension, next); again != "" && !o.overwrite {
 		return "", "", switchfs.FileCheck{}, skipped("already combined in " + filepath.Base(again) + " (-w writes it again)")
 	}
 	// written under a hidden name of its own first, in the folder of the pack: its name tells
 	// its size, known once it is written
-	folder := filepath.Dir(files[0])
+	folder := next
 	if o.output != "" {
 		output, err := outputFolder(o)
 		if err == nil {
@@ -1450,7 +1504,7 @@ func packGame(ctx context.Context, o options, files []string, template string, o
 	if err != nil {
 		return "", "", switchfs.FileCheck{}, err
 	}
-	name, err := packName(o, files, template, extension, info.Size())
+	name, err := packName(o, files, template, extension, info.Size(), next)
 	if err != nil {
 		return "", "", switchfs.FileCheck{}, err
 	}
@@ -1482,8 +1536,8 @@ func packGame(ctx context.Context, o options, files []string, template string, o
 }
 
 // packName is the name of the pack of the files of a game: by the newest version of each
-// title they hold and its size, next to the file of the game or in the output folder.
-func packName(o options, files []string, template string, extension string, size int64) (string, error) {
+// title they hold and its size, in next (see packFolder) or in the output folder.
+func packName(o options, files []string, template string, extension string, size int64, next string) (string, error) {
 	titles := []*switchfs.ContentMetaAttributes{}
 	newest := map[string]*switchfs.ContentMetaAttributes{}
 	for _, file := range files {
@@ -1502,12 +1556,12 @@ func packName(o options, files []string, template string, extension string, size
 	}
 	title := describeTitles(titles)
 	title.Size = size
-	return target(o, filepath.Join(filepath.Dir(files[0]), strings.TrimSuffix(newName(files[0], title, template), filepath.Ext(files[0]))+extension))
+	return target(o, filepath.Join(next, strings.TrimSuffix(newName(files[0], title, template), filepath.Ext(files[0]))+extension))
 }
 
 // packedAmong is a file of a game that is its pack already, given with the others: one that
 // holds more than one title, under the name the pack of them would get. "" when there is none.
-func packedAmong(o options, files []string, template string, extension string) string {
+func packedAmong(o options, files []string, template string, extension string, next string) string {
 	for _, file := range files {
 		titles, err := readTitles(file)
 		info, statErr := os.Stat(file)
@@ -1515,11 +1569,116 @@ func packedAmong(o options, files []string, template string, extension string) s
 			continue
 		}
 		// with what it holds, its own size is the size of the pack
-		if name, err := packName(o, files, template, extension, info.Size()); err == nil && sameFile(name, file) {
+		if name, err := packName(o, files, template, extension, info.Size(), next); err == nil && sameFile(name, file) {
 			return file
 		}
 	}
 	return ""
+}
+
+// givenFolders are the folders a work was given, as absolute paths: among the files and folders
+// named on the command line or dropped or chosen in the window (o.origins), a folder of parts
+// being a file.
+func givenFolders(o options) []string {
+	folders := []string{}
+	for _, path := range append(append([]string{}, o.origins...), o.files...) {
+		if _, parts := splitContainer(path); parts {
+			continue
+		}
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			if absolute, err := filepath.Abs(path); err == nil {
+				folders = append(folders, absolute)
+			}
+		}
+	}
+	return folders
+}
+
+// packFolder is where the pack of files goes when no output folder is given (#45). Files that
+// came in a folder given are what that folder holds: their pack goes next to the folder that
+// holds them all, in the one above it, when that folder holds no other file of the work; files
+// from several folders given go next to those, in the folder that holds them. Else, as for files
+// given one by one, it goes next to the first file. The packs made before among the files do not
+// count for where the files lie, so a pack made again is found where it went the first time.
+func packFolder(files []string, work []string, folders []string) string {
+	next := filepath.Dir(files[0])
+	if len(folders) == 0 {
+		return next
+	}
+	own := []string{}
+	for _, file := range files {
+		if titles, err := readTitles(file); err != nil || len(titles) < 2 {
+			own = append(own, file)
+		}
+	}
+	if len(own) == 0 {
+		own = files
+	}
+	given := func(path string) bool {
+		for _, folder := range folders {
+			if within(path, folder) {
+				return true
+			}
+		}
+		return false
+	}
+	holder := commonFolder(own)
+	if holder == "" {
+		return next
+	}
+	beside := filepath.Dir(holder)
+	if !given(holder) {
+		for _, file := range own {
+			if absolute, err := filepath.Abs(file); err != nil || !given(absolute) {
+				return next
+			}
+		}
+		beside = holder
+	} else if beside == holder {
+		// the root of a drive has no folder above it
+		return next
+	}
+	packed := map[string]bool{}
+	for _, file := range files {
+		if absolute, err := filepath.Abs(file); err == nil {
+			packed[strings.ToLower(absolute)] = true
+		}
+	}
+	for _, file := range work {
+		if absolute, err := filepath.Abs(file); err == nil && !packed[strings.ToLower(absolute)] && within(absolute, holder) {
+			return next
+		}
+	}
+	return beside
+}
+
+// commonFolder is the folder that holds all the files given, as an absolute path; "" when they
+// are on different drives.
+func commonFolder(files []string) string {
+	holder := ""
+	for _, file := range files {
+		absolute, err := filepath.Abs(file)
+		if err != nil {
+			return ""
+		}
+		if holder == "" {
+			holder = filepath.Dir(absolute)
+		}
+		for !within(absolute, holder) {
+			above := filepath.Dir(holder)
+			if above == holder {
+				return ""
+			}
+			holder = above
+		}
+	}
+	return holder
+}
+
+// within tells whether path is folder or lies in it, at any depth; both are absolute.
+func within(path string, folder string) bool {
+	relative, err := filepath.Rel(folder, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative)
 }
 
 // packKind is the extension of the pack of the files given: an NSP, an NSZ when one of them
@@ -1650,6 +1809,8 @@ func shown(err error) error {
 		return err
 	case isSkipped(err):
 		return skipped(text)
+	case isModified(err):
+		return modified(text)
 	}
 	return errors.New(text)
 }
@@ -1708,6 +1869,10 @@ func describe(path string) []string {
 		lines = append(lines, fmt.Sprintf("%s, uncompressed: %s", facts.Kind, size(facts.Size)))
 	}
 	switch {
+	case facts.Archive > 0:
+		lines = append(lines, "works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it")
+	case facts.Sparse > 0:
+		lines = append(lines, "works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it")
 	case facts.Solid > 0:
 		lines = append(lines, "works with: every installer (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators need it decompressed")
 	case facts.Blocks > 0:

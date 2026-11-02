@@ -145,7 +145,7 @@ func TestMeasureTellsWhyAGameIsLeftOut(t *testing.T) {
 	measureTestKeys(t)
 	sparse := measureTestGame(t, filepath.Join(t.TempDir(), "sparse.nsp"), 0x10000, true)
 	_, err := measurableGame(context.Background(), []string{sparse}, options{level: 3})
-	want := "nothing in it can be compressed, it cannot be measured with: it uses sparse storage, which cannot be compressed yet"
+	want := "nothing in it can be compressed, it cannot be measured with: it uses sparse storage, which only the experimental format NCZSECT2 compresses"
 	if !isSkipped(err) || err.Error() != want {
 		t.Fatalf("%v", err)
 	}

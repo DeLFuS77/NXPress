@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.0
+
+### New
+
+- Extra compression, experimental and NXPress only: `--extra`, or "Extra compression, NXPress only" under Advanced, off by default. Base games in sparse storage, such as No More Heroes 3 or BlazBlue Entropy Effect X, which no compressor could shrink, go into an extension of NCZ, NCZSECT2 (docs/ncz-sparse.md), 6 to 9% smaller; and the blocks Nintendo compressed with LZ4 inside many recent games and updates are kept decompressed and made again byte for byte with its two LZ4 compressors, NCZSECT3 (docs/lz4-archive.md), about 6% smaller than a plain NSZ. Each file gets what it needs, and one that needs neither stays a plain NSZ; `--sparse` and `--archive` turn on one half each
+- Installers and emulators do not read the two extensions yet: a file that uses them is decompressed with NXPress before installing it, and it comes back byte for byte. Tested with DBI
+
+### Improvements
+
+- Verify: Whole is called Hash now. A file whose NCA are not signed by Nintendo while nothing in it is damaged is MODIFIED, in orange, and no longer counts as failed: a tool rewrote it, and it usually installs and plays. A damaged file is still FAILED, in red. With Both, the hashes are checked even when the signature fails. On the command line, `--verify-level hash` (`full` still works) (thanks @NikoMuffin, #42)
+- The fields of the name templates of Rename and Combine are in a table, one to a row, with what each writes, an example and its name as Switch Library Manager writes it (thanks @NikoMuffin, #43)
+- The bar at the top with the name and the version is gone, as both are in the title of the window; the notice of a new version still shows there when one is out (thanks @NikoMuffin, #44)
+- Combine: the pack of a folder dropped or chosen goes next to the folder, not inside it, so a collection with each game in a folder of its own gets the SuperNSP of each game next to its folder. Files added one by one keep it next to them. The same on the command line (thanks @NikoMuffin, #45)
+- The empty list tells what NXPress has saved since always only once a work of the session has saved space, not each time the window opens (thanks @NikoMuffin, #48)
+
 ## 1.3.1
 
 ### Fixes

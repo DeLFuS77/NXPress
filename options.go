@@ -43,11 +43,16 @@ type options struct {
 	pack        string
 	packGames   bool
 	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
-	packOne     bool
-	packName    string
+	packOne  bool
+	packName string
+	// the files and folders dropped or chosen in the window, the files of its list came from: a
+	// pack of the files of a folder given goes next to it (#45)
+	origins     []string
 	level       int
 	block       bool
 	lowPriority bool
+	sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
+	archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
 	threads     int
 	multi       int
 	output      string
@@ -88,6 +93,7 @@ var optionNames = []optionName{
 	{"--verify", 'V', false, true}, {"--quick-verify", 'Q', false, true}, {"--verify-level", 0, true, false},
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
+	{"--extra", 0, false, false}, {"--sparse", 0, false, false}, {"--archive", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
@@ -249,6 +255,12 @@ func (o *options) flag(option optionName) {
 		o.verify = true
 	case "--block":
 		o.block = true
+	case "--extra":
+		o.sparse, o.archive = true, true
+	case "--sparse":
+		o.sparse = true
+	case "--archive":
+		o.archive = true
 	case "--low-priority":
 		o.lowPriority = true
 	case "--solid":
@@ -345,8 +357,12 @@ func (o *options) set(option optionName, told string, value string, hasValue boo
 	case "--pack-name":
 		o.packName = value
 	case "--verify-level":
+		// hash was named full before 1.4.0, which scripts may still give (#42)
+		if value == "hash" {
+			value = "full"
+		}
 		if value != "full" && value != "signature" && value != "both" {
-			return errors.New("--verify-level is full, signature or both")
+			return errors.New("--verify-level is hash, signature or both")
 		}
 		o.verifyLevel = value
 	default:
@@ -412,6 +428,9 @@ func (o *options) check() error {
 	if o.packName != "" && !o.packGames && !o.packOne {
 		o.notes = append(o.notes, "--pack-name has no effect without --pack-games or --pack-one")
 	}
+	if (o.sparse || o.archive) && !o.compress && !o.estimate {
+		o.notes = append(o.notes, "--extra, --sparse and --archive have no effect without -C")
+	}
 	// these write no file
 	for _, action := range []struct {
 		on   bool
@@ -436,9 +455,10 @@ Usage: nxpress [options] file or folder...
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ)
   -Q, --quick-verify  the same as -V
-  --verify-level L    what -V checks: full (every NCA by its hashes, the default),
-                      signature (the header of every NCA signed by Nintendo, in seconds:
-                      a tool that rewrote an NCA leaves it unsigned) or both
+  --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
+                      the same), signature (the header of every NCA signed by Nintendo, in
+                      seconds: a tool that rewrote an NCA leaves it unsigned, and the file
+                      is told MODIFIED, not FAILED) or both
   --no-cache          with -V, check every file again, also the ones checked before and not
                       changed since (NXPress remembers them, and every file it writes)
   --dat FILE          with -V, tell whether each file is a dump the DAT lists (the XML of
@@ -448,6 +468,13 @@ Usage: nxpress [options] file or folder...
                       as it is; every installer takes it but Awoo
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
+  --extra             experimental, extra compression that only NXPress reads: base games
+                      in sparse storage (NCZSECT2, docs/ncz-sparse.md) and the LZ4 blocks
+                      Nintendo compressed inside games and updates, kept decompressed and
+                      made again byte for byte (NCZSECT3, docs/lz4-archive.md). Each file
+                      gets what it needs; one that needs neither stays a plain NSZ. Installers
+                      do not read the rest yet: decompress such a file with NXPress to install
+                      it. --sparse and --archive turn on one half each
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)
@@ -507,6 +534,9 @@ Usage: nxpress [options] file or folder...
   --pack-one          merge the files given into one multi-title file as --pack does,
                       named by --pack-name, next to the first file of the first game (or
                       in -o)
+                      Given a folder, the pack of the files of each folder goes next to
+                      it, not inside it: a game in a folder of its own (with its updates
+                      and DLC in folders inside) gets its SuperNSP next to that folder
   --pack-name T       the name of each pack of --pack-games and --pack-one, by the fields
                       of --rename
                       (default "{name} [{id}][v{version}] ({contents})")

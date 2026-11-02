@@ -125,6 +125,8 @@ func runCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 		// a watch looks at the folders given themselves, and into all their folders
 		jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
 	} else {
+		// the folders given stay known: the pack of the files of one goes next to it (#45)
+		o.origins = o.files
 		o.files, failed = commandLineFiles(o, out)
 	}
 	failed += jobs(ctx, o, out)

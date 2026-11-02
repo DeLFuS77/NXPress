@@ -7,13 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div class="brand">
-    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8"/><path d="M6.8 22V10l6.6 12V10M18.6 10l6.6 12M25.2 10l-6.6 12"/></svg>
-    <span>NXPress</span><small id="version"></small>
-  </div>
-</header>
-
+<!-- the name and the version are in the title of the window: no bar of its own above (#44) -->
 <div id="update-banner" class="topbar" hidden>
   <span id="update-text"></span>
   <button id="update-get" class="primary small" data-t="updateGet"></button>
@@ -136,6 +130,7 @@
         <label class="choice"><input type="radio" name="target" value="block" id="target-block">
           <span><b data-t="forEmulators"></b><small data-t="forEmulatorsHint"></small>
           <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
+        <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
         <p class="hint" data-t="xczBlock"></p>
       </div>
     </section>
@@ -144,7 +139,8 @@
       <h2 data-t="template"></h2>
       <textarea id="template" class="template" rows="1" spellcheck="false"></textarea>
       <div class="template-row"><button id="template-reset" class="quiet" data-t="templateReset"></button></div>
-      <p class="hint" data-t="templateHint"></p>
+      <table class="fields"></table>
+      <p class="hint" data-t="fieldsNote"></p>
       <label class="check"><input id="keep-named" type="checkbox"><span data-t="keepNamed"></span></label>
     </section>
 
@@ -181,7 +177,8 @@
       <h2 id="pack-template-title"></h2>
       <textarea id="pack-template" class="template" rows="1" spellcheck="false" aria-labelledby="pack-template-title"></textarea>
       <div class="template-row"><button id="pack-template-reset" class="quiet" data-t="templateReset"></button></div>
-      <p class="hint" data-t="templateHint"></p>
+      <table class="fields"></table>
+      <p class="hint" data-t="fieldsNote"></p>
       <div id="pack-games-fields">
         <h2 class="pack-plan-title" data-t="packPlan"></h2>
         <p class="hint" id="pack-plan-empty" data-t="packPlanEmpty"></p>
@@ -217,6 +214,10 @@
       <div class="field">
         <label class="check"><input id="low-priority" type="checkbox"><span data-t="lowPriority"></span></label>
         <p class="hint" data-t="lowPriorityHint"></p>
+      </div>
+      <div class="field" data-for="compress">
+        <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
+        <p class="hint" data-t="extraHint"></p>
       </div>
       <div class="field" data-for="compress">
         <button id="measure" class="link"></button>
@@ -288,6 +289,18 @@
   <p class="muted" data-t="spaceIntro"></p>
   <ul class="space-list" id="space-list"></ul>
   <div class="dialog-actions"><button id="space-cancel" data-t="cancel"></button><button id="space-start" class="primary" data-t="spaceStart"></button></div>
+</dialog>
+<dialog id="extra-dialog" class="warn-dialog" aria-labelledby="extra-title" aria-describedby="extra-intro">
+  <h2 id="extra-title"><svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 9.5v4.5M12 16.8v.2"/></svg><span data-t="extraWarnTitle"></span></h2>
+  <p id="extra-intro" class="muted" data-t="extraWarnIntro"></p>
+  <ul class="warn-list">
+    <li data-t="extraWarnWhat"></li>
+    <li data-t="extraWarnInstall"></li>
+    <li data-t="extraWarnTime"></li>
+    <li data-t="extraWarnOriginals"></li>
+    <li data-t="extraWarnFormat"></li>
+  </ul>
+  <div class="dialog-actions"><button id="extra-cancel" data-t="cancel"></button><button id="extra-on" class="primary" data-t="extraWarnOn"></button></div>
 </dialog>
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>

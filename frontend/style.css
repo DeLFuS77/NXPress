@@ -1,8 +1,8 @@
-/* colors, by role: blue for what you choose and start, red for the brand and for what went
-wrong, green for space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
+/* colors, by role: blue for what you choose and start, red for what went wrong, green for
+space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
 :root {
   --bg: #101216; --panel: #181b21; --raised: #1f232a; --line: #2c313a; --text: #e9ecf1; --muted: #98a0ad;
-  --accent: #3db7ea; --accent-soft: rgba(61, 183, 234, .14); --accent-text: #061018; --brand: #e60012;
+  --accent: #3db7ea; --accent-soft: rgba(61, 183, 234, .14); --accent-text: #061018;
   --ok: #45c27a; --ok-soft: rgba(69, 194, 122, .14); --bad: #ff6464; --bad-soft: rgba(255, 100, 100, .12);
   --warn: #f0a33a; --bar: #2c313a; --hover: #252a32; --focus: #7fd0f2;
   --radius: 8px; --radius-small: 6px;
@@ -63,18 +63,10 @@ input[type=number] { width: 72px; font: inherit; color: var(--text); background:
 input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
-/* header */
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
-.brand small { font-weight: 400; font-size: 12px; color: var(--muted); }
-.logo { width: 24px; height: 24px; }
-.logo rect { fill: var(--brand, #e60012); }
-.logo path { fill: none; stroke: #fff; stroke-width: 2.9; stroke-linecap: round; stroke-linejoin: round; }
-
 /* layout */
 main { flex: 1; display: flex; min-height: 0; }
-/* Windows 11: the top bar and the menu show the Mica of the system, the work stays on its own ground */
-html.mica body, html.mica header, html.mica nav { background: transparent; }
+/* Windows 11: the menu shows the Mica of the system, the work stays on its own ground */
+html.mica body, html.mica nav { background: transparent; }
 html.mica #work, html.mica #preferences { background: var(--bg); }
 
 /* the modes, by group */
@@ -201,6 +193,13 @@ dialog p { margin: 8px 0; }
 .report-name { font-weight: 600; word-break: break-word; }
 .report-note { font-size: 12px; color: var(--muted); margin-top: 2px; user-select: text; -webkit-user-select: text; }
 #report-dialog { max-width: 640px; }
+/* the warning of an experimental option: what it changes, point by point */
+.warn-dialog { max-width: 580px; border-top: 3px solid var(--warn); }
+.warn-dialog h2 { display: flex; align-items: center; gap: 8px; }
+.warn-icon { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--warn); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.warn-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.warn-list li { position: relative; padding: 8px 10px 8px 28px; border-radius: 8px; background: color-mix(in srgb, var(--warn) 9%, transparent); line-height: 1.45; }
+.warn-list li::before { content: ""; position: absolute; left: 11px; top: 15px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
 .measure-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-variant-numeric: tabular-nums; }
 .measure-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .measure-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
@@ -212,7 +211,7 @@ dialog p { margin: 8px 0; }
 .measure-table .speed { font-size: inherit; color: inherit; margin-top: 0; }
 @keyframes changed { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
 input.changed { animation: changed 2.5s ease-out; }
-.badge.skipped { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.badge.skipped, .badge.modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 /* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
 #log { margin: 0 20px 12px; max-height: min(160px, 16vh); overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
@@ -271,6 +270,15 @@ label.choice small { display: block; font-size: 12px; color: var(--muted); margi
 /* a template is longer than the panel is wide: it wraps, whole, with its button under it */
 textarea.template { display: block; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .template-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+/* the fields of a template, one to a row: the field and its name in Switch Library Manager, what
+it writes and an example (#43); they can be selected, to copy them into the template */
+table.fields { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; user-select: text; -webkit-user-select: text; }
+table.fields th { text-align: left; font-weight: 600; color: var(--muted); padding: 0 8px 4px 0; border-bottom: 1px solid var(--line); }
+table.fields td { vertical-align: top; padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); line-height: 1.35; }
+table.fields tr:last-child td { border-bottom: 0; }
+table.fields td:first-child { white-space: nowrap; }
+table.fields code { font: 12px "Cascadia Mono", Consolas, monospace; color: var(--text); }
+table.fields small { display: block; font: 11px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
@@ -477,8 +485,8 @@ tr.row-in { animation: row-in .22s ease-out both; }
 tr.row-out { animation: row-out .18s ease-in forwards; }
 tr.ended-ok { --flash: var(--ok-soft); animation: ended 1.4s ease-out; }
 tr.ended-failed { --flash: var(--bad-soft); animation: ended 1.8s ease-out; }
-tr.ended-skipped { --flash: color-mix(in srgb, var(--warn) 14%, transparent); animation: ended 1.4s ease-out; }
-tr.ended-ok .badge, tr.ended-failed .badge, tr.ended-skipped .badge { animation: pop .3s ease-out; }
+tr.ended-skipped, tr.ended-modified { --flash: color-mix(in srgb, var(--warn) 14%, transparent); animation: ended 1.4s ease-out; }
+tr.ended-ok .badge, tr.ended-failed .badge, tr.ended-skipped .badge, tr.ended-modified .badge { animation: pop .3s ease-out; }
 /* work in progress moves: the bar of a file at work and the bar of the whole list */
 td.state .bar div, td.state .seg div, .busy .bar.total div { background-image: linear-gradient(135deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%); background-size: 24px 24px; animation: stripes .8s linear infinite; }
 .actions.glow { animation: glow 1.6s ease-out; }

@@ -112,6 +112,9 @@ func (r *reporter) done(path string, output string, note string, err error) {
 		case isSkipped(err):
 			result = jsonObject{"type", "complete", "file", path, "result", "skipped"}
 			note = err.Error()
+		case isModified(err):
+			result = jsonObject{"type", "complete", "file", path, "result", "modified"}
+			note = err.Error()
 		case err != nil:
 			result = jsonObject{"type", "error", "code", r.errorCode(), "message", filepath.Base(path) + ": " + err.Error(),
 				"file", path, "result", "error", "error", err.Error()}
@@ -130,6 +133,8 @@ func (r *reporter) done(path string, output string, note string, err error) {
 	switch {
 	case isSkipped(err):
 		fmt.Fprintf(r.out, "SKIPPED %s (%v)\n", filepath.Base(path), err)
+	case isModified(err):
+		fmt.Fprintf(r.out, "MODIFIED %s: %v\n", filepath.Base(path), err)
 	case err != nil:
 		fmt.Fprintf(r.out, "FAILED %s: %v\n", filepath.Base(path), err)
 	case output != "" && note != "":

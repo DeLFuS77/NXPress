@@ -1,16 +1,87 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"context"
+	"path/filepath"
+	"strings"
+	"testing"
 
-// --verify-level takes full, signature or both, and nothing else.
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
+)
+
+// --verify-level takes hash, signature or both, and nothing else; full, the name of hash before
+// 1.4.0, is still taken (#42).
 func TestVerifyLevelOption(t *testing.T) {
-	for _, level := range []string{"full", "signature", "both"} {
-		o, err := parseOptions([]string{"-V", "--verify-level", level, "game.nsp"})
+	for given, level := range map[string]string{"hash": "full", "full": "full", "signature": "signature", "both": "both"} {
+		o, err := parseOptions([]string{"-V", "--verify-level", given, "game.nsp"})
 		if err != nil || o.verifyLevel != level {
-			t.Errorf("%s: %q %v", level, o.verifyLevel, err)
+			t.Errorf("%s: %q %v", given, o.verifyLevel, err)
 		}
 	}
 	if _, err := parseOptions([]string{"-V", "--verify-level", "quick", "game.nsp"}); err == nil {
 		t.Error("an unknown level is taken")
+	}
+}
+
+// verifyGames writes a game whose NCA files are whole but not signed by Nintendo, as every
+// synthetic one, and a game rewritten by a tool and then damaged.
+func verifyGames(t *testing.T) (string, string) {
+	t.Helper()
+	folder := t.TempDir()
+	unsigned := safetyTitleNsp(t, filepath.Join(folder, "unsigned.nsp"), safetyBaseID, 0, switchfs.ContentMetaType_Application, 1, nil)
+	nca, name := safetyRewrittenNca()
+	// a byte of the data its hash tree checks
+	nca[len(nca)-0x100] ^= 0xFF
+	damaged := safetyNspWith(t, filepath.Join(folder, "damaged.nsp"), safetyBaseID, 0, switchfs.ContentMetaType_Application, nca, name, nil)
+	return unsigned, damaged
+}
+
+// A file whose NCA files are not signed by Nintendo while its data is whole is modified, not
+// failed, by the signature alone or by both; one whose data is damaged fails by its hashes, and
+// by both, which reads its data even after the signature (#42).
+func TestVerifyTellsModifiedFromDamaged(t *testing.T) {
+	safetyIsolate(t)
+	unsigned, damaged := verifyGames(t)
+	verify := func(path string, level string) (string, error) {
+		_, note, err := doJob(context.Background(), "verify", path, options{verifyLevel: level, noCache: true}, 1, quiet{})
+		return note, err
+	}
+	for _, level := range []string{"signature", "both"} {
+		if _, err := verify(unsigned, level); !isModified(err) || isFailure(err) || !strings.HasPrefix(err.Error(), "2 of 2 NCA not signed by Nintendo") {
+			t.Errorf("%s, a file only unsigned: %v", level, err)
+		}
+	}
+	if note, err := verify(unsigned, "full"); err != nil {
+		t.Errorf("hash, a file only unsigned: %q %v", note, err)
+	}
+	// the signature alone does not read the data
+	if _, err := verify(damaged, "signature"); !isModified(err) {
+		t.Errorf("signature, a damaged file: %v", err)
+	}
+	for _, level := range []string{"full", "both"} {
+		if _, err := verify(damaged, level); !isFailure(err) || strings.Contains(err.Error(), "not signed") {
+			t.Errorf("%s, a damaged file: %v", level, err)
+		}
+	}
+}
+
+// The command line tells a modified file as MODIFIED, and so to other programs, and only the
+// damaged one counts as failed.
+func TestVerifyModifiedOnTheCommandLine(t *testing.T) {
+	safetyIsolate(t)
+	unsigned, damaged := verifyGames(t)
+	o := options{verify: true, verifyLevel: "both", noCache: true, files: []string{unsigned, damaged}, multi: 1, threads: 1}
+	var text bytes.Buffer
+	if failed := runJobs(context.Background(), o, &reporter{out: &text}); failed != 1 {
+		t.Fatalf("%d failed: %s", failed, text.String())
+	}
+	if !strings.Contains(text.String(), "MODIFIED unsigned.nsp: 2 of 2 NCA not signed by Nintendo") || !strings.Contains(text.String(), "FAILED damaged.nsp: ") {
+		t.Fatal(text.String())
+	}
+	text.Reset()
+	o.files = []string{unsigned}
+	if failed := runJobs(context.Background(), o, &reporter{out: &text, machine: true}); failed != 0 || !strings.Contains(text.String(), `"result": "modified"`) {
+		t.Fatalf("%d failed: %s", failed, text.String())
 	}
 }

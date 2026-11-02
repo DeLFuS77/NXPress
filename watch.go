@@ -225,7 +225,7 @@ type watchEnd struct {
 
 func (w *watchOutput) done(path string, written string, note string, err error) {
 	w.mutex.Lock()
-	w.ends = append(w.ends, watchEnd{path: path, written: written, failed: err != nil && !isSkipped(err)})
+	w.ends = append(w.ends, watchEnd{path: path, written: written, failed: isFailure(err)})
 	w.mutex.Unlock()
 	w.output.done(path, written, note, err)
 }
