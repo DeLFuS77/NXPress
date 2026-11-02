@@ -14,6 +14,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/DeLFuS77/NXPress/internal/jobs"
+	"github.com/DeLFuS77/NXPress/internal/portable"
+	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/windowplace"
+
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 	"github.com/wailsapp/wails/v2"
 	wailsoptions "github.com/wailsapp/wails/v2/pkg/options"
@@ -36,9 +41,9 @@ var appIcon []byte
 func runWindow(files []string) int {
 	app := &App{files: files}
 	// the window opens where it was left and as big (see windowplace.go)
-	place, _ := loadWindowPlace()
+	place, _ := windowplace.LoadWindowPlace()
 	// on Windows 11 the menu shows the Mica of the system through a window left clear
-	mica := micaWindow()
+	mica := system.MicaWindow()
 	background := &wailsoptions.RGBA{R: 24, G: 24, B: 27, A: 255}
 	backdrop := windows.Auto
 	if mica {
@@ -49,13 +54,13 @@ func runWindow(files []string) int {
 		Title:            "NXPress " + version,
 		Width:            place.Width,
 		Height:           place.Height,
-		MinWidth:         windowMinWidth,
-		MinHeight:        windowMinHeight,
+		MinWidth:         windowplace.WindowMinWidth,
+		MinHeight:        windowplace.WindowMinHeight,
 		StartHidden:      true,
 		BackgroundColour: background,
 		AssetServer:      &assetserver.Options{Assets: frontend},
 		OnStartup:        app.startup,
-		OnDomReady:       placeWindow,
+		OnDomReady:       windowplace.PlaceWindow,
 		OnBeforeClose:    app.beforeClose,
 		OnShutdown:       app.closed,
 		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
@@ -63,7 +68,7 @@ func runWindow(files []string) int {
 		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
 		// portable (see portable.go): the page keeps its settings next to the program too
 		Windows: &windows.Options{
-			WebviewUserDataPath:  webviewFolder(),
+			WebviewUserDataPath:  portable.WebviewFolder(),
 			WebviewIsTransparent: mica, WindowIsTranslucent: mica, BackdropType: backdrop,
 		},
 	})
@@ -102,7 +107,7 @@ type App struct {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	// the keys of the usual places are read at once, as the command line does
-	if path, err := loadKeys(""); err == nil {
+	if path, err := jobs.LoadKeys(""); err == nil {
 		a.keys = path
 	}
 }
@@ -131,14 +136,14 @@ func (a *App) Setup() Setup {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	setup := Setup{
-		Version: version, Keys: a.keys, Threads: defaultThreads(1), Cpus: runtime.NumCPU(),
-		Level: defaultLevel, MaxLevel: maxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: sendToFolder() != "",
-		Mica: micaWindow(),
+		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
+		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
+		Mica: system.MicaWindow(),
 	}
-	setup.SendToEnabled = setup.SendTo && sendToEnabled()
+	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {
 		setup.Mode = "decompress"
-		if files, _ := inputs(a.files, []string{".nsp", ".xci"}); len(files) > 0 {
+		if files, _ := jobs.Inputs(a.files, []string{".nsp", ".xci"}); len(files) > 0 {
 			setup.Mode = "compress"
 		}
 	}
@@ -148,9 +153,9 @@ func (a *App) Setup() Setup {
 // SetSendTo puts NXPress in the "Send to" menu of the Explorer, or takes it away.
 func (a *App) SetSendTo(on bool) error {
 	if on {
-		return enableSendTo()
+		return system.EnableSendTo()
 	}
-	return disableSendTo()
+	return system.DisableSendTo()
 }
 
 // ChooseKeys asks for a prod.keys or a keys.txt, and makes it active.
@@ -169,9 +174,9 @@ func (a *App) ChooseKeys() (string, error) {
 func (a *App) useKeys(path string) (string, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if _, err := loadKeys(path); err != nil {
+	if _, err := jobs.LoadKeys(path); err != nil {
 		if a.keys != "" {
-			if _, err := loadKeys(a.keys); err != nil {
+			if _, err := jobs.LoadKeys(a.keys); err != nil {
 				a.keys = ""
 			}
 		}
@@ -193,14 +198,14 @@ func extensions(mode string) []string {
 	if mode == "pack" {
 		return []string{".nsp", ".nsz", ".xci", ".xcz"}
 	}
-	return takes[mode]
+	return jobs.Takes[mode]
 }
 
 // Expand gives the files a mode takes among the paths given, the files of the folders given
 // included. A folder that cannot be read is told on the page: its games would else be left out
 // without a word.
 func (a *App) Expand(paths []string, mode string) []Item {
-	files, missing := inputs(paths, extensions(mode))
+	files, missing := jobs.Inputs(paths, extensions(mode))
 	for _, path := range missing {
 		if a.ctx != nil {
 			emit(a.ctx, "say", path+" cannot be read: its files are left out")
@@ -247,11 +252,11 @@ func (a *App) ChooseOutput() (string, error) {
 }
 
 // Describe gives the main title of a file, with its icon, to show it in the list.
-func (a *App) Describe(path string) (gameTitle, error) {
-	if _, ok := splitContainer(path); ok {
-		return gameTitle{}, errors.New("a file in parts")
+func (a *App) Describe(path string) (jobs.GameTitle, error) {
+	if _, ok := jobs.SplitContainer(path); ok {
+		return jobs.GameTitle{}, errors.New("a file in parts")
 	}
-	return readTitle(path, true)
+	return jobs.ReadTitle(path, true)
 }
 
 // FileCard is what Info shows of a file beside its row: its kind, its size and the one as NSP
@@ -279,9 +284,9 @@ func (a *App) Card(path string) (FileCard, error) {
 func (a *App) NewNames(paths []string, template string, keepNamed bool) []string {
 	names := make([]string, len(paths))
 	for i, path := range paths {
-		if title, err := readTitle(path, false); err == nil {
-			names[i] = newName(path, title, template)
-			if keepNamed && keepsName(path, title.TitleID) {
+		if title, err := jobs.ReadTitle(path, false); err == nil {
+			names[i] = jobs.NewName(path, title, template)
+			if keepNamed && jobs.KeepsName(path, title.TitleID) {
 				names[i] = filepath.Base(path)
 			}
 		}
@@ -302,27 +307,27 @@ type PackGame struct {
 // folder given they came in), or among the files given under the name its pack would get, as the
 // work then tells it. origins are the files and folders the list came from.
 func (a *App) PackPlan(files []string, origins []string, output string, template string) []PackGame {
-	sources, _ := inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
-	order, groups, _ := gameGroups(sources)
-	o := options{output: output, files: files, origins: origins}
-	folders := givenFolders(o)
+	sources, _ := jobs.Inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
+	order, groups, _ := jobs.GameGroups(sources)
+	o := jobs.Options{Output: output, Files: files, Origins: origins}
+	folders := jobs.GivenFolders(o)
 	if template == "" {
-		template = defaultPackTemplate
+		template = jobs.DefaultPackTemplate
 	}
 	plan := []PackGame{}
 	for _, id := range order {
 		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
-		if title, err := readTitle(groups[id][0], false); err == nil {
+		if title, err := jobs.ReadTitle(groups[id][0], false); err == nil {
 			game.Name = title.Name
 		}
 		if game.Name == "" {
 			game.Name = filepath.Base(groups[id][0])
 		}
-		next := packFolder(groups[id], sources, folders)
-		if packed := packedAlready(o, id, groups[id], next); packed != "" {
+		next := jobs.PackFolder(groups[id], sources, folders)
+		if packed := jobs.PackedAlready(o, id, groups[id], next); packed != "" {
 			game.Packed = filepath.Base(packed)
-		} else if extension, err := packKind(groups[id]); err == nil {
-			if again := packedAmong(o, groups[id], template, extension, next); again != "" {
+		} else if extension, err := jobs.PackKind(groups[id]); err == nil {
+			if again := jobs.PackedAmong(o, groups[id], template, extension, next); again != "" {
 				game.Packed = filepath.Base(again)
 			}
 		}
@@ -333,12 +338,12 @@ func (a *App) PackPlan(files []string, origins []string, output string, template
 
 // DefaultPackTemplate is the name of the pack of each game when none is chosen.
 func (a *App) DefaultPackTemplate() string {
-	return defaultPackTemplate
+	return jobs.DefaultPackTemplate
 }
 
 // DefaultTemplate is the template of names offered first.
 func (a *App) DefaultTemplate() string {
-	return defaultTemplate
+	return jobs.DefaultTemplate
 }
 
 // ChooseDat asks for a DAT file.
@@ -413,71 +418,71 @@ type Request struct {
 // Start does the work in the background: the page follows it by the events "progress", "done"
 // and "say", and "finished" once every file is done.
 func (a *App) Start(request Request) error {
-	o := options{
-		level: request.Level, block: request.Block, threads: request.Threads, multi: max(1, request.Multi),
-		output: request.Output, overwrite: request.Overwrite, rmSource: request.RemoveSource, files: request.Files,
+	o := jobs.Options{
+		Level: request.Level, Block: request.Block, Threads: request.Threads, Multi: max(1, request.Multi),
+		Output: request.Output, Overwrite: request.Overwrite, RmSource: request.RemoveSource, Files: request.Files,
 	}
 	if request.Mode == "verify" {
-		o.verifyLevel = request.VerifyLevel
-		o.dat = request.Dat
+		o.VerifyLevel = request.VerifyLevel
+		o.Dat = request.Dat
 	}
-	o.watch = request.Watch
-	o.noCache = request.NoCache
-	o.levels = request.Levels
-	o.sparse = request.Sparse
-	o.archive = request.Archive
+	o.Watch = request.Watch
+	o.NoCache = request.NoCache
+	o.Levels = request.Levels
+	o.Sparse = request.Sparse
+	o.Archive = request.Archive
 	switch request.Mode {
 	case "compress":
-		o.compress = true
+		o.Compress = true
 	case "decompress":
-		o.decompress = true
+		o.Decompress = true
 	case "convert":
-		o.convert = true
+		o.Convert = true
 	case "recompress":
-		o.recompress = true
+		o.Recompress = true
 	case "trim":
-		o.trim = true
+		o.Trim = true
 	case "estimate":
-		o.estimate = true
+		o.Estimate = true
 	case "measure":
-		o.measure = true
+		o.Measure = true
 	case "fat32":
-		o.fat32 = true
+		o.Fat32 = true
 	case "rename":
-		o.template = request.Template
-		o.keepNamed = request.KeepNamed
-		if o.template == "" {
-			o.template = defaultTemplate
+		o.Template = request.Template
+		o.KeepNamed = request.KeepNamed
+		if o.Template == "" {
+			o.Template = jobs.DefaultTemplate
 		}
 	case "split":
-		o.split = true
+		o.Split = true
 	case "info":
-		o.info = true
+		o.Info = true
 	case "pack":
-		o.skipGames = map[string]bool{}
+		o.SkipGames = map[string]bool{}
 		for _, id := range request.SkipGames {
-			o.skipGames[strings.ToUpper(id)] = true
+			o.SkipGames[strings.ToUpper(id)] = true
 		}
 		// a SuperNSP per game, or one file with everything, named by its template next to the
 		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
-		o.origins = request.Origins
+		o.Origins = request.Origins
 		switch {
 		case request.PackGames:
-			o.packGames, o.packName = true, request.PackTemplate
+			o.PackGames, o.PackName = true, request.PackTemplate
 		case request.Pack != "":
-			o.pack = request.Pack
+			o.Pack = request.Pack
 		default:
-			o.packOne, o.packName = true, request.PackTemplate
+			o.PackOne, o.PackName = true, request.PackTemplate
 		}
 	default:
-		o.verify = true
+		o.Verify = true
 	}
-	if err := o.check(); err != nil {
+	if err := o.Check(); err != nil {
 		return err
 	}
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.keys == "" && !o.recompress && !o.fat32 {
+	if a.keys == "" && !o.Recompress && !o.Fat32 {
 		return errors.New("no prod.keys: choose one")
 	}
 	if a.cancel != nil {
@@ -498,19 +503,21 @@ func (a *App) Start(request Request) error {
 		}
 		started := time.Now()
 		a.setPaused(false)
-		jobs := runJobs
-		if o.watch {
-			jobs = func(ctx context.Context, o options, out output) int { return watchJobs(ctx, o, out, watchEvery) }
+		work := jobs.RunJobs
+		if o.Watch {
+			work = func(ctx context.Context, o jobs.Options, out jobs.Output) int {
+				return jobs.WatchJobs(ctx, o, out, jobs.WatchEvery)
+			}
 		}
-		failed := jobs(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
+		failed := work(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
 		cancelled := ctx.Err() != nil
 		a.mutex.Lock()
 		a.cancel, a.finished = nil, nil
 		// the taskbar ends as the work did: red while there are errors to look at, else nothing
 		if failed > 0 && !cancelled {
-			setTaskbarProgress("error", 1, 1)
+			system.SetTaskbarProgress("error", 1, 1)
 		} else {
-			setTaskbarProgress("none", 1, 1)
+			system.SetTaskbarProgress("none", 1, 1)
 		}
 		a.mutex.Unlock()
 		close(finished)
@@ -523,7 +530,7 @@ func (a *App) Start(request Request) error {
 }
 
 // changePriority puts NXPress below the normal priority, or back to it.
-var changePriority = setLowPriority
+var changePriority = system.SetLowPriority
 
 // setPriority puts NXPress below the normal priority when asked, and back to it when not, as the
 // work asked for is taken, and only when that changes; it gives a note when it could not.
@@ -565,7 +572,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 			return true
 		}
 	}
-	keepWindowPlace(ctx)
+	windowplace.KeepWindowPlace(ctx)
 	return false
 }
 
@@ -631,7 +638,7 @@ func (a *App) SetPaused(paused bool) {
 // setPaused pauses the work or lets it go on; paused, the computer may go to sleep.
 func (a *App) setPaused(paused bool) {
 	a.paused.Store(paused)
-	pauseAwake(paused)
+	system.PauseAwake(paused)
 }
 
 // SetTaskbar shows the progress of the work on the button of NXPress in the taskbar (#31):
@@ -644,7 +651,7 @@ func (a *App) SetTaskbar(state string, done float64, total float64) {
 	if (state == "normal" || state == "paused") && a.cancel == nil {
 		return
 	}
-	setTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
+	system.SetTaskbarProgress(state, uint64(max(done, 0)), uint64(max(total, 0)))
 }
 
 // Notify shows a notice of the system, with the texts of the page, to tell when long work is
@@ -661,7 +668,7 @@ func (a *App) Notify(title string, body string) {
 // icon in the temporary folder), which a portable NXPress does not do: it sends none. macOS asks
 // the user first.
 func (a *App) readyNotices() bool {
-	if runtime.GOOS == "windows" && portableFolder() != "" {
+	if runtime.GOOS == "windows" && portable.Folder() != "" {
 		return false
 	}
 	wailsruntime.InitializeNotifications(a.ctx)
@@ -694,7 +701,7 @@ func (a *App) ShutDownIn(seconds int, force bool) {
 		if !a.shutdownDue(round) {
 			return
 		}
-		if err := shutDown(force); err != nil {
+		if err := system.ShutDown(force); err != nil {
 			emit(a.ctx, "shutdownFailed", err.Error())
 			return
 		}
@@ -739,7 +746,7 @@ func (a *App) CancelShutDown() {
 
 // ShowFile opens the folder of a file in the file manager.
 func (a *App) ShowFile(path string) {
-	showFile(path)
+	system.ShowFile(path)
 }
 
 // emit sends an event to the page.
@@ -756,22 +763,22 @@ type window struct {
 // how often the progress of a file is sent at most, unless its percentage changes
 const windowEvery = 500 * time.Millisecond
 
-// waitWhilePaused holds the work while it is paused, until it goes on or is cancelled: before
+// WaitWhilePaused holds the work while it is paused, until it goes on or is cancelled: before
 // each file, and at every step that tells its progress.
-func (w *window) waitWhilePaused() {
+func (w *window) WaitWhilePaused() {
 	for w.app != nil && w.app.paused.Load() && w.job.Err() == nil {
 		time.Sleep(200 * time.Millisecond)
 	}
 }
 
-func (w *window) progress(path string, step string) func(done int64, total int64) {
+func (w *window) Progress(path string, step string) func(done int64, total int64) {
 	var (
 		mutex     sync.Mutex
 		last      time.Time
 		lastShare = int64(-1)
 	)
 	return func(done int64, total int64) {
-		w.waitWhilePaused()
+		w.WaitWhilePaused()
 		share := int64(0)
 		if total > 0 {
 			share = done * 1000 / total
@@ -788,16 +795,16 @@ func (w *window) progress(path string, step string) func(done int64, total int64
 	}
 }
 
-func (w *window) done(path string, output string, note string, err error) {
+func (w *window) Done(path string, output string, note string, err error) {
 	result := map[string]any{"file": path, "output": output, "note": note}
 	// the size of the new file, for the savings the page adds up
 	if info, err := os.Stat(output); output != "" && err == nil {
 		result["size"] = info.Size()
 	}
 	switch {
-	case isSkipped(err):
+	case jobs.IsSkipped(err):
 		result["skipped"], result["note"] = true, err.Error()
-	case isModified(err):
+	case jobs.IsModified(err):
 		result["modified"], result["note"] = true, err.Error()
 	case err != nil:
 		result["error"] = err.Error()
@@ -808,26 +815,26 @@ func (w *window) done(path string, output string, note string, err error) {
 	emit(w.ctx, "done", result)
 }
 
-func (w *window) say(format string, args ...any) {
+func (w *window) Say(format string, args ...any) {
 	emit(w.ctx, "say", fmt.Sprintf(format, args...))
 }
 
 // measured gives the page what a measure found: the setting chosen, to put in its fields, and
 // every setting tried, to show them.
-func (w *window) measured(report measureReport) {
+func (w *window) measured(report jobs.MeasureReport) {
 	trials := []map[string]any{}
-	for _, t := range report.trials {
-		trials = append(trials, map[string]any{"threads": t.Threads, "multi": t.Files, "speed": t.Speed, "best": t == report.best})
+	for _, t := range report.Trials {
+		trials = append(trials, map[string]any{"threads": t.Threads, "multi": t.Files, "speed": t.Speed, "best": t == report.Best})
 	}
 	// a faster setting less than 5% faster than the one chosen: the window tells why it was not
 	var faster any
-	if report.faster != nil {
-		faster = map[string]any{"threads": report.faster.Threads, "multi": report.faster.Files, "speed": report.faster.Speed}
+	if report.Faster != nil {
+		faster = map[string]any{"threads": report.Faster.Threads, "multi": report.Faster.Files, "speed": report.Faster.Speed}
 	}
 	emit(w.ctx, "measured", map[string]any{
-		"threads": report.best.Threads, "multi": report.best.Files, "speed": report.best.Speed,
-		"processors": report.processors, "level": report.level, "block": report.block,
-		"seconds10GB": int(report.per10GB.Seconds()), "trials": trials, "faster": faster,
+		"threads": report.Best.Threads, "multi": report.Best.Files, "speed": report.Best.Speed,
+		"processors": report.Processors, "level": report.Level, "block": report.Block,
+		"seconds10GB": int(report.Per10GB.Seconds()), "trials": trials, "faster": faster,
 	})
 }
 

@@ -10,6 +10,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/DeLFuS77/NXPress/internal/jobs"
+	"github.com/DeLFuS77/NXPress/internal/system"
 )
 
 // watchRecorder is the window of a watch under test: it keeps the files that ended.
@@ -19,22 +22,22 @@ type watchRecorder struct {
 	watching bool
 }
 
-func (r *watchRecorder) progress(string, string) func(int64, int64) { return func(int64, int64) {} }
+func (r *watchRecorder) Progress(string, string) func(int64, int64) { return func(int64, int64) {} }
 
-func (r *watchRecorder) done(path string, output string, note string, err error) {
+func (r *watchRecorder) Done(path string, output string, note string, err error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.ended = append(r.ended, path)
 }
 
-func (r *watchRecorder) say(format string, args ...any) {
+func (r *watchRecorder) Say(format string, args ...any) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.watching = r.watching || format == "watching for new files"
 }
 
 // startWatch watches a folder until the test ends, once the files of the start are done.
-func startWatch(t *testing.T, o options, runs *watchRuns) {
+func startWatch(t *testing.T, o jobs.Options, runs *watchRuns) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := make(chan struct{})
@@ -44,7 +47,7 @@ func startWatch(t *testing.T, o options, runs *watchRuns) {
 	})
 	recorder := &watchRecorder{}
 	go func() {
-		watchFolder(ctx, o, recorder, 10*time.Millisecond, runs.run)
+		jobs.WatchFolder(ctx, o, recorder, 10*time.Millisecond, runs.run)
 		close(stopped)
 	}()
 	eventually(t, "the watch did not start", func() bool {
@@ -62,8 +65,8 @@ type watchRuns struct {
 	end   func(path string) (string, error)
 }
 
-func (w *watchRuns) run(ctx context.Context, o options, out output) int {
-	files, _ := inputs(o.files, takes[o.action()])
+func (w *watchRuns) run(ctx context.Context, o jobs.Options, out jobs.Output) int {
+	files, _ := jobs.Inputs(o.Files, jobs.Takes[o.Action()])
 	failed := 0
 	for _, path := range files {
 		w.mutex.Lock()
@@ -74,7 +77,7 @@ func (w *watchRuns) run(ctx context.Context, o options, out output) int {
 		if end != nil {
 			written, err = end(path)
 		}
-		out.done(path, written, "", err)
+		out.Done(path, written, "", err)
 		if err != nil {
 			failed++
 		}
@@ -127,10 +130,10 @@ func TestWatchTakesWholeFiles(t *testing.T) {
 	written := time.Now().Add(-time.Hour)
 	os.Chtimes(touched, written, written)
 
-	watch := folderWatch{seen: map[string]bool{}, looked: map[string]fileLook{}, failed: map[string]fileLook{}}
+	watch := jobs.FolderWatch{Seen: map[string]bool{}, Looked: map[string]jobs.FileLook{}, Failed: map[string]jobs.FileLook{}}
 	look := func() []string {
-		files, _ := inputs([]string{folder}, takes["compress"])
-		ready, _ := watch.look(files)
+		files, _ := jobs.Inputs([]string{folder}, jobs.Takes["compress"])
+		ready, _ := watch.Look(files)
 		names := []string{}
 		for _, path := range ready {
 			names = append(names, filepath.Base(path))
@@ -164,7 +167,7 @@ func TestWatchWaitsForAFileOpenToWrite(t *testing.T) {
 	folder := t.TempDir()
 	path := filepath.Join(folder, "copying.nsp")
 	runs := &watchRuns{}
-	startWatch(t, options{compress: true, files: []string{folder}}, runs)
+	startWatch(t, jobs.Options{Compress: true, Files: []string{folder}}, runs)
 	copying, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		t.Fatal(err)
@@ -173,7 +176,7 @@ func TestWatchWaitsForAFileOpenToWrite(t *testing.T) {
 	if err := copying.Truncate(1 << 20); err != nil {
 		t.Fatal(err)
 	}
-	if !fileBusy(path) {
+	if !system.FileBusy(path) {
 		t.Fatal("a file open to write is not told busy")
 	}
 
@@ -182,7 +185,7 @@ func TestWatchWaitsForAFileOpenToWrite(t *testing.T) {
 		t.Fatal("a file still open to write was taken")
 	}
 	copying.Close()
-	if fileBusy(path) {
+	if system.FileBusy(path) {
 		t.Fatal("a closed file is told busy")
 	}
 	eventually(t, "the file was not taken once closed", func() bool { return runs.times("copying.nsp") == 1 })
@@ -201,7 +204,7 @@ func TestWatchRetriesAFailedFileOnceItChanges(t *testing.T) {
 		}
 		return "", nil
 	}}
-	startWatch(t, options{compress: true, files: []string{folder}}, runs)
+	startWatch(t, jobs.Options{Compress: true, Files: []string{folder}}, runs)
 	writeFile(t, path, 100)
 	eventually(t, "the new file was not taken", func() bool { return runs.times("game.nsp") == 1 })
 	time.Sleep(300 * time.Millisecond)
@@ -229,7 +232,7 @@ func TestWatchRetriesAFailedFileOfTheStart(t *testing.T) {
 		}
 		return "", nil
 	}}
-	startWatch(t, options{compress: true, files: []string{folder}}, runs)
+	startWatch(t, jobs.Options{Compress: true, Files: []string{folder}}, runs)
 	eventually(t, "the file of the start was not done", func() bool { return runs.times("game.nsp") == 1 })
 	time.Sleep(200 * time.Millisecond)
 	if n := runs.times("game.nsp"); n != 1 {
@@ -244,14 +247,14 @@ func TestWatchOutputPassesThePauseOn(t *testing.T) {
 	app := &App{}
 	app.paused.Store(true)
 	job, cancel := context.WithCancel(context.Background())
-	var out output = &watchOutput{output: &window{job: job, app: app}}
-	pausing, ok := out.(interface{ waitWhilePaused() })
+	var out jobs.Output = &jobs.WatchOutput{Output: &window{job: job, app: app}}
+	pausing, ok := out.(interface{ WaitWhilePaused() })
 	if !ok {
 		t.Fatal("the watch hides the pause of the window")
 	}
 	released := make(chan struct{})
 	go func() {
-		pausing.waitWhilePaused()
+		pausing.WaitWhilePaused()
 		close(released)
 	}()
 	select {
@@ -262,7 +265,7 @@ func TestWatchOutputPassesThePauseOn(t *testing.T) {
 	cancel()
 	<-released
 	// the console has no pause: nothing waits
-	(&watchOutput{output: &watchRecorder{}}).waitWhilePaused()
+	(&jobs.WatchOutput{Output: &watchRecorder{}}).WaitWhilePaused()
 }
 
 // The files the work writes in the folder watched are not taken as new files: recompressed into
@@ -276,7 +279,7 @@ func TestWatchLeavesTheFilesItWrites(t *testing.T) {
 		written := filepath.Join(recompressed, filepath.Base(path))
 		return written, os.WriteFile(written, make([]byte, 50), 0o644)
 	}
-	startWatch(t, options{recompress: true, files: []string{folder}}, runs)
+	startWatch(t, jobs.Options{Recompress: true, Files: []string{folder}}, runs)
 	writeFile(t, filepath.Join(folder, "game.nsz"), 100)
 	eventually(t, "the new file was not taken", func() bool { return runs.times("game.nsz") == 1 })
 	time.Sleep(300 * time.Millisecond)
