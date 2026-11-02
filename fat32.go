@@ -287,31 +287,6 @@ func removeParts(path string) error {
 	}
 }
 
-// copyWithProgress copies size bytes, telling the progress when asked.
-func copyWithProgress(ctx context.Context, output io.Writer, input io.Reader, size int64, progress func(done int64, total int64)) error {
-	buffer := make([]byte, 4<<20)
-	var done int64
-	for done < size {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		n, err := io.ReadFull(input, buffer[:min(int64(len(buffer)), size-done)])
-		if n > 0 {
-			if _, werr := output.Write(buffer[:n]); werr != nil {
-				return werr
-			}
-			done += int64(n)
-			if progress != nil {
-				progress(done, size)
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // checkSum reads a file (or the first of its parts) again and compares its SHA-256.
 func checkSum(ctx context.Context, path string, size int64, want []byte, progress func(done int64, total int64)) error {
 	reader, err := switchfs.OpenFile(path)

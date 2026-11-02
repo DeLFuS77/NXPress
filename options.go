@@ -545,3 +545,33 @@ Multi-title files (SuperNSP) compress like any other file. The options of nsz --
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted
 and have no effect.
 `
+
+func (o options) action() string {
+	switch {
+	case o.compress:
+		return "compress"
+	case o.decompress:
+		return "decompress"
+	case o.convert:
+		return "convert"
+	case o.recompress:
+		return "recompress"
+	case o.trim:
+		return "trim"
+	case o.estimate:
+		return "estimate"
+	case o.measure:
+		return "measure"
+	case o.fat32:
+		return "fat32"
+	case o.template != "":
+		return "rename"
+	case o.split:
+		return "split"
+	case o.info:
+		return "info"
+	case o.pack != "" || o.packGames || o.packOne:
+		return "pack"
+	}
+	return "verify"
+}
