@@ -1105,7 +1105,7 @@ function previewPacks() {
     const list = $("pack-plan");
     if (state.mode !== "pack" || !$("pack-games").checked) return;
     const paths = state.items.map(item => item.path);
-    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.output, state.packTemplate) || [] : [];
+    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
@@ -1254,7 +1254,8 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], ...(extra || {}) };
+  // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;

@@ -45,6 +45,9 @@ type options struct {
 	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
 	packOne     bool
 	packName    string
+	// the files and folders dropped or chosen in the window, the files of its list came from: a
+	// pack of the files of a folder given goes next to it (#45)
+	origins     []string
 	level       int
 	block       bool
 	lowPriority bool
@@ -531,6 +534,9 @@ Usage: nxpress [options] file or folder...
   --pack-one          merge the files given into one multi-title file as --pack does,
                       named by --pack-name, next to the first file of the first game (or
                       in -o)
+                      Given a folder, the pack of the files of each folder goes next to
+                      it, not inside it: a game in a folder of its own (with its updates
+                      and DLC in folders inside) gets its SuperNSP next to that folder
   --pack-name T       the name of each pack of --pack-games and --pack-one, by the fields
                       of --rename
                       (default "{name} [{id}][v{version}] ({contents})")

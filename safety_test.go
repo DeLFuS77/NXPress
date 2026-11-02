@@ -43,22 +43,25 @@ func TestPackUnderTheNameOfOneOfItsFilesKeepsIt(t *testing.T) {
 	}
 }
 
-// Packing a folder by game again, with the pack made before among its files, -w and
-// --rm-source: the game is still whole in one file.
+// Packing a folder by game again, with the pack made before among its files (the files given
+// one by one, it went next to them), -w and --rm-source: the game is still whole in one file,
+// now next to the folder (#45).
 func TestPackGamesAgainKeepsTheGame(t *testing.T) {
 	safetyIsolate(t)
-	folder := t.TempDir()
-	safetyGame(t, folder)
-	if failed := packGames(context.Background(), options{packGames: true, files: []string{folder}}, quiet{}); failed != 0 {
+	folder := filepath.Join(t.TempDir(), "games")
+	base, update, dlc := safetyGame(t, folder)
+	if failed := packGames(context.Background(), options{packGames: true, files: []string{base, update, dlc}}, quiet{}); failed != 0 {
 		t.Fatalf("first run: %d failed", failed)
 	}
 	packGames(context.Background(), options{packGames: true, overwrite: true, rmSource: true, files: []string{folder}}, quiet{})
-	for _, name := range safetyList(folder) {
-		if titles, err := readTitles(filepath.Join(folder, name)); err == nil && len(titles) == 3 {
-			return
+	for _, place := range []string{folder, filepath.Dir(folder)} {
+		for _, name := range safetyList(place) {
+			if titles, err := readTitles(filepath.Join(place, name)); err == nil && len(titles) == 3 {
+				return
+			}
 		}
 	}
-	t.Fatalf("no file holds the whole game anymore: %v", safetyList(folder))
+	t.Fatalf("no file holds the whole game anymore: %v, above: %v", safetyList(folder), safetyList(filepath.Dir(folder)))
 }
 
 // Two files a template gives the same name: the second is not renamed onto the first, with -w

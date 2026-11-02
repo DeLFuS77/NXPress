@@ -298,12 +298,14 @@ type PackGame struct {
 }
 
 // PackPlan tells the packs by game the files would make: the files of each game, and the pack
-// made before when there is one where its pack would go (output, or the folder of the game), or
-// among the files given under the name its pack would get, as the work then tells it.
-func (a *App) PackPlan(files []string, output string, template string) []PackGame {
+// made before when there is one where its pack would go (output, or next to the files or to the
+// folder given they came in), or among the files given under the name its pack would get, as the
+// work then tells it. origins are the files and folders the list came from.
+func (a *App) PackPlan(files []string, origins []string, output string, template string) []PackGame {
 	sources, _ := inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
 	order, groups, _ := gameGroups(sources)
-	o := options{output: output}
+	o := options{output: output, files: files, origins: origins}
+	folders := givenFolders(o)
 	if template == "" {
 		template = defaultPackTemplate
 	}
@@ -316,10 +318,11 @@ func (a *App) PackPlan(files []string, output string, template string) []PackGam
 		if game.Name == "" {
 			game.Name = filepath.Base(groups[id][0])
 		}
-		if packed := packedAlready(o, id, groups[id]); packed != "" {
+		next := packFolder(groups[id], sources, folders)
+		if packed := packedAlready(o, id, groups[id], next); packed != "" {
 			game.Packed = filepath.Base(packed)
 		} else if extension, err := packKind(groups[id]); err == nil {
-			if again := packedAmong(o, groups[id], template, extension); again != "" {
+			if again := packedAmong(o, groups[id], template, extension, next); again != "" {
 				game.Packed = filepath.Base(again)
 			}
 		}
@@ -393,6 +396,7 @@ type Request struct {
 	Pack         string   `json:"pack"`
 	PackGames    bool     `json:"packGames"`
 	PackTemplate string   `json:"packTemplate"`
+	Origins      []string `json:"origins"`
 	Dat          string   `json:"dat"`
 	Template     string   `json:"template"`
 	Watch        bool     `json:"watch"`
@@ -456,6 +460,7 @@ func (a *App) Start(request Request) error {
 		}
 		// a SuperNSP per game, or one file with everything, named by its template next to the
 		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
+		o.origins = request.Origins
 		switch {
 		case request.PackGames:
 			o.packGames, o.packName = true, request.PackTemplate

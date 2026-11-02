@@ -14,7 +14,7 @@ func TestPackPlanTellsAPackAmongTheFiles(t *testing.T) {
 	if failed := packGames(context.Background(), options{packGames: true, files: []string{folder}}, quiet{}); failed != 0 {
 		t.Fatalf("first run: %d failed", failed)
 	}
-	plan := (&App{}).PackPlan([]string{folder}, "", "")
+	plan := (&App{}).PackPlan([]string{folder}, nil, "", "")
 	if len(plan) != 1 || plan[0].Packed == "" {
 		t.Fatalf("plan %+v", plan)
 	}
