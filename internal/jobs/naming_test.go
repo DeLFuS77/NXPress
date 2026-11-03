@@ -100,3 +100,24 @@ func TestDescribeTitlesForTheHover(t *testing.T) {
 		t.Errorf("languages %v", got.Languages)
 	}
 }
+
+// The experimental formats of NXPress a file is in go into its name with {experimental}, and the
+// brackets left empty go away for any other file (#58).
+func TestExperimentalField(t *testing.T) {
+	title := GameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 1}
+	if got := NewName("a.nsz", title, "{name} [{experimental}]"); got != "Game.nsz" {
+		t.Errorf("a plain NSZ: %q", got)
+	}
+	for facts, want := range map[switchfs.FileFacts]string{{Sparse: 1}: "NCZSECT2", {Archive: 3}: "NCZSECT3", {Sparse: 1, Archive: 2}: "NCZSECT2+NCZSECT3", {Solid: 4}: ""} {
+		if got := FormatOf(facts); got != want {
+			t.Errorf("%+v: %q, want %q", facts, got, want)
+		}
+	}
+	title.Format = "NCZSECT2"
+	if got := NewName("a.nsz", title, "{name} [{experimental}]"); got != "Game [NCZSECT2].nsz" {
+		t.Errorf("an NSZ in NCZSECT2: %q", got)
+	}
+	if got := ExperimentalFormat("a.nsp"); got != "" {
+		t.Errorf("an NSP is never experimental: %q", got)
+	}
+}

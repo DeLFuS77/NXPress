@@ -232,7 +232,8 @@ function renderCard(row) {
   const whole = Math.max(card.decompressed || card.size, card.size);
   const share = whole ? card.size / whole : 1;
   const compressed = card.solid + card.blocks > 0;
-  const works = card.solid > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 0 }
+  const works = card.format ? { NXPress: 1, DBI: 0, Tinfoil: 0, Awoo: 0, CyberFoil: 0, Sphaira: 0, emulators: 0 }
+    : card.solid > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 0 }
     : card.blocks > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 0, CyberFoil: 1, Sphaira: 1, emulators: 1 }
     : { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 1 };
   element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><div class="tags"></div>`;
@@ -964,6 +965,20 @@ function paint(row) {
     title.textContent = tags ? row.item.name.slice(0, tags.index).trim() || row.item.name : row.item.name;
     file.textContent = row.game ? `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)}` : tags ? tags[0].trim() : "";
   }
+  // a file in an experimental format of NXPress says so beside its name, "Experimental" and the
+  // format, so it is found again before a program that reads plain NSZ only gets it (#58)
+  if (row.game && row.game.format) {
+    const why = t("experimentalWhy")(row.game.format.replace("+", ", "));
+    const mark = document.createElement("span");
+    mark.className = "exp-mark";
+    mark.textContent = t("experimentalMark");
+    mark.title = why;
+    const format = document.createElement("span");
+    format.className = "exp-format";
+    format.textContent = row.game.format.replace("+", " + ");
+    format.title = why;
+    title.append(mark, format);
+  }
   // a warning of the list shows until the file is worked on
   let warn = row.tr.querySelector(".list-warn");
   if (row.warn && !row.status) {
@@ -1144,6 +1159,7 @@ const templateFields = [
   ["{size_gb}", "{SIZE_GB}", "fieldSizeGb", "2.7GB"],
   ["{size_mb}", "{SIZE_MB}", "fieldSizeMb", "2650MB"],
   ["{dlc_number}", "{DLC_NUMBER}", "fieldDlcNumber", "1"],
+  ["{experimental}", "", "fieldExperimental", "NCZSECT2"],
 ];
 function fillFields() {
   for (const table of document.querySelectorAll("table.fields")) {
