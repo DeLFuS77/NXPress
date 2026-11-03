@@ -259,20 +259,13 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
-// the colors NXPress can wear, chosen in Settings: its own and ten more (RuneStone, Vampire and Huntress with scenes), each with its background
+// the colors NXPress can wear, chosen in Settings: its own and three more with a scene (RuneStone, Vampire and Huntress), each with its background
 // and its main color in dark and in light, for its swatch (the colors themselves are in style.css)
 const palettes = [
   ["nxpress", "", ["#101216", "#3db7ea"], ["#eef0f3", "#0a6fb0"]],
-  ["midnight", "paletteMidnight", ["#0a0f2c", "#7f8fff"], ["#d9dfff", "#3241c9"]],
-  ["lagoon", "paletteLagoon", ["#031c1b", "#2ee6c8"], ["#cdeee8", "#08766a"]],
-  ["amethyst", "paletteAmethyst", ["#170c26", "#c89bff"], ["#e6dbf8", "#6230c4"]],
-  ["fuchsia", "paletteFuchsia", ["#1c0a1a", "#f472d0"], ["#f6dcef", "#9d2a96"]],
-  ["coffee", "paletteCoffee", ["#17110c", "#e3c39b"], ["#eee3d6", "#4e3426"]],
-  ["slate", "paletteSlate", ["#232a36", "#93b4ff"], ["#dfe5ee", "#3a5a99"]],
   ["relic", "paletteRelic", ["#0b1316", "#4fe3ff"], ["#ebe2cc", "#0c6f86"]],
   ["vampire", "paletteVampire", ["#070a12", "#cdd9ff"], ["#cfd3e2", "#26336e"]],
   ["visor", "paletteVisor", ["#05070c", "#9cff3a"], ["#c9cfcf", "#2f6408"]],
-  ["graphite", "paletteGraphite", ["#000000", "#f2f2f2"], ["#e4e4e4", "#111111"]],
 ];
 function applyPalette() {
   if (state.palette === "nxpress") document.documentElement.removeAttribute("data-palette");

@@ -543,33 +543,9 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 .switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .switch, .switch::after, .pref-more summary::before { transition: none; } }
 
-/* the colors of NXPress: its own (no attribute) and ten more, each in dark and in light. They change
+/* the colors of NXPress: its own (no attribute) and three more with a scene, each in dark and in light. They change
 the background, the panels, the lines and the color of what you choose and start; red, green and orange
 keep what they say (an error, space saved, a warning), and so do the colors of the groups of the menu */
-:root[data-palette="midnight"] {
-  --bg: #0a0f2c; --panel: #10173d; --raised: #172050; --line: #263372; --hover: #1b2658; --bar: #263372; --muted: #9aa6d6;
-  --accent: #7f8fff; --accent-soft: rgba(127, 143, 255, .18); --accent-text: #0a0d24; --focus: #aab4ff;
-}
-:root[data-palette="lagoon"] {
-  --bg: #031c1b; --panel: #082826; --raised: #0d3431; --line: #174a45; --hover: #103c38; --bar: #174a45; --muted: #8fbcb5;
-  --accent: #2ee6c8; --accent-soft: rgba(46, 230, 200, .16); --accent-text: #021612; --focus: #86f0de;
-}
-:root[data-palette="amethyst"] {
-  --bg: #170c26; --panel: #211335; --raised: #2a1943; --line: #3f2763; --hover: #301d4d; --bar: #3f2763; --muted: #b3a0cf;
-  --accent: #c89bff; --accent-soft: rgba(200, 155, 255, .18); --accent-text: #1a0a2c; --focus: #dcc2ff;
-}
-:root[data-palette="fuchsia"] {
-  --bg: #1c0a1a; --panel: #27102a; --raised: #321636; --line: #4a2150; --hover: #3a1a3f; --bar: #4a2150; --muted: #c9a1c6;
-  --accent: #f472d0; --accent-soft: rgba(244, 114, 208, .17); --accent-text: #22051c; --focus: #f9a8e3;
-}
-:root[data-palette="coffee"] {
-  --bg: #17110c; --panel: #211812; --raised: #2b2018; --line: #3e2f24; --hover: #31251c; --bar: #3e2f24; --muted: #b8a593;
-  --accent: #e3c39b; --accent-soft: rgba(227, 195, 155, .15); --accent-text: #1c130b; --focus: #f0dcc2;
-}
-:root[data-palette="slate"] {
-  --bg: #232a36; --panel: #2a3240; --raised: #323b4b; --line: #44506a; --hover: #384254; --bar: #44506a; --muted: #aab4c6;
-  --accent: #93b4ff; --accent-soft: rgba(147, 180, 255, .16); --accent-text: #0f1626; --focus: #bccfff;
-}
 :root[data-palette="relic"] {
   --bg: #0b1316; --panel: #101b1f; --raised: #152429; --line: #1f3d45; --hover: #18303a; --bar: #1c3840; --muted: #8fb8be;
   --accent: #4fe3ff; --accent-soft: rgba(79, 227, 255, .16); --accent-text: #021216; --focus: #a8f3ff;
@@ -582,35 +558,7 @@ keep what they say (an error, space saved, a warning), and so do the colors of t
   --bg: #05070c; --panel: #0a0d14; --raised: #10151f; --line: #26303c; --hover: #141b26; --bar: #1b2430; --muted: #93a3a8;
   --accent: #9cff3a; --accent-soft: rgba(156, 255, 58, .14); --accent-text: #0a1400; --focus: #c8ff8a;
 }
-:root[data-palette="graphite"] {
-  --bg: #000000; --panel: #0e0e0e; --raised: #171717; --line: #262626; --hover: #1d1d1d; --bar: #262626; --muted: #9a9a9a;
-  --accent: #f2f2f2; --accent-soft: rgba(242, 242, 242, .12); --accent-text: #000; --focus: #ffffff;
-}
 @media (prefers-color-scheme: light) {
-  :root[data-palette="midnight"]:not([data-theme="dark"]) {
-    --bg: #d9dfff; --panel: #eef1ff; --raised: #e3e8ff; --line: #bfc8f3; --hover: #d5dcfb; --bar: #c9d1f7; --muted: #4a5385;
-    --accent: #3241c9; --accent-soft: rgba(50, 65, 201, .12); --accent-text: #fff; --focus: #3241c9;
-  }
-  :root[data-palette="lagoon"]:not([data-theme="dark"]) {
-    --bg: #cdeee8; --panel: #e8f8f5; --raised: #d9f2ee; --line: #a9dad1; --hover: #ccebe5; --bar: #b8e2da; --muted: #3d6762;
-    --accent: #08766a; --accent-soft: rgba(8, 118, 106, .12); --accent-text: #fff; --focus: #08766a;
-  }
-  :root[data-palette="amethyst"]:not([data-theme="dark"]) {
-    --bg: #e6dbf8; --panel: #f5effe; --raised: #ece3fb; --line: #cdbbec; --hover: #e3d7f7; --bar: #d6c8f1; --muted: #5e4c80;
-    --accent: #6230c4; --accent-soft: rgba(98, 48, 196, .12); --accent-text: #fff; --focus: #6230c4;
-  }
-  :root[data-palette="fuchsia"]:not([data-theme="dark"]) {
-    --bg: #f6dcef; --panel: #fdf0f9; --raised: #f9e5f3; --line: #e8bcdc; --hover: #f3d7eb; --bar: #edc8e3; --muted: #7a4a6e;
-    --accent: #9d2a96; --accent-soft: rgba(157, 42, 150, .12); --accent-text: #fff; --focus: #9d2a96;
-  }
-  :root[data-palette="coffee"]:not([data-theme="dark"]) {
-    --bg: #eee3d6; --panel: #faf4ec; --raised: #f3eadf; --line: #dccbb6; --hover: #ebdfd0; --bar: #e2d4c2; --muted: #6b5848;
-    --accent: #4e3426; --accent-soft: rgba(78, 52, 38, .12); --accent-text: #fff; --focus: #4e3426;
-  }
-  :root[data-palette="slate"]:not([data-theme="dark"]) {
-    --bg: #dfe5ee; --panel: #f2f5f9; --raised: #e8edf3; --line: #c4cdda; --hover: #dde3ec; --bar: #ccd5e1; --muted: #4c5668;
-    --accent: #3a5a99; --accent-soft: rgba(58, 90, 153, .12); --accent-text: #fff; --focus: #3a5a99;
-  }
   :root[data-palette="relic"]:not([data-theme="dark"]) {
     --bg: #ebe2cc; --panel: #f6f0e1; --raised: #efe6d2; --line: #d3c4a0; --hover: #e7dcc3; --bar: #ddd0b0; --muted: #6b5f45;
     --accent: #0c6f86; --accent-soft: rgba(12, 111, 134, .12); --accent-text: #fff; --focus: #0c6f86;
@@ -623,34 +571,6 @@ keep what they say (an error, space saved, a warning), and so do the colors of t
     --bg: #c9cfcf; --panel: #d8dddc; --raised: #d0d6d5; --line: #a7b0af; --hover: #c3cac9; --bar: #b6bfbe; --muted: #3f4a4a;
     --accent: #2f6408; --accent-soft: rgba(47, 100, 8, .14); --accent-text: #fff; --focus: #2f6408;
   }
-  :root[data-palette="graphite"]:not([data-theme="dark"]) {
-    --bg: #e4e4e4; --panel: #fafafa; --raised: #f0f0f0; --line: #cfcfcf; --hover: #e8e8e8; --bar: #d6d6d6; --muted: #555555;
-    --accent: #111111; --accent-soft: rgba(17, 17, 17, .08); --accent-text: #fff; --focus: #111111;
-  }
-}
-:root[data-palette="midnight"][data-theme="light"] {
-  --bg: #d9dfff; --panel: #eef1ff; --raised: #e3e8ff; --line: #bfc8f3; --hover: #d5dcfb; --bar: #c9d1f7; --muted: #4a5385;
-  --accent: #3241c9; --accent-soft: rgba(50, 65, 201, .12); --accent-text: #fff; --focus: #3241c9;
-}
-:root[data-palette="lagoon"][data-theme="light"] {
-  --bg: #cdeee8; --panel: #e8f8f5; --raised: #d9f2ee; --line: #a9dad1; --hover: #ccebe5; --bar: #b8e2da; --muted: #3d6762;
-  --accent: #08766a; --accent-soft: rgba(8, 118, 106, .12); --accent-text: #fff; --focus: #08766a;
-}
-:root[data-palette="amethyst"][data-theme="light"] {
-  --bg: #e6dbf8; --panel: #f5effe; --raised: #ece3fb; --line: #cdbbec; --hover: #e3d7f7; --bar: #d6c8f1; --muted: #5e4c80;
-  --accent: #6230c4; --accent-soft: rgba(98, 48, 196, .12); --accent-text: #fff; --focus: #6230c4;
-}
-:root[data-palette="fuchsia"][data-theme="light"] {
-  --bg: #f6dcef; --panel: #fdf0f9; --raised: #f9e5f3; --line: #e8bcdc; --hover: #f3d7eb; --bar: #edc8e3; --muted: #7a4a6e;
-  --accent: #9d2a96; --accent-soft: rgba(157, 42, 150, .12); --accent-text: #fff; --focus: #9d2a96;
-}
-:root[data-palette="coffee"][data-theme="light"] {
-  --bg: #eee3d6; --panel: #faf4ec; --raised: #f3eadf; --line: #dccbb6; --hover: #ebdfd0; --bar: #e2d4c2; --muted: #6b5848;
-  --accent: #4e3426; --accent-soft: rgba(78, 52, 38, .12); --accent-text: #fff; --focus: #4e3426;
-}
-:root[data-palette="slate"][data-theme="light"] {
-  --bg: #dfe5ee; --panel: #f2f5f9; --raised: #e8edf3; --line: #c4cdda; --hover: #dde3ec; --bar: #ccd5e1; --muted: #4c5668;
-  --accent: #3a5a99; --accent-soft: rgba(58, 90, 153, .12); --accent-text: #fff; --focus: #3a5a99;
 }
 :root[data-palette="relic"][data-theme="light"] {
   --bg: #ebe2cc; --panel: #f6f0e1; --raised: #efe6d2; --line: #d3c4a0; --hover: #e7dcc3; --bar: #ddd0b0; --muted: #6b5f45;
@@ -663,10 +583,6 @@ keep what they say (an error, space saved, a warning), and so do the colors of t
 :root[data-palette="visor"][data-theme="light"] {
   --bg: #c9cfcf; --panel: #d8dddc; --raised: #d0d6d5; --line: #a7b0af; --hover: #c3cac9; --bar: #b6bfbe; --muted: #3f4a4a;
   --accent: #2f6408; --accent-soft: rgba(47, 100, 8, .14); --accent-text: #fff; --focus: #2f6408;
-}
-:root[data-palette="graphite"][data-theme="light"] {
-  --bg: #e4e4e4; --panel: #fafafa; --raised: #f0f0f0; --line: #cfcfcf; --hover: #e8e8e8; --bar: #d6d6d6; --muted: #555555;
-  --accent: #111111; --accent-soft: rgba(17, 17, 17, .08); --accent-text: #fff; --focus: #111111;
 }
 
 /* Relic shines: the main color glows around what is chosen and started, as ancient light does */
