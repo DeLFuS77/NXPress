@@ -119,7 +119,7 @@ const samples = [
   ["its part Game [0100000000010000][v0].nsp would take the place of the file itself: rename the file first, or split it into another folder", "take the place"],
   ["D:\Juegos\locked cannot be read: its files are left out", "left out"],
   ["nothing in it can be compressed, it cannot be measured with: it uses sparse storage, which only the experimental format NCZSECT2 compresses", "only the experimental format"],
-  ["this game uses sparse storage: it installs as it is, and only the experimental format NCZSECT2, an option under Advanced, can compress it", "an option under Advanced"],
+  ["this game uses sparse storage: to compress it with the experimental format of NXPress (NCZSECT2), turn on Extra compression under Advanced, or use --extra", "use --extra"],
   ["1.0 GB -> 900.0 MB, 10.0% smaller, 1 NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", "decompress it with NXPress"],
   ["1.0 GB -> 900.0 MB, 10.0% smaller, 47606 LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it", "kept decompressed"],
   ["works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it", "works with"],

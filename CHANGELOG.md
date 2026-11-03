@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Verify: a file checked is VERIFIED, and a damaged one CORRUPTED, as other tools call them; a file that could not be checked (a key missing, a file that cannot be read) keeps FAILED with its reason, and MODIFIED stays as it is. The command line keeps OK, MODIFIED and FAILED, which scripts read (thanks @NikoMuffin, #55)
+- Verify: Compare with a DAT and Check again files already checked are at the bottom of Advanced (thanks @NikoMuffin, #52)
+- The hint of Watch the folders added says plainly that the files copied into them are processed automatically (thanks @NikoMuffin, #51)
+- "Replace files already there" is now "Replace if the new file is already there", with a line under it: a new file whose name is already taken in Save to is written again, or skipped when unticked, and the originals are never touched (thanks @NikoMuffin, #56)
+- A game in sparse storage left as it is says how to compress it: turn on Extra compression under Advanced, or `--extra` on the command line; the hint of that option names its two formats, NCZSECT2 and NCZSECT3 (thanks @NikoMuffin, #57)
+
 ## 1.4.1
 
 ### Improvements

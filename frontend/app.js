@@ -122,6 +122,16 @@ function adviceFor(error) {
   return "adviceGeneric";
 }
 
+// the word of a state: a check says Verified, and Corrupted when its hashes find the file damaged,
+// as other tools say it (#55); a file that could not be checked (a key missing, unreadable) is not
+// corrupted, and keeps Failed with its reason
+const damaged = (status, error) => status === "failed" && !!error && error !== "cancelled" && adviceFor(error) === "adviceDamaged";
+function stateWord(status, mode, isDamaged) {
+  if (mode === "verify" && status === "ok") return t("verified");
+  if (mode === "verify" && isDamaged) return t("corrupted");
+  return t(status);
+}
+
 // the space saved since always, kept in the window: what every work that wrote files saved
 // in the units the window shows sizes in (1 GB = 1024 MB), so they read round
 const milestones = [100, 250, 500, 1024, 2048, 5120, 10240].map(gb => gb * 2 ** 30);
@@ -1040,7 +1050,7 @@ function paint(row) {
     cell.firstChild.textContent = t("waiting");
   } else if (row.status === "ok") {
     cell.innerHTML = `<span class="badge ok"></span>`;
-    cell.firstChild.textContent = t("ok");
+    cell.firstChild.textContent = stateWord("ok", row.mode);
     // the space saved: the bar of the original shrinks to the new file, once, as the file ends
     if (row.after > 0 && row.item.size > row.after) {
       const share = row.after / row.item.size;
@@ -1064,7 +1074,7 @@ function paint(row) {
     cell.firstChild.textContent = t("modified");
   } else if (row.status === "failed") {
     cell.innerHTML = `<span class="badge ${row.error === "cancelled" ? "waiting" : "failed"}"></span>`;
-    cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : t("failed");
+    cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : stateWord("failed", row.mode, damaged(row.status, row.error));
   } else {
     cell.innerHTML = "";
   }
@@ -1418,7 +1428,7 @@ function listen() {
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
-    Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
+    Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0, mode: state.lastRun ? state.lastRun.mode : state.mode });
     // a file renamed keeps its row, under its new name and path
     if (mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
@@ -1509,6 +1519,7 @@ function keepReport(event) {
   const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "modified", "skipped"].includes(row.status)).map(row => ({
     name: row.game && row.game.name ? `${row.game.name} · ${row.item.name}` : row.item.name,
     status: row.status === "failed" && row.error === "cancelled" ? "cancelled" : row.status,
+    damaged: damaged(row.status, row.error),
     note: noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note),
   }));
   save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
@@ -1528,24 +1539,29 @@ function showReport() {
   // a long report: how many of each, the problems first, and only them when there are some
   const all = kept ? kept.rows : [];
   const order = { failed: 0, cancelled: 1, modified: 2, skipped: 3, ok: 4 };
+  const mode = kept ? kept.mode : "";
+  // a check counts its damaged files apart, as Corrupted, from the ones it could not check
   const counts = {};
-  for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
+  for (const row of all) {
+    const key = mode === "verify" && row.damaged ? "corrupted" : row.status;
+    counts[key] = (counts[key] || 0) + 1;
+  }
   const problems = all.length - (counts.ok || 0);
   $("report-counts").innerHTML = "";
-  for (const status of ["ok", "modified", "skipped", "failed", "cancelled"]) {
+  for (const status of ["ok", "modified", "skipped", "corrupted", "failed", "cancelled"]) {
     if (!counts[status]) continue;
     const badge = document.createElement("span");
-    badge.className = "badge " + (status === "cancelled" ? "waiting" : status);
-    badge.textContent = `${t(status)} ${counts[status]}`;
+    badge.className = "badge " + (status === "cancelled" ? "waiting" : status === "corrupted" ? "failed" : status);
+    badge.textContent = `${status === "corrupted" ? stateWord("failed", mode, true) : stateWord(status, mode)} ${counts[status]}`;
     $("report-counts").append(badge);
   }
   $("report-problems-option").hidden = !problems || problems === all.length;
   $("report-problems").checked = problems > 0 && problems < all.length;
-  $("report-problems").onchange = () => paintReport(all, order);
-  paintReport(all, order);
+  $("report-problems").onchange = () => paintReport(all, order, mode);
+  paintReport(all, order, mode);
   openDialog($("report-dialog"));
 }
-function paintReport(all, order) {
+function paintReport(all, order, mode) {
   const onlyProblems = $("report-problems").checked;
   const rows = $("report-rows");
   rows.innerHTML = "";
@@ -1557,7 +1573,7 @@ function paintReport(all, order) {
     tr.querySelector(".report-note").textContent = row.note;
     const badge = tr.querySelector(".badge");
     badge.classList.add(row.status === "cancelled" ? "waiting" : row.status);
-    badge.textContent = t(row.status);
+    badge.textContent = stateWord(row.status, mode, row.damaged);
     rows.append(tr);
   }
 }

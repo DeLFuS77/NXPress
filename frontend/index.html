@@ -159,14 +159,6 @@
       <p class="hint" id="verify-level-hint"></p>
     </section>
 
-    <section class="block" data-for="verify">
-      <h2 data-t="datTitle"></h2>
-      <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon" data-t-title="noDat" data-t-label="noDat">✕</button></div>
-      <p class="hint" data-t="datHint"></p>
-      <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
-      <p class="hint" data-t="noCacheHint"></p>
-    </section>
-
     <section class="block" data-for="pack">
       <div class="field" role="radiogroup">
         <label class="choice"><input type="radio" name="pack-kind" value="games" id="pack-games">
@@ -193,6 +185,7 @@
         <div class="path"><span id="output"></span><button id="choose-output" data-t="choose"></button><button id="reset-output" class="quiet icon" data-t-label="nextTo">✕</button></div>
       </div>
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
+      <p class="hint" data-t="overwriteHint"></p>
       <label class="check" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
       <p class="warning" id="remove-warning" data-t="removeWarning" hidden></p>
     </section>
@@ -222,6 +215,15 @@
       <div class="field" data-for="compress">
         <button id="measure" class="link"></button>
         <p class="hint" data-t="measureHint"></p>
+      </div>
+      <div class="field" data-for="verify">
+        <div class="label" data-t="datTitle"></div>
+        <div class="path"><span id="dat"></span><button id="choose-dat" data-t="choose"></button><button id="reset-dat" class="quiet icon" data-t-title="noDat" data-t-label="noDat">✕</button></div>
+        <p class="hint" data-t="datHint"></p>
+      </div>
+      <div class="field" data-for="verify">
+        <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
+        <p class="hint" data-t="noCacheHint"></p>
       </div>
     </details>
   </aside>
