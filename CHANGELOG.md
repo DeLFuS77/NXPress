@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New
+
+- Colors to choose in Settings › General: NXPress's own and seven more, Midnight, Lagoon, Amethyst, Fuchsia, Coffee, Slate and Graphite, each in dark and in light. They change the background, the panels and the main color; red, green and orange keep meaning errors, savings and warnings, and the groups of the menu keep their colors. On Windows 11 the menu wears them instead of the Mica of the system
+
 ### Improvements
 
 - Verify: a file checked is VERIFIED, and a damaged one CORRUPTED, as other tools call them; a file that could not be checked (a key missing, a file that cannot be read) keeps FAILED with its reason, and MODIFIED stays as it is. The command line keeps OK, MODIFIED and FAILED, which scripts read (thanks @NikoMuffin, #55)

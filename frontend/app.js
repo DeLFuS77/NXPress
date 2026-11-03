@@ -259,6 +259,48 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
+// the colors NXPress can wear, chosen in Settings: its own and seven more, each with its background
+// and its main color in dark and in light, for its swatch (the colors themselves are in style.css)
+const palettes = [
+  ["nxpress", "", ["#101216", "#3db7ea"], ["#eef0f3", "#0a6fb0"]],
+  ["midnight", "paletteMidnight", ["#0a0f2c", "#7f8fff"], ["#d9dfff", "#3241c9"]],
+  ["lagoon", "paletteLagoon", ["#031c1b", "#2ee6c8"], ["#cdeee8", "#08766a"]],
+  ["amethyst", "paletteAmethyst", ["#170c26", "#c89bff"], ["#e6dbf8", "#6230c4"]],
+  ["fuchsia", "paletteFuchsia", ["#1c0a1a", "#f472d0"], ["#f6dcef", "#9d2a96"]],
+  ["coffee", "paletteCoffee", ["#17110c", "#e3c39b"], ["#eee3d6", "#4e3426"]],
+  ["slate", "paletteSlate", ["#232a36", "#93b4ff"], ["#dfe5ee", "#3a5a99"]],
+  ["graphite", "paletteGraphite", ["#000000", "#f2f2f2"], ["#e4e4e4", "#111111"]],
+];
+function applyPalette() {
+  if (state.palette === "nxpress") document.documentElement.removeAttribute("data-palette");
+  else document.documentElement.dataset.palette = state.palette;
+}
+// the swatches of the colors, in the theme shown, the one chosen marked
+function paintPalettes() {
+  const box = $("palettes");
+  const dark = state.theme === "dark" || (state.theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  if (!box.children.length) {
+    for (const [key] of palettes) {
+      const button = document.createElement("button");
+      button.className = "palette";
+      button.setAttribute("role", "radio");
+      button.dataset.palette = key;
+      button.innerHTML = "<i></i><span></span>";
+      button.onclick = () => { state.palette = key; save("palette", key); applyPalette(); paintPalettes(); };
+      box.append(button);
+    }
+  }
+  for (const button of box.children) {
+    const [key, name, darkColors, lightColors] = palettes.find(palette => palette[0] === button.dataset.palette);
+    const [ground, accent] = dark ? darkColors : lightColors;
+    button.style.setProperty("--sw-bg", ground);
+    button.style.setProperty("--sw-accent", accent);
+    button.querySelector("span").textContent = name ? t(name) : "NXPress";
+    button.classList.toggle("on", key === state.palette);
+    button.setAttribute("aria-checked", String(key === state.palette));
+  }
+}
+
 // the color of a cover: the mean of its pixels, the bright and colorful ones weighing more, so a
 // card of the game can wear it; kept with the game once found
 function coverTone(game) {
@@ -687,6 +729,7 @@ function render() {
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  paintPalettes();
   // the list as rows, or as a grid of covers
   const view = load("view", "list") === "grid" ? "grid" : "list";
   $("files").classList.toggle("grid", view === "grid");
@@ -1694,6 +1737,9 @@ async function main() {
     }
   };
   theme();
+  // the colors: NXPress's own, or the ones chosen in Settings
+  state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
+  applyPalette();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
   // the language: the one chosen, else the one of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);
