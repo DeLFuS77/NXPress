@@ -4,7 +4,7 @@
 
 ### New
 
-- Colors to choose in Settings › General: NXPress's own and seven more, Midnight, Lagoon, Amethyst, Fuchsia, Coffee, Slate and Graphite, each in dark and in light. They change the background, the panels and the main color; red, green and orange keep meaning errors, savings and warnings, and the groups of the menu keep their colors. On Windows 11 the menu wears them instead of the Mica of the system
+- Colors to choose in Settings › General: NXPress's own and eight more, Midnight, Lagoon, Amethyst, Fuchsia, Coffee, Slate, Graphite and Relic, each in dark and in light. Relic shines: cyan light on dark stone (on old paper in light), with lines engraved in the background, corners of light, light running along the frames and, while the list is empty, a scene of light with arcs and circuit lines; its motion stops when Windows asks for less motion. They change the background, the panels and the main color; red, green and orange keep meaning errors, savings and warnings, and the groups of the menu keep their colors. On Windows 11 the menu wears them instead of the Mica of the system
 
 ### Improvements
 

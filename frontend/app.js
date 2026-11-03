@@ -259,7 +259,7 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
-// the colors NXPress can wear, chosen in Settings: its own and seven more, each with its background
+// the colors NXPress can wear, chosen in Settings: its own and eight more (Relic glows), each with its background
 // and its main color in dark and in light, for its swatch (the colors themselves are in style.css)
 const palettes = [
   ["nxpress", "", ["#101216", "#3db7ea"], ["#eef0f3", "#0a6fb0"]],
@@ -269,6 +269,7 @@ const palettes = [
   ["fuchsia", "paletteFuchsia", ["#1c0a1a", "#f472d0"], ["#f6dcef", "#9d2a96"]],
   ["coffee", "paletteCoffee", ["#17110c", "#e3c39b"], ["#eee3d6", "#4e3426"]],
   ["slate", "paletteSlate", ["#232a36", "#93b4ff"], ["#dfe5ee", "#3a5a99"]],
+  ["relic", "paletteRelic", ["#0b1316", "#4fe3ff"], ["#ebe2cc", "#0c6f86"]],
   ["graphite", "paletteGraphite", ["#000000", "#f2f2f2"], ["#e4e4e4", "#111111"]],
 ];
 function applyPalette() {
