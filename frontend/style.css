@@ -107,10 +107,6 @@ nav button.on b { color: var(--text); }
 #preferences { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
 .pref-group { max-width: 560px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .pref-group h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
-.pref-row { display: flex; align-items: center; gap: 12px; width: 100%; }
-.pref-row > :first-child { flex: 1; }
-.pref-row .segmented { margin: 0; }
-.pref-row .segmented button { padding: 3px 10px; }
 .pref-keys { margin: 0; font-size: 12px; color: var(--muted); word-break: break-all; }
 .pref-sound { display: flex; align-items: center; gap: 10px; padding-left: 26px; font-size: 12px; color: var(--muted); }
 .pref-sound span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -508,3 +504,34 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 /* while the files are at work */
 .busy nav button, .busy .toolbar button, .busy aside, .busy #empty button { pointer-events: none; opacity: .55; }
 .busy td.remove button { visibility: hidden; }
+
+/* the Settings page: groups of rows, what each does on the left and its control on the right (#60) */
+.pref-page { display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 760px; }
+.pref-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; max-width: 1180px; }
+.pref-column { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (max-width: 1100px) { .pref-columns { grid-template-columns: minmax(0, 1fr); max-width: 760px; } }
+#preferences .pref-group { max-width: none; width: 100%; display: block; padding: 0 16px; gap: 0; }
+#preferences .pref-group h2 { margin: 0 -16px; padding: 12px 16px 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.pref-item { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.pref-group h2 + .pref-item { border-top: 0; }
+.pref-item[hidden] { display: none; }
+.pref-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pref-text b { font-weight: 600; font-size: 14px; }
+.pref-text small { font-size: 12px; color: var(--muted); }
+.pref-item > select { min-width: 180px; }
+.pref-item .segmented { margin: 0; }
+.pref-item .segmented button { padding: 3px 10px; }
+#preferences .pref-keys { word-break: break-all; }
+#preferences .pref-sound { padding-left: 0; margin-top: 4px; }
+.pref-more { display: block; }
+.pref-more summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.pref-more summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+.pref-more[open] summary::before { transform: rotate(90deg); }
+.pref-more .keys { margin: 10px 0 2px; }
+.pref-list .keys { margin-top: 8px; }
+.switch { appearance: none; -webkit-appearance: none; flex: none; width: 38px; height: 22px; margin: 0; border-radius: 999px; background: var(--bar); position: relative; cursor: pointer; transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--text); transition: transform .15s; }
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(16px); background: var(--accent-text); }
+.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .switch, .switch::after, .pref-more summary::before { transition: none; } }

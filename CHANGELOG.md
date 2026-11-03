@@ -9,6 +9,7 @@
 - The hint of Watch the folders added says plainly that the files copied into them are processed automatically (thanks @NikoMuffin, #51)
 - "Replace files already there" is now "Replace if the new file is already there", with a line under it: a new file whose name is already taken in Save to is written again, or skipped when unticked, and the originals are never touched (thanks @NikoMuffin, #56)
 - A game in sparse storage left as it is says how to compress it: turn on Extra compression under Advanced, or `--extra` on the command line; the hint of that option names its two formats, NCZSECT2 and NCZSECT3 (thanks @NikoMuffin, #57)
+- Settings is in order: General, While working, Keys, System and Help, each setting a row with what it does and its control, in two columns when the window is wide. Low priority moves there from the Advanced part of each section, as it is one setting for the whole app (thanks @NikoMuffin, #60)
 
 ## 1.4.1
 

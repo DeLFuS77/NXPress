@@ -204,10 +204,6 @@
       <div class="field row">
         <label for="multi" data-t="multi"></label><input id="multi" type="number" min="1" max="16">
       </div>
-      <div class="field">
-        <label class="check"><input id="low-priority" type="checkbox"><span data-t="lowPriority"></span></label>
-        <p class="hint" data-t="lowPriorityHint"></p>
-      </div>
       <div class="field" data-for="compress">
         <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
         <p class="hint" data-t="extraHint"></p>
@@ -232,41 +228,71 @@
     <div class="page-head">
       <h1 data-t="preferences"></h1>
     </div>
-    <div class="pref-group">
-      <h2 data-t="prefKeys"></h2>
-      <p class="pref-keys" id="keys-path"></p>
-      <button id="keys-change" data-t="keysChoose"></button>
-    </div>
-    <div class="pref-group">
-      <h2 data-t="prefLook"></h2>
-      <div class="pref-row"><span data-t="theme"></span>
-        <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+    <div class="pref-page pref-columns">
+      <div class="pref-column">
+      <section class="pref-group">
+        <h2 data-t="prefGeneral"></h2>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="language"></b></div>
+          <select id="language-select"></select>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="theme"></b></div>
+          <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+        </div>
+      </section>
+      <section class="pref-group">
+        <h2 data-t="prefWork"></h2>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="lowPriority"></b><small data-t="lowPriorityHint"></small></div>
+          <input id="low-priority" type="checkbox" class="switch" role="switch">
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="soundWhenDone"></b><small data-t="soundHint"></small><span class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></span></div>
+          <input id="sound" type="checkbox" class="switch" role="switch">
+        </div>
+      </section>
+      <section class="pref-group">
+        <h2 data-t="prefKeys"></h2>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="prefKeysFile"></b><small class="pref-keys" id="keys-path"></small></div>
+          <button id="keys-change" data-t="prefChange"></button>
+        </div>
+      </section>
       </div>
-      <div class="pref-row"><label for="language-select" data-t="language"></label>
-        <select id="language-select"></select>
+      <div class="pref-column">
+      <section class="pref-group">
+        <h2 data-t="prefSystem"></h2>
+        <div class="pref-item" id="send-to-row">
+          <div class="pref-text"><b data-t="sendToTitle"></b><small data-t="sendToHint"></small></div>
+          <button id="send-to"></button>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
+          <input id="updates" type="checkbox" class="switch" role="switch">
+        </div>
+      </section>
+      <section class="pref-group">
+        <h2 data-t="prefHelp"></h2>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="lastReport"></b><small data-t="lastReportHint"></small></div>
+          <button id="last-report" data-t="prefShow"></button>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="starLink"></b><small data-t="starHint"></small></div>
+          <button id="star-link"><span aria-hidden="true">★ </span><span data-t="prefOpen"></span></button>
+        </div>
+        <div class="pref-item pref-list">
+          <div class="pref-text"><b data-t="shortcuts"></b><dl class="keys">
+            <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
+          </dl></div>
+        </div>
+      </section>
       </div>
-    </div>
-    <div class="pref-group">
-      <h2 data-t="prefWork"></h2>
-      <label class="check"><input id="sound" type="checkbox"><span data-t="soundWhenDone"></span></label>
-      <div class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></div>
-      <button id="last-report" data-t="lastReport"></button>
-    </div>
-    <div class="pref-group">
-      <h2 data-t="shortcuts"></h2>
-      <dl class="keys">
-        <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
-        <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
-        <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
-        <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
-        <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
-      </dl>
-    </div>
-    <div class="pref-group">
-      <h2 data-t="prefApp"></h2>
-      <label class="check"><input id="updates" type="checkbox"><span data-t="updates"></span></label>
-      <button id="send-to"></button>
-      <button id="star-link"><span aria-hidden="true">★ </span><span data-t="starLink"></span></button>
     </div>
   </section>
 </main>

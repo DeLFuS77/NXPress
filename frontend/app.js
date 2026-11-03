@@ -755,7 +755,7 @@ function render() {
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
   $("shutdown-force-option").hidden = $("shutdown-option").hidden || !$("shutdown").checked;
   $("shutdown-force-option").title = t("shutdownForceHint");
-  $("send-to").hidden = !state.setup.sendTo;
+  $("send-to-row").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
   $("empty").hidden = state.items.length > 0;
   $("files").hidden = state.items.length === 0;
@@ -1866,6 +1866,8 @@ async function main() {
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
   $("sound").onchange = () => { save("sound", $("sound").checked); renderSound(); };
+  // Low priority is in Settings, out of the side panel that saves itself (#60)
+  $("low-priority").onchange = () => save("settings", settings());
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
