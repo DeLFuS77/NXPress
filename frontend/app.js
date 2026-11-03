@@ -259,7 +259,7 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
-// the colors NXPress can wear, chosen in Settings: its own and eight more (Relic glows), each with its background
+// the colors NXPress can wear, chosen in Settings: its own and eight more (RuneStone glows), each with its background
 // and its main color in dark and in light, for its swatch (the colors themselves are in style.css)
 const palettes = [
   ["nxpress", "", ["#101216", "#3db7ea"], ["#eef0f3", "#0a6fb0"]],
