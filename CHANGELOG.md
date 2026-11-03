@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- The files in an experimental format of NXPress say so in the list and in the covers view: "Experimental" next to the name of the game, with the format beside it (NCZSECT2, NCZSECT3), so they are found again without decompressing anything. Rename has a new `{experimental}` field that writes the format in the name, and is left empty, with its brackets, for any other file. The card of such a file in Details no longer lists DBI, Tinfoil and the other installers as able to read it: only NXPress (thanks @NikoMuffin, #58)
+
 ## 1.4.0
 
 ### New

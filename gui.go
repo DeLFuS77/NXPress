@@ -268,6 +268,8 @@ type FileCard struct {
 	Solid        int    `json:"solid"`
 	Blocks       int    `json:"blocks"`
 	Trimmable    int64  `json:"trimmable"`
+	// the experimental formats of NXPress its NCZ files are in, which only NXPress reads (#58)
+	Format string `json:"format,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
@@ -276,7 +278,7 @@ func (a *App) Card(path string) (FileCard, error) {
 	if err != nil {
 		return FileCard{}, err
 	}
-	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments}, nil
+	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments, Format: jobs.FormatOf(facts)}, nil
 }
 
 // NewNames gives the names the files would get by a template, "" for a file that cannot be read;

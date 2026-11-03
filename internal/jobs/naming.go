@@ -47,6 +47,34 @@ type GameTitle struct {
 	NeedsGame int      `json:"needsGame,omitempty"`
 	// the icon of the game, as a data URL, when asked for
 	Icon string `json:"icon,omitempty"`
+	// the experimental formats of NXPress its NCZ files are in (NCZSECT2, NCZSECT3), which only
+	// NXPress reads so far: empty for a plain NSZ or XCZ and any other file (#58)
+	Format string `json:"format,omitempty"`
+}
+
+// ExperimentalFormat tells the experimental formats of NXPress the NCZ files of a file are in,
+// from their headers: "NCZSECT2", "NCZSECT3", both joined by a plus, or "" for any other file.
+func ExperimentalFormat(path string) string {
+	if extension := strings.ToLower(filepath.Ext(path)); extension != ".nsz" && extension != ".xcz" {
+		return ""
+	}
+	facts, err := switchfs.DescribeFile(path)
+	if err != nil {
+		return ""
+	}
+	return FormatOf(facts)
+}
+
+// FormatOf tells the experimental formats of NXPress that facts of a file count.
+func FormatOf(facts switchfs.FileFacts) string {
+	formats := []string{}
+	if facts.Sparse > 0 {
+		formats = append(formats, "NCZSECT2")
+	}
+	if facts.Archive > 0 {
+		formats = append(formats, "NCZSECT3")
+	}
+	return strings.Join(formats, "+")
 }
 
 // ReadTitles reads the titles a game file holds.
@@ -82,6 +110,7 @@ func ReadTitle(path string, withIcon bool) (GameTitle, error) {
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		result.Size = info.Size()
 	}
+	result.Format = ExperimentalFormat(path)
 	if withIcon {
 		if icon, err := switchfs.ExtractIcon(path); err == nil && len(icon) > 0 {
 			result.Icon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
@@ -186,10 +215,12 @@ var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
 // Manager writes them: {name} {TITLE_NAME}, {id} {TITLE_ID}, {version} {VERSION} (of the newest
 // update for a game with its updates), {version_txt} {VERSION_TXT} (as the game shows it,
 // 1.0.5), {type} {TYPE}, {titles}, {contents} {PACKAGE_CONTENTS} (1G+1U+2D), {size_gb}
-// {SIZE_GB}, {size_mb} {SIZE_MB} and {dlc_number} {DLC_NUMBER} (1 for the first DLC of its
-// game, empty for other files). {REGION} and {DLC_NAME}, which that program takes from
-// its database of titles, are left empty, as brackets left with nothing, and a field it does
-// not know is left out. Its extension is kept, and it fits the 255 bytes of a file name.
+// {SIZE_GB}, {size_mb} {SIZE_MB}, {dlc_number} {DLC_NUMBER} (1 for the first DLC of its
+// game, empty for other files) and {experimental} (the experimental formats of NXPress the file
+// is in, NCZSECT2 or NCZSECT3, empty for any other file). {REGION} and {DLC_NAME}, which that
+// program takes from its database of titles, are left empty, as brackets left with nothing,
+// and a field it does not know is left out. Its extension is kept, and it fits the 255 bytes
+// of a file name.
 func NewName(path string, title GameTitle, template string) string {
 	if template == "" {
 		template = DefaultTemplate
@@ -204,7 +235,7 @@ func NewName(path string, title GameTitle, template string) string {
 		fields := []string{
 			"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
 			"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
-			"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{dlc_number}", "",
+			"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{experimental}", title.Format, "{dlc_number}", "",
 		}
 		if title.Type == "DLC" && title.Titles == 1 {
 			fields[len(fields)-1] = dlcNumber(title.TitleID)
@@ -216,7 +247,8 @@ func NewName(path string, title GameTitle, template string) string {
 			if upper == "" {
 				upper = strings.ToUpper(fields[i])
 			}
-			if upper != "{TITLES}" {
+			// Switch Library Manager has no fields for these
+			if upper != "{TITLES}" && upper != "{EXPERIMENTAL}" {
 				fields = append(fields, upper, fields[i+1])
 			}
 		}
