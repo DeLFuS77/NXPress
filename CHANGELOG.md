@@ -18,6 +18,13 @@
 - Show in folder is a small folder button beside the name of the game, so it says which game it opens and adds no line to the row (thanks @NikoMuffin, #61)
 - When done: Nothing, Turn off or Hibernate, one choice instead of the box to turn off. Hibernate is offered only where the computer can hibernate, keeps every program as it was, and needs no forcing; the same 60 seconds to call it off (thanks @NikoMuffin, #62)
 
+### Security
+
+- A crafted file that makes a parser give up while it is read now fails that one file, with its reason, instead of closing the window: the other files are still processed
+- The versions.json downloaded for the updates that are out and not in the list is decompressed with a bounded window, as the rest of the app already does, so a crafted versions.json.zst cannot make it reserve far more memory than its contents
+- The window declares a Content-Security-Policy that only lets it load its own files (and data: images and sounds), as defense in depth against injected content
+- Built with the Go 1.27.3 toolchain, which carries the fixes of the standard library since 1.27.0
+
 ## 1.4.1
 
 ### Improvements
