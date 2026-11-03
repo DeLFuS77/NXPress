@@ -17,6 +17,7 @@ import (
 	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 	"github.com/DeLFuS77/NXPress/internal/windowplace"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -102,6 +103,9 @@ type App struct {
 	noticesReady bool
 	// the question asked as the window closes with files at work, in the language of the page
 	closeAsk, closeYes, closeNo string
+	// the versions published of each game, once the page asked for them (see published.go)
+	versions      atomic.Pointer[titledb.Versions]
+	versionsMutex sync.Mutex
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -417,6 +421,8 @@ type Request struct {
 	LowPriority  bool     `json:"lowPriority"`
 	Sparse       bool     `json:"sparse"`
 	Archive      bool     `json:"archive"`
+	// Details tells the newest versions published too, as the setting allows it
+	Published bool `json:"published"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -462,6 +468,9 @@ func (a *App) Start(request Request) error {
 		o.Split = true
 	case "info":
 		o.Info = true
+		if request.Published {
+			o.Versions = a.versions.Load()
+		}
 	case "pack":
 		o.SkipGames = map[string]bool{}
 		for _, id := range request.SkipGames {

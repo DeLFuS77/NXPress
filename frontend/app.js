@@ -60,6 +60,9 @@ const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
   setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  // the newest version published of each title ID asked (null when the list does not know it),
+  // and the day of the list of versions: null until it is read, "" when there is none
+  published: new Map(), versionsDate: null,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -106,6 +109,10 @@ function size(bytes) {
   const digits = unit ? 1 : 0, key = state.language + digits;
   sizeFormats[key] = sizeFormats[key] || new Intl.NumberFormat(state.language, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
   return sizeFormats[key].format(value) + " " + units[unit];
+}
+// a day as the language writes it (21 oct 2026 in Spanish for 2026-10-21), "" for none
+function day(date) {
+  try { return date ? new Intl.DateTimeFormat(state.language, { dateStyle: "medium" }).format(new Date(date + "T00:00:00")) : ""; } catch { return date; }
 }
 // a path in a field cut at its start (direction: rtl) keeps its order with a mark of left to
 // right at both ends: else "E:\Games" shows as "\Games:E" and brackets turn round
@@ -353,13 +360,20 @@ function showPop(row, anchor) {
   if (game.gameId) facts.push([t("popGame"), game.gameId]);
   if (game.needsGame) facts.push([t("popNeedsGame"), "v" + game.needsGame]);
   if (game.firmware) facts.push([t("popFirmware"), game.firmware]);
+  // the newest version published, in blue when the list does not have it
+  const online = row.online;
+  if (online) {
+    const newer = online.version > online.reach;
+    facts.push([t("popNewest"), `v${online.version}` + (newer ? (online.date ? " · " + day(online.date) : "") : " · " + t("popNewestHave")), newer ? "pop-newer" : ""]);
+  }
   const list = pop.querySelector("dl");
   list.innerHTML = "";
-  for (const [name, value] of facts) {
+  for (const [name, value, tone] of facts) {
     const term = document.createElement("dt");
     const detail = document.createElement("dd");
     term.textContent = name;
     detail.textContent = value;
+    if (tone) detail.className = tone;
     list.append(term, detail);
   }
   // the languages by their first tag: EN for en-US and en-GB
@@ -600,7 +614,7 @@ function stepText(step) {
 
 // warnings of the list, from the games read: an update with a newer one beside it, a title given
 // twice; in Pack also an update or a DLC without its game, and a DLC that needs a newer game
-// than the list brings
+// than the list brings; and, with the versions published, a newer version out
 function listWarnings() {
   const read = [...state.rows.values()].filter(row => !row.item.result && row.game && row.game.titleId);
   const games = new Map();
@@ -637,7 +651,57 @@ function listWarnings() {
     else if (state.mode === "pack" && row.game.type !== "BASE" && row.game.titles === 1 && game && !game.base) warnings.set(row, t("warnNoGame"));
     else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
   }
+  publishedWarnings(read, warnings);
   return warnings;
+}
+// the title ID the versions of a file are published under: the one of its game for an update,
+// its own for a game or a DLC
+const publishedId = game => game.type === "UPD" ? game.gameId : game.titleId;
+// a newer version published than the list brings: told on the newest file of the game (or of the
+// DLC), as "you have" its version (v0 for a game without its update), and not on the older ones,
+// which have the warning of the newer one in the list already. Each row keeps what is known, for
+// its card.
+function publishedWarnings(read, warnings) {
+  for (const row of state.rows.values()) row.online = null;
+  if (!$("published").checked || !state.versionsDate) return;
+  const unknown = [...new Set(read.map(row => publishedId(row.game)).filter(id => id && !state.published.has(id)))];
+  if (unknown.length) askPublished(unknown);
+  const reach = new Map();
+  for (const row of read) {
+    const id = publishedId(row.game);
+    if (id) reach.set(id, Math.max(reach.has(id) ? reach.get(id) : -1, row.game.latest || 0));
+  }
+  for (const row of read) {
+    const id = publishedId(row.game), newest = id && state.published.get(id);
+    if (!newest) continue;
+    const have = reach.get(id);
+    row.online = { version: newest.version, date: newest.date, reach: have };
+    if (!warnings.has(row) && newest.version > have && (row.game.latest || 0) === have) warnings.set(row, t("warnPublished")(newest.version, day(newest.date), have));
+  }
+}
+// asks once for the newest versions published of title IDs, and tells the warnings again once known
+function askPublished(ids) {
+  for (const id of ids) state.published.set(id, undefined);
+  app().Published(ids).then(found => {
+    for (const id of ids) state.published.set(id, found[id] || null);
+    warnSoon();
+  }).catch(() => { for (const id of ids) state.published.delete(id); });
+}
+// the versions published of each game, when the setting allows it: downloaded once a day at most,
+// else the copy kept, with nothing said when there is no connection (see published.go)
+async function loadVersions() {
+  if (!$("published").checked) return;
+  const date = await app().LoadVersions().catch(() => "");
+  if (!$("published").checked) return;
+  state.versionsDate = date;
+  state.published.clear();
+  paintPublished();
+  warnSoon();
+}
+// the day of the list of versions under its setting, or that there is none yet
+function paintPublished() {
+  const date = $("published").checked ? state.versionsDate : null;
+  $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
 let warnTimer = 0;
 function warnSoon() {
@@ -707,6 +771,7 @@ function render() {
   $("preferences").hidden = !preferences;
   $("open-preferences").classList.toggle("on", preferences);
   $("keys-path").textContent = state.keys || t("keys")("");
+  paintPublished();
   $("title").textContent = t(state.mode);
   // the section in the color of its group, its tile beside its title
   const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
@@ -1331,7 +1396,7 @@ async function start(mode, extra) {
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, ...(extra || {}) };
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -1786,6 +1851,7 @@ async function main() {
   // experimental, and off unless it was turned on
   $("extra").checked = !!(chosen.sparse || chosen.archive);
   $("updates").checked = load("updates", true);
+  $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
   if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
@@ -1920,6 +1986,18 @@ async function main() {
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
+  // turned off, the versions published are forgotten, and the copy kept removed
+  $("published").onchange = () => {
+    save("published", $("published").checked);
+    if ($("published").checked) loadVersions();
+    else {
+      app().ForgetVersions();
+      state.versionsDate = null;
+      state.published.clear();
+      paintPublished();
+      warnSoon();
+    }
+  };
   $("sound").onchange = () => { save("sound", $("sound").checked); renderSound(); };
   // Low priority is in Settings, out of the side panel that saves itself (#60)
   $("low-priority").onchange = () => save("settings", settings());
@@ -1999,6 +2077,7 @@ async function main() {
   }
   render();
   checkUpdate();
+  loadVersions();
 }
 
 main();

@@ -55,7 +55,7 @@ While it works, each file has its bar split in its steps (the work, then the che
 
 It follows the light or dark theme of the system, or the one chosen in Settings, and speaks 11 languages: English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Korean and Chinese. Settings is a page of its own, with a sound when the work is done (the one of NXPress or one of your own), the last report and the keyboard shortcuts.
 
-NXPress goes on the internet for one thing only: the window asks GitHub whether a new version is out. It can be turned off in Settings; the command line never does it.
+NXPress goes on the internet for two things only, both from the window and each one can be turned off in Settings: it asks GitHub whether a new version is out, and once a day at most it downloads the list of the versions published of each game (versions.json, about 200 KB, the one Switch Library Manager Web uses), to tell the updates that are out and not in the list. Nothing of the list is sent. The command line never goes on the internet: `-i` tells the newest update published from the copy the window keeps.
 
 ## Solid or in blocks
 

@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/DeLFuS77/NXPress/internal/dat"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -72,6 +73,8 @@ type Options struct {
 	Ignored []string
 	// what the options given do not do together, told once
 	Notes []string
+	// the versions published of each game, which -i tells beside each title, when they are kept
+	Versions *titledb.Versions
 }
 
 const (

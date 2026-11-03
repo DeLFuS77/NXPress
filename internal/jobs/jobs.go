@@ -452,7 +452,7 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
-		note, err := info(path, out)
+		note, err := info(path, o.Versions, out)
 		return "", note, err
 	}
 	return verify(ctx, path, o, out)

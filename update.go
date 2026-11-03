@@ -18,9 +18,9 @@ type Update struct {
 	URL     string `json:"url"`
 }
 
-// CheckUpdate asks GitHub for the latest version of NXPress: the only time NXPress goes on the
-// internet, and only from the window, when its menu allows it. Builds that are not a version
-// do not ask.
+// CheckUpdate asks GitHub for the latest version of NXPress: one of the two times NXPress goes on
+// the internet, with the versions published of the games (see published.go), and only from the
+// window, when its settings allow it. Builds that are not a version do not ask.
 func (a *App) CheckUpdate() Update {
 	if _, ok := versionNumbers(version); !ok {
 		return Update{}
