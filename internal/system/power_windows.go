@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"runtime"
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -38,6 +40,25 @@ func ShutDown(force bool) error {
 		arguments = append(arguments, "/f")
 	}
 	command := exec.Command("shutdown.exe", arguments...)
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return command.Run()
+}
+
+// CanHibernate tells whether the computer can hibernate: Windows lets it be turned off
+// (powercfg /hibernate off), and then it is not offered.
+func CanHibernate() bool {
+	allowed := windows.NewLazySystemDLL("powrprof.dll").NewProc("IsPwrHibernateAllowed")
+	if allowed.Find() != nil {
+		return false
+	}
+	yes, _, _ := allowed.Call()
+	return yes != 0
+}
+
+// Hibernate keeps what is open on the disk and turns the computer off; it comes back as it was
+// left, with no program closed.
+func Hibernate() error {
+	command := exec.Command("shutdown.exe", "/h")
 	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return command.Run()
 }

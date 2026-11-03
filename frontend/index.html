@@ -84,7 +84,7 @@
         <div class="speed" id="speed" hidden><svg class="sparkline" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true"><path id="speed-area"/><path id="speed-line"/></svg><span id="speed-text"></span></div>
         <div id="status" class="muted"></div>
         <div class="summary-extra">
-          <label class="check small-check" id="shutdown-option"><input id="shutdown" type="checkbox"><span data-t="shutdownWhenDone"></span></label>
+          <label class="small-check when-done" id="shutdown-option"><span data-t="whenDone"></span><select id="when-done"><option value="" data-t="whenDoneNothing"></option><option value="off" data-t="whenDoneOff"></option><option value="hibernate" id="when-done-hibernate" data-t="whenDoneHibernate"></option></select></label>
           <label class="check small-check" id="shutdown-force-option" hidden><input id="shutdown-force" type="checkbox"><span data-t="shutdownForce"></span></label>
           <button id="report" class="link small-link" data-t="report" hidden></button>
         </div>

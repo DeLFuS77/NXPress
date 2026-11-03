@@ -478,3 +478,23 @@ func TestSound(t *testing.T) {
 		t.Error("a missing sound gave no error")
 	}
 }
+
+// Hibernating comes with the same count as turning off, and once the computer is back the page is
+// told the count is over: nothing watches for a computer still on (#62).
+func TestHibernateEndsTheCount(t *testing.T) {
+	events := catchEvents(t)
+	called := 0
+	own := hibernate
+	hibernate = func() error { called++; return nil }
+	t.Cleanup(func() { hibernate = own })
+	a := &App{ctx: context.Background()}
+	a.HibernateIn(0)
+	eventually(t, "the computer is not hibernated, or the page not told", func() bool {
+		a.mutex.Lock()
+		defer a.mutex.Unlock()
+		return called == 1 && events.count("shutdownCancelled") == 1
+	})
+	if events.count("shutdownFailed") != 0 {
+		t.Fatal("hibernating is taken for a failed turning off")
+	}
+}

@@ -150,6 +150,10 @@ td.name { word-break: break-word; }
    until the game brings its own */
 .game .cover { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 8px; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--hover); border: 1px solid var(--line); }
 .game .title { font-weight: 600; }
+/* the folder of the new file, beside the name of its game (#61) */
+.folder-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; margin-left: 6px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--accent); vertical-align: -5px; }
+.folder-btn:hover { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.folder-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .game .file { font-size: 12px; color: var(--muted); }
 /* a file in an experimental format of NXPress, beside its name (#58) */
 .exp-mark { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 18px; vertical-align: 1px; color: var(--tone-organize); background: color-mix(in srgb, var(--tone-organize) 15%, transparent); white-space: nowrap; }
@@ -282,6 +286,9 @@ select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--te
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
 .small-check { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; }
+/* what the computer does when the work is done: nothing, turn off or hibernate (#62) */
+.when-done { display: inline-flex; align-items: center; gap: 6px; }
+.when-done select { font: inherit; font-size: 12px; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
 .path span { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; padding: 5px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
 .path span.empty { direction: ltr; white-space: normal; color: var(--muted); }
 .advanced summary { cursor: pointer; font-weight: 600; list-style: none; }

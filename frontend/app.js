@@ -797,7 +797,12 @@ function render() {
   $("pause").textContent = state.paused ? t("resume") : t("pause");
   $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "modified", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
-  $("shutdown-force-option").hidden = $("shutdown-option").hidden || !$("shutdown").checked;
+  // hibernate only where the computer can, and forcing only to turn off: hibernating closes no
+  // program (#62)
+  const canHibernate = !!(state.setup && state.setup.hibernate);
+  $("when-done-hibernate").hidden = !canHibernate;
+  if (!canHibernate && $("when-done").value === "hibernate") $("when-done").value = "";
+  $("shutdown-force-option").hidden = $("shutdown-option").hidden || $("when-done").value !== "off";
   $("shutdown-force-option").title = t("shutdownForceHint");
   $("send-to-row").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
@@ -1144,15 +1149,16 @@ function paint(row) {
     note.textContent = "→ " + row.preview;
   }
   renderCard(row);
+  // the new file shows in its folder from a button beside the name of its game: it says which game
+  // it is for, and adds no line to the row (#61)
   if (row.output) {
-    if (note.textContent) note.append(" · ");
-    // a link with somewhere to go, so the keyboard reaches it; it opens the folder, not a page
-    const link = document.createElement("a");
-    link.href = "#";
-    link.textContent = t("showFolder");
-    link.title = row.output;
-    link.onclick = event => { event.preventDefault(); app().ShowFile(row.output); };
-    note.append(link);
+    const open = document.createElement("button");
+    open.className = "folder-btn";
+    open.title = `${t("showFolder")}: ${row.output}`;
+    open.setAttribute("aria-label", t("showFolder"));
+    open.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
+    open.onclick = event => { event.stopPropagation(); app().ShowFile(row.output); };
+    title.append(open);
   }
   // the button that takes the file out of the list says so, in the language chosen
   const remove = row.tr.querySelector(".remove button");
@@ -1530,7 +1536,7 @@ function listen() {
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
     if (!event.cancelled && $("sound").checked) playSound();
-    if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
+    if (!event.cancelled && $("when-done").value && !(state.lastRun && state.lastRun.watch)) startShutdown();
     // the taskbar: red while there are errors to look at, else nothing
     app().SetTaskbar(!event.cancelled && event.failed ? "error" : "none", 1, 1);
     // what this work saved goes to the space saved since always
@@ -1542,14 +1548,19 @@ function listen() {
     state.celebrate = !event.cancelled;
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
-    if (!($("shutdown").checked && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
+    if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
   });
-  // the computer did not turn off: told in the window and by a notice, with what can help
+  // the computer did not turn off or hibernate: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
     hideShutdown();
-    const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
-    setStatus({ key: "shutdownFailed", args: [$("shutdown-force").checked], after: reason ? ` (${reason})` : "" });
-    app().Notify("NXPress", text);
+    const after = reason ? ` (${reason})` : "";
+    if (state.powerAction === "hibernate") {
+      setStatus({ key: "hibernateFailed", after });
+      app().Notify("NXPress", t("hibernateFailed") + after);
+      return;
+    }
+    setStatus({ key: "shutdownFailed", args: [$("shutdown-force").checked], after });
+    app().Notify("NXPress", t("shutdownFailed")($("shutdown-force").checked) + after);
   });
   // NXPress called the turning off off by itself (a work started): its count goes
   events.EventsOn("shutdownCancelled", hideShutdown);
@@ -1666,12 +1677,14 @@ let shutdownTimer = 0;
 function startShutdown() {
   // the report shows by itself the next time NXPress opens
   save("showReport", true);
-  app().ShutDownIn(60, $("shutdown-force").checked);
+  state.powerAction = $("when-done").value;
+  if (state.powerAction === "hibernate") app().HibernateIn(60);
+  else app().ShutDownIn(60, $("shutdown-force").checked);
   state.shutdownAt = Date.now() + 60000;
   $("shutdown-banner").hidden = false;
   const tick = () => {
     const left = Math.max(0, Math.round((state.shutdownAt - Date.now()) / 1000));
-    $("shutdown-text").textContent = t("shutdownIn")(left);
+    $("shutdown-text").textContent = t(state.powerAction === "hibernate" ? "hibernateIn" : "shutdownIn")(left);
     if (left > 0) shutdownTimer = setTimeout(tick, 1000);
   };
   tick();
@@ -1943,7 +1956,7 @@ async function main() {
     render();
   };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); setStatus({ key: "reportCopied" }); };
-  $("shutdown").onchange = () => render();
+  $("when-done").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
   $("preset-save").onclick = () => {

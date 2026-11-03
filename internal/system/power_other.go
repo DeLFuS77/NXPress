@@ -3,10 +3,12 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 // preventSleep keeps the computer from going to sleep until the function it gives is called:
@@ -39,4 +41,22 @@ func ShutDown(force bool) error {
 		return exec.Command("systemctl", "poweroff", "-i").Run()
 	}
 	return exec.Command("systemctl", "poweroff").Run()
+}
+
+// CanHibernate tells whether the computer can hibernate: on Linux as systemd says; macOS has no
+// hibernation to ask for.
+func CanHibernate() bool {
+	if runtime.GOOS == "darwin" {
+		return false
+	}
+	answer, err := exec.Command("systemctl", "can-hibernate").Output()
+	return err == nil && strings.TrimSpace(string(answer)) == "yes"
+}
+
+// Hibernate keeps what is open on the disk and turns the computer off, on Linux.
+func Hibernate() error {
+	if runtime.GOOS == "darwin" {
+		return errors.New("macOS cannot be asked to hibernate")
+	}
+	return exec.Command("systemctl", "hibernate").Run()
 }

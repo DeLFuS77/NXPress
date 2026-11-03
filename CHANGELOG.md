@@ -14,6 +14,8 @@
 - "Replace files already there" is now "Replace if the new file is already there", with a line under it: a new file whose name is already taken in Save to is written again, or skipped when unticked, and the originals are never touched (thanks @NikoMuffin, #56)
 - A game in sparse storage left as it is says how to compress it: turn on Extra compression under Advanced, or `--extra` on the command line; the hint of that option names its two formats, NCZSECT2 and NCZSECT3 (thanks @NikoMuffin, #57)
 - Settings is in order: General, While working, Keys, System and Help, each setting a row with what it does and its control, in two columns when the window is wide. Low priority moves there from the Advanced part of each section, as it is one setting for the whole app (thanks @NikoMuffin, #60)
+- Show in folder is a small folder button beside the name of the game, so it says which game it opens and adds no line to the row (thanks @NikoMuffin, #61)
+- When done: Nothing, Turn off or Hibernate, one choice instead of the box to turn off. Hibernate is offered only where the computer can hibernate, keeps every program as it was, and needs no forcing; the same 60 seconds to call it off (thanks @NikoMuffin, #62)
 
 ## 1.4.1
 
