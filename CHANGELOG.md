@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New
+
+- Log, under Check: every work NXPress did, the newest first and by day, each with its files, how they ended and what they saved. It finds a game or a file, and can show only the works with problems. It is kept in log.txt in the settings folder too, with how many works to keep (100, 500, 1000 or no limit) and a button to clear it, which Undo takes back. It takes the place of Last report in Settings › Help, and opens by itself after the computer was shut down at the end of a work (thanks @NikoMuffin, #69)
+
 ### Improvements
 
 - The help of the options no longer fills the panels: a small ⓘ after the name of an option tells there is some, and it shows in a card while the mouse is on the name or the option has the focus of the keyboard. The description of each section is beside its title the same way, and so is the help in Settings; warnings stay in sight (thanks @NikoMuffin, #67)

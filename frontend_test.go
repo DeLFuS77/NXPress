@@ -146,7 +146,7 @@ for (const code of ["es", "fr", "de", "it", "pt", "nl", "ru"]) {
 
 // the texts the page asks for by name are there
 const page = fs.readFileSync(path.join(dir, "app.js"), "utf8") + fs.readFileSync(path.join(dir, "index.html"), "utf8");
-for (const found of page.matchAll(/\bt\("([A-Za-z0-9]+)"\)|data-t(?:-title|-label)?="([A-Za-z0-9]+)"/g)) {
+for (const found of page.matchAll(/\bt\("([A-Za-z0-9]+)"\)|data-t(?:-title|-label|-placeholder)?="([A-Za-z0-9]+)"/g)) {
   const key = found[1] || found[2];
   if (!(key in en)) say("the page asks for " + key + ", which has no text");
 }

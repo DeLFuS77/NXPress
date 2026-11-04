@@ -109,6 +109,8 @@ type App struct {
 	// the versions published of each game, once the page asked for them (see published.go)
 	versions      atomic.Pointer[titledb.Versions]
 	versionsMutex sync.Mutex
+	// the log of the works, written one change at a time (see worklog.go)
+	logMutex sync.Mutex
 }
 
 func (a *App) startup(ctx context.Context) {
