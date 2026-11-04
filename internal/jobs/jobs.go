@@ -128,7 +128,7 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 				if ctx.Err() != nil {
 					continue
 				}
-				output, note, err := doJob(ctx, action, path, o, threads, out)
+				output, note, err := safeJob(ctx, action, path, o, threads, out)
 				// a new file checked as a game before it got its name need not be read again
 				if err == nil && output != "" && checksOutput[action] {
 					cache.Checked.Keep(output, "")
@@ -428,6 +428,17 @@ func isEmpty(path string) bool {
 	return err == nil && info.Mode().IsRegular() && info.Size() == 0
 }
 
+// safeJob runs doJob and turns a panic into a failed file instead of a crash: a malformed file
+// that trips a parser stops that one job, and the rest of the work goes on.
+func safeJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (output string, note string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			output, note, err = "", "", fmt.Errorf("the file could not be read: %v", r)
+		}
+	}()
+	return doJob(ctx, action, path, o, threads, out)
+}
+
 func doJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (string, string, error) {
 	if isEmpty(path) {
 		return "", "", ErrEmpty
@@ -452,7 +463,7 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	case "split":
 		return split(ctx, path, o, out)
 	case "info":
-		note, err := info(path, out)
+		note, err := info(path, o.Versions, out)
 		return "", note, err
 	}
 	return verify(ctx, path, o, out)

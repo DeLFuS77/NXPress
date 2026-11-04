@@ -71,6 +71,10 @@ func compress(ctx context.Context, path string, o Options, threads int, out Outp
 	if result.Rebuilt > 0 {
 		note += fmt.Sprintf(", %d LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it", result.Rebuilt)
 	}
+	// a compressed storage that could not be read leaves its NCA a plain NCZ, with why
+	if len(result.Lz4Unread) > 0 {
+		note += fmt.Sprintf(", %d NCA with their LZ4 blocks left as they are: their compressed storage could not be read (%s)", len(result.Lz4Unread), strings.Join(result.Lz4Unread, "; "))
+	}
 	if modified := modifiedNote(check); modified != "" {
 		note += ", " + modified
 	}

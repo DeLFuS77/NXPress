@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.5.0
+
+### New
+
+- Updates that are out and not in the list: once a day at most, NXPress downloads the versions published (the versions.json of Switch Library Manager Web, about 200 KB), and the newest file of each game says which update is out and which one you have. On by default; it can be turned off in Settings › System, and `-i` on the command line tells it too
+- Colors to choose in Settings › General: NXPress's own and three more, RuneStone, Vampire and Huntress, in dark and in light, each with its own scene while the list is empty. Red, green and orange keep meaning errors, savings and warnings
+
+### Improvements
+
+- Verify says VERIFIED and CORRUPTED, as other tools do; a file that could not be checked keeps FAILED with its reason, and the command line keeps OK, MODIFIED and FAILED (thanks @NikoMuffin, #55)
+- Verify: Compare with a DAT and Check again files already checked move to the bottom of Advanced (#52), and the hint of the watched folders is clearer (#51) (thanks @NikoMuffin)
+- "Replace if the new file is already there", with a line that says what it does (thanks @NikoMuffin, #56)
+- A game in sparse storage says how to compress it: with Extra compression under Advanced (thanks @NikoMuffin, #57)
+- Settings in groups (General, While working, Keys, System and Help), with Low priority in it for the whole app (thanks @NikoMuffin, #60)
+- Show in folder is a small button beside the name of the game (thanks @NikoMuffin, #61)
+- When done: Nothing, Turn off or Hibernate, with the same 60 seconds to call it off (thanks @NikoMuffin, #62)
+- Extra compression makes again two more LZ4 compressors of Nintendo that many recent games use, level 16 and the fast one built for 32 bits: CHRONO CROSS THE RADICAL DREAMERS EDITION is now 9% smaller than as a plain NSZ. A file that uses them is decompressed by NXPress 1.5.0 or newer and Switch Library Manager Web 1.72.1 or newer; older versions refuse it with an error, never with a wrong file (thanks @NikoMuffin, #63)
+
+### Fixes
+
+- Extra compression no longer stops a game with "invalid bucket tree" or "invalid NCZSECT3 table", as on BZZZT, CHRONO CROSS THE RADICAL DREAMERS EDITION and its update: the LZ4 table of Nintendo is read as Atmosphère reads it, and an NCA that cannot use it is written as a plain NCZ instead of failing the game (thanks @NikoMuffin, #63)
+
+### Security
+
+- A file crafted to make a parser give up fails that one file instead of closing the window; the versions.json downloaded is decompressed with a bounded window; the window declares a Content-Security-Policy; built with Go 1.27.3
+
 ## 1.4.1
 
 ### Improvements

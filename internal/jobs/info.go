@@ -5,15 +5,19 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/DeLFuS77/NXPress/internal/titledb"
+
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
-// info tells the titles a file holds; a file that cannot be read fails.
-func info(path string, out Output) (string, error) {
+// info tells the titles a file holds, with the newest version published of each when the
+// versions are kept; a file that cannot be read fails.
+func info(path string, versions *titledb.Versions, out Output) (string, error) {
 	read := switchfs.ReadNspMetadata
 	if extension := strings.ToLower(filepath.Ext(path)); extension == ".xci" || extension == ".xcz" {
 		read = switchfs.ReadXciMetadata
@@ -37,6 +41,9 @@ func info(path string, out Output) (string, error) {
 			}
 		}
 		lines = append(lines, line)
+		if published := publishedLine(title, versions); published != "" {
+			lines = append(lines, published)
+		}
 		lines = append(lines, titleDetails(title)...)
 	}
 	lines = append(lines, describe(path)...)
@@ -45,6 +52,33 @@ func info(path string, out Output) (string, error) {
 		return "1 title", nil
 	}
 	return fmt.Sprintf("%d titles", len(titles)), nil
+}
+
+// publishedLine tells the newest version published of a title, when the versions kept know it:
+// the newest update of its game for a game or an update, its own newest version for a DLC.
+func publishedLine(title *switchfs.ContentMetaAttributes, versions *titledb.Versions) string {
+	id, err := strconv.ParseUint(title.TitleId, 16, 64)
+	if err != nil || versions == nil {
+		return ""
+	}
+	what := "update"
+	switch title.Type {
+	case "UPD":
+		if id, err = switchfs.GameTitleID(title.TitleId, title.Type); err != nil {
+			return ""
+		}
+	case "DLC":
+		what = "version"
+	}
+	published, ok := versions.Newest(id)
+	if !ok {
+		return ""
+	}
+	line := fmt.Sprintf("  newest %s published: v%d", what, published.Version)
+	if published.Date != "" {
+		line += " (" + published.Date + ")"
+	}
+	return line
 }
 
 // shown is an error as people see it: the bytes of a damaged file quoted in it (what was read

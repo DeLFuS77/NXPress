@@ -12,7 +12,9 @@ import (
 	"syscall"
 
 	"github.com/DeLFuS77/NXPress/internal/jobs"
+	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 )
 
 // Version is the version the command line tells: the one of the build, given by main
@@ -22,6 +24,16 @@ var Version = "dev"
 // the console is closed, the user signs out or the computer shuts down (the system then waits
 // a few seconds for NXPress to remove its half written files)
 var stopSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
+
+// keptVersions gives the versions published the window keeps, nil when it keeps none
+var keptVersions = func() *titledb.Versions {
+	folder, err := portable.DataFolder()
+	if err != nil {
+		return nil
+	}
+	versions, _ := titledb.Load(folder)
+	return versions
+}
 
 // RunCommand does what the command line asks, printing to stdout and stderr, and gives the
 // exit code.
@@ -58,6 +70,12 @@ func RunCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	if _, err := jobs.LoadKeys(o.Keys); err != nil && !o.Recompress && !o.Fat32 {
 		fmt.Fprintln(stderr, "nxpress:", err)
 		return 2
+	}
+
+	// -i tells the newest versions published too, from the copy the window keeps when its setting
+	// is on: the command line does not go on the internet
+	if o.Info {
+		o.Versions = keptVersions()
 	}
 
 	if o.LowPriority {

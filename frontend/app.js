@@ -60,6 +60,9 @@ const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
   setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  // the newest version published of each title ID asked (null when the list does not know it),
+  // and the day of the list of versions: null until it is read, "" when there is none
+  published: new Map(), versionsDate: null,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -107,6 +110,10 @@ function size(bytes) {
   sizeFormats[key] = sizeFormats[key] || new Intl.NumberFormat(state.language, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
   return sizeFormats[key].format(value) + " " + units[unit];
 }
+// a day as the language writes it (21 oct 2026 in Spanish for 2026-10-21), "" for none
+function day(date) {
+  try { return date ? new Intl.DateTimeFormat(state.language, { dateStyle: "medium" }).format(new Date(date + "T00:00:00")) : ""; } catch { return date; }
+}
 // a path in a field cut at its start (direction: rtl) keeps its order with a mark of left to
 // right at both ends: else "E:\Games" shows as "\Games:E" and brackets turn round
 const ltr = path => "\u200E" + path + "\u200E";
@@ -120,6 +127,16 @@ function adviceFor(error) {
   if (/no space|not enough space|disk full/.test(text)) return "adviceSpace";
   if (/access is denied|permission|in use|being used/.test(text)) return "adviceAccess";
   return "adviceGeneric";
+}
+
+// the word of a state: a check says Verified, and Corrupted when its hashes find the file damaged,
+// as other tools say it (#55); a file that could not be checked (a key missing, unreadable) is not
+// corrupted, and keeps Failed with its reason
+const damaged = (status, error) => status === "failed" && !!error && error !== "cancelled" && adviceFor(error) === "adviceDamaged";
+function stateWord(status, mode, isDamaged) {
+  if (mode === "verify" && status === "ok") return t("verified");
+  if (mode === "verify" && isDamaged) return t("corrupted");
+  return t(status);
 }
 
 // the space saved since always, kept in the window: what every work that wrote files saved
@@ -249,6 +266,44 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
+// the colors NXPress can wear, chosen in Settings: its own and three more with a scene (RuneStone, Vampire and Huntress), each with its background
+// and its main color in dark and in light, for its swatch (the colors themselves are in style.css)
+const palettes = [
+  ["nxpress", "", ["#101216", "#3db7ea"], ["#eef0f3", "#0a6fb0"]],
+  ["relic", "paletteRelic", ["#0b1316", "#4fe3ff"], ["#ebe2cc", "#0c6f86"]],
+  ["vampire", "paletteVampire", ["#070a12", "#cdd9ff"], ["#cfd3e2", "#26336e"]],
+  ["visor", "paletteVisor", ["#05070c", "#9cff3a"], ["#c9cfcf", "#2f6408"]],
+];
+function applyPalette() {
+  if (state.palette === "nxpress") document.documentElement.removeAttribute("data-palette");
+  else document.documentElement.dataset.palette = state.palette;
+}
+// the swatches of the colors, in the theme shown, the one chosen marked
+function paintPalettes() {
+  const box = $("palettes");
+  const dark = state.theme === "dark" || (state.theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  if (!box.children.length) {
+    for (const [key] of palettes) {
+      const button = document.createElement("button");
+      button.className = "palette";
+      button.setAttribute("role", "radio");
+      button.dataset.palette = key;
+      button.innerHTML = "<i></i><span></span>";
+      button.onclick = () => { state.palette = key; save("palette", key); applyPalette(); paintPalettes(); };
+      box.append(button);
+    }
+  }
+  for (const button of box.children) {
+    const [key, name, darkColors, lightColors] = palettes.find(palette => palette[0] === button.dataset.palette);
+    const [ground, accent] = dark ? darkColors : lightColors;
+    button.style.setProperty("--sw-bg", ground);
+    button.style.setProperty("--sw-accent", accent);
+    button.querySelector("span").textContent = name ? t(name) : "NXPress";
+    button.classList.toggle("on", key === state.palette);
+    button.setAttribute("aria-checked", String(key === state.palette));
+  }
+}
+
 // the color of a cover: the mean of its pixels, the bright and colorful ones weighing more, so a
 // card of the game can wear it; kept with the game once found
 function coverTone(game) {
@@ -305,13 +360,20 @@ function showPop(row, anchor) {
   if (game.gameId) facts.push([t("popGame"), game.gameId]);
   if (game.needsGame) facts.push([t("popNeedsGame"), "v" + game.needsGame]);
   if (game.firmware) facts.push([t("popFirmware"), game.firmware]);
+  // the newest version published, in blue when the list does not have it
+  const online = row.online;
+  if (online) {
+    const newer = online.version > online.reach;
+    facts.push([t("popNewest"), `v${online.version}` + (newer ? (online.date ? " · " + day(online.date) : "") : " · " + t("popNewestHave")), newer ? "pop-newer" : ""]);
+  }
   const list = pop.querySelector("dl");
   list.innerHTML = "";
-  for (const [name, value] of facts) {
+  for (const [name, value, tone] of facts) {
     const term = document.createElement("dt");
     const detail = document.createElement("dd");
     term.textContent = name;
     detail.textContent = value;
+    if (tone) detail.className = tone;
     list.append(term, detail);
   }
   // the languages by their first tag: EN for en-US and en-GB
@@ -552,7 +614,7 @@ function stepText(step) {
 
 // warnings of the list, from the games read: an update with a newer one beside it, a title given
 // twice; in Pack also an update or a DLC without its game, and a DLC that needs a newer game
-// than the list brings
+// than the list brings; and, with the versions published, a newer version out
 function listWarnings() {
   const read = [...state.rows.values()].filter(row => !row.item.result && row.game && row.game.titleId);
   const games = new Map();
@@ -589,7 +651,57 @@ function listWarnings() {
     else if (state.mode === "pack" && row.game.type !== "BASE" && row.game.titles === 1 && game && !game.base) warnings.set(row, t("warnNoGame"));
     else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
   }
+  publishedWarnings(read, warnings);
   return warnings;
+}
+// the title ID the versions of a file are published under: the one of its game for an update,
+// its own for a game or a DLC
+const publishedId = game => game.type === "UPD" ? game.gameId : game.titleId;
+// a newer version published than the list brings: told on the newest file of the game (or of the
+// DLC), as "you have" its version (v0 for a game without its update), and not on the older ones,
+// which have the warning of the newer one in the list already. Each row keeps what is known, for
+// its card.
+function publishedWarnings(read, warnings) {
+  for (const row of state.rows.values()) row.online = null;
+  if (!$("published").checked || !state.versionsDate) return;
+  const unknown = [...new Set(read.map(row => publishedId(row.game)).filter(id => id && !state.published.has(id)))];
+  if (unknown.length) askPublished(unknown);
+  const reach = new Map();
+  for (const row of read) {
+    const id = publishedId(row.game);
+    if (id) reach.set(id, Math.max(reach.has(id) ? reach.get(id) : -1, row.game.latest || 0));
+  }
+  for (const row of read) {
+    const id = publishedId(row.game), newest = id && state.published.get(id);
+    if (!newest) continue;
+    const have = reach.get(id);
+    row.online = { version: newest.version, date: newest.date, reach: have };
+    if (!warnings.has(row) && newest.version > have && (row.game.latest || 0) === have) warnings.set(row, t("warnPublished")(newest.version, day(newest.date), have));
+  }
+}
+// asks once for the newest versions published of title IDs, and tells the warnings again once known
+function askPublished(ids) {
+  for (const id of ids) state.published.set(id, undefined);
+  app().Published(ids).then(found => {
+    for (const id of ids) state.published.set(id, found[id] || null);
+    warnSoon();
+  }).catch(() => { for (const id of ids) state.published.delete(id); });
+}
+// the versions published of each game, when the setting allows it: downloaded once a day at most,
+// else the copy kept, with nothing said when there is no connection (see published.go)
+async function loadVersions() {
+  if (!$("published").checked) return;
+  const date = await app().LoadVersions().catch(() => "");
+  if (!$("published").checked) return;
+  state.versionsDate = date;
+  state.published.clear();
+  paintPublished();
+  warnSoon();
+}
+// the day of the list of versions under its setting, or that there is none yet
+function paintPublished() {
+  const date = $("published").checked ? state.versionsDate : null;
+  $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
 let warnTimer = 0;
 function warnSoon() {
@@ -659,6 +771,7 @@ function render() {
   $("preferences").hidden = !preferences;
   $("open-preferences").classList.toggle("on", preferences);
   $("keys-path").textContent = state.keys || t("keys")("");
+  paintPublished();
   $("title").textContent = t(state.mode);
   // the section in the color of its group, its tile beside its title
   const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
@@ -677,6 +790,7 @@ function render() {
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  paintPalettes();
   // the list as rows, or as a grid of covers
   const view = load("view", "list") === "grid" ? "grid" : "list";
   $("files").classList.toggle("grid", view === "grid");
@@ -743,9 +857,14 @@ function render() {
   $("pause").textContent = state.paused ? t("resume") : t("pause");
   $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "modified", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
-  $("shutdown-force-option").hidden = $("shutdown-option").hidden || !$("shutdown").checked;
+  // hibernate only where the computer can, and forcing only to turn off: hibernating closes no
+  // program (#62)
+  const canHibernate = !!(state.setup && state.setup.hibernate);
+  $("when-done-hibernate").hidden = !canHibernate;
+  if (!canHibernate && $("when-done").value === "hibernate") $("when-done").value = "";
+  $("shutdown-force-option").hidden = $("shutdown-option").hidden || $("when-done").value !== "off";
   $("shutdown-force-option").title = t("shutdownForceHint");
-  $("send-to").hidden = !state.setup.sendTo;
+  $("send-to-row").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
   $("empty").hidden = state.items.length > 0;
   $("files").hidden = state.items.length === 0;
@@ -1040,7 +1159,7 @@ function paint(row) {
     cell.firstChild.textContent = t("waiting");
   } else if (row.status === "ok") {
     cell.innerHTML = `<span class="badge ok"></span>`;
-    cell.firstChild.textContent = t("ok");
+    cell.firstChild.textContent = stateWord("ok", row.mode);
     // the space saved: the bar of the original shrinks to the new file, once, as the file ends
     if (row.after > 0 && row.item.size > row.after) {
       const share = row.after / row.item.size;
@@ -1064,7 +1183,7 @@ function paint(row) {
     cell.firstChild.textContent = t("modified");
   } else if (row.status === "failed") {
     cell.innerHTML = `<span class="badge ${row.error === "cancelled" ? "waiting" : "failed"}"></span>`;
-    cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : t("failed");
+    cell.firstChild.textContent = row.error === "cancelled" ? t("cancelled") : stateWord("failed", row.mode, damaged(row.status, row.error));
   } else {
     cell.innerHTML = "";
   }
@@ -1090,15 +1209,16 @@ function paint(row) {
     note.textContent = "→ " + row.preview;
   }
   renderCard(row);
+  // the new file shows in its folder from a button beside the name of its game: it says which game
+  // it is for, and adds no line to the row (#61)
   if (row.output) {
-    if (note.textContent) note.append(" · ");
-    // a link with somewhere to go, so the keyboard reaches it; it opens the folder, not a page
-    const link = document.createElement("a");
-    link.href = "#";
-    link.textContent = t("showFolder");
-    link.title = row.output;
-    link.onclick = event => { event.preventDefault(); app().ShowFile(row.output); };
-    note.append(link);
+    const open = document.createElement("button");
+    open.className = "folder-btn";
+    open.title = `${t("showFolder")}: ${row.output}`;
+    open.setAttribute("aria-label", t("showFolder"));
+    open.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
+    open.onclick = event => { event.stopPropagation(); app().ShowFile(row.output); };
+    title.append(open);
   }
   // the button that takes the file out of the list says so, in the language chosen
   const remove = row.tr.querySelector(".remove button");
@@ -1276,7 +1396,7 @@ async function start(mode, extra) {
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, ...(extra || {}) };
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -1418,7 +1538,7 @@ function listen() {
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
-    Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0 });
+    Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0, mode: state.lastRun ? state.lastRun.mode : state.mode });
     // a file renamed keeps its row, under its new name and path
     if (mode === "rename" && row.output && !event.error) {
       const old = row.item.path;
@@ -1476,7 +1596,7 @@ function listen() {
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
     if (!event.cancelled && $("sound").checked) playSound();
-    if (!event.cancelled && $("shutdown").checked && !(state.lastRun && state.lastRun.watch)) startShutdown();
+    if (!event.cancelled && $("when-done").value && !(state.lastRun && state.lastRun.watch)) startShutdown();
     // the taskbar: red while there are errors to look at, else nothing
     app().SetTaskbar(!event.cancelled && event.failed ? "error" : "none", 1, 1);
     // what this work saved goes to the space saved since always
@@ -1488,14 +1608,19 @@ function listen() {
     state.celebrate = !event.cancelled;
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
-    if (!($("shutdown").checked && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
+    if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
   });
-  // the computer did not turn off: told in the window and by a notice, with what can help
+  // the computer did not turn off or hibernate: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
     hideShutdown();
-    const text = t("shutdownFailed")($("shutdown-force").checked) + (reason ? ` (${reason})` : "");
-    setStatus({ key: "shutdownFailed", args: [$("shutdown-force").checked], after: reason ? ` (${reason})` : "" });
-    app().Notify("NXPress", text);
+    const after = reason ? ` (${reason})` : "";
+    if (state.powerAction === "hibernate") {
+      setStatus({ key: "hibernateFailed", after });
+      app().Notify("NXPress", t("hibernateFailed") + after);
+      return;
+    }
+    setStatus({ key: "shutdownFailed", args: [$("shutdown-force").checked], after });
+    app().Notify("NXPress", t("shutdownFailed")($("shutdown-force").checked) + after);
   });
   // NXPress called the turning off off by itself (a work started): its count goes
   events.EventsOn("shutdownCancelled", hideShutdown);
@@ -1509,6 +1634,7 @@ function keepReport(event) {
   const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "modified", "skipped"].includes(row.status)).map(row => ({
     name: row.game && row.game.name ? `${row.game.name} · ${row.item.name}` : row.item.name,
     status: row.status === "failed" && row.error === "cancelled" ? "cancelled" : row.status,
+    damaged: damaged(row.status, row.error),
     note: noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note),
   }));
   save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
@@ -1528,24 +1654,29 @@ function showReport() {
   // a long report: how many of each, the problems first, and only them when there are some
   const all = kept ? kept.rows : [];
   const order = { failed: 0, cancelled: 1, modified: 2, skipped: 3, ok: 4 };
+  const mode = kept ? kept.mode : "";
+  // a check counts its damaged files apart, as Corrupted, from the ones it could not check
   const counts = {};
-  for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
+  for (const row of all) {
+    const key = mode === "verify" && row.damaged ? "corrupted" : row.status;
+    counts[key] = (counts[key] || 0) + 1;
+  }
   const problems = all.length - (counts.ok || 0);
   $("report-counts").innerHTML = "";
-  for (const status of ["ok", "modified", "skipped", "failed", "cancelled"]) {
+  for (const status of ["ok", "modified", "skipped", "corrupted", "failed", "cancelled"]) {
     if (!counts[status]) continue;
     const badge = document.createElement("span");
-    badge.className = "badge " + (status === "cancelled" ? "waiting" : status);
-    badge.textContent = `${t(status)} ${counts[status]}`;
+    badge.className = "badge " + (status === "cancelled" ? "waiting" : status === "corrupted" ? "failed" : status);
+    badge.textContent = `${status === "corrupted" ? stateWord("failed", mode, true) : stateWord(status, mode)} ${counts[status]}`;
     $("report-counts").append(badge);
   }
   $("report-problems-option").hidden = !problems || problems === all.length;
   $("report-problems").checked = problems > 0 && problems < all.length;
-  $("report-problems").onchange = () => paintReport(all, order);
-  paintReport(all, order);
+  $("report-problems").onchange = () => paintReport(all, order, mode);
+  paintReport(all, order, mode);
   openDialog($("report-dialog"));
 }
-function paintReport(all, order) {
+function paintReport(all, order, mode) {
   const onlyProblems = $("report-problems").checked;
   const rows = $("report-rows");
   rows.innerHTML = "";
@@ -1557,7 +1688,7 @@ function paintReport(all, order) {
     tr.querySelector(".report-note").textContent = row.note;
     const badge = tr.querySelector(".badge");
     badge.classList.add(row.status === "cancelled" ? "waiting" : row.status);
-    badge.textContent = t(row.status);
+    badge.textContent = stateWord(row.status, mode, row.damaged);
     rows.append(tr);
   }
 }
@@ -1606,12 +1737,14 @@ let shutdownTimer = 0;
 function startShutdown() {
   // the report shows by itself the next time NXPress opens
   save("showReport", true);
-  app().ShutDownIn(60, $("shutdown-force").checked);
+  state.powerAction = $("when-done").value;
+  if (state.powerAction === "hibernate") app().HibernateIn(60);
+  else app().ShutDownIn(60, $("shutdown-force").checked);
   state.shutdownAt = Date.now() + 60000;
   $("shutdown-banner").hidden = false;
   const tick = () => {
     const left = Math.max(0, Math.round((state.shutdownAt - Date.now()) / 1000));
-    $("shutdown-text").textContent = t("shutdownIn")(left);
+    $("shutdown-text").textContent = t(state.powerAction === "hibernate" ? "hibernateIn" : "shutdownIn")(left);
     if (left > 0) shutdownTimer = setTimeout(tick, 1000);
   };
   tick();
@@ -1678,6 +1811,9 @@ async function main() {
     }
   };
   theme();
+  // the colors: NXPress's own, or the ones chosen in Settings
+  state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
+  applyPalette();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
   // the language: the one chosen, else the one of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);
@@ -1715,6 +1851,7 @@ async function main() {
   // experimental, and off unless it was turned on
   $("extra").checked = !!(chosen.sparse || chosen.archive);
   $("updates").checked = load("updates", true);
+  $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
   if (sort && ["", "name", "size", "state"].includes(sort.key)) state.sort = { key: sort.key, dir: sort.dir < 0 ? -1 : 1 };
@@ -1849,7 +1986,21 @@ async function main() {
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); };
+  // turned off, the versions published are forgotten, and the copy kept removed
+  $("published").onchange = () => {
+    save("published", $("published").checked);
+    if ($("published").checked) loadVersions();
+    else {
+      app().ForgetVersions();
+      state.versionsDate = null;
+      state.published.clear();
+      paintPublished();
+      warnSoon();
+    }
+  };
   $("sound").onchange = () => { save("sound", $("sound").checked); renderSound(); };
+  // Low priority is in Settings, out of the side panel that saves itself (#60)
+  $("low-priority").onchange = () => save("settings", settings());
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };
@@ -1878,7 +2029,7 @@ async function main() {
     render();
   };
   $("report").onclick = () => { window.runtime.ClipboardSetText(report()); setStatus({ key: "reportCopied" }); };
-  $("shutdown").onchange = () => render();
+  $("when-done").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
   $("preset-save").onclick = () => {
@@ -1926,6 +2077,7 @@ async function main() {
   }
   render();
   checkUpdate();
+  loadVersions();
 }
 
 main();

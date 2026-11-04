@@ -6,6 +6,7 @@ import (
 
 	"github.com/DeLFuS77/NXPress/internal/cli"
 	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 )
 
 // version is set by the build of a release
@@ -13,6 +14,7 @@ var version = "dev"
 
 func main() {
 	cli.Version = version
+	titledb.UserAgent = "NXPress/" + version
 	// with no arguments it is the window, and with only files or folders too: the ones dropped
 	// on NXPress, or sent to it from the Explorer. Started from the Explorer, the console
 	// Windows opened for it is closed

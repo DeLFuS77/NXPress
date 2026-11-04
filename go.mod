@@ -2,11 +2,14 @@ module github.com/DeLFuS77/NXPress
 
 go 1.27.0
 
-replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261102161409-f1ac2c0d8957
+toolchain go1.27.3
+
+replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104052343-4eaab1174930
 
 require (
 	github.com/dtrunk90/switch-library-manager-web v0.0.0-00010101000000-000000000000
 	github.com/go-ole/go-ole v1.3.0
+	github.com/klauspost/compress v1.18.7
 	github.com/wailsapp/wails/v2 v2.17.0
 	golang.org/x/sys v0.49.0
 )
@@ -21,7 +24,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/labstack/echo/v4 v4.15.3 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect

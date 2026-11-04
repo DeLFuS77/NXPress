@@ -17,6 +17,7 @@ import (
 	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 	"github.com/DeLFuS77/NXPress/internal/windowplace"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -102,6 +103,9 @@ type App struct {
 	noticesReady bool
 	// the question asked as the window closes with files at work, in the language of the page
 	closeAsk, closeYes, closeNo string
+	// the versions published of each game, once the page asked for them (see published.go)
+	versions      atomic.Pointer[titledb.Versions]
+	versionsMutex sync.Mutex
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -130,6 +134,8 @@ type Setup struct {
 	SendToEnabled bool `json:"sendToEnabled"`
 	// the window is clear behind the menu, for the Mica of Windows 11
 	Mica bool `json:"mica"`
+	// the computer can hibernate when the work is done (#62)
+	Hibernate bool `json:"hibernate"`
 }
 
 func (a *App) Setup() Setup {
@@ -138,7 +144,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
-		Mica: system.MicaWindow(),
+		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(),
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {
@@ -415,6 +421,8 @@ type Request struct {
 	LowPriority  bool     `json:"lowPriority"`
 	Sparse       bool     `json:"sparse"`
 	Archive      bool     `json:"archive"`
+	// Details tells the newest versions published too, as the setting allows it
+	Published bool `json:"published"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -460,6 +468,9 @@ func (a *App) Start(request Request) error {
 		o.Split = true
 	case "info":
 		o.Info = true
+		if request.Published {
+			o.Versions = a.versions.Load()
+		}
 	case "pack":
 		o.SkipGames = map[string]bool{}
 		for _, id := range request.SkipGames {
@@ -694,6 +705,23 @@ const shutdownWait = 90 * time.Second
 // comes first; forced, the programs left open are closed without saving. When it does not turn
 // off, the page is told ("shutdownFailed"), to say so.
 func (a *App) ShutDownIn(seconds int, force bool) {
+	a.powerOffIn(seconds, func() error { return system.ShutDown(force) }, true)
+}
+
+// HibernateIn hibernates the computer in the seconds given, as ShutDownIn turns it off: what is
+// open waits on the disk, so no program is closed and there is nothing to force (#62).
+func (a *App) HibernateIn(seconds int) {
+	a.powerOffIn(seconds, hibernate, false)
+}
+
+// hibernate is system.Hibernate, which the tests stand in for
+var hibernate = system.Hibernate
+
+// powerOffIn does what turns the computer off or hibernates it in the seconds given, unless
+// CancelShutDown or new work comes first. Turning off is watched: NXPress still running
+// shutdownWait later means it did not happen. A computer that hibernated comes back to NXPress as
+// it was, so the page is only told the count is over.
+func (a *App) powerOffIn(seconds int, do func() error, watch bool) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	a.stopShutdown()
@@ -703,11 +731,15 @@ func (a *App) ShutDownIn(seconds int, force bool) {
 		if !a.shutdownDue(round) {
 			return
 		}
-		if err := system.ShutDown(force); err != nil {
+		if err := do(); err != nil {
 			emit(a.ctx, "shutdownFailed", err.Error())
 			return
 		}
-		time.AfterFunc(shutdownWait, func() { emit(a.ctx, "shutdownFailed", "") })
+		if watch {
+			time.AfterFunc(shutdownWait, func() { emit(a.ctx, "shutdownFailed", "") })
+			return
+		}
+		emit(a.ctx, "shutdownCancelled")
 	})
 }
 

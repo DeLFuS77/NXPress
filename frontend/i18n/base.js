@@ -14,7 +14,7 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
-  [/^this game uses sparse storage: it installs as it is, and only the experimental format NCZSECT2, an option under Advanced, can compress it$/, "sparseSkip"],
+  [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Advanced, or use --extra$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which only the experimental format NCZSECT2 compresses/g, "sparseWhy"],
@@ -52,6 +52,7 @@ const noteRules = [
   [/(\d+) NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it/g, "sparseNote"],
   [/works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "worksArchive"],
   [/(\d+) LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "archiveNote"],
+  [/(\d+) NCA with their LZ4 blocks left as they are: their compressed storage could not be read/g, "lz4Unread"],
   [/padding: (.+?) that trimming takes away/g, "paddingInfo"],
   [/delta fragments: (.+?) that trimming takes away/g, "deltasInfo"],
   [/ of padding taken away/g, "paddingTaken"],
