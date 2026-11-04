@@ -4,7 +4,7 @@ go 1.27.0
 
 toolchain go1.27.3
 
-replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104052343-4eaab1174930
+replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104201927-9e606b2030dd
 
 require (
 	github.com/dtrunk90/switch-library-manager-web v0.0.0-00010101000000-000000000000

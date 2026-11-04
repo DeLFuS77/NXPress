@@ -13,6 +13,7 @@
 ### Fixes
 
 - Low priority now reaches the window too: on Windows its WebView2 processes go below normal with NXPress, and its memory is the first given to the other programs when memory runs short (thanks @NikoMuffin, #70)
+- The extra compression no longer takes every processor for each file: its LZ4 blocks are checked and made again on the threads of each file, and never on more than its share of the processors when several files are worked on at once, so the computer keeps answering while they are compressed, decompressed or verified (thanks @NikoMuffin, #70)
 
 ## 1.5.1
 
