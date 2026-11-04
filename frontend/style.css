@@ -285,7 +285,9 @@ table.fields small { display: block; font: 11px "Cascadia Mono", Consolas, monos
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
-.small-check { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; }
+/* label.check gives the boxes of the panels room above; in the bar at the bottom a box sits on the
+   line, or "Force it" moved the bar when Shut down was chosen (#66) */
+.small-check, label.check.small-check { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; }
 /* what the computer does when the work is done: nothing, turn off or hibernate (#62) */
 .when-done { display: inline-flex; align-items: center; gap: 6px; }
 .when-done select { font: inherit; font-size: 12px; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
