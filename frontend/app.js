@@ -429,7 +429,7 @@ function hidePop() {
 // the keyboard; a small ⓘ after the name tells there is one. The texts stay in the page, filled
 // by render as before, and describe their option to screen readers.
 const helpOwners = new WeakMap();
-let helpTimer = 0, helpHideTimer = 0, helpOpen = null, helpWarm = 0;
+let helpTimer = 0, helpHideTimer = 0, helpOpen = null, helpControl = null, helpWarm = 0;
 // the name a text of help goes with: the box or the button before it, else the title of its field
 function helpName(hint) {
   if (hint.id === "about") return $("title");
@@ -453,7 +453,8 @@ function setupHelp() {
     // the control the name goes with is the one described, and its focus shows the help; a name
     // with no control (a title) takes the focus itself
     const control = name.closest("label")?.control || (name.id && document.querySelector(`[aria-labelledby~="${name.id}"]`)) || name.closest(".pref-item")?.querySelector(":scope > :is(input, select, button)") || name;
-    control.setAttribute("aria-describedby", hint.id);
+    const described = (control.getAttribute("aria-describedby") || "").split(" ").filter(Boolean);
+    if (!described.includes(hint.id)) control.setAttribute("aria-describedby", [...described, hint.id].join(" "));
     helpOwners.set(control, name);
     if (control === name && !name.matches("button")) name.tabIndex = 0;
   });
@@ -466,27 +467,30 @@ function setupHelp() {
     clearTimeout(helpTimer);
     // a moment on the name first, so the cards do not flash while the mouse goes by; one after
     // another comes at once
-    helpTimer = setTimeout(() => showHelp(name), helpOpen || Date.now() < helpWarm ? 40 : 300);
+    helpTimer = setTimeout(() => showHelp(name, null), helpOpen || Date.now() < helpWarm ? 40 : 300);
   });
   document.addEventListener("pointerout", event => {
     const name = event.target.closest(".has-help");
     if (!name && !$("help-pop").contains(event.target)) return;
     const to = event.relatedTarget;
     if (to && ((name && name.contains(to)) || $("help-pop").contains(to) || (helpOpen && helpOpen.contains(to)))) return;
+    // brought by the keyboard, it stays while its field has the focus
+    if (helpControl && document.activeElement === helpControl) return;
     clearTimeout(helpTimer);
     helpHideTimer = setTimeout(hideHelp, 180);
   });
   document.addEventListener("focusin", event => {
     const name = helpOwners.get(event.target);
-    if (name && event.target.matches(":focus-visible")) showHelp(name);
+    if (name && event.target.matches(":focus-visible")) showHelp(name, event.target);
   });
-  document.addEventListener("focusout", event => { if (helpOwners.has(event.target)) hideHelp(); });
+  document.addEventListener("focusout", event => { if (helpOpen && event.target === helpControl) hideHelp(); });
   document.addEventListener("keydown", event => { if (event.key === "Escape") hideHelp(); });
-  document.addEventListener("pointerdown", event => { if (!$("help-pop").contains(event.target)) hideHelp(); });
+  // a click elsewhere closes it; one in the field being filled in leaves it open
+  document.addEventListener("pointerdown", event => { if (!$("help-pop").contains(event.target) && !(helpControl && helpControl.contains(event.target))) hideHelp(); });
   document.addEventListener("scroll", hideHelp, true);
   window.addEventListener("blur", hideHelp);
 }
-function showHelp(name) {
+function showHelp(name, control) {
   const hint = $(name.dataset.help);
   const text = hint ? hint.textContent.trim() : "";
   if (!text || !name.getClientRects().length) return;
@@ -494,6 +498,7 @@ function showHelp(name) {
   clearTimeout(helpHideTimer);
   if (helpOpen && helpOpen !== name) helpOpen.classList.remove("help-open");
   helpOpen = name;
+  helpControl = control;
   name.classList.add("help-open");
   const pop = $("help-pop");
   pop.classList.remove("in", "above");
@@ -505,18 +510,25 @@ function showHelp(name) {
   pop.querySelector(".help-body").textContent = text;
   pop.hidden = false;
   // under the ⓘ, which follows the last word of the name, or above it when there is no room
-  // under; never out of the window
+  // under; never out of the window; when the keyboard brought it, it leaves the field being
+  // filled in sight
   const range = document.createRange();
   range.selectNodeContents(name);
   const words = range.getClientRects();
   const box = name.getBoundingClientRect();
   const last = words.length ? words[words.length - 1] : box;
   const x = Math.min(last.right + (name.id === "title" ? 17 : 13), box.right);
+  let top = box.top, bottom = box.bottom;
+  if (control && control !== name) {
+    const field = control.getBoundingClientRect();
+    top = Math.min(top, field.top);
+    bottom = Math.max(bottom, field.bottom);
+  }
   const width = pop.offsetWidth, height = pop.offsetHeight, gap = 10;
-  const above = box.bottom + gap + height > innerHeight - 8 && box.top - gap - height > 8;
+  const above = bottom + gap + height > innerHeight - 8 && top - gap - height > 8;
   const left = Math.max(8, Math.min(x - width / 2, innerWidth - width - 8));
   pop.style.left = left + "px";
-  pop.style.top = Math.max(8, above ? box.top - gap - height : box.bottom + gap) + "px";
+  pop.style.top = Math.max(8, above ? top - gap - height : bottom + gap) + "px";
   pop.classList.toggle("above", above);
   pop.querySelector(".help-arrow").style.left = Math.max(10, Math.min(x - left - 6, width - 22)) + "px";
   requestAnimationFrame(() => pop.classList.add("in"));
@@ -526,6 +538,7 @@ function hideHelp() {
   if (!helpOpen) return;
   helpOpen.classList.remove("help-open");
   helpOpen = null;
+  helpControl = null;
   helpWarm = Date.now() + 600;
   $("help-pop").classList.remove("in");
   setTimeout(() => { if (!helpOpen) $("help-pop").hidden = true; }, 160);
