@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- The help of the options no longer fills the panels: a small ⓘ after the name of an option tells there is some, and it shows in a card while the mouse is on the name or the option has the focus of the keyboard. The description of each section is beside its title the same way, and so is the help in Settings; warnings stay in sight (thanks @NikoMuffin, #67)
+
 ### Fixes
 
 - Low priority now reaches the window too: on Windows its WebView2 processes go below normal with NXPress, and its memory is the first given to the other programs when memory runs short (thanks @NikoMuffin, #70)

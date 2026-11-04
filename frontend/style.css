@@ -365,6 +365,27 @@ table.grid .game.refill { transition: none; }
 .game-pop .pop-languages { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
 .game-pop .pop-languages i { font-style: normal; font-size: 11px; font-weight: 600; padding: 1px 5px; border-radius: 4px; color: var(--accent); background: var(--accent-soft); }
 
+/* the help of an option (#67): its text is out of the way, and shows in a card while the mouse
+   is on the name of the option or it has the focus; a small ⓘ after the name tells there is one,
+   grey until the mouse comes, then in the blue of NXPress. Warnings stay in sight */
+.help-text { display: none !important; }
+.has-help { cursor: help; border-radius: 4px; }
+label .has-help, button.has-help { cursor: pointer; }
+.has-help::after { content: ""; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: -2px; background-color: var(--muted); opacity: .75; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6.4'/%3E%3Cpath d='M8 7.3v4M8 4.9v.2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6.4'/%3E%3Cpath d='M8 7.3v4M8 4.9v.2'/%3E%3C/svg%3E") center / contain no-repeat; transition: background-color .15s, opacity .15s, transform .15s; }
+.has-help:hover::after, .has-help.help-open::after, .has-help:focus-visible::after { background-color: var(--accent); opacity: 1; transform: scale(1.1); }
+#title.has-help::after { width: 18px; height: 18px; margin-left: 8px; vertical-align: -1px; }
+.help-pop { --help-tone: var(--accent); position: fixed; z-index: 46; max-width: 300px; padding: 12px 14px; border-radius: 11px; color: var(--text); border: 1px solid color-mix(in srgb, var(--help-tone) 42%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--help-tone) 20%, var(--raised)), var(--raised) 62%); box-shadow: 0 14px 34px rgba(0, 0, 0, .3), 0 0 22px -8px color-mix(in srgb, var(--help-tone) 45%, transparent); opacity: 0; transform: translateY(5px) scale(.98); transition: opacity .14s ease-out, transform .16s cubic-bezier(.2, .8, .2, 1); }
+.help-pop.above { transform: translateY(-5px) scale(.98); }
+.help-pop.in { opacity: 1; transform: none; }
+.help-pop.wide { max-width: 380px; }
+.help-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; margin-bottom: 5px; }
+.help-title i { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; color: var(--help-tone); background: color-mix(in srgb, var(--help-tone) 18%, transparent); }
+.help-title svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.help-body { font-size: 12.5px; line-height: 1.5; color: color-mix(in srgb, var(--text) 85%, var(--muted)); }
+.help-arrow { position: absolute; top: -7px; width: 12px; height: 12px; transform: rotate(45deg); background: color-mix(in srgb, var(--help-tone) 15%, var(--raised)); border-left: 1px solid color-mix(in srgb, var(--help-tone) 42%, var(--line)); border-top: 1px solid color-mix(in srgb, var(--help-tone) 42%, var(--line)); }
+.help-pop.above .help-arrow { top: auto; bottom: -7px; background: var(--raised); border: 0; border-right: 1px solid color-mix(in srgb, var(--help-tone) 42%, var(--line)); border-bottom: 1px solid color-mix(in srgb, var(--help-tone) 42%, var(--line)); }
+@media (prefers-reduced-motion: reduce) { .help-pop, .help-pop.above { transform: none; } .has-help:hover::after, .has-help.help-open::after { transform: none; } }
+
 /* 5: an error that tells what to do */
 .error-more { margin-top: 4px; font-size: 12px; }
 .error-more summary { cursor: pointer; color: var(--accent); font-weight: 600; width: max-content; }
