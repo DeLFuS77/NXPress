@@ -98,6 +98,9 @@ type App struct {
 	shutdownRound int
 	// below the normal priority, as the work asked for last
 	lowPriority bool
+	// while NXPress is low, stops keeping the processes of the window low and gives them back
+	// their priority
+	childrenBack func()
 	// the notices of the system, readied as the first is sent, and whether they can be
 	notices      sync.Once
 	noticesReady bool
@@ -555,6 +558,7 @@ func (a *App) setPriority(low bool) string {
 	}
 	a.lowPriority = low
 	err := changePriority(low)
+	a.keepChildrenLow(low)
 	switch {
 	case err == nil:
 		return ""
@@ -562,6 +566,45 @@ func (a *App) setPriority(low bool) string {
 		return "the priority could not be lowered: " + err.Error()
 	}
 	return "the priority could not go back to normal: " + err.Error()
+}
+
+// changeChildrenPriority puts the processes of the window below the normal priority with NXPress,
+// or back; childrenEvery is how often it is done again while NXPress is low.
+var (
+	changeChildrenPriority = system.SetChildrenLowPriority
+	childrenEvery          = 10 * time.Second
+)
+
+// keepChildrenLow puts the processes of the window, WebView2, below the normal priority with
+// NXPress and keeps them there while it is low, as WebView2 raises them again when the window
+// shows (#70); or gives them back theirs. The mutex is held.
+func (a *App) keepChildrenLow(low bool) {
+	if !low {
+		if a.childrenBack != nil {
+			a.childrenBack()
+			a.childrenBack = nil
+		}
+		return
+	}
+	stop, stopped := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(stopped)
+		every := time.NewTicker(childrenEvery)
+		defer every.Stop()
+		for {
+			changeChildrenPriority(true)
+			select {
+			case <-stop:
+				changeChildrenPriority(false)
+				return
+			case <-every.C:
+			}
+		}
+	}()
+	a.childrenBack = func() {
+		close(stop)
+		<-stopped
+	}
 }
 
 // closeWait is how long NXPress waits as it closes for the files at work to stop, so their half

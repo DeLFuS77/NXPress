@@ -307,7 +307,8 @@ func TestWindowWaitsWhilePaused(t *testing.T) {
 }
 
 // The priority changes only once the work is taken, and only when what is asked changes; when it
-// cannot go back to normal, NXPress says so too.
+// cannot go back to normal, NXPress says so too. The processes of the window go down with it, are
+// put down again now and then while it is low, and come back with it (#70).
 func TestPriorityChangesWithTheWorkTaken(t *testing.T) {
 	events := catchEvents(t)
 	changes := []bool{}
@@ -321,6 +322,16 @@ func TestPriorityChangesWithTheWorkTaken(t *testing.T) {
 		return nil
 	}
 	defer func() { changePriority = changed }()
+	var childrenMutex sync.Mutex
+	children := []bool{}
+	childrenChanged, every := changeChildrenPriority, childrenEvery
+	changeChildrenPriority = func(low bool) {
+		childrenMutex.Lock()
+		defer childrenMutex.Unlock()
+		children = append(children, low)
+	}
+	childrenEvery = 10 * time.Millisecond
+	defer func() { changeChildrenPriority, childrenEvery = childrenChanged, every }()
 
 	a := &App{ctx: context.Background()}
 	// refused: no keys to compress
@@ -346,6 +357,11 @@ func TestPriorityChangesWithTheWorkTaken(t *testing.T) {
 	if len(changes) != 1 || !changes[0] {
 		t.Fatalf("the priority changed %v, want once to low", changes)
 	}
+	eventually(t, "the processes of the window were not put down again", func() bool {
+		childrenMutex.Lock()
+		defer childrenMutex.Unlock()
+		return len(children) >= 3
+	})
 
 	refuse = true
 	watch.LowPriority = false
@@ -365,6 +381,13 @@ func TestPriorityChangesWithTheWorkTaken(t *testing.T) {
 	})
 	if len(changes) != 2 || changes[1] {
 		t.Fatalf("the priority changed %v, want low then back", changes)
+	}
+	childrenMutex.Lock()
+	defer childrenMutex.Unlock()
+	for i, low := range children {
+		if low != (i < len(children)-1) {
+			t.Fatalf("the processes of the window changed %v, want low until NXPress came back", children)
+		}
 	}
 }
 

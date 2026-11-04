@@ -36,3 +36,8 @@ func SetLowPriority(low bool) error {
 	}
 	return syscall.Setpriority(syscall.PRIO_PROCESS, 0, nice)
 }
+
+// SetChildrenLowPriority does nothing here: the processes of the window of WebKit keep their own
+// priority on Linux and macOS, where they take little of the processor (on macOS they are not
+// even started by NXPress).
+func SetChildrenLowPriority(low bool) {}
