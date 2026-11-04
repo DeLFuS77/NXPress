@@ -424,6 +424,121 @@ function hidePop() {
   $("game-pop").hidden = true;
 }
 
+// the help of the options (#67): the text that tells what an option does is out of the way, and
+// shows in a card while the mouse is on the name of the option, or the option has the focus of
+// the keyboard; a small ⓘ after the name tells there is one. The texts stay in the page, filled
+// by render as before, and describe their option to screen readers.
+const helpOwners = new WeakMap();
+let helpTimer = 0, helpHideTimer = 0, helpOpen = null, helpWarm = 0;
+// the name a text of help goes with: the box or the button before it, else the title of its field
+function helpName(hint) {
+  if (hint.id === "about") return $("title");
+  const item = hint.closest("label.choice, .pref-text");
+  if (item) return item.querySelector("b");
+  for (let element = hint.previousElementSibling; element; element = element.previousElementSibling) {
+    if (element.matches("label.check, .level-head")) return element.querySelector("span");
+    if (element.matches("button:not(.small-link), h2, .label")) return element;
+  }
+  return null;
+}
+function setupHelp() {
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status)");
+  hints.forEach((hint, i) => {
+    const name = helpName(hint);
+    if (!name) return;
+    hint.id ||= "help-" + i;
+    hint.classList.add("help-text");
+    name.classList.add("has-help");
+    name.dataset.help = hint.id;
+    // the control the name goes with is the one described, and its focus shows the help; a name
+    // with no control (a title) takes the focus itself
+    const control = name.closest("label")?.control || (name.id && document.querySelector(`[aria-labelledby~="${name.id}"]`)) || name.closest(".pref-item")?.querySelector(":scope > :is(input, select, button)") || name;
+    control.setAttribute("aria-describedby", hint.id);
+    helpOwners.set(control, name);
+    if (control === name && !name.matches("button")) name.tabIndex = 0;
+  });
+  document.addEventListener("pointerover", event => {
+    if ($("help-pop").contains(event.target)) { clearTimeout(helpHideTimer); return; }
+    const name = event.target.closest(".has-help");
+    if (!name || event.buttons) return;
+    clearTimeout(helpHideTimer);
+    if (name === helpOpen) return;
+    clearTimeout(helpTimer);
+    // a moment on the name first, so the cards do not flash while the mouse goes by; one after
+    // another comes at once
+    helpTimer = setTimeout(() => showHelp(name), helpOpen || Date.now() < helpWarm ? 40 : 300);
+  });
+  document.addEventListener("pointerout", event => {
+    const name = event.target.closest(".has-help");
+    if (!name && !$("help-pop").contains(event.target)) return;
+    const to = event.relatedTarget;
+    if (to && ((name && name.contains(to)) || $("help-pop").contains(to) || (helpOpen && helpOpen.contains(to)))) return;
+    clearTimeout(helpTimer);
+    helpHideTimer = setTimeout(hideHelp, 180);
+  });
+  document.addEventListener("focusin", event => {
+    const name = helpOwners.get(event.target);
+    if (name && event.target.matches(":focus-visible")) showHelp(name);
+  });
+  document.addEventListener("focusout", event => { if (helpOwners.has(event.target)) hideHelp(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") hideHelp(); });
+  document.addEventListener("pointerdown", event => { if (!$("help-pop").contains(event.target)) hideHelp(); });
+  document.addEventListener("scroll", hideHelp, true);
+  window.addEventListener("blur", hideHelp);
+}
+function showHelp(name) {
+  const hint = $(name.dataset.help);
+  const text = hint ? hint.textContent.trim() : "";
+  if (!text || !name.getClientRects().length) return;
+  clearTimeout(helpTimer);
+  clearTimeout(helpHideTimer);
+  if (helpOpen && helpOpen !== name) helpOpen.classList.remove("help-open");
+  helpOpen = name;
+  name.classList.add("help-open");
+  const pop = $("help-pop");
+  pop.classList.remove("in", "above");
+  pop.classList.toggle("wide", hint.id === "about" || text.length > 240);
+  // in the color of the group of the section; in Settings, in the blue of NXPress
+  const tone = name.closest("#preferences") ? "" : getComputedStyle($("title-tile")).getPropertyValue("--tone").trim();
+  pop.style.setProperty("--help-tone", tone || "var(--accent)");
+  pop.querySelector(".help-title span").textContent = name.textContent.trim();
+  pop.querySelector(".help-body").textContent = text;
+  pop.hidden = false;
+  // under the ⓘ, which follows the last word of the name, or above it when there is no room
+  // under; never out of the window
+  const range = document.createRange();
+  range.selectNodeContents(name);
+  const words = range.getClientRects();
+  const box = name.getBoundingClientRect();
+  const last = words.length ? words[words.length - 1] : box;
+  const x = Math.min(last.right + (name.id === "title" ? 17 : 13), box.right);
+  const width = pop.offsetWidth, height = pop.offsetHeight, gap = 10;
+  const above = box.bottom + gap + height > innerHeight - 8 && box.top - gap - height > 8;
+  const left = Math.max(8, Math.min(x - width / 2, innerWidth - width - 8));
+  pop.style.left = left + "px";
+  pop.style.top = Math.max(8, above ? box.top - gap - height : box.bottom + gap) + "px";
+  pop.classList.toggle("above", above);
+  pop.querySelector(".help-arrow").style.left = Math.max(10, Math.min(x - left - 6, width - 22)) + "px";
+  requestAnimationFrame(() => pop.classList.add("in"));
+}
+function hideHelp() {
+  clearTimeout(helpTimer);
+  if (!helpOpen) return;
+  helpOpen.classList.remove("help-open");
+  helpOpen = null;
+  helpWarm = Date.now() + 600;
+  $("help-pop").classList.remove("in");
+  setTimeout(() => { if (!helpOpen) $("help-pop").hidden = true; }, 160);
+}
+// the window drawn again: the card follows the text of its option (the level, the check chosen),
+// and goes with an option no longer shown
+function refreshHelp() {
+  if (!helpOpen) return;
+  const hint = $(helpOpen.dataset.help);
+  if (!helpOpen.getClientRects().length || !hint || !hint.textContent.trim()) hideHelp();
+  else $("help-pop").querySelector(".help-body").textContent = hint.textContent.trim();
+}
+
 // the menu of a file, with a right click: show it in its folder, copy its title ID, its name or
 // its path, check only it, take it out of the list
 function showRowMenu(row, remove, x, y) {
@@ -874,6 +989,7 @@ function render() {
   summary();
   for (const row of state.rows.values()) paint(row);
   sortRows();
+  refreshHelp();
 }
 
 // summary tells what the list holds, how far the work is, and what it saved.
@@ -2055,6 +2171,7 @@ async function main() {
   $("keep-named").onchange = () => { save("settings", settings()); previewNames(); };
   $("template-reset").onclick = async () => { state.template = await app().DefaultTemplate(); $("template").value = state.template; save("settings", settings()); previewNames(); };
   listen();
+  setupHelp();
 
   // the files left unfinished last time
   const pending = load("pending", null, isPending);

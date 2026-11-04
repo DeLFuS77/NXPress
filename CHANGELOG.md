@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- The help of the options no longer fills the panels: a small ⓘ after the name of an option tells there is some, and it shows in a card while the mouse is on the name or the option has the focus of the keyboard. The description of each section is beside its title the same way, and so is the help in Settings; warnings stay in sight (thanks @NikoMuffin, #67)
+
 ## 1.5.1
 
 ### Improvements
