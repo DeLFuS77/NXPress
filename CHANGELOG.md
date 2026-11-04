@@ -5,6 +5,7 @@
 ### Improvements
 
 - Re-verify files already checked, as it is now called, is back at the top of Verify, out of Advanced; only Compare with a DAT stays there (thanks @NikoMuffin, #65)
+- When done says Shut down instead of Turn off, and choosing it no longer moves the bar at the bottom (thanks @NikoMuffin, #66)
 
 ## 1.5.0
 
