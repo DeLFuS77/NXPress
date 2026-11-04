@@ -18,6 +18,10 @@
 - Show in folder is a small folder button beside the name of the game, so it says which game it opens and adds no line to the row (thanks @NikoMuffin, #61)
 - When done: Nothing, Turn off or Hibernate, one choice instead of the box to turn off. Hibernate is offered only where the computer can hibernate, keeps every program as it was, and needs no forcing; the same 60 seconds to call it off (thanks @NikoMuffin, #62)
 
+### Fixes
+
+- Extra compression no longer stops a game with "invalid bucket tree" or "invalid NCZSECT3 table", as it did on BZZZT, CHRONO CROSS THE RADICAL DREAMERS EDITION and its update. The table of the LZ4 blocks of Nintendo is read as Atmosphère reads it, also when the game leaves unused room after it; an NCA none of whose blocks can be made again byte for byte is written as a plain NCZ, which every installer reads, instead of an NCZSECT3 without its table; and an NCA whose table still cannot be read is compressed as a plain NCZ, with why in the note of the file, instead of failing the whole game (thanks @NikoMuffin, #63)
+
 ## 1.4.1
 
 ### Improvements

@@ -52,6 +52,7 @@ const noteRules = [
   [/(\d+) NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it/g, "sparseNote"],
   [/works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "worksArchive"],
   [/(\d+) LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "archiveNote"],
+  [/(\d+) NCA with their LZ4 blocks left as they are: their compressed storage could not be read/g, "lz4Unread"],
   [/padding: (.+?) that trimming takes away/g, "paddingInfo"],
   [/delta fragments: (.+?) that trimming takes away/g, "deltasInfo"],
   [/ of padding taken away/g, "paddingTaken"],

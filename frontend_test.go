@@ -122,6 +122,7 @@ const samples = [
   ["this game uses sparse storage: to compress it with the experimental format of NXPress (NCZSECT2), turn on Extra compression under Advanced, or use --extra", "use --extra"],
   ["1.0 GB -> 900.0 MB, 10.0% smaller, 1 NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", "decompress it with NXPress"],
   ["1.0 GB -> 900.0 MB, 10.0% smaller, 47606 LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it", "kept decompressed"],
+  ["1.0 GB -> 900.0 MB, 10.0% smaller, 1 NCA with their LZ4 blocks left as they are: their compressed storage could not be read (0123456789abcdef0123456789abcdef.nca: invalid bucket tree)", "left as they are"],
   ["works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it", "works with"],
   ["works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it", "works with"],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],

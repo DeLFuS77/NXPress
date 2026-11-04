@@ -92,7 +92,7 @@ texts.ja = {
   },
   notes: {
     sparseNote: "スパースストレージの NCA $1 個を実験的形式 NCZSECT2 で圧縮: インストールするには NXPress で展開してください", worksSparse: "対応: NXPress のみ(スパースストレージ用の実験的形式 NCZSECT2): インストールするには NXPress で展開してください",
-    archiveNote: "Nintendo の LZ4 ブロック $1 個を実験的なアーカイブ形式 NCZSECT3 で展開したまま保存: インストールするには NXPress で展開してください", worksArchive: "対応: NXPress のみ、実験的なアーカイブ形式 NCZSECT3: インストールするには NXPress で展開してください",
+    archiveNote: "Nintendo の LZ4 ブロック $1 個を実験的なアーカイブ形式 NCZSECT3 で展開したまま保存: インストールするには NXPress で展開してください", lz4Unread: "NCA $1 個は LZ4 ブロックをそのまま保存: 圧縮ストレージを読み取れませんでした", worksArchive: "対応: NXPress のみ、実験的なアーカイブ形式 NCZSECT3: インストールするには NXPress で展開してください",
     onlyFileOfGame: "ここにあるのはこのゲームのファイル 1 つだけです: まとめる相手がありません", packedInto: "まとめた先: ",
     trimOnlyUpdates: "。デルタフラグメントがあるのはアップデートだけです",
     notCompressibleWhy: "圧縮できるものがないため、そのままにしました", sparseSkip: "このゲームはスパースストレージを使っています。NXPress の実験的な形式で圧縮するには、詳細設定の「追加圧縮」をオンにしてください", sparseWhy: "スパースストレージを使っています。NXPress の実験的な形式で圧縮するには、詳細設定の「追加圧縮」をオンにしてください", encryptionWhy: "セクションが NXPress の読めない暗号化を使っています", noGameDataWhy: "ゲームのデータがありません", alreadyCompressedWhy: "すでに圧縮済みです(NCZ ファイルを含む)。名前の違う NSZ か XCZ です", onlyMetaWhy: "メタデータ以外の NCA がありません",

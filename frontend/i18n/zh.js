@@ -92,7 +92,7 @@ texts.zh = {
   },
   notes: {
     sparseNote: "稀疏存储的 NCA $1 个,采用实验性格式 NCZSECT2:安装前请用 NXPress 解压", worksSparse: "支持:仅 NXPress,稀疏存储的实验性格式 NCZSECT2:安装前请用 NXPress 解压",
-    archiveNote: "$1 个 Nintendo LZ4 块以实验性存档格式 NCZSECT3 解压保存：安装前请用 NXPress 解压", worksArchive: "支持：仅 NXPress，实验性存档格式 NCZSECT3：安装前请用 NXPress 解压",
+    archiveNote: "$1 个 Nintendo LZ4 块以实验性存档格式 NCZSECT3 解压保存：安装前请用 NXPress 解压", lz4Unread: "$1 个 NCA 的 LZ4 块保持原样：无法读取其压缩存储", worksArchive: "支持：仅 NXPress，实验性存档格式 NCZSECT3：安装前请用 NXPress 解压",
     onlyFileOfGame: "这里只有该游戏的这一个文件:没有可合并的内容", packedInto: "已合并到 ",
     trimOnlyUpdates: "。只有更新才有增量片段",
     notCompressibleWhy: "没有可压缩的内容,保持原样", sparseSkip: "该游戏使用稀疏存储。要用 NXPress 的实验性格式压缩它，请在“高级”中打开“额外压缩”", sparseWhy: "它使用稀疏存储：在“高级”中打开“额外压缩”，即可用 NXPress 的实验性格式压缩", encryptionWhy: "它的分区使用了 NXPress 无法读取的加密", noGameDataWhy: "其中没有游戏数据", alreadyCompressedWhy: "它已经压缩过(包含 NCZ 文件),是改了名字的 NSZ 或 XCZ", onlyMetaWhy: "除元数据外没有任何 NCA",

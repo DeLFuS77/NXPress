@@ -92,7 +92,7 @@ texts.ko = {
   },
   notes: {
     sparseNote: "스파스 스토리지 NCA $1개를 실험적 형식 NCZSECT2로 압축: 설치하려면 NXPress로 압축을 푸세요", worksSparse: "지원: NXPress만, 스파스 스토리지용 실험적 형식 NCZSECT2: 설치하려면 NXPress로 압축을 푸세요",
-    archiveNote: "Nintendo의 LZ4 블록 $1개를 실험적 보관 형식 NCZSECT3로 압축 해제한 채 저장: 설치하려면 NXPress로 압축을 푸세요", worksArchive: "지원: NXPress만, 실험적 보관 형식 NCZSECT3: 설치하려면 NXPress로 압축을 푸세요",
+    archiveNote: "Nintendo의 LZ4 블록 $1개를 실험적 보관 형식 NCZSECT3로 압축 해제한 채 저장: 설치하려면 NXPress로 압축을 푸세요", lz4Unread: "NCA $1개는 LZ4 블록을 그대로 저장: 압축 스토리지를 읽을 수 없습니다", worksArchive: "지원: NXPress만, 실험적 보관 형식 NCZSECT3: 설치하려면 NXPress로 압축을 푸세요",
     onlyFileOfGame: "여기에 이 게임의 파일이 하나뿐이에요: 함께 묶을 것이 없어요", packedInto: "묶은 파일: ",
     trimOnlyUpdates: ". 델타 조각은 업데이트에만 있어요",
     notCompressibleWhy: "압축할 것이 없어 그대로 두었어요", sparseSkip: "이 게임은 스파스 스토리지를 써요. NXPress의 실험적인 형식으로 압축하려면 고급에서 '추가 압축'을 켜세요", sparseWhy: "스파스 스토리지를 써요. NXPress의 실험적 형식으로 압축하려면 고급에서 '추가 압축'을 켜세요", encryptionWhy: "섹션이 NXPress가 읽지 못하는 암호화를 써요", noGameDataWhy: "게임 데이터가 없어요", alreadyCompressedWhy: "이미 압축되어 있어요(NCZ 파일 포함). 이름이 다른 NSZ나 XCZ예요", onlyMetaWhy: "메타데이터 말고는 NCA가 없어요",

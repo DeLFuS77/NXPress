@@ -13,10 +13,13 @@ The blocks can be kept decompressed only if they can be made again byte for byte
 
 NXPress has both, written after `lz4.c` and `lz4hc.c` of LZ4 (BSD 2-Clause License, Copyright Yann Collet). They make again every block of the games tried: 47,648 of an update of Hauntii, 157,669 of an update of BlazBlue Entropy Effect X, and 6,978 of its base game.
 
+Other games use compressors NXPress does not have yet, and their blocks stay as LZ4: BZZZT tells level 16 for its blocks, and most of the level 0 blocks of CHRONO CROSS THE RADICAL DREAMERS EDITION come from another version of the fast compressor (1,976 of its 102,622 blocks are made again).
+
 ## Where the blocks are
 
 - **FS header 0x178**: the compression info, with the offset and size of the table and its BKTR header. The table sits at the end of the data level of the hash tree, the last of its levels, and its offset counts from the start of that level.
-- **Table entries**: 0x18 bytes each, in nodes of 16 KiB. Each entry holds the offset in the decompressed data (s64), the offset in the stored data (s64), the kind (u8: 0 stored, 1 zeros, 3 LZ4), the level (s8), 2 bytes unused and the stored size (u32).
+- **Table**: a bucket tree in nodes of 16 KiB, as Atmosphère reads it: a first node that tells the entry sets and the end of the decompressed data, then the entry sets, one node each, of up to 682 entries. The size the FS header tells is often bigger than the tree: many games leave unused nodes after the last set.
+- **Table entries**: 0x18 bytes each. Each entry holds the offset in the decompressed data (s64), the offset in the stored data (s64), the kind (u8: 0 stored, 1 zeros, 3 LZ4), the level (s8), 2 bytes unused and the stored size (u32).
 - **In an update**: the data level is in the patched space of the section. The indirect table (FS header 0x100) tells which part of it the update holds. Only those blocks are in its NCA.
 - **Base games in sparse storage**: their table is in their update, so they are left as NCZSECT2 does.
 
@@ -40,6 +43,8 @@ An NCZ in this format is an `NCZSECT2`, with these changes:
 **The last 16 bytes:** where `NCZLZ4RB` starts, counted from the start of the NCZ (u64), then `NCZLZ4FT`.
 
 A block is kept decompressed only when it is made again byte for byte while the NCZ is written. Any other block stays as LZ4 in the stream and is not in the table. The data is always one stream, never `NCZBLOCK`.
+
+An NCA none of whose blocks is made again is written as `NCZSECT2` or plain NCZ, as it would be without this format, and so is one whose table cannot be read, told with why in the note of the file: the game is still compressed.
 
 ## Rebuilding
 

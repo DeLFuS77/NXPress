@@ -92,7 +92,7 @@ texts.it = {
   },
   notes: {
     sparseNote: "$1 NCA in sparse storage nel formato sperimentale NCZSECT2: decomprimilo con NXPress per installarlo", worksSparse: "funziona con: solo NXPress, formato sperimentale NCZSECT2 per lo sparse storage: decomprimilo con NXPress per installarlo",
-    archiveNote: "$1 blocchi LZ4 di Nintendo tenuti decompressi nel formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo", worksArchive: "funziona con: solo NXPress, formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo",
+    archiveNote: "$1 blocchi LZ4 di Nintendo tenuti decompressi nel formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo", lz4Unread: "$1 NCA con i blocchi LZ4 lasciati come sono: non è stato possibile leggere la loro memoria compressa", worksArchive: "funziona con: solo NXPress, formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo",
     onlyFileOfGame: "è l'unico file del suo gioco qui: non c'è niente con cui unirlo", packedInto: "unito in ",
     trimOnlyUpdates: " (solo gli aggiornamenti li hanno)",
     notCompressibleWhy: "Niente da comprimere, resta com'è", sparseSkip: "Questo gioco usa lo sparse storage. Per comprimerlo con il formato sperimentale di NXPress, attiva Compressione extra in Avanzate", sparseWhy: "usa lo sparse storage: attiva Compressione extra in Avanzate per comprimerlo con il formato sperimentale di NXPress", encryptionWhy: "le sue sezioni usano una cifratura che NXPress non legge", noGameDataWhy: "non contiene dati del gioco", alreadyCompressedWhy: "è già compresso (contiene file NCZ): è un NSZ o XCZ con un altro nome", onlyMetaWhy: "non contiene NCA oltre ai metadati",
