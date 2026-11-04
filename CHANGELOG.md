@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- Log, under Check: every work NXPress did, the newest first and by day, each with its files, how they ended and what they saved. It finds a game or a file, and can show only the works with problems. It is kept in log.txt in the settings folder too, with how many works to keep (100, 500, 1000 or no limit) and a button to clear it, which Undo takes back. It takes the place of Last report in Settings › Help, and opens by itself after the computer was shut down at the end of a work (thanks @NikoMuffin, #69)
+
 ## 1.5.1
 
 ### Improvements

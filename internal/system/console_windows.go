@@ -38,6 +38,21 @@ func ShowFile(path string) {
 	command.Start()
 }
 
+// OpenFile opens a file in the program Windows has for it: a text file in its editor.
+func OpenFile(path string) error {
+	verb, _ := syscall.UTF16PtrFromString("open")
+	file, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	// ShellExecuteW answers more than 32 when the program started (1 shows its window as usual)
+	done, _, failed := syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW").Call(0, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(file)), 0, 0, 1)
+	if done <= 32 {
+		return fmt.Errorf("%s cannot be opened: %v", path, failed)
+	}
+	return nil
+}
+
 // SendToFolder is the folder of the "Send to" menu of the Explorer, for this user.
 func SendToFolder() string {
 	if data := os.Getenv("APPDATA"); data != "" {

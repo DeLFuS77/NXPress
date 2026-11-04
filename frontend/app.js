@@ -26,6 +26,8 @@ const icons = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   fat32: '<path d="M7 3h7l4 4v14H7z"/><path d="M10 6v3m3-3v3"/>',
   rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
+  // the log of the works: a clock going back
+  worklog: '<path d="M3.8 12a8.2 8.2 0 1 0 2.4-5.8"/><path d="M3.5 3.8v3.9h3.9"/><path d="M12 7.5V12l3 2"/>',
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || ""}</svg>`;
 // the color of the tile of an icon, by the group of its section
@@ -63,6 +65,9 @@ const state = {
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
+  // the log of the works, the oldest first, its text file, the works open in it, and whether it
+  // shows only the ones with problems (#69)
+  worklog: [], worklogFile: "", worklogOpen: new Set(), worklogProblems: false,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -728,6 +733,7 @@ function render() {
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
   // the name of a button that shows an icon, or no text on a narrow window
   document.querySelectorAll("[data-t-label]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.tLabel)); });
+  document.querySelectorAll("[data-t-placeholder]").forEach(element => { element.placeholder = t(element.dataset.tPlaceholder); });
   // the section chosen with the keyboard keeps the focus while the menu is drawn again
   const focused = $("modes").contains(document.activeElement) ? document.activeElement.dataset.mode : "";
   $("modes").innerHTML = "";
@@ -760,9 +766,25 @@ function render() {
       };
       $("modes").append(button);
     }
+    // the log of the works, with what checks them (#69): a page, not a section of files
+    if (group === "groupCheck") {
+      const button = document.createElement("button");
+      button.innerHTML = tile("worklog", group) + "<span><b></b><small></small></span>";
+      button.dataset.mode = "worklog";
+      button.querySelector("b").textContent = t("worklog");
+      button.title = t("worklog");
+      button.querySelector("small").textContent = t("hintWorklog");
+      button.className = state.view === "worklog" ? "on" : "";
+      button.onclick = openWorklog;
+      $("modes").append(button);
+    }
   }
   if (focused) $("modes").querySelector(`[data-mode="${focused}"]`)?.focus({ preventScroll: true });
-  document.querySelectorAll("[data-for]").forEach(element => { element.hidden = !element.dataset.for.split(" ").includes(state.mode); });
+  // the log takes the place of the list of the section, and its settings the one of the options
+  const worklog = state.view === "worklog";
+  document.querySelectorAll("[data-for]").forEach(element => { element.hidden = worklog ? element.dataset.for !== "worklog" : !element.dataset.for.split(" ").includes(state.mode); });
+  $("work").classList.toggle("worklog-view", worklog);
+  if (worklog) paintWorklog();
   // the page of the settings takes the place of the section and its options
   const preferences = state.view === "preferences";
   $("work").hidden = preferences;
@@ -772,12 +794,13 @@ function render() {
   $("open-preferences").classList.toggle("on", preferences);
   $("keys-path").textContent = state.keys || t("keys")("");
   paintPublished();
-  $("title").textContent = t(state.mode);
+  const page = worklog ? "worklog" : state.mode;
+  $("title").textContent = t(page);
   // the section in the color of its group, its tile beside its title
-  const group = (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
+  const group = worklog ? "groupCheck" : (groups.find(([, members]) => members.includes(state.mode)) || [""])[0];
   $("title-tile").className = `tile tone-${tones[group] || "neutral"}`;
-  $("title-tile").innerHTML = icon(state.mode);
-  $("about").textContent = t("about" + state.mode[0].toUpperCase() + state.mode.slice(1));
+  $("title-tile").innerHTML = icon(page);
+  $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
   for (const entry of takesShown[state.mode].split(" ")) {
     // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on
@@ -1585,13 +1608,12 @@ function listen() {
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const single = onePack(state.lastRun);
     const total = single || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
-    keepReport(event);
     // the files skipped by this work, not the ones left so by the work before
     const skippedRows = single || !state.lastRun ? 0 : state.lastRun.skipped;
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     setStatus(event.cancelled ? { key: "stopped" } : { key: "finished", args: [total, event.failed, event.seconds, skippedRows] });
     if (state.lastRun) state.lastRun.status = status;
-    keepReportStatus(status);
+    keepWork(event, status);
     if (event.cancelled || !event.failed) save("pending", null);
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
@@ -1627,69 +1649,165 @@ function listen() {
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
-// the report of the last work is kept, so what happened can be read again later: above all after
-// the computer was turned off when it was done, when it shows by itself the next time
-function keepReport(event) {
-  const run = state.lastRun && state.lastRun.started;
-  const rows = [...state.rows.values()].filter(row => run && row.run === run && ["ok", "failed", "modified", "skipped"].includes(row.status)).map(row => ({
+/// the log of the works (#69): each work is kept as it ends, by NXPress in the folder of its
+// settings with a text file of it, to read what was done again later: above all after the
+// computer was turned off when it was done, when the log shows by itself the next time
+const worklogKeeps = [100, 500, 1000, 0];
+const worklogKeep = () => { const keep = load("worklogKeep", 500); return worklogKeeps.includes(keep) ? keep : 500; };
+const workName = mode => mode === "measure" ? t("measureTitle") : mode === "estimate" ? t("estimateButton") : t(mode) || mode;
+// a measure and an estimate compress: they wear the tile of Compress
+const workTile = mode => icons[mode] ? tile(mode, (groups.find(([, members]) => members.includes(mode)) || ["groupCheck"])[0]) : tile("compress", "groupSpace");
+const isWork = value => isReport(value) && Number.isFinite(value.when) && typeof value.mode === "string";
+function keepWork(event, status) {
+  const run = state.lastRun;
+  const started = run && run.started;
+  const mode = run ? run.mode : state.mode;
+  const request = (run && run.request) || {};
+  const ran = [...state.rows.values()].filter(row => started && row.run === started && ["ok", "failed", "modified", "skipped"].includes(row.status));
+  // a work stopped before it did anything leaves nothing to read
+  if (!ran.length && event.cancelled) return;
+  const rows = ran.map(row => ({
     name: row.game && row.game.name ? `${row.game.name} · ${row.item.name}` : row.item.name,
     status: row.status === "failed" && row.error === "cancelled" ? "cancelled" : row.status,
     damaged: damaged(row.status, row.error),
     note: noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note),
   }));
-  save("lastReport", { when: Date.now(), mode: state.lastRun ? state.lastRun.mode : state.mode, cancelled: !!event.cancelled, rows, status: "", text: "" });
+  // what the files written saved, as the space saved since always counts it
+  const saved = ["compress", "recompress", "trim", "pack"].includes(mode) ? ran.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after).reduce((sum, row) => sum + row.item.size - row.after, 0) : 0;
+  const detail = ["compress", "recompress", "estimate", "measure"].includes(mode) && request.level ? t("worklogLevel")(request.level, !!request.block)
+    : mode === "verify" && ["full", "signature", "both"].includes(request.verifyLevel) ? t("verify" + request.verifyLevel[0].toUpperCase() + request.verifyLevel.slice(1)) : "";
+  // whole numbers: NXPress keeps them as such
+  const work = { when: Date.now(), mode, cancelled: !!event.cancelled, status, detail, seconds: Math.round(event.seconds || 0), saved: Math.round(saved), rows, text: "" };
+  work.text = workText(work);
+  app().AddToLog(work, worklogKeep()).then(works => { state.worklog = (works || []).filter(isWork); if (state.view === "worklog") render(); }).catch(() => { });
 }
-function keepReportStatus(status) {
-  const kept = load("lastReport", null, isReport);
-  if (!kept) return;
-  kept.status = status;
-  kept.text = report();
-  save("lastReport", kept);
+// how a work reads in the text file of the log: as the window shows it, in its language
+function workText(work) {
+  const when = new Date(work.when);
+  const two = n => String(n).padStart(2, "0");
+  const date = `${when.getFullYear()}-${two(when.getMonth() + 1)}-${two(when.getDate())} ${two(when.getHours())}:${two(when.getMinutes())}`;
+  const lines = [[date, workName(work.mode), work.detail, `NXPress ${state.setup.version}`].filter(Boolean).join(" · ")];
+  lines.push([work.status, work.saved > 0 ? t("worklogSaved")(size(work.saved)) : ""].filter(Boolean).join(" "));
+  const words = work.rows.map(row => stateWord(row.status, work.mode, row.damaged));
+  const width = Math.max(0, ...words.map(word => word.length)) + 2;
+  work.rows.forEach((row, i) => lines.push(`  ${words[i].padEnd(width)}${row.name}${row.note ? " — " + row.note : ""}`));
+  return lines.join("\n");
 }
-function showReport() {
-  const kept = load("lastReport", null, isReport);
-  $("report-when").textContent = kept ? `${new Date(kept.when).toLocaleString(state.language)} · ${kept.mode === "measure" ? t("measureTitle") : kept.mode === "estimate" ? t("estimateButton") : t(kept.mode) || kept.mode}` : "";
-  $("report-status").textContent = kept ? kept.status : t("noReport");
-  $("report-copy").hidden = !kept;
-  // a long report: how many of each, the problems first, and only them when there are some
-  const all = kept ? kept.rows : [];
+// the log as NXPress keeps it, and the last report of an older NXPress put in it the first time
+async function loadWorklog() {
+  try {
+    state.worklog = (await app().Log() || []).filter(isWork);
+    state.worklogFile = await app().LogFile() || "";
+  } catch { state.worklog = []; }
+  const older = load("lastReport", null, isReport);
+  if (older && Number.isFinite(older.when) && older.rows.length && !state.worklog.length) {
+    const work = { when: older.when, mode: typeof older.mode === "string" ? older.mode : "", cancelled: !!older.cancelled, status: typeof older.status === "string" ? older.status : "", detail: "", seconds: 0, saved: 0, rows: older.rows, text: "" };
+    work.text = workText(work);
+    try { state.worklog = (await app().AddToLog(work, worklogKeep()) || []).filter(isWork); } catch { }
+  }
+  try { localStorage.removeItem("nxpress.lastReport"); } catch { }
+}
+// the log takes the place of the list, and its settings the one of the options; the newest work
+// is open, to read it at once
+function openWorklog() {
+  if (state.busy || state.starting || state.view === "worklog") return;
+  state.view = "worklog";
+  const newest = state.worklog[state.worklog.length - 1];
+  state.worklogOpen = new Set(newest ? [newest.when] : []);
+  render();
+  replay("enter", document.querySelector("#work .page-head"), $("worklog-list"), $("settings"));
+}
+// the day of a work, as the log groups them: today, yesterday, then the day of the week
+function workDay(when) {
+  const day = new Date(when), today = new Date();
+  const days = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - new Date(day.getFullYear(), day.getMonth(), day.getDate())) / 86400000);
+  const year = day.getFullYear() === today.getFullYear() ? {} : { year: "numeric" };
+  const date = day.toLocaleDateString(state.language, { day: "numeric", month: "long", ...year });
+  if (days === 0) return `${t("worklogToday")} · ${date}`;
+  if (days === 1) return `${t("worklogYesterday")} · ${date}`;
+  return day.toLocaleDateString(state.language, { weekday: "long", day: "numeric", month: "long", ...year });
+}
+function paintWorklog() {
+  const find = $("worklog-find").value.trim().toLowerCase();
+  const problems = !!state.worklogProblems;
+  for (const button of $("worklog-filter").querySelectorAll("button")) {
+    const on = !!button.dataset.problems === problems;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
+  const works = state.worklog.slice().reverse();
+  $("worklog-count").textContent = works.length ? t("worklogCount")(works.length, works.reduce((sum, work) => sum + work.rows.length, 0)) : "";
+  for (const option of $("worklog-keep").options) if (option.value !== "0") option.textContent = t("worklogKeepN")(Number(option.value));
+  $("worklog-keep").value = String(worklogKeep());
+  $("worklog-file").textContent = state.worklogFile;
+  $("worklog-file").title = state.worklogFile;
+  $("worklog-open").disabled = $("worklog-clear").disabled = !works.length;
+  $("worklog-show").hidden = !works.length;
+  const list = $("worklog-list");
+  list.innerHTML = "";
+  const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
+  const shown = works.filter(work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches));
+  if (!shown.length) {
+    list.innerHTML = `<div class="worklog-empty"><svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">${icons.worklog}</svg><div class="big"></div><div class="muted"></div></div>`;
+    list.querySelector(".big").textContent = t(works.length ? "worklogNone" : "worklogEmpty");
+    list.querySelector(".muted").textContent = t(works.length ? "worklogNoneHint" : "worklogEmptyHint");
+    return;
+  }
   const order = { failed: 0, cancelled: 1, modified: 2, skipped: 3, ok: 4 };
-  const mode = kept ? kept.mode : "";
-  // a check counts its damaged files apart, as Corrupted, from the ones it could not check
-  const counts = {};
-  for (const row of all) {
-    const key = mode === "verify" && row.damaged ? "corrupted" : row.status;
-    counts[key] = (counts[key] || 0) + 1;
-  }
-  const problems = all.length - (counts.ok || 0);
-  $("report-counts").innerHTML = "";
-  for (const status of ["ok", "modified", "skipped", "corrupted", "failed", "cancelled"]) {
-    if (!counts[status]) continue;
-    const badge = document.createElement("span");
-    badge.className = "badge " + (status === "cancelled" ? "waiting" : status === "corrupted" ? "failed" : status);
-    badge.textContent = `${status === "corrupted" ? stateWord("failed", mode, true) : stateWord(status, mode)} ${counts[status]}`;
-    $("report-counts").append(badge);
-  }
-  $("report-problems-option").hidden = !problems || problems === all.length;
-  $("report-problems").checked = problems > 0 && problems < all.length;
-  $("report-problems").onchange = () => paintReport(all, order, mode);
-  paintReport(all, order, mode);
-  openDialog($("report-dialog"));
-}
-function paintReport(all, order, mode) {
-  const onlyProblems = $("report-problems").checked;
-  const rows = $("report-rows");
-  rows.innerHTML = "";
-  const shown = all.filter(row => !onlyProblems || row.status !== "ok").sort((a, b) => order[a.status] - order[b.status]);
-  for (const row of shown) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td><div class="report-name"></div><div class="report-note"></div></td><td class="state"><span class="badge"></span></td>`;
-    tr.querySelector(".report-name").textContent = row.name;
-    tr.querySelector(".report-note").textContent = row.note;
-    const badge = tr.querySelector(".badge");
-    badge.classList.add(row.status === "cancelled" ? "waiting" : row.status);
-    badge.textContent = stateWord(row.status, mode, row.damaged);
-    rows.append(tr);
+  let day = "";
+  for (const work of shown) {
+    const label = workDay(work.when);
+    if (label !== day) {
+      day = label;
+      const head = document.createElement("div");
+      head.className = "worklog-day";
+      head.textContent = label;
+      list.append(head);
+    }
+    const open = state.worklogOpen.has(work.when) || !!find;
+    const item = document.createElement("div");
+    item.className = "worklog-work" + (open ? " open" : "");
+    item.innerHTML = `<button class="worklog-row" aria-expanded="${open}"><span class="worklog-time"></span>${workTile(work.mode)}<span class="worklog-what"><b></b><small></small></span><span class="worklog-counts"></span><span class="worklog-saved"></span><svg class="worklog-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><div class="worklog-files"><table><tbody></tbody></table><button class="link small-link worklog-copy"></button></div>`;
+    const clock = new Date(work.when).toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" });
+    item.querySelector(".worklog-time").textContent = clock;
+    item.querySelector(".worklog-what b").textContent = workName(work.mode);
+    // on a narrow window the hour goes before the rest, where the column of the hours is gone
+    item.querySelector(".worklog-what small").textContent = [t("worklogFiles")(work.rows.length), work.detail, work.seconds ? time(work.seconds) : "", work.cancelled ? t("worklogCancelled") : ""].filter(Boolean).join(" · ");
+    item.querySelector(".worklog-what small").dataset.clock = clock;
+    // how its files ended: a check counts its damaged files apart, as Corrupted
+    const counts = {};
+    for (const row of work.rows) { const key = work.mode === "verify" && row.damaged ? "corrupted" : row.status; counts[key] = (counts[key] || 0) + 1; }
+    for (const status of ["ok", "modified", "skipped", "corrupted", "failed", "cancelled"]) {
+      if (!counts[status]) continue;
+      const badge = document.createElement("span");
+      badge.className = "badge " + (status === "cancelled" ? "waiting" : status === "corrupted" ? "failed" : status);
+      badge.textContent = `${status === "corrupted" ? stateWord("failed", work.mode, true) : stateWord(status, work.mode)} ${counts[status]}`;
+      item.querySelector(".worklog-counts").append(badge);
+    }
+    item.querySelector(".worklog-saved").textContent = work.saved > 0 ? "−" + size(work.saved) : "";
+    // its files, the problems first, and only the ones looked for
+    const rows = work.rows.filter(row => (!problems || row.status !== "ok") && matches(row)).sort((a, b) => order[a.status] - order[b.status]);
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><div class="report-name"></div><div class="report-note"></div></td><td class="state"><span class="badge"></span></td>`;
+      tr.querySelector(".report-name").textContent = row.name;
+      tr.querySelector(".report-note").textContent = row.note || "";
+      const badge = tr.querySelector(".badge");
+      badge.classList.add(row.status === "cancelled" ? "waiting" : row.status);
+      badge.textContent = stateWord(row.status, work.mode, row.damaged);
+      item.querySelector("tbody").append(tr);
+    }
+    const copy = item.querySelector(".worklog-copy");
+    copy.textContent = t("worklogCopy");
+    copy.onclick = () => { window.runtime.ClipboardSetText(work.text); showToast(t("worklogCopied")); };
+    const button = item.querySelector(".worklog-row");
+    button.onclick = () => {
+      if (state.worklogOpen.has(work.when)) state.worklogOpen.delete(work.when); else state.worklogOpen.add(work.when);
+      const now = state.worklogOpen.has(work.when);
+      item.classList.toggle("open", now);
+      button.setAttribute("aria-expanded", now);
+    };
+    list.append(item);
   }
 }
 
@@ -1735,7 +1853,7 @@ function renderSound() {
 
 let shutdownTimer = 0;
 function startShutdown() {
-  // the report shows by itself the next time NXPress opens
+  // the log shows by itself the next time NXPress opens
   save("showReport", true);
   state.powerAction = $("when-done").value;
   if (state.powerAction === "hibernate") app().HibernateIn(60);
@@ -1832,10 +1950,10 @@ async function main() {
   $(chosen.block ? "target-block" : "target-solid").checked = true;
   $("threads").value = number(chosen.threads) || state.setup.threads;
   state.restorePreset = load("preset", "");
-  if (load("showReport", false)) {
-    save("showReport", false);
-    setTimeout(showReport, 300);
-  }
+  // the log is read, and shown when the computer was turned off at the end of the last work
+  const showLog = load("showReport", false);
+  save("showReport", false);
+  loadWorklog().then(() => { if (showLog) setTimeout(openWorklog, 300); else if (state.view === "worklog") render(); });
   // Advanced is open unless it was closed, and stays as it was left
   $("advanced").open = load("advancedOpen", true);
   $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
@@ -2017,9 +2135,34 @@ async function main() {
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
   $("measure-close").onclick = () => $("measure-dialog").close();
-  $("last-report").onclick = showReport;
-  $("report-close").onclick = () => $("report-dialog").close();
-  $("report-copy").onclick = () => { const kept = load("lastReport", null, isReport); if (kept) window.runtime.ClipboardSetText(kept.text); $("report-dialog").close(); setStatus({ key: "reportCopied" }); };
+  $("last-report").onclick = openWorklog;
+  // the log: what is looked for, the works with problems only, the most kept, its text file, and
+  // clearing it, which Undo takes back
+  $("worklog-find").oninput = paintWorklog;
+  $("worklog-filter").onclick = event => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    state.worklogProblems = !!button.dataset.problems;
+    paintWorklog();
+  };
+  $("worklog-keep").onchange = async () => {
+    const keep = Number($("worklog-keep").value);
+    save("worklogKeep", keep);
+    try { state.worklog = (await app().KeepLog(keep) || []).filter(isWork); } catch { }
+    render();
+  };
+  $("worklog-open").onclick = () => app().OpenLog().catch(() => { });
+  $("worklog-show").onclick = () => app().ShowFile(state.worklogFile);
+  $("worklog-clear").onclick = async () => {
+    const kept = state.worklog;
+    try { await app().ClearLog(); } catch { return; }
+    state.worklog = [];
+    render();
+    showToast(t("worklogCleared"), async () => {
+      try { await app().WriteLog(kept); state.worklog = kept; } catch { }
+      render();
+    });
+  };
   $("pause").onclick = () => {
     state.paused = !state.paused;
     app().SetPaused(state.paused);

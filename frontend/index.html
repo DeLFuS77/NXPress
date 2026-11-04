@@ -78,6 +78,17 @@
     </div>
     <pre id="log" hidden></pre>
 
+    <!-- the log of the works (#69), in place of the list while it is shown -->
+    <div class="toolbar" id="worklog-tools">
+      <input id="worklog-find" type="search" data-t-placeholder="worklogFind" data-t-label="worklogFind">
+      <div class="segmented" id="worklog-filter" role="radiogroup">
+        <button data-problems="" role="radio" data-t="worklogAll"></button>
+        <button data-problems="1" role="radio" data-t="worklogProblems"></button>
+      </div>
+      <span class="worklog-count" id="worklog-count"></span>
+    </div>
+    <div id="worklog-list" class="worklog-list"></div>
+
     <div class="actions">
       <div class="summary">
         <div id="summary-text"></div>
@@ -221,6 +232,25 @@
         <p class="hint" data-t="datHint"></p>
       </div>
     </details>
+
+    <section class="block" data-for="worklog" id="worklog-settings">
+      <h2 data-t="worklog"></h2>
+      <div class="field">
+        <label class="label" for="worklog-keep" data-t="worklogKeep"></label>
+        <select id="worklog-keep"><option value="100"></option><option value="500"></option><option value="1000"></option><option value="0" data-t="worklogNoLimit"></option></select>
+        <p class="hint" data-t="worklogKeepHint"></p>
+      </div>
+      <div class="field">
+        <div class="label" data-t="worklogFile"></div>
+        <div class="path"><span id="worklog-file"></span><button id="worklog-open" data-t="prefOpen"></button></div>
+        <button id="worklog-show" class="link small-link" data-t="showFolder"></button>
+        <p class="hint" data-t="worklogFileHint"></p>
+      </div>
+      <div class="field">
+        <button id="worklog-clear" data-t="worklogClear"></button>
+        <p class="hint" data-t="worklogClearHint"></p>
+      </div>
+    </section>
   </aside>
 
   <section id="preferences" hidden>
@@ -282,7 +312,7 @@
       <section class="pref-group">
         <h2 data-t="prefHelp"></h2>
         <div class="pref-item">
-          <div class="pref-text"><b data-t="lastReport"></b><small data-t="lastReportHint"></small></div>
+          <div class="pref-text"><b data-t="worklog"></b><small data-t="worklogPrefHint"></small></div>
           <button id="last-report" data-t="prefShow"></button>
         </div>
         <div class="pref-item">
@@ -350,17 +380,6 @@
     <div><button id="star-yes" class="outline"><span aria-hidden="true">★ </span><span data-t="starGive"></span></button><button id="star-no" class="quiet" data-t="starNo"></button></div>
   </div>
   <div class="dialog-actions"><button id="done-folder" data-t="showFolder"></button><button id="done-close" class="primary" data-t="close" autofocus></button></div>
-</dialog>
-<dialog id="report-dialog" aria-labelledby="report-title">
-  <h2 id="report-title" data-t="lastReport"></h2>
-  <p id="report-when" class="muted"></p>
-  <p id="report-status"></p>
-  <div class="report-tools">
-    <div id="report-counts" class="report-counts"></div>
-    <label class="check small-check" id="report-problems-option"><input id="report-problems" type="checkbox"><span data-t="reportProblems"></span></label>
-  </div>
-  <div class="report-files"><table class="measure-table"><tbody id="report-rows"></tbody></table></div>
-  <div class="dialog-actions"><button id="report-copy" data-t="report"></button><button id="report-close" class="primary" data-t="close"></button></div>
 </dialog>
 <script src="i18n/base.js"></script>
 <script src="i18n/en.js"></script>
