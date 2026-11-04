@@ -6,14 +6,16 @@ Status: **experimental, for keeping files only**. Written and read by NXPress, w
 
 Since firmware 12, an NCA section can use **compressed storage**: its data is cut into blocks, most of them of 64 KiB, and each block is stored as it is, as zeros or compressed with LZ4. Many recent games and updates use it. LZ4 has no entropy coding, and data compressed with it hides most of what zstd could find. NCZ compresses those blocks as they are.
 
-The blocks can be kept decompressed only if they can be made again byte for byte when the NCA is rebuilt: the hash of the NCA must match its content ID. The tools of Nintendo use two compressors, told by the level of each block in the table of the compressed storage:
+The blocks can be kept decompressed only if they can be made again byte for byte when the NCA is rebuilt: the hash of the NCA must match its content ID. The tools of Nintendo use these compressors, told by the level of each block in the table of the compressed storage:
 
-- **Level 0**: the fast compressor of LZ4 before 1.8.2. It uses a hash of 5 bytes on a table of 13 bits, tries the position right after a match at once, and searches matches only up to 12 bytes before the end of the block.
-- **Level 5**: LZ4HC of LZ4 r1xx, before 1.7. It searches a hash chain 16 times, without the analysis of repeated patterns of 1.8, and starts the second search of a match one byte after the first one.
+- **Level 0**: the fast compressor of LZ4 before 1.8.2. It uses a hash of 5 bytes on a table of 13 bits, tries the position right after a match at once, and searches matches only up to 12 bytes before the end of the block. Some games were made with the same compressor built for 32 bits, whose hash takes 4 bytes instead of 5: a block of level 0 is tried with both, and one made with the hash of 4 bytes is told as level **64** in the table of the NCZSECT3.
+- **Levels 1 to 16**: LZ4HC of LZ4 r1xx, before 1.7. It searches a hash chain `1 << (level - 1)` times (16 times at level 5, 32,768 at level 16), without the analysis of repeated patterns of 1.8, and starts the second search of a match one byte after the first one.
 
-NXPress has both, written after `lz4.c` and `lz4hc.c` of LZ4 (BSD 2-Clause License, Copyright Yann Collet). They make again every block of the games tried: 47,648 of an update of Hauntii, 157,669 of an update of BlazBlue Entropy Effect X, and 6,978 of its base game.
+NXPress has them all, written after `lz4.c` and `lz4hc.c` of LZ4 (BSD 2-Clause License, Copyright Yann Collet). They make again every block of the games tried: 47,648 of an update of Hauntii (level 0), 157,669 of an update of BlazBlue Entropy Effect X and 6,978 of its base game (level 5), 5,999 of BZZZT (level 16, and one of level 0 with the hash of 4 bytes), and 102,622 of CHRONO CROSS THE RADICAL DREAMERS EDITION and 182 of its update (level 0 with the hash of 4 bytes).
 
-Other games use compressors NXPress does not have yet, and their blocks stay as LZ4: BZZZT tells level 16 for its blocks, and most of the level 0 blocks of CHRONO CROSS THE RADICAL DREAMERS EDITION come from another version of the fast compressor (1,976 of its 102,622 blocks are made again).
+Level 16 leaves the LZ4 close to its limit, so zstd gains little over its blocks (BZZZT is 0.7% smaller than as a plain NSZ) and making them again is slow, about 4 MB/s per core. The fast compressor built for 32 bits gains much more: CHRONO CROSS THE RADICAL DREAMERS EDITION is 9% smaller (3.53 GB as a plain NSZ, 3.21 GB as NCZSECT3).
+
+A file with blocks of a level other than 0 and 5 is made by NXPress 1.5.0 or newer: NXPress 1.4 refuses it with "the LZ4 block at … cannot be made again", never with a wrong file.
 
 ## Where the blocks are
 

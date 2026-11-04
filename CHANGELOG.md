@@ -1,26 +1,30 @@
 # Changelog
 
-## Unreleased
+## 1.5.0
 
 ### New
 
-- Updates that are out and not in the list: once a day at most, the window downloads the versions published of each game and DLC (the versions.json of Switch Library Manager Web, about 200 KB), and the newest file of a game says "v393216 is out (Oct 21, 2026); you have v262144" with the other warnings of the list, a game without its update counting as v0; its card tells the newest version too. On by default, it can be turned off in Settings › System, and with no connection nothing is said. On the command line, `-i` tells the newest update published from the copy the window keeps, without going on the internet
-- Colors to choose in Settings › General: NXPress's own and three more with a scene while the list is empty, RuneStone, Vampire and Huntress, each in dark and in light. RuneStone shines: cyan light on dark stone (on old paper in light), with lines engraved in the background, corners of light, light running along the frames and, while the list is empty, a scene of light with arcs and circuit lines. Vampire is a cold night of full moon: silver on deep blue with crimson frames (a violet dusk in light) and, while the list is empty, a huge pale moon behind the icon, clouds and mist, bare branches, brambles and red embers rising. Huntress is armor in deep space: lime green with orange frames and titles (grey metal in light) and, while the list is empty, stars and a nebula seen through the edge of a visor, with a core of energy that charges up behind the icon. Their motion stops when Windows asks for less motion. They change the background, the panels and the main color; red, green and orange keep meaning errors, savings and warnings, and the groups of the menu keep their colors. On Windows 11 the menu wears them instead of the Mica of the system
+- Updates that are out and not in the list: once a day at most, NXPress downloads the versions published (the versions.json of Switch Library Manager Web, about 200 KB), and the newest file of each game says which update is out and which one you have. On by default; it can be turned off in Settings › System, and `-i` on the command line tells it too
+- Colors to choose in Settings › General: NXPress's own and three more, RuneStone, Vampire and Huntress, in dark and in light, each with its own scene while the list is empty. Red, green and orange keep meaning errors, savings and warnings
 
 ### Improvements
 
-- Verify: a file checked is VERIFIED, and a damaged one CORRUPTED, as other tools call them; a file that could not be checked (a key missing, a file that cannot be read) keeps FAILED with its reason, and MODIFIED stays as it is. The command line keeps OK, MODIFIED and FAILED, which scripts read (thanks @NikoMuffin, #55)
-- Verify: Compare with a DAT and Check again files already checked are at the bottom of Advanced (thanks @NikoMuffin, #52)
-- The hint of Watch the folders added says plainly that the files copied into them are processed automatically (thanks @NikoMuffin, #51)
-- "Replace files already there" is now "Replace if the new file is already there", with a line under it: a new file whose name is already taken in Save to is written again, or skipped when unticked, and the originals are never touched (thanks @NikoMuffin, #56)
-- A game in sparse storage left as it is says how to compress it: turn on Extra compression under Advanced, or `--extra` on the command line; the hint of that option names its two formats, NCZSECT2 and NCZSECT3 (thanks @NikoMuffin, #57)
-- Settings is in order: General, While working, Keys, System and Help, each setting a row with what it does and its control, in two columns when the window is wide. Low priority moves there from the Advanced part of each section, as it is one setting for the whole app (thanks @NikoMuffin, #60)
-- Show in folder is a small folder button beside the name of the game, so it says which game it opens and adds no line to the row (thanks @NikoMuffin, #61)
-- When done: Nothing, Turn off or Hibernate, one choice instead of the box to turn off. Hibernate is offered only where the computer can hibernate, keeps every program as it was, and needs no forcing; the same 60 seconds to call it off (thanks @NikoMuffin, #62)
+- Verify says VERIFIED and CORRUPTED, as other tools do; a file that could not be checked keeps FAILED with its reason, and the command line keeps OK, MODIFIED and FAILED (thanks @NikoMuffin, #55)
+- Verify: Compare with a DAT and Check again files already checked move to the bottom of Advanced (#52), and the hint of the watched folders is clearer (#51) (thanks @NikoMuffin)
+- "Replace if the new file is already there", with a line that says what it does (thanks @NikoMuffin, #56)
+- A game in sparse storage says how to compress it: with Extra compression under Advanced (thanks @NikoMuffin, #57)
+- Settings in groups (General, While working, Keys, System and Help), with Low priority in it for the whole app (thanks @NikoMuffin, #60)
+- Show in folder is a small button beside the name of the game (thanks @NikoMuffin, #61)
+- When done: Nothing, Turn off or Hibernate, with the same 60 seconds to call it off (thanks @NikoMuffin, #62)
+- Extra compression makes again two more LZ4 compressors of Nintendo that many recent games use, level 16 and the fast one built for 32 bits: CHRONO CROSS THE RADICAL DREAMERS EDITION is now 9% smaller than as a plain NSZ. A file that uses them is decompressed by NXPress 1.5.0 or newer and Switch Library Manager Web 1.72.1 or newer; older versions refuse it with an error, never with a wrong file (thanks @NikoMuffin, #63)
 
 ### Fixes
 
-- Extra compression no longer stops a game with "invalid bucket tree" or "invalid NCZSECT3 table", as it did on BZZZT, CHRONO CROSS THE RADICAL DREAMERS EDITION and its update. The table of the LZ4 blocks of Nintendo is read as Atmosphère reads it, also when the game leaves unused room after it; an NCA none of whose blocks can be made again byte for byte is written as a plain NCZ, which every installer reads, instead of an NCZSECT3 without its table; and an NCA whose table still cannot be read is compressed as a plain NCZ, with why in the note of the file, instead of failing the whole game (thanks @NikoMuffin, #63)
+- Extra compression no longer stops a game with "invalid bucket tree" or "invalid NCZSECT3 table", as on BZZZT, CHRONO CROSS THE RADICAL DREAMERS EDITION and its update: the LZ4 table of Nintendo is read as Atmosphère reads it, and an NCA that cannot use it is written as a plain NCZ instead of failing the game (thanks @NikoMuffin, #63)
+
+### Security
+
+- A file crafted to make a parser give up fails that one file instead of closing the window; the versions.json downloaded is decompressed with a bounded window; the window declares a Content-Security-Policy; built with Go 1.27.3
 
 ## 1.4.1
 

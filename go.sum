@@ -4,8 +4,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/zstd v1.5.7 h1:ybO8RBeh29qrxIhCA9E8gKY6xfONU9T6G6aP9DTKfLE=
 github.com/DataDog/zstd v1.5.7/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
-github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261102161409-f1ac2c0d8957 h1:vz/vmC9Tu6vNwviz+1Sv3bhU2dCYyuNsMS+hu+Fvu5k=
-github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261102161409-f1ac2c0d8957/go.mod h1:wNTdz8PK17uJDKXUx24goo+5bdJQI92Gg1Ir9GWuw4g=
+github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104052343-4eaab1174930 h1:Ug32GUhte5To1O1IRdyUA7TTEIzdfdsIdxb3EF5giqo=
+github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104052343-4eaab1174930/go.mod h1:wNTdz8PK17uJDKXUx24goo+5bdJQI92Gg1Ir9GWuw4g=
 github.com/avast/retry-go/v5 v5.0.0 h1:kf1Qc2UsTZ4qq8elDymqfbISvkyMuhgRxuJqX2NHP7k=
 github.com/avast/retry-go/v5 v5.0.0/go.mod h1://d+usmKWio1agtZfS1H/ltTqwtIfBnRq9zEwjc3eH8=
 github.com/bep/debounce v1.2.1 h1:v67fRdBA9UQu2NhLFXrSg0Brw7CexQekrBwDMM8bzeY=

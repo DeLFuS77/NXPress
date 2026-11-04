@@ -222,7 +222,9 @@ func fetch(ctx context.Context, client *http.Client, address string, ask state) 
 		return nil, state{}, err
 	}
 	if strings.HasSuffix(address, settings.COMPRESSED_SUFFIX) {
-		decoder, err := zstd.NewReader(bytes.NewReader(data), zstd.WithDecoderConcurrency(1))
+		// cap the window like the shared module (db/utils.go) so a crafted versions.json.zst
+		// cannot make the decoder reserve far more memory than the output it is allowed
+		decoder, err := zstd.NewReader(bytes.NewReader(data), zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxWindow(1<<27))
 		if err != nil {
 			return nil, state{}, err
 		}
