@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Low priority now reaches the window too: on Windows its WebView2 processes go below normal with NXPress, and its memory is the first given to the other programs when memory runs short (thanks @NikoMuffin, #70)
+
 ## 1.5.1
 
 ### Improvements
