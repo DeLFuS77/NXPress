@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1
+
+### Improvements
+
+- Re-verify files already checked, as it is now called, is back at the top of Verify, out of Advanced; only Compare with a DAT stays there (thanks @NikoMuffin, #65)
+
 ## 1.5.0
 
 ### New
