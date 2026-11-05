@@ -9,9 +9,14 @@ const groups = [
 ];
 // what each mode takes, to show it
 const takesShown = {
-  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ", convert: "XCI XCZ",
-  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
+  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP", convert: "XCI XCZ",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
+
+// a NUP holds its game decrypted: it is read and verified without keys
+const isNup = path => /\.nup$/i.test(path);
+// whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files only
+const needsKeys = mode => !["recompress", "fat32"].includes(mode) && !(state.items.length > 0 && state.items.every(item => isNup(item.path)));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
 const icons = {
@@ -953,7 +958,7 @@ function render() {
     button.setAttribute("aria-checked", on);
   }
   $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
-  $("keys-banner").hidden = !!state.keys || state.mode === "recompress" || state.mode === "fat32";
+  $("keys-banner").hidden = !!state.keys || !needsKeys(state.mode);
   $("toolbar").hidden = state.items.length === 0;
   // the list stays as it is while its files are at work, also from the keyboard
   for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
@@ -1203,7 +1208,7 @@ function sortSoon() {
 const describeQueue = [];
 let describing = 0;
 function describe(row) {
-  if (!state.keys) return;
+  if (!state.keys && !isNup(row.item.path)) return;
   describeQueue.push(row);
   pumpDescribe();
 }
@@ -1267,7 +1272,7 @@ function paint(row) {
     row.tr.querySelector(".cover").hidden = true;
   }
   // the cover shimmers while the game is read
-  row.tr.querySelector(".cover").classList.toggle("loading", !!state.keys && !row.described);
+  row.tr.querySelector(".cover").classList.toggle("loading", (!!state.keys || isNup(row.item.path)) && !row.described);
   // in the grid, the cover fills up with the progress of its file
   const game = row.tr.querySelector(".game");
   game.classList.toggle("working", row.status === "work");
@@ -1533,7 +1538,7 @@ async function start(mode, extra) {
   if (state.view) { state.view = ""; render(); }
   // what the work needs is told by its own mode: Verify only this, in a section that needs no
   // keys, still needs them
-  if (!state.keys && !["recompress", "fat32"].includes(mode)) { setStatus({ key: "needKeys" }); return; }
+  if (!state.keys && needsKeys(mode)) { setStatus({ key: "needKeys" }); return; }
   if (!state.items.length) { setStatus({ key: mode === "measure" ? "measureNeedsGame" : "needFiles" }); return; }
   const chosen = settings();
   save("settings", chosen);

@@ -128,9 +128,18 @@ const samples = [
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 40 s at level 3", " at level "],
   ["8.0 MB -> 42.3 KB, 99.5% smaller", " -> "],
+  ["NXPress does not compress, convert or repack NUP files: it shows what they hold (Details, -i) and verifies them (Verify, -V)", "-V"],
+  ["308 files checked by their SHA-256 (2 in no folder of any package); a NUP holds no signatures of Nintendo; not compared with the DAT, which lists no NUP files", "checked by"],
+  ["checked on 2026-11-05, not changed since; 1 file checked by its SHA-256", "checked by"],
+  ["3 of 372587 files are damaged: game v65536: romfs/a.bin (its SHA-256 does not match); update v131072: romfs/b.bin (its zstd data cannot be decompressed (bad magic)); and 1 more", "damaged"],
+  ["x.bin (in no folder) (its data decompresses to 5 bytes instead of 9); y.bin (its data cannot be read (I/O error)); z.bin (its data decompresses to more than its 9 bytes)", "its data"],
+  ["Game.nup: damaged files:\n  game v0: romfs/a.bin: its SHA-256 does not match\n  and 3 more", "damaged files"],
+  ["the NUP file is cut short: 1000 of 5000 bytes, a copy or a download that stopped before its end", "cut short"],
+  ["cannot be read: NUP table of contents is damaged (its hash does not match)", "table of contents"],
+  ["works with: programs that read NUP files; NXPress shows and verifies it, but does not compress, convert or repack it", "works with"],
 ];
 // in English too: what the window says in its own words
-const ownEnglish = ["-w", " -> "];
+const ownEnglish = ["-w", " -> ", "-V"];
 for (const [note, english] of samples) {
   for (const code of codes) {
     const text = noteText(note, code);

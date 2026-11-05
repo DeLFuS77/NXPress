@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New
+
+- NUP files (.nup), the containers of decrypted Switch and Switch 2 games, are read without keys. Details shows each package (the game, an update or a DLC) with its title ID, its version, the name and the publisher the file gives, its files and their size, uncompressed and as stored. Verify checks the hash of the table of contents and the SHA-256 of every file, decompressing the ones stored with zstd, and tells each damaged file by its path; it reads the file once from start to end, which hard disks read fastest. NXPress does not compress, convert or repack NUP files, and says so when one is given to another work (thanks @brumouta, DeLFuS77/switch-library-manager-web#157)
+
 ### Improvements
 
 - Combine and Split name the SuperXCI too, not only the SuperNSP: a game card with its updates and DLC is made by Combine when an XCI is among the files, and Split writes each of its titles to a file of its own (thanks @NikoMuffin, #73)

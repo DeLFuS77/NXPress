@@ -222,6 +222,12 @@ func (a *App) Expand(paths []string, mode string) []Item {
 			emit(a.ctx, "say", path+" cannot be read: its files are left out")
 		}
 	}
+	// a NUP dropped on a work that does not take it is told, not left out without a word
+	if !jobs.TakesNup(mode) && a.ctx != nil {
+		for _, path := range jobs.NupFiles(paths) {
+			emit(a.ctx, "say", filepath.Base(path)+": "+jobs.NupNotDone)
+		}
+	}
 	items := make([]Item, 0, len(files))
 	for _, path := range files {
 		item := Item{Path: path, Name: filepath.Base(path)}
@@ -281,10 +287,19 @@ type FileCard struct {
 	Trimmable    int64  `json:"trimmable"`
 	// the experimental formats of NXPress its NCZ files are in, which only NXPress reads (#58)
 	Format string `json:"format,omitempty"`
+	// the packages of a NUP: its game, its updates and its DLC, with their files
+	Packages []jobs.NupPackage `json:"packages,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
 func (a *App) Card(path string) (FileCard, error) {
+	if strings.EqualFold(filepath.Ext(path), ".nup") {
+		size, uncompressed, packages, err := jobs.NupCard(path)
+		if err != nil {
+			return FileCard{}, err
+		}
+		return FileCard{Kind: "NUP", Size: size, Decompressed: uncompressed, Packages: packages}, nil
+	}
 	facts, err := switchfs.DescribeFile(path)
 	if err != nil {
 		return FileCard{}, err
@@ -498,9 +513,10 @@ func (a *App) Start(request Request) error {
 	if err := o.Check(); err != nil {
 		return err
 	}
+	keys := jobs.NeedsKeys(o)
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	if a.keys == "" && !o.Recompress && !o.Fat32 {
+	if a.keys == "" && keys {
 		return errors.New("no prod.keys: choose one")
 	}
 	if a.cancel != nil {

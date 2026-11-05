@@ -27,7 +27,7 @@ import (
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
 	"decompress": {".nsz", ".xcz"},
-	"verify":     {".nsp", ".nsz", ".xci", ".xcz"},
+	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	"convert":    {".xci", ".xcz"},
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
@@ -37,7 +37,7 @@ var Takes = map[string][]string{
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
 	"split": {".nsp", ".nsz", ".xci", ".xcz"},
-	"info":  {".nsp", ".nsz", ".xci", ".xcz"},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 }
 
 // checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA
@@ -66,6 +66,8 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	action := o.Action()
 	// the LZ4 blocks of the extra compression keep to the threads of each file (lz4Threads)
 	ctx = switchfs.WithThreads(ctx, lz4Threads(o))
+	// a NUP given to a work that does not take it is told, not left out without a word
+	nupsLeft := tellNupsLeft(o, out)
 	if action == "pack" && o.PackGames {
 		return PackGames(ctx, o, out)
 	}
@@ -87,7 +89,9 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		out.Done(path, "", "", errors.New("no such file or folder"))
 	}
 	if len(files) == 0 {
-		out.Say("no file to %s among the ones given", action)
+		if nupsLeft == 0 {
+			out.Say("no file to %s among the ones given", action)
+		}
 		return len(missing)
 	}
 	// the measure tries its settings on the biggest game that can be compressed
@@ -444,6 +448,16 @@ func safeJob(ctx context.Context, action string, path string, o Options, threads
 func doJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (string, string, error) {
 	if isEmpty(path) {
 		return "", "", ErrEmpty
+	}
+	if isNup(path) {
+		switch action {
+		case "info":
+			note, err := infoNup(path, o.Versions, out)
+			return "", note, err
+		case "verify":
+			return verifyNup(ctx, path, o, out)
+		}
+		return "", "", Skipped(NupNotDone)
 	}
 	switch action {
 	case "compress":

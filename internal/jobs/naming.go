@@ -50,6 +50,9 @@ type GameTitle struct {
 	// the experimental formats of NXPress its NCZ files are in (NCZSECT2, NCZSECT3), which only
 	// NXPress reads so far: empty for a plain NSZ or XCZ and any other file (#58)
 	Format string `json:"format,omitempty"`
+	// the kind of container when it is not an NSP or an XCI: NUP, which holds its games
+	// decrypted and is read without keys
+	Container string `json:"container,omitempty"`
 }
 
 // ExperimentalFormat tells the experimental formats of NXPress the NCZ files of a file are in,
@@ -102,6 +105,12 @@ func ReadTitles(path string) ([]*switchfs.ContentMetaAttributes, error) {
 
 // ReadTitle reads the main title of a game file; withIcon adds its icon.
 func ReadTitle(path string, withIcon bool) (GameTitle, error) {
+	if isNup(path) {
+		if isEmpty(path) {
+			return GameTitle{}, ErrEmpty
+		}
+		return nupTitle(path, withIcon)
+	}
 	all, err := ReadTitles(path)
 	if err != nil {
 		return GameTitle{}, err

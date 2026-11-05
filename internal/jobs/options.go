@@ -472,7 +472,8 @@ Usage: nxpress [options] file or folder...
   -C                  compress NSP and XCI files to NSZ and XCZ
   -D                  decompress NSZ and XCZ files to NSP and XCI
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
-                      files given (NSP, NSZ, XCI, XCZ)
+                      files given (NSP, NSZ, XCI, XCZ, and NUP: the SHA-256 of each of its
+                      files, without keys)
   -Q, --quick-verify  the same as -V
   --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
                       the same), signature (the header of every NCA signed by Nintendo, in
@@ -507,7 +508,9 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
-  -i, --info          show the titles a file holds
+  -i, --info          show the titles a file holds; of a NUP, each package (game, update,
+                      DLC) with its files and their size, without keys. NUP files are only
+                      shown and verified: NXPress does not compress, convert or repack them
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one

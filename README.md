@@ -39,7 +39,7 @@ Drop files or folders on the window, or on NXPress itself; on Windows it can add
 
 - **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
 - **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game, named by a template; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
-- **Check**: verify files by their hashes, by the signature of Nintendo or both, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with
+- **Check**: verify files by their hashes, by the signature of Nintendo or both, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with. NUP files are verified and shown too, without keys (see [NUP files](#nup-files))
 
 While it works, each file has its bar split in its steps (the work, then the check of what it wrote), the window tells the speed and the time left, and on Windows the button of the taskbar shows the progress. It can pause, keeps the computer awake, tells with a notice of the system when long work is done and can turn the computer off after. Before it starts it checks that the new files fit on each drive, and at the end a card tells the space saved and what saved the most. The files left unfinished when it was closed are offered when it opens again, and Copy report puts the result of every file on the clipboard, to paste in an issue.
 
@@ -96,6 +96,8 @@ nxpress --estimate --levels game.nsp  the same at the levels 3 to 19, to choose 
 nxpress --measure -l 18 game.nsp   try threads and files at once here, and tell the fastest for -t and -m
 nxpress -i game.nsz                 show its titles, how it is stored and what it works with
 nxpress -V --dat switch.dat games   tell which files are dumps a DAT (No-Intro) lists
+nxpress -V game.nup                 check every file of a NUP by its SHA-256, without keys
+nxpress -i game.nup                 show the packages of a NUP, with their files and sizes
 nxpress --fat32 game.nsp            a file over 4 GB to a folder of parts for a FAT32 microSD (and back)
 nxpress --rename "{name} [{id}][v{version}]" games   rename files by what they hold
 nxpress -C --watch -o out inbox     compress every new file copied into inbox, until Ctrl+C
@@ -105,7 +107,16 @@ nxpress -C --recursive games        take the files in the folders inside too
 
 `nxpress --help` lists every option. The options of nsz work the same, so NXPress can take its place in scripts.
 
-The keys are read from `--keys`, or from a `prod.keys` or `keys.txt` next to NXPress, in the working folder or in `~/.switch`.
+The keys are read from `--keys`, or from a `prod.keys` or `keys.txt` next to NXPress, in the working folder or in `~/.switch`. NUP files need none.
+
+## NUP files
+
+NUP (`.nup`, [github.com/a55uka/nup](https://github.com/a55uka/nup)) is a container of decrypted Switch and Switch 2 games: a game, its updates and its DLC in one file, as plain files, each stored raw or compressed with zstd and with its own SHA-256. Nothing in it is encrypted, so NXPress reads it without keys:
+
+- **Details** (`-i`) shows each package (the game, an update or a DLC) with its title ID, its version, the name and the publisher the file gives, its files and their size, uncompressed and as stored.
+- **Verify** (`-V`) checks the hash of the table of contents, then reads the whole file once, from start to end, and checks the SHA-256 of every file, decompressing the ones stored with zstd. A damaged file is told by its path in its package.
+
+NXPress does not compress, convert or repack NUP files: given to another work, a NUP is left as it is, and NXPress says why.
 
 ## Building
 

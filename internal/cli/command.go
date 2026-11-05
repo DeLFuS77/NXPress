@@ -66,8 +66,8 @@ func RunCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 		out.Note("%s", note)
 	}
 	// recompressing needs no keys (the NCZ hold their data decrypted, with their keys), nor do
-	// files split for FAT32 or joined
-	if _, err := jobs.LoadKeys(o.Keys); err != nil && !o.Recompress && !o.Fat32 {
+	// files split for FAT32 or joined, nor NUP files verified or shown (their games are decrypted)
+	if _, err := jobs.LoadKeys(o.Keys); err != nil && jobs.NeedsKeys(o) {
 		fmt.Fprintln(stderr, "nxpress:", err)
 		return 2
 	}
