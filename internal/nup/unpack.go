@@ -5,17 +5,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
-
-	"github.com/klauspost/compress/zstd"
 )
 
 // The unpacking of a NUP into a folder, in the layout the packer of the format reads back: the
@@ -49,9 +44,11 @@ type UnpackResult struct {
 }
 
 // Unpack writes the packages of a NUP into dest, a folder that must not be there yet; a file
-// whose data is not what the table says fails the work, and the folder it made is removed.
-// progress is told the bytes written of the ones to write.
-func Unpack(ctx context.Context, path string, dest string, workers int, progress func(done int64, total int64)) (result UnpackResult, err error) {
+// whose data is not what the table says fails the work, and the folder it made is removed. The
+// NUP is read as Verify reads it, by readers that go through it in order (one for a hard disk,
+// several for an SSD), each piece of data once: workers decompress it, hash it and write it into
+// every file that has it. progress is told the bytes read of the ones to read.
+func Unpack(ctx context.Context, path string, dest string, workers int, readers int, progress func(done int64, total int64)) (result UnpackResult, err error) {
 	source, err := os.Open(path)
 	if err != nil {
 		return UnpackResult{}, err
@@ -65,22 +62,9 @@ func Unpack(ctx context.Context, path string, dest string, workers int, progress
 	if err != nil {
 		return UnpackResult{}, err
 	}
-	if err := os.Mkdir(dest, 0o755); err != nil {
-		return UnpackResult{}, err
-	}
-	// the folder made here, and only it, goes when the work fails
-	defer func() {
-		if err != nil {
-			os.RemoveAll(dest)
-		}
-	}()
-	type job struct {
-		path string
-		file int
-	}
-	jobs := []job{}
+	// every path of every file, and every folder, checked before anything is written
+	paths := make([][]string, len(container.Files))
 	folders := []string{}
-	total := int64(0)
 	for i, pkg := range container.Packages {
 		if pkg.Kind > KindAddon {
 			return UnpackResult{}, fmt.Errorf("NUP package %d has kind %d, which NUP version 1 keeps for later", i, pkg.Kind)
@@ -101,150 +85,103 @@ func Unpack(ctx context.Context, path string, dest string, workers int, progress
 			if err := safePath(name); err != nil {
 				return err
 			}
-			jobs = append(jobs, job{filepath.Join(root, filepath.FromSlash(name)), index})
-			total += int64(container.Files[index].Size)
+			paths[index] = append(paths[index], filepath.Join(root, filepath.FromSlash(name)))
+			result.Files++
+			result.Size += int64(container.Files[index].Size)
 			return nil
 		})
 		if err != nil {
 			return UnpackResult{}, err
 		}
 	}
+	if err := os.Mkdir(dest, 0o755); err != nil {
+		return UnpackResult{}, err
+	}
+	// the folder made here, and only it, goes when the work fails
+	defer func() {
+		if err != nil {
+			os.RemoveAll(dest)
+		}
+	}()
 	for _, folder := range folders {
 		if err := os.MkdirAll(folder, 0o755); err != nil {
 			return UnpackResult{}, err
 		}
 	}
-	// the files in the order their data is stored, so the NUP is read from start to end
-	sort.SliceStable(jobs, func(a, b int) bool {
-		return container.Files[jobs[a].file].ExtentOffset < container.Files[jobs[b].file].ExtentOffset
-	})
 
-	var (
-		done    atomic.Int64
-		lock    sync.Mutex
-		failure error
-		wait    sync.WaitGroup
-	)
-	tell := func(n int64) {
-		value := done.Add(n)
-		if progress != nil && lock.TryLock() {
-			progress(value, total)
-			lock.Unlock()
-		}
+	// the pieces of data, each once with the files it is written into; the files of 0 bytes are
+	// written at once
+	type key struct {
+		offset, stored, size uint64
+		codec                byte
 	}
+	byKey := map[key]*extentJob{}
+	empty := sha256.Sum256(nil)
+	for i, f := range container.Files {
+		if len(paths[i]) == 0 {
+			continue
+		}
+		if f.Size == 0 {
+			if f.Hash != empty {
+				return UnpackResult{}, fmt.Errorf("%s: its SHA-256 does not match", paths[i][0])
+			}
+			for _, path := range paths[i] {
+				out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+				if err != nil {
+					return UnpackResult{}, err
+				}
+				if err := out.Close(); err != nil {
+					return UnpackResult{}, err
+				}
+			}
+			continue
+		}
+		k := key{f.ExtentOffset, f.ExtentSize, f.Size, f.Codec}
+		job, ok := byKey[k]
+		if !ok {
+			job = &extentJob{offset: f.ExtentOffset, stored: f.ExtentSize, size: f.Size, codec: f.Codec}
+			byKey[k] = job
+		}
+		job.files = append(job.files, i)
+		job.outputs = append(job.outputs, paths[i]...)
+	}
+	jobs := make([]*extentJob, 0, len(byKey))
+	total := int64(0)
+	for _, job := range byKey {
+		jobs = append(jobs, job)
+		total += int64(job.stored)
+	}
+	sort.Slice(jobs, func(i, j int) bool {
+		if jobs[i].offset != jobs[j].offset {
+			return jobs[i].offset < jobs[j].offset
+		}
+		return jobs[i].stored < jobs[j].stored
+	})
 	if progress != nil {
 		progress(0, total)
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	work := make(chan job)
-	var failed sync.Once
-	for range max(1, min(workers, len(jobs))) {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
-			var decoder *zstd.Decoder
-			defer func() {
-				if decoder != nil {
-					decoder.Close()
-				}
-			}()
-			buffer := make([]byte, 1<<20)
-			for j := range work {
-				if ctx.Err() != nil {
-					continue
-				}
-				file := container.Files[j.file]
-				if file.Codec == CodecZstd && decoder == nil {
-					made, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxWindow(maxWindow),
-						zstd.WithDecoderMaxMemory(maxWindow))
-					if err != nil {
-						failed.Do(func() { failure = err })
-						cancel()
-						continue
-					}
-					decoder = made
-				}
-				if err := writeFile(ctx, source, file, j.path, decoder, buffer, tell); err != nil {
-					failed.Do(func() { failure = err })
-					cancel()
-				}
-			}
-		}()
-	}
-	for _, j := range jobs {
-		if ctx.Err() != nil {
-			break
+	if _, err := readAll(ctx, source, jobs, max(1, workers), max(1, readers), func(done int64) {
+		if progress != nil {
+			progress(done, total)
 		}
-		work <- j
-	}
-	close(work)
-	wait.Wait()
-	if failure != nil {
-		return UnpackResult{}, failure
-	}
-	if err := ctx.Err(); err != nil {
+	}); err != nil {
 		return UnpackResult{}, err
+	}
+	for _, job := range jobs {
+		for _, index := range job.files {
+			where := paths[index][0]
+			switch {
+			case job.reason != "":
+				return UnpackResult{}, fmt.Errorf("%s: %s", where, job.reason)
+			case container.Files[index].Hash != job.sum:
+				return UnpackResult{}, fmt.Errorf("%s: its SHA-256 does not match", where)
+			}
+		}
 	}
 	if progress != nil {
 		progress(total, total)
 	}
-	return UnpackResult{Files: len(jobs), Size: total}, nil
-}
-
-// writeFile writes one file of a NUP, decompressed, and checks it by its SHA-256.
-func writeFile(ctx context.Context, source *os.File, file File, path string, decoder *zstd.Decoder, buffer []byte,
-	tell func(int64)) error {
-	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-	if err != nil {
-		return err
-	}
-	hash := sha256.New()
-	var data io.Reader = &ctxReader{ctx: ctx, r: io.NewSectionReader(source, int64(file.ExtentOffset), int64(file.ExtentSize))}
-	if file.Size == 0 {
-		data = &io.LimitedReader{}
-	} else if file.Codec == CodecZstd {
-		if err := decoder.Reset(data); err != nil {
-			out.Close()
-			return fmt.Errorf("%s: its zstd data cannot be decompressed (%v)", path, err)
-		}
-		data = io.LimitReader(decoder, int64(file.Size)+1)
-	}
-	written := int64(0)
-	for {
-		n, err := data.Read(buffer)
-		if n > 0 {
-			if _, werr := out.Write(buffer[:n]); werr != nil {
-				out.Close()
-				return werr
-			}
-			hash.Write(buffer[:n])
-			written += int64(n)
-			tell(int64(n))
-		}
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			out.Close()
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			return fmt.Errorf("%s: its data cannot be read (%v)", path, err)
-		}
-	}
-	if err := out.Close(); err != nil {
-		return err
-	}
-	var sum [32]byte
-	copy(sum[:], hash.Sum(nil))
-	switch {
-	case written != int64(file.Size):
-		return fmt.Errorf("%s: its data gives %d bytes instead of %d", path, written, file.Size)
-	case sum != file.Hash:
-		return fmt.Errorf("%s: its SHA-256 does not match", path)
-	}
-	return nil
+	return result, nil
 }
 
 // walkFolders calls fn for every folder of a package, by its path inside it, empty ones too.

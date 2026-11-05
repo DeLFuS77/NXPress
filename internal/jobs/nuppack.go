@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/DeLFuS77/NXPress/internal/nup"
+	"github.com/DeLFuS77/NXPress/internal/system"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -166,11 +167,18 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	if o.LevelGiven {
 		level = o.Level
 	}
-	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: max(1, threads)}, out.Progress(dir, "Packaging"))
+	// every worker reads at once on an SSD, where many small files open faster so; one at a time on
+	// a hard disk, and on a drive that does not tell what it is
+	workers, readers := max(1, threads), 1
+	if penalty, known := system.SeekPenalty(dir); known && !penalty {
+		readers = workers
+	}
+	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers}, out.Progress(dir, "Packaging"))
 	if err != nil {
 		return "", "", err
 	}
-	_, check, err := nup.Verify(ctx, written, nupWorkers(o), out.Progress(dir, "Verifying"))
+	checkers := nupWorkers(o)
+	_, check, err := nup.Verify(ctx, written, checkers, nupReaders(written, checkers), out.Progress(dir, "Verifying"))
 	if err != nil {
 		return "", "", fmt.Errorf("the new NUP cannot be read back: %w", err)
 	}
@@ -217,7 +225,8 @@ func unpackNup(ctx context.Context, path string, o Options, threads int, out Out
 	if _, err := os.Lstat(written); err == nil {
 		return "", "", fmt.Errorf("%s, left by a work that stopped, is in the way: remove it first", written)
 	}
-	result, err := nup.Unpack(ctx, path, written, max(1, threads), out.Progress(path, "Unpacking"))
+	workers := max(1, threads)
+	result, err := nup.Unpack(ctx, path, written, workers, nupReaders(path, workers), out.Progress(path, "Unpacking"))
 	if err != nil {
 		return "", "", err
 	}

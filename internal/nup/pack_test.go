@@ -108,7 +108,7 @@ func TestPackOldLayout(t *testing.T) {
 		if level == 3 && result.Zstd == 0 || level == 0 && result.Zstd != 0 {
 			t.Errorf("level %d: %d files with zstd", level, result.Zstd)
 		}
-		_, check, err := Verify(context.Background(), out, 2, nil)
+		_, check, err := Verify(context.Background(), out, 2, 2, nil)
 		if err != nil || len(check.Damaged) != 0 || check.Files != 13 || check.Unplaced != 0 {
 			t.Fatalf("level %d: %v %+v", level, err, check)
 		}
@@ -146,7 +146,7 @@ func TestPackOldLayout(t *testing.T) {
 
 		// unpacked, it is the folder again, but its listings
 		dest := filepath.Join(t.TempDir(), "unpacked")
-		unpacked, err := Unpack(context.Background(), out, dest, 3, nil)
+		unpacked, err := Unpack(context.Background(), out, dest, 3, 3, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -233,7 +233,7 @@ func TestPackNewLayout(t *testing.T) {
 	if dlc := container.Packages[2]; dlc.Kind != KindAddon || dlc.TitleID != 0x040074A01BF13001 || dlc.RomfsDir == NoDir {
 		t.Errorf("DLC %+v", dlc)
 	}
-	if _, check, err := Verify(context.Background(), out, 1, nil); err != nil || len(check.Damaged) != 0 {
+	if _, check, err := Verify(context.Background(), out, 1, 1, nil); err != nil || len(check.Damaged) != 0 {
 		t.Errorf("%v %+v", err, check)
 	}
 }
@@ -296,13 +296,13 @@ func TestUnpackRefusesDamageAndBadNames(t *testing.T) {
 	nup := testnup.Build(packages)
 	offset, _ := testnup.Extent(nup, packages, 0, "romfs/Data/noise.bin")
 	nup[offset+100] ^= 1
-	if _, err := Unpack(context.Background(), write(t, nup), filepath.Join(t.TempDir(), "out"), 2, nil); err == nil || !strings.Contains(err.Error(), "SHA-256") {
+	if _, err := Unpack(context.Background(), write(t, nup), filepath.Join(t.TempDir(), "out"), 2, 2, nil); err == nil || !strings.Contains(err.Error(), "SHA-256") {
 		t.Errorf("damaged: %v", err)
 	}
 	for _, name := range []string{"romfs/../escape.bin", "romfs/a\\b.bin", "romfs/./x"} {
 		nup := testnup.Build([]testnup.Package{{TitleId: 1, Files: []testnup.File{{Path: name, Data: []byte("x")}}}})
 		dest := filepath.Join(t.TempDir(), "out")
-		if _, err := Unpack(context.Background(), write(t, nup), dest, 1, nil); err == nil || !strings.Contains(err.Error(), "cannot be written here") {
+		if _, err := Unpack(context.Background(), write(t, nup), dest, 1, 1, nil); err == nil || !strings.Contains(err.Error(), "cannot be written here") {
 			t.Errorf("%q: %v", name, err)
 		}
 		if _, err := os.Stat(filepath.Join(filepath.Dir(dest), "escape.bin")); err == nil {
@@ -311,7 +311,49 @@ func TestUnpackRefusesDamageAndBadNames(t *testing.T) {
 	}
 	// a folder already there is not written into
 	dest := t.TempDir()
-	if _, err := Unpack(context.Background(), write(t, testnup.Build(game())), dest, 1, nil); !errors.Is(err, fs.ErrExist) {
+	if _, err := Unpack(context.Background(), write(t, testnup.Build(game())), dest, 1, 1, nil); !errors.Is(err, fs.ErrExist) {
 		t.Errorf("into a folder there: %v", err)
+	}
+}
+
+// Big files, on one reader or several: the same big data in the game and its update is kept
+// once, big files of the same size and other data are both kept, big files zstd makes smaller
+// are streamed and the others written by copiers; all of them read back whole.
+func TestPackBigFiles(t *testing.T) {
+	same := noise(9<<20+3, 21)
+	other := noise(9<<20+3, 22)
+	text := bytes.Repeat([]byte("big text that zstd makes smaller "), 400_000)
+	root := filepath.Join(t.TempDir(), "dump")
+	writeTree(t, root, map[string][]byte{
+		"base/exefs/main.npdm":          npdm(0x0100000000010000),
+		"base/romfs/a/same.bin":         same,
+		"base/romfs/a/other.bin":        other,
+		"base/romfs/a/text.bin":         text,
+		"base/romfs/a/unique.bin":       noise(10<<20+7, 23),
+		"updates/65536/romfs/same.bin":  same,
+		"updates/65536/romfs/text.bin":  text,
+		"updates/65536/romfs/small.bin": []byte("small"),
+	})
+	for _, o := range []PackOptions{{Level: 3, Workers: 4, Readers: 1}, {Level: 3, Workers: 6, Readers: 6}, {Level: 0, Workers: 3, Readers: 2}} {
+		out := filepath.Join(t.TempDir(), "big.nup")
+		result, err := Pack(context.Background(), root, out, o, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Shared != 2 || result.Files != 8 {
+			t.Errorf("%+v: %d shared of %d files", o, result.Shared, result.Files)
+		}
+		// same.bin and text.bin are kept once: the NUP holds a little more than the other data
+		if limit := int64(len(same)+len(other)+len(text)+(10<<20+7)) + 1<<20; result.FileSize > limit {
+			t.Errorf("%+v: %d bytes, more than %d", o, result.FileSize, limit)
+		}
+		if _, check, err := Verify(context.Background(), out, 3, 2, nil); err != nil || len(check.Damaged) != 0 {
+			t.Fatalf("%+v: %v %+v", o, err, check.Damaged)
+		}
+		dest := filepath.Join(t.TempDir(), "back")
+		if _, err := Unpack(context.Background(), out, dest, 4, 3, nil); err != nil {
+			t.Fatal(err)
+		}
+		compareTrees(t, root, dest)
 	}
 }

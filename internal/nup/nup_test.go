@@ -130,7 +130,7 @@ func TestVerifyGoodNup(t *testing.T) {
 		for _, workers := range []int{1, 4} {
 			path := write(t, testnup.BuildWith(game(), o))
 			calls, last := 0, int64(0)
-			_, check, err := Verify(context.Background(), path, workers, func(done int64, total int64) {
+			_, check, err := Verify(context.Background(), path, workers, workers, func(done int64, total int64) {
 				calls++
 				if done > total || done < 0 {
 					t.Errorf("progress %d of %d", done, total)
@@ -165,7 +165,7 @@ func TestVerifyFindsDamagedFiles(t *testing.T) {
 	damage(nup, packages, 0, "romfs/Data/shared.bin", 40)
 	// zstd that cannot be decompressed any more
 	damage(nup, packages, 0, "romfs/Data/big.bin", 2)
-	_, check, err := Verify(context.Background(), write(t, nup), 2, nil)
+	_, check, err := Verify(context.Background(), write(t, nup), 2, 2, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestVerifyFindsZstdOfTheWrongSize(t *testing.T) {
 	for _, size := range []uint64{4000, 6000} {
 		nup := testnup.Build(packages)
 		setFile(nup, 1, 0, func(record []byte) { binary.LittleEndian.PutUint64(record[0x08:], size) })
-		_, check, err := Verify(context.Background(), write(t, nup), 1, nil)
+		_, check, err := Verify(context.Background(), write(t, nup), 1, 1, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -219,7 +219,7 @@ func setFile(nup []byte, packages int, index int, change func(record []byte)) {
 func TestVerifyRefusesADamagedTable(t *testing.T) {
 	nup := testnup.Build(game())
 	nup[headerSize+0x200] ^= 1
-	_, _, err := Verify(context.Background(), write(t, nup), 1, nil)
+	_, _, err := Verify(context.Background(), write(t, nup), 1, 1, nil)
 	if err == nil || !strings.Contains(err.Error(), "table of contents is damaged") {
 		t.Errorf("err %v", err)
 	}
@@ -228,7 +228,7 @@ func TestVerifyRefusesADamagedTable(t *testing.T) {
 func TestVerifyTellsAFileCutShort(t *testing.T) {
 	nup := testnup.Build(game())
 	for _, cut := range []int{len(nup) - 1, len(nup) / 2, 0x90, 10} {
-		_, _, err := Verify(context.Background(), write(t, nup[:cut]), 1, nil)
+		_, _, err := Verify(context.Background(), write(t, nup[:cut]), 1, 1, nil)
 		if err == nil || !errors.Is(err, io.ErrUnexpectedEOF) {
 			t.Errorf("cut at %d: %v", cut, err)
 		}
@@ -237,7 +237,7 @@ func TestVerifyTellsAFileCutShort(t *testing.T) {
 
 func TestVerifyStopsWhenCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	_, _, err := Verify(ctx, write(t, testnup.Build(game())), 2, func(done int64, total int64) {
+	_, _, err := Verify(ctx, write(t, testnup.Build(game())), 2, 2, func(done int64, total int64) {
 		if done > 0 {
 			cancel()
 		}
@@ -304,14 +304,14 @@ func TestWalkRefusesALoop(t *testing.T) {
 	if err := container.Walk(0, func(string, int) error { return nil }); err == nil || !strings.Contains(err.Error(), "inside itself") {
 		t.Errorf("err %v", err)
 	}
-	if _, _, err := Verify(context.Background(), write(t, nup), 1, nil); err == nil {
+	if _, _, err := Verify(context.Background(), write(t, nup), 1, 1, nil); err == nil {
 		t.Error("verified")
 	}
 }
 
 func TestVerifyEmptyPackageAndEmptyFile(t *testing.T) {
 	nup := testnup.Build([]testnup.Package{{TitleId: 1, Kind: testnup.Update, Flags: 1, Files: []testnup.File{{Path: "romfs/zero"}}}})
-	container, check, err := Verify(context.Background(), write(t, nup), 4, nil)
+	container, check, err := Verify(context.Background(), write(t, nup), 4, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestVerifyEmptyPackageAndEmptyFile(t *testing.T) {
 	}
 	// an empty file whose hash is not the one of nothing
 	setFile(nup, 1, 0, func(record []byte) { record[0x20] ^= 1 })
-	_, check, err = Verify(context.Background(), write(t, nup), 1, nil)
+	_, check, err = Verify(context.Background(), write(t, nup), 1, 1, nil)
 	if err != nil || len(check.Damaged) != 1 {
 		t.Errorf("%v %+v", err, check)
 	}
@@ -374,7 +374,7 @@ func TestVerifyManySmallAndBigFiles(t *testing.T) {
 	packages := []testnup.Package{{TitleId: 0x0100000000010000, Files: files}}
 	nup := testnup.Build(packages)
 	for _, workers := range []int{1, 3, 8} {
-		_, check, err := Verify(context.Background(), write(t, nup), workers, nil)
+		_, check, err := Verify(context.Background(), write(t, nup), workers, workers, nil)
 		if err != nil || len(check.Damaged) != 0 || check.Files != 3002 {
 			t.Fatalf("%d workers: %v %+v", workers, err, check.Damaged)
 		}
@@ -383,7 +383,7 @@ func TestVerifyManySmallAndBigFiles(t *testing.T) {
 		damaged := bytes.Clone(nup)
 		offset, size := testnup.Extent(damaged, packages, 0, path)
 		damaged[offset+size-1] ^= 0x80
-		_, check, err := Verify(context.Background(), write(t, damaged), 4, nil)
+		_, check, err := Verify(context.Background(), write(t, damaged), 4, 4, nil)
 		if err != nil || len(check.Damaged) != 1 || check.Damaged[0].Path != path {
 			t.Errorf("%s: %v %+v", path, err, check.Damaged)
 		}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/DeLFuS77/NXPress/internal/cache"
 	"github.com/DeLFuS77/NXPress/internal/nup"
+	"github.com/DeLFuS77/NXPress/internal/system"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -71,11 +72,20 @@ func NeedsKeys(o Options) bool {
 	return false
 }
 
-// nupWorkers are the pieces of data of one NUP read and checked at once: a few, as the hashes
-// and zstd keep a core busy each while a disk reads ahead, never more than its share of the
-// processors among the files at once.
+// nupWorkers are the pieces of data of one NUP hashed and decompressed at once: its share of the
+// processors among the files worked on at once.
 func nupWorkers(o Options) int {
-	return max(1, min(4, switchfs.UsableProcessors()/max(1, o.Multi)))
+	return max(1, switchfs.UsableProcessors()/max(1, o.Multi))
+}
+
+// nupReaders are the readers that go through a NUP, or the files of a dump folder, at once: one
+// on a hard disk, which reads fastest in order, and on a drive that does not tell what it is;
+// several on an SSD, which reads faster so.
+func nupReaders(path string, workers int) int {
+	if penalty, known := system.SeekPenalty(path); known && !penalty {
+		return max(1, min(4, workers))
+	}
+	return 1
 }
 
 // verifyNup checks a NUP: the hash of its table of contents, then the SHA-256 of every file,
@@ -96,7 +106,8 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		}
 		return "", joinNotes(append([]string{note}, extra...)...), nil
 	}
-	_, check, err := nup.Verify(ctx, path, nupWorkers(o), out.Progress(path, "Verifying"))
+	workers := nupWorkers(o)
+	_, check, err := nup.Verify(ctx, path, workers, nupReaders(path, workers), out.Progress(path, "Verifying"))
 	if err != nil {
 		return "", "", err
 	}

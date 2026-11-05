@@ -57,6 +57,8 @@ type extentJob struct {
 	offset, stored, size uint64
 	codec                byte
 	files                []int
+	// the files it is written into, when a NUP is unpacked
+	outputs []string
 	// why the data is damaged, "" when it is whole; and its SHA-256, once read whole
 	reason string
 	sum    [32]byte
@@ -72,12 +74,12 @@ type feed struct {
 
 // Verify reads every piece of data of a NUP once, in the order it is stored, and compares the
 // SHA-256 of each file, decompressed when it is stored with zstd, with the one its table of
-// contents keeps. One reader goes through the file from start to end, as a hard disk reads
-// fastest, and workers hash and decompress what it reads; nothing is held in memory but a few
-// buffers. The header and the table of contents are checked first, by their hash: a NUP whose
+// contents keeps. Readers go through the file in order, one for a hard disk, which reads fastest
+// so, several for an SSD, and workers hash and decompress what they read; nothing is held in
+// memory but a few buffers. The header and the table of contents are checked first, by their hash: a NUP whose
 // table is damaged fails as a whole, a NUP whose files are damaged gives them in
 // Check.Damaged. progress is told the bytes read of the ones to read.
-func Verify(ctx context.Context, path string, workers int, progress func(done int64, total int64)) (*Container, Check, error) {
+func Verify(ctx context.Context, path string, workers int, readers int, progress func(done int64, total int64)) (*Container, Check, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, Check{}, err
@@ -133,7 +135,7 @@ func Verify(ctx context.Context, path string, workers int, progress func(done in
 		progress(0, total)
 	}
 
-	read, err := readAll(ctx, file, jobs, max(1, workers), func(done int64) {
+	read, err := readAll(ctx, file, jobs, max(1, workers), max(1, readers), func(done int64) {
 		if progress != nil {
 			progress(done, total)
 		}
@@ -179,20 +181,30 @@ func Verify(ctx context.Context, path string, workers int, progress func(done in
 	return container, check, nil
 }
 
-// readAll reads the pieces of data in their order, one after the other, and hands each to the
-// first worker free; it gives the bytes read. progress is told them from the reader only.
-func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int, progress func(done int64)) (int64, error) {
+// readAll reads the pieces of data in their order and hands each to the first worker free; it
+// gives the bytes read. Each reader goes through its own stretch of the NUP from start to end:
+// one reader for a hard disk, which reads fastest in order, several for an SSD, which reads
+// faster with several reads at once. progress is told the bytes read, from one reader at a time.
+func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int, readers int, progress func(done int64)) (int64, error) {
 	workers = min(workers, max(1, len(jobs)))
-	free := make(chan []byte, workers*(queued+1)+2)
+	readers = max(1, min(readers, workers))
+	free := make(chan []byte, workers*(queued+1)+2*readers)
 	for range cap(free) {
 		free <- make([]byte, chunkSize)
 	}
 	idle := make(chan int, workers)
 	feeds := make([]chan *feed, workers)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	var (
 		wait    sync.WaitGroup
 		failure atomic.Value
 	)
+	fail := func(err error) {
+		if failure.CompareAndSwap(nil, err) {
+			cancel()
+		}
+	}
 	for w := range workers {
 		feeds[w] = make(chan *feed, 1)
 		idle <- w
@@ -203,32 +215,81 @@ func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int,
 			defer worker.close()
 			for f := range feeds[w] {
 				if err := worker.check(f); err != nil {
-					failure.CompareAndSwap(nil, err)
+					fail(err)
 				}
 				idle <- w
 			}
 		}()
 	}
 
-	done := int64(0)
+	var (
+		done      atomic.Int64
+		told      sync.Mutex
+		stretches sync.WaitGroup
+	)
+	tell := func(n int64) {
+		value := done.Add(n)
+		if told.TryLock() {
+			progress(value)
+			told.Unlock()
+		}
+	}
+	// the stretches of the readers: the pieces in their order, cut where the bytes are shared
+	total := int64(0)
+	for _, job := range jobs {
+		total += int64(job.stored)
+	}
+	share, first, sum := total/int64(readers)+1, 0, int64(0)
+	for i := range jobs {
+		sum += int64(jobs[i].stored)
+		if sum >= share || i == len(jobs)-1 {
+			stretch := jobs[first : i+1]
+			first, sum = i+1, 0
+			stretches.Add(1)
+			go func() {
+				defer stretches.Done()
+				if err := readStretch(ctx, file, stretch, free, idle, feeds, tell); err != nil {
+					fail(err)
+				}
+			}()
+		}
+	}
+	stretches.Wait()
+	for _, f := range feeds {
+		close(f)
+	}
+	wait.Wait()
+	if err, _ := failure.Load().(error); err != nil {
+		return done.Load(), err
+	}
+	return done.Load(), nil
+}
+
+// readStretch reads the pieces of one stretch of the NUP in their order, small pieces in a few
+// big reads, and hands each to the first worker free. A part of the disk that cannot be read
+// makes its piece damaged and the reading goes on; only a cancelled work stops it.
+func readStretch(ctx context.Context, file *os.File, jobs []*extentJob, free chan []byte, idle chan int, feeds []chan *feed,
+	tell func(int64)) error {
 	var window []byte
 	windowAt := int64(-1)
-	var readErr error
 	for _, job := range jobs {
-		if readErr = ctx.Err(); readErr != nil {
-			break
-		}
-		if err, _ := failure.Load().(error); err != nil {
-			readErr = err
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		f := &feed{job: job, chunks: make(chan []byte, queued)}
-		feeds[<-idle] <- f
+		var w int
+		select {
+		case w = <-idle:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		feeds[w] <- f
 		at, end := int64(job.offset), int64(job.offset+job.stored)
 		for at < end {
-			if readErr = ctx.Err(); readErr != nil {
-				f.failed = readErr
-				break
+			if err := ctx.Err(); err != nil {
+				f.failed = err
+				close(f.chunks)
+				return err
 			}
 			buffer := <-free
 			n := min(int64(len(buffer)), end-at)
@@ -275,28 +336,15 @@ func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int,
 			}
 			f.chunks <- buffer[:n]
 			at += n
-			done += n
-			progress(done)
+			tell(n)
 		}
 		close(f.chunks)
-		if readErr != nil {
-			break
-		}
 	}
-	for _, f := range feeds {
-		close(f)
-	}
-	wait.Wait()
-	if readErr != nil {
-		return done, readErr
-	}
-	if err, _ := failure.Load().(error); err != nil {
-		return done, err
-	}
-	return done, nil
+	return nil
 }
 
-// hasher is a worker: it hashes the data of a piece as it comes, decompressed for zstd.
+// hasher is a worker: it hashes the data of a piece as it comes, decompressed for zstd, and when
+// the piece has files to write (unpacking), writes it into each of them.
 type hasher struct {
 	free    chan []byte
 	decoder *zstd.Decoder
@@ -311,12 +359,25 @@ func (h *hasher) close() {
 
 // check hashes the data of a piece, and keeps in the piece its hash or why it is damaged. Its
 // chunks are all taken, whatever happens, so the reader never waits for it. It gives an error
-// only when the work cannot go on.
+// only when the work cannot go on: a file it cannot write.
 func (h *hasher) check(f *feed) error {
 	job := f.job
 	hash := sha256.New()
 	source := &chunkReader{chunks: f.chunks, free: h.free}
 	defer source.drain()
+	var into io.Writer = hash
+	if len(job.outputs) > 0 {
+		writers := []io.Writer{hash}
+		for _, path := range job.outputs {
+			out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+			if err != nil {
+				return err
+			}
+			defer out.Close()
+			writers = append(writers, out)
+		}
+		into = &guardedWriter{w: io.MultiWriter(writers...)}
+	}
 	var (
 		n   int64
 		err error
@@ -331,13 +392,16 @@ func (h *hasher) check(f *feed) error {
 		}
 		if err = h.decoder.Reset(source); err == nil {
 			// one byte more than the file has tells data that goes on past it
-			n, err = io.CopyBuffer(hash, io.LimitReader(h.decoder, int64(job.size)+1), h.out)
+			n, err = io.CopyBuffer(into, io.LimitReader(h.decoder, int64(job.size)+1), h.out)
 		}
 	} else {
-		n, err = source.hashAll(hash)
+		n, err = source.hashAll(into)
 	}
 	source.drain()
+	var written *writeError
 	switch {
+	case errors.As(err, &written):
+		return written.err
 	case f.failed != nil:
 		job.reason = fmt.Sprintf("its data cannot be read (%v)", f.failed)
 	case err != nil:
@@ -350,6 +414,28 @@ func (h *hasher) check(f *feed) error {
 		copy(job.sum[:], hash.Sum(nil))
 	}
 	return nil
+}
+
+// writeError is a file of an unpacking that could not be written, told apart from damaged data.
+type writeError struct {
+	err error
+}
+
+func (e *writeError) Error() string {
+	return e.err.Error()
+}
+
+// guardedWriter tells the errors of the files written as writeErrors.
+type guardedWriter struct {
+	w io.Writer
+}
+
+func (g *guardedWriter) Write(p []byte) (int, error) {
+	n, err := g.w.Write(p)
+	if err != nil {
+		return n, &writeError{err}
+	}
+	return n, nil
 }
 
 // chunkReader reads the chunks of a piece as one stream, giving each buffer back once read.
@@ -374,13 +460,16 @@ func (r *chunkReader) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-// hashAll writes every chunk into hash as it is, without copying it, and gives the bytes.
-func (r *chunkReader) hashAll(hash io.Writer) (int64, error) {
+// hashAll writes every chunk into to as it is, without copying it, and gives the bytes.
+func (r *chunkReader) hashAll(to io.Writer) (int64, error) {
 	n := int64(0)
 	for chunk := range r.chunks {
-		hash.Write(chunk)
+		_, err := to.Write(chunk)
 		n += int64(len(chunk))
 		r.free <- chunk[:cap(chunk)]
+		if err != nil {
+			return n, err
+		}
 	}
 	return n, nil
 }
