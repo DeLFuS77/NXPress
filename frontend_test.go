@@ -128,9 +128,31 @@ const samples = [
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 40 s at level 3", " at level "],
   ["8.0 MB -> 42.3 KB, 99.5% smaller", " -> "],
+  ["NXPress does not compress, convert or trim NUP files: it makes them of dump folders (Combine, --nup), turns them back into folders (Decompress, -D), shows what they hold (Details, -i) and verifies them (Verify, -V)", "-V"],
+  ["167315 files in 3 packages, 31.5 GB → 29.8 GB: 2104 with the data of another file, kept once, 9870 with zstd; dlc/040074a01bf13001/0/updates left out: NUP version 1 holds no updates of DLC", "with zstd"],
+  ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the original is kept: --rm-source does not delete dump folders or NUP files", "--rm-source"],
+  ["1232 files, 39.5 GB, checked by their SHA-256 as they were written", "checked by"],
+  ["Kirby Air Riders [040077201BE50000] is already there: move or rename it to unpack the NUP again", "already there"],
+  ["D:/Games/.Kirby.nxpress, left by a work that stopped, is in the way: remove it first", "in the way"],
+  ["the new NUP does not read back whole: 3 files are not what was packed", "read back"],
+  ["cannot be read: the folder holds no game, update or DLC to pack: no exefs or romfs with files in it", "no game"],
+  ["cannot be read: it holds 2 programs (0, 1): NUP version 1 holds one", "programs"],
+  ["NUP holds a file or folder whose name cannot be written here: romfs/../x", "cannot be written"],
+  ["D:/Games/x.bin: its data gives 5 bytes instead of 9", "gives"],
+  ["308 files checked by their SHA-256 (2 in no folder of any package); a NUP holds no signatures of Nintendo; not compared with the DAT, which lists no NUP files", "checked by"],
+  ["checked on 2026-11-05, not changed since; 1 file checked by its SHA-256", "checked by"],
+  ["3 of 372587 files are damaged: game v65536: romfs/a.bin (its SHA-256 does not match); update v131072: romfs/b.bin (its zstd data cannot be decompressed (bad magic)); and 1 more", "damaged"],
+  ["x.bin (in no folder) (its data decompresses to 5 bytes instead of 9); y.bin (its data cannot be read (I/O error)); z.bin (its data decompresses to more than its 9 bytes)", "its data"],
+  ["Game.nup: damaged files:\n  game v0: romfs/a.bin: its SHA-256 does not match\n  and 3 more", "damaged files"],
+  ["the NUP file is cut short: 1000 of 5000 bytes, a copy or a download that stopped before its end", "cut short"],
+  ["cannot be read: NUP table of contents is damaged (its hash does not match)", "table of contents"],
+  ["works with: programs that read NUP files; NXPress makes it of a dump folder (Combine, --nup) and turns it back into one (Decompress, -D)", "--nup"],
+  ["Game.nup:\n  0400486024DEC000 BASE v65536 Game\n    version 1.0.2\n    publisher: Nobody\n    605 files: 19.6 GB, 19.5 GB as stored\n  NUP: 38.9 GB, 39.5 GB of files uncompressed, 38.9 GB as stored", "as stored"],
+  ["Game.nup:\n  0400486024DEC000 BASE v65536\n    1 file: 4.0 KB, 1.0 KB as stored", "as stored"],
+  ["Game.nup:\n  0400486024DEC000 BASE v65536\n    publisher: Nobody", "publisher"],
 ];
 // in English too: what the window says in its own words
-const ownEnglish = ["-w", " -> "];
+const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];
 for (const [note, english] of samples) {
   for (const code of codes) {
     const text = noteText(note, code);

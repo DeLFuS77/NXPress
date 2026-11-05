@@ -31,8 +31,8 @@ func FolderFiles(folder string, recursive bool) (found []string, unread []unread
 			found = append(found, walked)
 			return nil
 		}
-		// a folder of parts is one file: its parts are not looked into
-		if _, ok := SplitContainer(walked); ok {
+		// a folder of parts is one file, and a dump folder is one game: neither is looked into
+		if _, ok := SplitContainer(walked); ok || IsDumpFolder(walked) {
 			found = append(found, walked)
 			return filepath.SkipDir
 		}

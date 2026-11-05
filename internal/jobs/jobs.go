@@ -26,8 +26,8 @@ import (
 // the files each action takes, by extension
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
-	"decompress": {".nsz", ".xcz"},
-	"verify":     {".nsp", ".nsz", ".xci", ".xcz"},
+	"decompress": {".nsz", ".xcz", ".nup"},
+	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	"convert":    {".xci", ".xcz"},
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
@@ -37,7 +37,11 @@ var Takes = map[string][]string{
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
 	"split": {".nsp", ".nsz", ".xci", ".xcz"},
-	"info":  {".nsp", ".nsz", ".xci", ".xcz"},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
+	// the dump folders packed into NUP files
+	"nup": {dumpFolders},
+	// Combine: the files it combines, and the dump folders it packs into NUP files
+	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
 }
 
 // checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA
@@ -56,6 +60,7 @@ var checksOutput = map[string]bool{
 	"measure":    false,
 	"info":       false,
 	"verify":     false,
+	"nup":        true,
 }
 
 // RunJobs does the action on every file, several at once with -m, and gives how many failed.
@@ -66,28 +71,47 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	action := o.Action()
 	// the LZ4 blocks of the extra compression keep to the threads of each file (lz4Threads)
 	ctx = switchfs.WithThreads(ctx, lz4Threads(o))
+	// a NUP given to a work that does not take it is told, not left out without a word
+	nupsLeft := tellNupsLeft(o, out)
+	// the dump folders given to Combine are packed into NUP files, each on its own; the files
+	// given with them are combined as they would be without them
+	failedDumps := 0
+	if action == "pack" {
+		var dumps []string
+		dumps, o.Files = splitDumps(o.Files)
+		if len(dumps) > 0 {
+			nupWork := o
+			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, true
+			failedDumps = RunJobs(ctx, nupWork, out)
+			if len(o.Files) == 0 {
+				return failedDumps
+			}
+		}
+	}
 	if action == "pack" && o.PackGames {
-		return PackGames(ctx, o, out)
+		return failedDumps + PackGames(ctx, o, out)
 	}
 	if action == "pack" && o.PackOne {
-		return packOne(ctx, o, out)
+		return failedDumps + packOne(ctx, o, out)
 	}
 	if action == "pack" {
 		if err := pack(ctx, o, out); err != nil {
 			out.Done(o.Pack, "", "", shown(err))
 			if IsSkipped(err) {
-				return 0
+				return failedDumps
 			}
-			return 1
+			return failedDumps + 1
 		}
-		return 0
+		return failedDumps
 	}
 	files, missing := Inputs(o.Files, Takes[action])
 	for _, path := range missing {
 		out.Done(path, "", "", errors.New("no such file or folder"))
 	}
 	if len(files) == 0 {
-		out.Say("no file to %s among the ones given", action)
+		if nupsLeft == 0 {
+			out.Say("no file to %s among the ones given", action)
+		}
 		return len(missing)
 	}
 	// the measure tries its settings on the biggest game that can be compressed
@@ -131,8 +155,9 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 					continue
 				}
 				output, note, err := safeJob(ctx, action, path, o, threads, out)
-				// a new file checked as a game before it got its name need not be read again
-				if err == nil && output != "" && checksOutput[action] {
+				// a new file checked as a game before it got its name need not be read again (a
+				// folder a NUP was unpacked into is no file to remember)
+				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
 					cache.Checked.Keep(output, "")
 				}
 				out.Done(path, output, note, shown(err))
@@ -217,13 +242,17 @@ func Inputs(paths []string, extensions []string) (files []string, missing []stri
 	seen := map[string]bool{}
 	// the files taken by their size, to find one given twice under two names
 	bySize := map[int64][]os.FileInfo{}
-	withParts := false
+	withParts, withDumps := false, false
 	for _, taken := range extensions {
 		withParts = withParts || taken == splitFiles
+		withDumps = withDumps || taken == dumpFolders
 	}
 	takes := func(path string) bool {
 		if strings.HasPrefix(filepath.Base(path), ".") {
 			return false
+		}
+		if IsDumpFolder(path) {
+			return withDumps
 		}
 		if _, ok := SplitContainer(path); ok {
 			return withParts
@@ -262,7 +291,7 @@ func Inputs(paths []string, extensions []string) (files []string, missing []stri
 			missing = append(missing, path)
 			continue
 		}
-		if _, ok := SplitContainer(path); !info.IsDir() || ok {
+		if _, ok := SplitContainer(path); !info.IsDir() || ok || IsDumpFolder(path) {
 			if takes(path) {
 				add(path)
 			}
@@ -424,6 +453,24 @@ func free(o Options, path string) error {
 // ErrEmpty is a file of 0 bytes, a copy that never happened: told plainly, before it is read.
 var ErrEmpty = errors.New("the file is empty")
 
+// isDir tells whether a path is a folder.
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// splitDumps parts the paths given into the dump folders among them and the rest.
+func splitDumps(paths []string) (dumps []string, rest []string) {
+	for _, path := range paths {
+		if IsDumpFolder(path) {
+			dumps = append(dumps, path)
+		} else {
+			rest = append(rest, path)
+		}
+	}
+	return dumps, rest
+}
+
 // isEmpty tells whether path is a file of 0 bytes (a folder of parts is not).
 func isEmpty(path string) bool {
 	info, err := os.Stat(path)
@@ -444,6 +491,21 @@ func safeJob(ctx context.Context, action string, path string, o Options, threads
 func doJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (string, string, error) {
 	if isEmpty(path) {
 		return "", "", ErrEmpty
+	}
+	if isNup(path) {
+		switch action {
+		case "info":
+			note, err := infoNup(path, o.Versions, out)
+			return "", note, err
+		case "verify":
+			return verifyNup(ctx, path, o, out)
+		case "decompress":
+			return unpackNup(ctx, path, o, threads, out)
+		}
+		return "", "", Skipped(NupNotDone)
+	}
+	if action == "nup" {
+		return packNup(ctx, path, o, threads, out)
 	}
 	switch action {
 	case "compress":

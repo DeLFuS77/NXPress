@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### New
+
+- NUP files (.nup), the containers of decrypted Switch and Switch 2 games, are read without keys. Details shows each package (the game, an update or a DLC) with its title ID, its version, the name and the publisher the file gives, its files and their size, uncompressed and as stored. Verify checks the hash of the table of contents and the SHA-256 of every file, decompressing the ones stored with zstd, and tells each damaged file by its path; it reads each piece of data once, in order on a hard disk, which reads fastest so, and with several readers at once on an SSD. The NUP files a build of the packer of the format wrote with the types of their metadata counted from 0 show the name and the publisher of their game all the same (thanks @brumouta, DeLFuS77/switch-library-manager-web#157)
+- Dump folders become NUP files in Combine (`--nup`), and NUP files become folders again in Decompress (`-D`), without keys. The dump folders of OunceCake are taken in its old layout and its new one, which also gives the name, the publisher and the icon of the game; a folder without them gives the NUP the name of the game its own name tells (MarioTennisFever_v1.1.1 is Mario Tennis Fever), so emulators show a name. Each file is stored with zstd at level 3, as the packer of the format does, or as it is when zstd does not make it smaller, and files with the same data are kept once; the new NUP is read back and checked before it gets its name. Packing reads, hashes and compresses files on every thread, and copies big files into the NUP on threads of their own; on a hard disk it reads one file at a time. Unpacking checks every file by its SHA-256 as it writes it, and never writes into a folder that is there already
+
 ### Improvements
 
 - Combine and Split name the SuperXCI too, not only the SuperNSP: a game card with its updates and DLC is made by Combine when an XCI is among the files, and Split writes each of its titles to a file of its own (thanks @NikoMuffin, #73)

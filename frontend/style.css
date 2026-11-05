@@ -484,12 +484,29 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 
 /* the card of a file in Info */
 .file-card { margin-top: 8px; max-width: 520px; }
+.file-card:has(.nup-packages) { max-width: 560px; }
 .card-sizes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .card-sizes .kind { font-weight: 700; color: var(--accent); min-width: 34px; }
 .card-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
 .card-bar div { height: 100%; border-radius: 4px; background: var(--ok); animation: card-in .6s cubic-bezier(.2, .8, .2, 1); }
 @keyframes card-in { from { width: 0; } }
 .file-card .tags { margin-top: 6px; }
+/* the packages of a NUP in its card: a line each, with its kind, who it is and its files */
+.nup-packages { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.nup-packages li { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
+.nup-packages .k { font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
+.nup-packages .who { min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+.nup-packages .who b { color: var(--text); font-weight: 600; }
+.nup-packages .num { color: var(--muted); text-align: right; white-space: nowrap; }
+.file-card .card-only { margin-top: 6px; font-size: 12px; color: var(--muted); }
+/* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
+.game .cover .cover-folder { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.dump-plan { margin-top: 4px; }
+.dump-pieces { display: flex; flex-wrap: wrap; gap: 4px; }
+.dump-pieces i { font-style: normal; font-size: 11px; font-weight: 700; line-height: 18px; padding: 0 7px; border-radius: 999px; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
+.dump-arrow { margin-top: 3px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.dump-arrow b { color: var(--text); font-weight: 600; }
+table.grid .dump-plan { display: none; }
 
 /* the switch of the list: rows or a grid of covers */
 .view-switch { margin: 0 0 0 auto; }

@@ -48,10 +48,15 @@ type Options struct {
 	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
 	PackOne  bool
 	PackName string
+	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
+	// a NUP, next to it or in -o
+	Nup bool
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
-	Origins     []string
-	Level       int
+	Origins []string
+	Level   int
+	// whether -l was given: the files of a NUP take zstd at level 3 unless it was
+	LevelGiven  bool
 	Block       bool
 	LowPriority bool
 	Sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
@@ -109,7 +114,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false},
+	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
 	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
@@ -304,6 +309,8 @@ func (o *Options) flag(option optionName) {
 		o.PackGames = true
 	case "--pack-one":
 		o.PackOne = true
+	case "--nup":
+		o.Nup = true
 	case "--minimal-output":
 		o.Minimal = true
 	case "--machine-readable":
@@ -340,6 +347,7 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 	switch option.name {
 	case "--level":
 		o.Level, err = number(1)
+		o.LevelGiven = true
 	case "--threads":
 		// nsz takes a number below 1 as "choose for me"
 		if n, convErr := strconv.Atoi(value); convErr == nil && n < 1 {
@@ -409,17 +417,17 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info} {
+	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one and --pack-games")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games and --nup")
 	}
 	// a watch would look for new files a pack does not take, without end
-	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne) {
-		return errors.New("--watch does not go with --pack, --pack-one or --pack-games: a pack is made of the files given at once")
+	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup) {
+		return errors.New("--watch does not go with --pack, --pack-one, --pack-games or --nup: a pack is made of the files given at once")
 	}
 	if o.Dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -470,9 +478,11 @@ const Usage = `NXPress %s, compresses and decompresses Nintendo Switch NSP and X
 Usage: nxpress [options] file or folder...
 
   -C                  compress NSP and XCI files to NSZ and XCZ
-  -D                  decompress NSZ and XCZ files to NSP and XCI
+  -D                  decompress NSZ and XCZ files to NSP and XCI, and turn NUP files into
+                      folders
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
-                      files given (NSP, NSZ, XCI, XCZ)
+                      files given (NSP, NSZ, XCI, XCZ, and NUP: the SHA-256 of each of its
+                      files, without keys)
   -Q, --quick-verify  the same as -V
   --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
                       the same), signature (the header of every NCA signed by Nintendo, in
@@ -507,7 +517,14 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
-  -i, --info          show the titles a file holds
+  -i, --info          show the titles a file holds; of a NUP, each package (game, update,
+                      DLC) with its files and their size, without keys
+  --nup               pack each dump folder given (base, updates and dlc, or exefs and
+                      romfs, as OunceCake writes them) into a NUP, next to it or in -o:
+                      each file with zstd (level 3, or -l) or as it is when zstd does not
+                      make it smaller, files with the same data kept once, the NUP checked
+                      whole before it gets its name; no keys needed. -D turns a NUP back
+                      into a folder, each file checked by its SHA-256
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one
@@ -593,6 +610,8 @@ func (o Options) Action() string {
 		return "info"
 	case o.Pack != "" || o.PackGames || o.PackOne:
 		return "pack"
+	case o.Nup:
+		return "nup"
 	}
 	return "verify"
 }
