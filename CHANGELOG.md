@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Combine and Split name the SuperXCI too, not only the SuperNSP: a game card with its updates and DLC is made by Combine when an XCI is among the files, and Split writes each of its titles to a file of its own (thanks @NikoMuffin, #73)
+
 ## 1.6.0
 
 ### New
