@@ -107,7 +107,8 @@ texts.en = {
     notCompressibleWhy: "nothing to compress in it, left as it is", sparseSkip: "This game uses sparse storage. To compress it with NXPress's experimental format, turn on Extra compression under Advanced", sparseWhy: "it uses sparse storage: turn on Extra compression under Advanced to compress it with NXPress's experimental format", encryptionWhy: "its sections use an encryption NXPress does not read", noGameDataWhy: "it holds no game data", alreadyCompressedWhy: "it is compressed already (it holds NCZ files), an NSZ or XCZ under another name", onlyMetaWhy: "it holds no NCA file but metadata",
     measureHead: "$1 processors, level $2 (threads × files at once):", measureBest: "best: threads $1, files at once $2, $3 MB/s, about $4 for 10 GB (applied)", notMeasurable: "nothing in it can be compressed: measure with another game", notMeasurableAny: "nothing in the games of the list can be compressed: add another game to measure with", alreadyThere: " is already there (tick “Replace if the new file is already there”)",
     alreadyCombined: "already combined in $1 (tick “Replace if the new file is already there” to write it again)",
-    nupNotDone: "NXPress does not compress, convert or repack NUP files: it shows what they hold in Details and verifies them in Verify",
+    nupNotDone: "NXPress does not compress, convert or trim NUP files: it makes them of dump folders in Combine, turns them back into folders in Decompress, shows what they hold in Details and verifies them in Verify",
+    nupKept: "the original is kept: Delete originals does not delete dump folders or NUP files",
     arrow: " → ",
   },
 };

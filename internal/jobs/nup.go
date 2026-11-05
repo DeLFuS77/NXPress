@@ -18,14 +18,15 @@ import (
 )
 
 // NUP files (.nup) hold decrypted games of the Switch and the Switch 2, a game with its updates
-// and its DLC, as plain files: NXPress shows what they hold and verifies them, without keys. It
-// does not compress, convert or repack them, and says so when asked to.
+// and its DLC, as plain files: NXPress shows what they hold and verifies them, makes them of dump
+// folders and turns them back into folders, without keys. The other works leave them as they
+// are, and say so.
 
 // NupNotDone is why a NUP given to any other work is left as it is.
-const NupNotDone = "NXPress does not compress, convert or repack NUP files: it shows what they hold (Details, -i) and verifies them (Verify, -V)"
+const NupNotDone = "NXPress does not compress, convert or trim NUP files: it makes them of dump folders (Combine, --nup), turns them back into folders (Decompress, -D), shows what they hold (Details, -i) and verifies them (Verify, -V)"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
@@ -44,21 +45,26 @@ func NupFiles(paths []string) []string {
 }
 
 // NeedsKeys tells whether a work needs the keys of the console: not to recompress, to split for
-// FAT32 or to join, nor for NUP files, which hold their games decrypted. A work given NUP files
-// only needs none: it verifies them or shows what they hold, or tells it leaves them as they are.
+// FAT32 or to join, nor for NUP files and dump folders, which hold their games decrypted. A work
+// given NUP files or dump folders only needs none: it packs them, unpacks, verifies or shows
+// them, or tells it leaves them as they are.
 func NeedsKeys(o Options) bool {
-	if o.Recompress || o.Fat32 {
+	if o.Recompress || o.Fat32 || o.Nup {
 		return false
 	}
-	if o.Watch || o.Action() == "pack" {
+	if o.Watch {
 		return true
 	}
-	files, _ := Inputs(o.Files, append(append([]string{}, Takes[o.Action()]...), ".nup"))
+	taken := Takes[o.Action()]
+	if o.Action() == "pack" {
+		taken = []string{".nsp", ".nsz", ".xci", ".xcz"}
+	}
+	files, _ := Inputs(o.Files, append(append([]string{}, taken...), ".nup", dumpFolders))
 	if len(files) == 0 {
 		return true
 	}
 	for _, path := range files {
-		if !isNup(path) {
+		if !isNup(path) && !IsDumpFolder(path) {
 			return true
 		}
 	}
@@ -321,7 +327,7 @@ func NupCard(path string) (size int64, uncompressed int64, packages []NupPackage
 // tellNupsLeft tells, for a work that does not take NUP files, each one given or in a folder
 // given: left as it is, and why. A watched folder tells nothing, round after round.
 func tellNupsLeft(o Options, out Output) int {
-	if TakesNup(o.Action()) || o.Watch {
+	if TakesNup(o.Action()) || o.Watch || o.Action() == "nup" {
 		return 0
 	}
 	files := NupFiles(o.Files)

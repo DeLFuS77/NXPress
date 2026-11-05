@@ -124,7 +124,7 @@ func commandLineFiles(o jobs.Options, out *jobs.Reporter) ([]string, int) {
 	failed := 0
 	for _, path := range o.Files {
 		info, err := os.Stat(path)
-		if _, parts := jobs.SplitContainer(path); err != nil || !info.IsDir() || parts {
+		if _, parts := jobs.SplitContainer(path); err != nil || !info.IsDir() || parts || jobs.IsDumpFolder(path) {
 			files = append(files, path)
 			continue
 		}

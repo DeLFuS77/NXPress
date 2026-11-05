@@ -111,6 +111,9 @@ func ReadTitle(path string, withIcon bool) (GameTitle, error) {
 		}
 		return nupTitle(path, withIcon)
 	}
+	if IsDumpFolder(path) {
+		return dumpTitle(path)
+	}
 	all, err := ReadTitles(path)
 	if err != nil {
 		return GameTitle{}, err

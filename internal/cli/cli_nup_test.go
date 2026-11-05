@@ -87,14 +87,37 @@ func TestNupWithoutKeys(t *testing.T) {
 	}
 
 	// no other work takes a NUP: it is told, and is no failure
-	for _, args := range [][]string{{"-C"}, {"-D"}, {"--convert"}, {"--recompress"}, {"--trim"}, {"--split"}} {
+	for _, args := range [][]string{{"-C"}, {"--convert"}, {"--recompress"}, {"--trim"}, {"--split"}} {
 		code, out = run(append(args, good)...)
-		if code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest.nup (NXPress does not compress, convert or repack NUP files") {
+		if code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest.nup (NXPress does not compress, convert or trim NUP files") {
 			t.Errorf("%v: %d\n%s", args, code, out)
 		}
 		if strings.Contains(out, "no file to") {
 			t.Errorf("%v: told no file too\n%s", args, out)
 		}
+	}
+
+	// -D turns a NUP into a folder of the same name, and --nup packs the folder again
+	unpacked := t.TempDir()
+	copied := filepath.Join(unpacked, "Made-up Quest [0400486024DEC000].nup")
+	os.WriteFile(copied, testnup.Build(nupGame()), 0o644)
+	if code, out = run("-D", copied); code != 0 || !strings.Contains(out, "OK Made-up Quest [0400486024DEC000].nup -> Made-up Quest [0400486024DEC000] (3 files") {
+		t.Errorf("-D: %d\n%s", code, out)
+	}
+	if data, err := os.ReadFile(filepath.Join(unpacked, "Made-up Quest [0400486024DEC000]", "base", "exefs", "main")); err != nil || len(data) != 3000 {
+		t.Errorf("unpacked main: %v %d", err, len(data))
+	}
+	// a folder there already is not written into
+	if code, out = run("-D", copied); code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest [0400486024DEC000].nup (Made-up Quest [0400486024DEC000] is already there") {
+		t.Errorf("-D again: %d\n%s", code, out)
+	}
+	repacked := t.TempDir()
+	if code, out = run("--nup", "-o", repacked, filepath.Join(unpacked, "Made-up Quest [0400486024DEC000]")); code != 0 ||
+		!strings.Contains(out, "OK Made-up Quest [0400486024DEC000] -> Made-up Quest [0400486024DEC000][v131072].nup (3 files in 2 packages") {
+		t.Errorf("--nup: %d\n%s", code, out)
+	}
+	if code, out = run("-V", "--no-cache", filepath.Join(repacked, "Made-up Quest [0400486024DEC000][v131072].nup")); code != 0 || !strings.Contains(out, "3 files checked") {
+		t.Errorf("-V of the new NUP: %d\n%s", code, out)
 	}
 
 	// a NUP with an NSP still needs the keys, for the NSP
