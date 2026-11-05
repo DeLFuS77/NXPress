@@ -106,7 +106,7 @@ const noteRules = [
   [/^(.+) is a link: links are not packed$/, "nupLink"],
   [/NUP holds a file or folder whose name cannot be written here: /g, "nupBadName"],
   [/its data gives (\d+) bytes instead of (\d+)/g, "nupGives"],
-  [/works with: programs that read NUP files; NXPress shows and verifies it, but does not compress, convert or repack it/g, "worksNup"],
+  [/works with: programs that read NUP files; NXPress makes it of a dump folder \(Combine, --nup\) and turns it back into one \(Decompress, -D\)/g, "worksNup"],
   [/\b1 file checked by its SHA-256/g, "nupCheckedOne"],
   [/\b(\d+) files checked by their SHA-256/g, "nupChecked"],
   [/ \((\d+) in no folder of any package\)/g, "nupUnplaced"],

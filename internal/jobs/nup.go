@@ -192,7 +192,7 @@ func infoNup(path string, versions *titledb.Versions, out Output) (string, error
 	totals := container.Totals()
 	lines = append(lines, fmt.Sprintf("NUP: %s, %s of files uncompressed, %s as stored", size(container.FileSize),
 		size(int64(totals.Size)), size(int64(totals.Stored))))
-	lines = append(lines, "works with: programs that read NUP files; NXPress shows and verifies it, but does not compress, convert or repack it")
+	lines = append(lines, "works with: programs that read NUP files; NXPress makes it of a dump folder (Combine, --nup) and turns it back into one (Decompress, -D)")
 	out.Say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	return count(len(container.Packages), "title", "titles"), nil
 }

@@ -326,6 +326,23 @@ func TestVerifyEmptyPackageAndEmptyFile(t *testing.T) {
 	}
 }
 
+// The packer of the format counted the types of the metadata from 0 for a while: such a block is
+// read with its types where the format puts them.
+func TestTypesCountedFromZero(t *testing.T) {
+	nup := testnup.Build([]testnup.Package{{TitleId: 0x040074A01BF12000, Meta: []testnup.Record{
+		{Type: 0, Payload: []byte("META npdm")}, {Type: 3, Payload: []byte("1.0.0")},
+		{Type: 4, Payload: []byte("Made-up Bananza")}, {Type: 5, Payload: []byte("Nobody")}, {Type: 6, Payload: bytes.Repeat([]byte{9}, 32)},
+	}, Files: []testnup.File{{Path: "romfs/a", Data: []byte("a")}}}})
+	container, err := Read(bytes.NewReader(nup), int64(len(nup)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := container.Packages[0]
+	if pkg.Name() != "Made-up Bananza" || pkg.Publisher() != "Nobody" || pkg.DisplayVersion() != "1.0.0" || string(pkg.Meta[1]) != "META npdm" {
+		t.Errorf("%q %q %q", pkg.Name(), pkg.Publisher(), pkg.DisplayVersion())
+	}
+}
+
 func TestNames(t *testing.T) {
 	nacp := make([]byte, 0x4000)
 	copy(nacp[2*0x300:], "ゲーム")

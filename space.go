@@ -2,7 +2,9 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 
+	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/space"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -25,6 +27,10 @@ func spaceShort(request Request, free func(string) (int64, error)) []space.Short
 	files := []space.File{}
 	for _, path := range request.Files {
 		size, ok := space.OriginalSize(path)
+		// a dump folder packed into a NUP takes at most the size of its files
+		if !ok && request.Mode == "pack" && jobs.IsDumpFolder(path) {
+			size, ok = jobs.DumpSize(path), true
+		}
 		if !ok {
 			continue
 		}
@@ -32,6 +38,10 @@ func spaceShort(request Request, free func(string) (int64, error)) []space.Short
 		if request.Mode == "decompress" {
 			if facts, err := switchfs.DescribeFile(path); err == nil && facts.DecompressedSize > most {
 				most = facts.DecompressedSize
+			}
+			// a NUP unpacked takes the size of its files, each written once per path
+			if strings.EqualFold(filepath.Ext(path), ".nup") {
+				most = max(most, jobs.NupUncompressed(path))
 			}
 		}
 		folder := filepath.Dir(path)

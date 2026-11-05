@@ -9,14 +9,17 @@ const groups = [
 ];
 // what each mode takes, to show it
 const takesShown = {
-  compress: "NSP XCI", decompress: "NSZ XCZ", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP", convert: "XCI XCZ",
-  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
+  compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP", convert: "XCI XCZ",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
 };
 
 // a NUP holds its game decrypted: it is read and verified without keys
 const isNup = path => /\.nup$/i.test(path);
-// whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files only
-const needsKeys = mode => !["recompress", "fat32"].includes(mode) && !(state.items.length > 0 && state.items.every(item => isNup(item.path)));
+// the cover of a dump folder, until its game is read: a folder
+const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
+// whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
+// dump folders only
+const needsKeys = mode => !["recompress", "fat32"].includes(mode) && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
 const icons = {
@@ -764,6 +767,8 @@ function stepsOf(row) {
   if (row.step && !row.step.startsWith("Verifying")) row.work = row.step.split(" ")[0];
   const work = { compress: "Compressing", recompress: "Recompressing", fat32: row.work || "Splitting" }[mode];
   if (work) return [work, "Verifying"];
+  // a dump folder is packed into a NUP, then the NUP is read back whole
+  if (mode === "pack" && row.item.dump) return ["Packaging", "Verifying"];
   if (mode === "trim" && /\.xc[iz]$/i.test(row.item.path)) return ["Trimming", "Verifying"];
   return [];
 }
@@ -965,10 +970,11 @@ function render() {
   $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
   for (const entry of takesShown[state.mode].split(" ")) {
-    // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on
+    // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on; ":takesDumps"
+    // alone: what it takes besides files
     const [type, which] = entry.split(":");
     const tag = document.createElement("i");
-    tag.textContent = which ? `${type} (${t(which)})` : type;
+    tag.textContent = which ? (type ? `${type} (${t(which)})` : t(which)) : type;
     $("takes").append(tag);
   }
   $("language-select").value = state.language;
@@ -1156,9 +1162,10 @@ function add(item) {
   state.removed.delete(item.path);
   const tr = document.createElement("tr");
   tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
-  // until the icon of the game comes, a cover tells the kind of file
-  const kind = (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
-  tr.querySelector(".cover").textContent = kind;
+  // until the icon of the game comes, a cover tells the kind of file; a dump folder shows a folder
+  const kind = item.dump ? "DUMP" : (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
+  tr.querySelector(".cover").textContent = item.dump ? "" : kind;
+  if (item.dump) tr.querySelector(".cover").innerHTML = folderIcon;
   tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
@@ -1239,7 +1246,7 @@ function sortSoon() {
 const describeQueue = [];
 let describing = 0;
 function describe(row) {
-  if (!state.keys && !isNup(row.item.path)) return;
+  if (!state.keys && !isNup(row.item.path) && !row.item.dump) return;
   describeQueue.push(row);
   pumpDescribe();
 }
@@ -1248,7 +1255,12 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => { row.game = game; if (state.sort.key === "name") sortSoon(); }).catch(() => { }).finally(() => { row.described = true; paint(row); warnSoon(); describing--; pumpDescribe(); });
+    app().Describe(row.item.path).then(game => {
+      row.game = game;
+      // a dump folder has its size once its files are added up
+      if (row.item.dump && game && game.size) { row.item.size = game.size; summary(); }
+      if (state.sort.key === "name") sortSoon();
+    }).catch(() => { }).finally(() => { row.described = true; paint(row); warnSoon(); describing--; pumpDescribe(); });
   }
 }
 
@@ -1263,7 +1275,12 @@ function paint(row) {
   const title = row.tr.querySelector(".title");
   const file = row.tr.querySelector(".file");
   const icon = row.tr.querySelector(".icon");
-  if (row.game && row.game.name) {
+  if (row.game && row.game.container === "DUMP") {
+    // a dump folder: its game, its newest version, and that it is a folder
+    title.textContent = row.game.name;
+    file.textContent = `${row.game.titleId} · v${row.game.latest} · ${t("dumpFolder")}`;
+    if (row.game.size) row.tr.querySelector(".size").textContent = size(row.game.size);
+  } else if (row.game && row.game.name) {
     title.textContent = row.game.name;
     file.textContent = `${row.game.titleId} · v${row.game.version} · ${t("gameKind")(row.game.type)} · ${row.item.name}`;
   } else {
@@ -1286,6 +1303,21 @@ function paint(row) {
     format.title = why;
     title.append(mark, format);
   }
+  // what a dump folder holds, and the name of its NUP, until it is worked on
+  row.tr.querySelector(".dump-plan")?.remove();
+  if (row.game && row.game.container === "DUMP" && !row.status && state.mode === "pack") {
+    const plan = document.createElement("div");
+    plan.className = "dump-plan";
+    plan.innerHTML = `<div class="dump-pieces"></div><div class="dump-arrow">→ <b></b></div>`;
+    for (const piece of row.game.pieces || []) {
+      const chip = document.createElement("i");
+      chip.textContent = t("gameKind")(piece.type) + (piece.type === "UPD" ? ` v${piece.version}` : piece.type === "DLC" ? ` ${piece.titleId}` : "");
+      plan.querySelector(".dump-pieces").append(chip);
+    }
+    plan.querySelector("b").textContent = row.game.nupName || "";
+    plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
+    file.after(plan);
+  }
   // a warning of the list shows until the file is worked on
   let warn = row.tr.querySelector(".list-warn");
   if (row.warn && !row.status) {
@@ -1303,7 +1335,7 @@ function paint(row) {
     row.tr.querySelector(".cover").hidden = true;
   }
   // the cover shimmers while the game is read
-  row.tr.querySelector(".cover").classList.toggle("loading", (!!state.keys || isNup(row.item.path)) && !row.described);
+  row.tr.querySelector(".cover").classList.toggle("loading", (!!state.keys || isNup(row.item.path) || !!row.item.dump) && !row.described);
   // in the grid, the cover fills up with the progress of its file
   const game = row.tr.querySelector(".game");
   game.classList.toggle("working", row.status === "work");

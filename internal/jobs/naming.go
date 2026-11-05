@@ -51,8 +51,18 @@ type GameTitle struct {
 	// NXPress reads so far: empty for a plain NSZ or XCZ and any other file (#58)
 	Format string `json:"format,omitempty"`
 	// the kind of container when it is not an NSP or an XCI: NUP, which holds its games
-	// decrypted and is read without keys
+	// decrypted and is read without keys, or DUMP, a dump folder packed into one
 	Container string `json:"container,omitempty"`
+	// of a dump folder: its packages, and the name of its NUP
+	Pieces  []DumpPiece `json:"pieces,omitempty"`
+	NupName string      `json:"nupName,omitempty"`
+}
+
+// DumpPiece is a package of a dump folder: the game, an update or a DLC.
+type DumpPiece struct {
+	Type    string `json:"type"`
+	TitleID string `json:"titleId"`
+	Version int    `json:"version"`
 }
 
 // ExperimentalFormat tells the experimental formats of NXPress the NCZ files of a file are in,

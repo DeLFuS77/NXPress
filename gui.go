@@ -202,13 +202,12 @@ type Item struct {
 	Path string `json:"path"`
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+	// a dump folder, which Combine packs into a NUP
+	Dump bool `json:"dump,omitempty"`
 }
 
 // extensions are the files a mode takes.
 func extensions(mode string) []string {
-	if mode == "pack" {
-		return []string{".nsp", ".nsz", ".xci", ".xcz"}
-	}
 	return jobs.Takes[mode]
 }
 
@@ -230,8 +229,8 @@ func (a *App) Expand(paths []string, mode string) []Item {
 	}
 	items := make([]Item, 0, len(files))
 	for _, path := range files {
-		item := Item{Path: path, Name: filepath.Base(path)}
-		if info, err := os.Stat(path); err == nil {
+		item := Item{Path: path, Name: filepath.Base(path), Dump: jobs.IsDumpFolder(path)}
+		if info, err := os.Stat(path); err == nil && !item.Dump {
 			item.Size = info.Size()
 		}
 		items = append(items, item)
@@ -243,7 +242,10 @@ func (a *App) Expand(paths []string, mode string) []Item {
 func (a *App) ChooseFiles(mode string) ([]Item, error) {
 	patterns := []string{}
 	for _, extension := range extensions(mode) {
-		patterns = append(patterns, "*"+extension)
+		// the folders a mode takes (parts, dumps) are chosen with Add folder
+		if strings.HasPrefix(extension, ".") {
+			patterns = append(patterns, "*"+extension)
+		}
 	}
 	paths, err := wailsruntime.OpenMultipleFilesDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Filters: []wailsruntime.FileFilter{{DisplayName: strings.ToUpper(strings.Join(patterns, ", ")), Pattern: strings.Join(patterns, ";")}},

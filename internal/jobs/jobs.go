@@ -40,6 +40,8 @@ var Takes = map[string][]string{
 	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	// the dump folders packed into NUP files
 	"nup": {dumpFolders},
+	// Combine: the files it combines, and the dump folders it packs into NUP files
+	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
 }
 
 // checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA

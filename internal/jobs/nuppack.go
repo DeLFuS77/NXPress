@@ -116,15 +116,37 @@ func dumpTitle(dir string) (GameTitle, error) {
 			result.GameID = fmt.Sprintf("%016X", game)
 		}
 	}
+	for _, source := range summary.sources {
+		result.Pieces = append(result.Pieces, DumpPiece{Type: map[byte]string{nup.KindBase: "BASE", nup.KindUpdate: "UPD", nup.KindAddon: "DLC"}[source.Kind],
+			TitleID: nup.Package{TitleID: source.TitleID, Kind: source.Kind}.TitleIDText(), Version: int(source.Version)})
+	}
+	result.NupName, _ = NupName(dir)
+	result.Size = DumpSize(dir)
+	return result, nil
+}
+
+// DumpSize is the size of the files of a dump folder, the listings of FTP clients left out.
+func DumpSize(dir string) int64 {
+	total := int64(0)
 	filepath.WalkDir(dir, func(_ string, entry fs.DirEntry, err error) error {
 		if err == nil && !entry.IsDir() && entry.Name() != ".listing" {
 			if info, err := entry.Info(); err == nil {
-				result.Size += info.Size()
+				total += info.Size()
 			}
 		}
 		return nil
 	})
-	return result, nil
+	return total
+}
+
+// NupUncompressed is the size of the files of a NUP uncompressed, each written once per path,
+// as unpacking writes them: 0 when it cannot be read.
+func NupUncompressed(path string) int64 {
+	container, err := nup.Open(path)
+	if err != nil {
+		return 0
+	}
+	return int64(container.Totals().Size)
 }
 
 // packNup makes the NUP of a dump folder, next to it or in the output folder: written under a

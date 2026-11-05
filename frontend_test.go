@@ -146,13 +146,13 @@ const samples = [
   ["Game.nup: damaged files:\n  game v0: romfs/a.bin: its SHA-256 does not match\n  and 3 more", "damaged files"],
   ["the NUP file is cut short: 1000 of 5000 bytes, a copy or a download that stopped before its end", "cut short"],
   ["cannot be read: NUP table of contents is damaged (its hash does not match)", "table of contents"],
-  ["works with: programs that read NUP files; NXPress shows and verifies it, but does not compress, convert or repack it", "works with"],
+  ["works with: programs that read NUP files; NXPress makes it of a dump folder (Combine, --nup) and turns it back into one (Decompress, -D)", "--nup"],
   ["Game.nup:\n  0400486024DEC000 BASE v65536 Game\n    version 1.0.2\n    publisher: Nobody\n    605 files: 19.6 GB, 19.5 GB as stored\n  NUP: 38.9 GB, 39.5 GB of files uncompressed, 38.9 GB as stored", "as stored"],
   ["Game.nup:\n  0400486024DEC000 BASE v65536\n    1 file: 4.0 KB, 1.0 KB as stored", "as stored"],
   ["Game.nup:\n  0400486024DEC000 BASE v65536\n    publisher: Nobody", "publisher"],
 ];
 // in English too: what the window says in its own words
-const ownEnglish = ["-w", " -> ", "-V", "--rm-source"];
+const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];
 for (const [note, english] of samples) {
   for (const code of codes) {
     const text = noteText(note, code);
