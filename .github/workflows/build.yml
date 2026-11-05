@@ -193,6 +193,8 @@ jobs:
             echo "No section for ${GITHUB_REF_NAME} in CHANGELOG.md" >&2
             exit 1
           fi
+          # the notes alone, without how to download, for the Discord server
+          cp release-notes.md discord-notes.md
 
       - name: Get the programs
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -259,3 +261,22 @@ jobs:
             --notes-file release-notes.md \
             --verify-tag \
             dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt
+
+      # the notes in #releases of the Discord server, through the webhook kept in the secret
+      # DISCORD_WEBHOOK; without it (a fork) nothing is sent, and if Discord fails the release
+      # stays as it is
+      - name: Announce on Discord
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK}" ]; then
+            echo "No DISCORD_WEBHOOK secret: nothing sent to Discord"
+            exit 0
+          fi
+          python3 .github/scripts/discord_release.py \
+            "NXPress ${GITHUB_REF_NAME}" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" \
+            discord-notes.md > discord-message.json
+          curl -fsS --retry 3 -H "Content-Type: application/json" \
+            --data @discord-message.json "${DISCORD_WEBHOOK}"
