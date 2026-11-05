@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -312,6 +313,29 @@ func TestUnpackRefusesDamageAndBadNames(t *testing.T) {
 			t.Errorf("%q: written outside", name)
 		}
 	}
+	// two updates of the same version would write their files to the same place: refused before
+	// anything is written
+	same := testnup.Build([]testnup.Package{
+		{TitleId: 1, Kind: testnup.Base, Files: []testnup.File{{Path: "exefs/main", Data: []byte("game")}}},
+		{TitleId: 1, Kind: testnup.Update, Version: 65536, Files: []testnup.File{{Path: "romfs/a.bin", Data: []byte("one")}}},
+		{TitleId: 1, Kind: testnup.Update, Version: 65536, Files: []testnup.File{{Path: "romfs/a.bin", Data: []byte("two")}}},
+	})
+	clash := filepath.Join(t.TempDir(), "out")
+	if _, err := Unpack(context.Background(), write(t, same), clash, 1, 1, nil); err == nil || !strings.Contains(err.Error(), "same place") {
+		t.Errorf("two updates of the same version: %v", err)
+	}
+	if _, err := os.Stat(clash); err == nil {
+		t.Error("nothing is written when two files clash")
+	}
+	// names that differ only in case are one where the system does not tell them apart
+	cased := testnup.Build([]testnup.Package{{TitleId: 1, Kind: testnup.Base, Files: []testnup.File{
+		{Path: "romfs/Data/A.bin", Data: []byte("upper")}, {Path: "romfs/data/a.bin", Data: []byte("lower")}}}})
+	_, err := Unpack(context.Background(), write(t, cased), filepath.Join(t.TempDir(), "out"), 1, 1, nil)
+	foldsCase := runtime.GOOS == "windows" || runtime.GOOS == "darwin"
+	if foldsCase && (err == nil || !strings.Contains(err.Error(), "same place")) || !foldsCase && err != nil {
+		t.Errorf("names that differ only in case on %s: %v", runtime.GOOS, err)
+	}
+
 	// a folder already there is not written into
 	dest := t.TempDir()
 	if _, err := Unpack(context.Background(), write(t, testnup.Build(game())), dest, 1, 1, nil); !errors.Is(err, fs.ErrExist) {

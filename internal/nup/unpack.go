@@ -94,6 +94,9 @@ func Unpack(ctx context.Context, path string, dest string, workers int, readers 
 			return UnpackResult{}, err
 		}
 	}
+	if err := clashes(folders, paths); err != nil {
+		return UnpackResult{}, err
+	}
 	if err := os.Mkdir(dest, 0o755); err != nil {
 		return UnpackResult{}, err
 	}
@@ -213,6 +216,31 @@ func (c *Container) walkFolders(pkg int, fn func(path string) error) error {
 				return err
 			}
 			stack = append(stack, frame{dir: node, prefix: path + "/", depth: top.depth + 1})
+		}
+	}
+	return nil
+}
+
+// clashes tells two files, or a file and a folder, that would be written to the same place: two
+// updates of the same version, or names that differ only in case where the system does not tell
+// them apart (Windows and macOS). Found before anything is written, not midway through gigabytes.
+func clashes(folders []string, paths [][]string) error {
+	key := func(path string) string {
+		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+			return strings.ToLower(path)
+		}
+		return path
+	}
+	taken := map[string]bool{}
+	for _, folder := range folders {
+		taken[key(folder)] = true
+	}
+	for _, outputs := range paths {
+		for _, path := range outputs {
+			if taken[key(path)] {
+				return fmt.Errorf("NUP holds two files, or a file and a folder, that would be written to the same place: %q", path)
+			}
+			taken[key(path)] = true
 		}
 	}
 	return nil

@@ -74,6 +74,8 @@ type Options struct {
 	TagFiles bool
 	// files with the same data keep one copy of it, as the packer of the format does
 	Dedup bool
+	// bytes left between the header and the table of contents, which the format allows
+	TocGap int
 }
 
 // Localized is the payload of a record of names or icons by language: tag, data, tag, data...
@@ -195,7 +197,8 @@ func BuildWith(packages []Package, o Options) []byte {
 		intern(file.name)
 	}
 	tocSize := poolOffset + pool.Len()
-	blobOffset := (headerSize + tocSize + 15) &^ 15
+	tocOffset := headerSize + o.TocGap
+	blobOffset := (tocOffset + tocSize + 15) &^ 15
 
 	// the data of the files, each aligned, the same data stored once
 	type extent struct {
@@ -300,12 +303,12 @@ func BuildWith(packages []Package, o Options) []byte {
 	copy(file, "NUP\x01")
 	le.PutUint16(file[0x04:], headerSize)
 	le.PutUint16(file[0x06:], 1)
-	le.PutUint64(file[0x08:], headerSize)
+	le.PutUint64(file[0x08:], uint64(tocOffset))
 	le.PutUint64(file[0x10:], uint64(tocSize))
 	le.PutUint64(file[0x38:], uint64(blobOffset))
 	le.PutUint64(file[0x40:], uint64(end))
 	le.PutUint32(file[0x48:], uint32(n))
-	copy(file[headerSize:], toc)
+	copy(file[tocOffset:], toc)
 	copy(file[blobOffset:], blob.Bytes())
 	for i, block := range blocks {
 		copy(file[offsets[i]:], block)
@@ -333,8 +336,9 @@ func boolByte(value bool) byte {
 
 // Rehash writes again the hash of the table of contents of a NUP whose table was changed.
 func Rehash(file []byte) {
+	tocOffset := binary.LittleEndian.Uint64(file[0x08:])
 	tocSize := binary.LittleEndian.Uint64(file[0x10:])
-	hash := sha256.Sum256(file[headerSize : headerSize+tocSize])
+	hash := sha256.Sum256(file[tocOffset : tocOffset+tocSize])
 	copy(file[0x18:], hash[:])
 }
 
@@ -353,7 +357,7 @@ func Extent(nup []byte, packages []Package, pkg int, path string) (offset int, s
 		index++
 	}
 	n := len(packages)
-	toc := nup[headerSize:]
+	toc := nup[le.Uint64(nup[0x08:]):]
 	dirCount := int(le.Uint64(toc[0x08:]))
 	record := toc[tocHeadSize+n*packageSize+dirCount*dirSize+index*fileSize:]
 	return int(le.Uint64(record[0x10:])), int(le.Uint64(record[0x18:]))

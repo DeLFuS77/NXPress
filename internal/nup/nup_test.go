@@ -126,7 +126,7 @@ func TestOpenTellsWhatANupHolds(t *testing.T) {
 }
 
 func TestVerifyGoodNup(t *testing.T) {
-	for _, o := range []testnup.Options{{Dedup: true}, {}, {TagFiles: true, Dedup: true}} {
+	for _, o := range []testnup.Options{{Dedup: true}, {}, {TagFiles: true, Dedup: true}, {Dedup: true, TocGap: 0x80}} {
 		for _, workers := range []int{1, 4} {
 			path := write(t, testnup.BuildWith(game(), o))
 			calls, last := 0, int64(0)

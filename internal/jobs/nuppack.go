@@ -76,6 +76,36 @@ func readDump(dir string) (dumpSummary, error) {
 // folderTags are the title ID and the version the name of a folder may have: [0100...][v1.2.3]
 var folderTags = regexp.MustCompile(`\s*\[(?:[0-9A-Fa-f]{16}|[vV][0-9.]+)\]`)
 
+var (
+	// any tag of the name of a folder: [0100...], [v1.2.3], [ROM]
+	dumpTags = regexp.MustCompile(`\s*\[[^\]]*\]`)
+	// a version at the end of the name: _v1.1.1, v65536
+	dumpVersion = regexp.MustCompile(`(?i)[\s_-]*v\d+(?:\.\d+)*$`)
+	// the word dumps are often named with
+	dumpRom = regexp.MustCompile(`(?i)\bROM\b`)
+	// words written together: MarioTennisFever
+	dumpWords = regexp.MustCompile(`(\p{Ll})(\p{Lu})`)
+)
+
+// dumpGameName is the name a NUP carries for a dump folder without control data, so emulators show
+// a name and not the label of the dump: the name of the folder without its tags, the version at
+// its end and the word ROM, its underscores as spaces and its words set apart (MarioTennisFever_v1.1.1
+// is Mario Tennis Fever). A folder with control data gives none: the NUP takes the name of the game.
+func dumpGameName(dir string) string {
+	if summary, err := readDump(dir); err != nil || nup.ControlName(summary.main.Control) != "" {
+		return ""
+	}
+	return dumpNameOf(filepath.Base(filepath.Clean(dir)))
+}
+
+// dumpNameOf is the name of a game the name of its dump folder gives (see dumpGameName).
+func dumpNameOf(folder string) string {
+	name := dumpTags.ReplaceAllString(folder, "")
+	name = dumpVersion.ReplaceAllString(strings.TrimSpace(strings.ReplaceAll(name, "_", " ")), "")
+	name = dumpWords.ReplaceAllString(dumpRom.ReplaceAllString(name, ""), "$1 $2")
+	return strings.Join(strings.Fields(name), " ")
+}
+
 // NupName is the name of the NUP of a dump folder: the name of the game, from its control data
 // when the folder has it, else the name of the folder, then its title ID and newest version.
 func NupName(dir string) (string, error) {
@@ -162,6 +192,10 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 		return "", "", err
 	}
 	written := temporary(name)
+	// the hidden file of a work that stopped is not this one's to remove
+	if _, err := os.Lstat(written); err == nil {
+		return "", "", fmt.Errorf("%s, left by a work that stopped, is in the way: remove it first", written)
+	}
 	defer os.Remove(written)
 	level := nupLevel
 	if o.LevelGiven {
@@ -173,7 +207,8 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	if penalty, known := system.SeekPenalty(dir); known && !penalty {
 		readers = workers
 	}
-	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers}, out.Progress(dir, "Packaging"))
+	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)},
+		out.Progress(dir, "Packaging"))
 	if err != nil {
 		return "", "", err
 	}
@@ -229,6 +264,11 @@ func unpackNup(ctx context.Context, path string, o Options, threads int, out Out
 	result, err := nup.Unpack(ctx, path, written, workers, nupReaders(path, workers), out.Progress(path, "Unpacking"))
 	if err != nil {
 		return "", "", err
+	}
+	// a folder that took the name meanwhile is never replaced (on Linux and macOS a rename would
+	// replace an empty one without a word): the files stay in the hidden folder, said where
+	if _, err := os.Lstat(name); err == nil {
+		return "", "", fmt.Errorf("%s appeared while the NUP was unpacked: the files unpacked are in %s", filepath.Base(name), written)
 	}
 	if err := os.Rename(written, name); err != nil {
 		// the hidden folder is the one this work made and filled
