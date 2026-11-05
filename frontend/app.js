@@ -256,6 +256,11 @@ function renderCard(row) {
   if (!card || state.mode !== "info") return;
   const element = document.createElement("div");
   element.className = "file-card";
+  if (card.packages) {
+    renderNupCard(element, card);
+    row.tr.querySelector(".note").after(element);
+    return;
+  }
   const whole = Math.max(card.decompressed || card.size, card.size);
   const share = whole ? card.size / whole : 1;
   const compressed = card.solid + card.blocks > 0;
@@ -274,6 +279,30 @@ function renderCard(row) {
     element.querySelector(".tags").append(tag);
   }
   row.tr.querySelector(".note").after(element);
+}
+
+// the card of a NUP: its size beside the one of its files uncompressed, then a line for each of
+// its packages (the game, an update, a DLC) with who it is and its files; the size as stored is
+// told only where it differs, for the files stored with zstd. NXPress only shows and verifies it.
+function renderNupCard(element, card) {
+  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="card-only"></div>`;
+  element.querySelector(".kind").textContent = card.kind;
+  const whole = Math.max(card.decompressed, card.size);
+  element.querySelector(".card-bar div").style.width = (whole ? card.size / whole * 100 : 100).toFixed(1) + "%";
+  element.querySelector("small").textContent = t("cardNup")(size(card.size), size(card.decompressed));
+  for (const pkg of card.packages) {
+    const line = document.createElement("li");
+    line.innerHTML = `<span class="k"></span><span class="who"><b></b><span></span></span><span class="num"></span>`;
+    line.querySelector(".k").textContent = t("gameKind")(pkg.type);
+    line.querySelector("b").textContent = pkg.name || "";
+    line.querySelector("b").hidden = !pkg.name;
+    const facts = [pkg.publisher, pkg.titleId, `v${pkg.version}` + (pkg.shown ? ` (${pkg.shown})` : "")].filter(Boolean).join(" · ");
+    line.querySelector(".who span").textContent = (pkg.name ? " · " : "") + facts;
+    const stored = size(pkg.stored) !== size(pkg.size) ? size(pkg.stored) : "";
+    line.querySelector(".num").textContent = t("nupFiles")(pkg.files, size(pkg.size), stored);
+    element.querySelector(".nup-packages").append(line);
+  }
+  element.querySelector(".card-only").textContent = t("nupOnly");
 }
 
 // the colors NXPress can wear, chosen in Settings: its own and three more with a scene (RuneStone, Vampire and Huntress), each with its background
@@ -959,6 +988,8 @@ function render() {
   }
   $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
   $("keys-banner").hidden = !!state.keys || !needsKeys(state.mode);
+  // in the sections that take NUP files, the banner says they need no keys
+  $("keys-nup").hidden = !["verify", "info"].includes(state.mode);
   $("toolbar").hidden = state.items.length === 0;
   // the list stays as it is while its files are at work, also from the keyboard
   for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
