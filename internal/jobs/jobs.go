@@ -64,6 +64,8 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	// the computer does not go to sleep while files are at work
 	defer system.KeepAwake()()
 	action := o.Action()
+	// the LZ4 blocks of the extra compression keep to the threads of each file (lz4Threads)
+	ctx = switchfs.WithThreads(ctx, lz4Threads(o))
 	if action == "pack" && o.PackGames {
 		return PackGames(ctx, o, out)
 	}

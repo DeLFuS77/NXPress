@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.0
+
+### New
+
+- Log, under Check: every work NXPress did, the newest first and by day, each with its files, how they ended and what they saved. It finds a game or a file, and can show only the works with problems. It is kept in log.txt in the settings folder too, with how many works to keep (100, 500, 1000 or no limit) and a button to clear it, which Undo takes back. It takes the place of Last report in Settings › Help, and opens by itself after the computer was shut down at the end of a work (thanks @NikoMuffin, #69)
+
+### Improvements
+
+- The help of the options no longer fills the panels: a small ⓘ after the name of an option tells there is some, and it shows in a card while the mouse is on the name or the option has the focus of the keyboard. The description of each section is beside its title the same way, and so is the help in Settings; warnings stay in sight (thanks @NikoMuffin, #67)
+
+### Fixes
+
+- Low priority now reaches the window too: on Windows its WebView2 processes go below normal with NXPress, and its memory is the first given to the other programs when memory runs short (thanks @NikoMuffin, #70)
+- The extra compression no longer takes every processor for each file: its LZ4 blocks are checked and made again on the threads of each file, and never on more than its share of the processors when several files are worked on at once, so the computer keeps answering while they are compressed, decompressed or verified (thanks @NikoMuffin, #70)
+
 ## 1.5.1
 
 ### Improvements

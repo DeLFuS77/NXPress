@@ -25,6 +25,19 @@ func ShowFile(path string) {
 	}
 }
 
+// OpenFile opens a file in the program the system has for it: a text file in its editor.
+func OpenFile(path string) error {
+	command := exec.Command("xdg-open", path)
+	if runtime.GOOS == "darwin" {
+		command = exec.Command("open", path)
+	}
+	if err := command.Start(); err != nil {
+		return err
+	}
+	go command.Wait()
+	return nil
+}
+
 // SendToFolder is empty: only the Explorer of Windows has a "Send to" menu.
 func SendToFolder() string { return "" }
 
