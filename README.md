@@ -1,6 +1,7 @@
 # NXPress
 
 [![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/delfus77)
+[![Discord](https://img.shields.io/badge/Discord-join_the_server-5865F2?logo=discord&logoColor=white)](https://discord.gg/acQVZSEBR)
 [![Release](https://img.shields.io/github/v/release/DeLFuS77/NXPress?sort=semver)](https://github.com/DeLFuS77/NXPress/releases)
 [![Downloads](https://img.shields.io/github/downloads/DeLFuS77/NXPress/total?logo=github)](https://github.com/DeLFuS77/NXPress/releases)
 [![Build](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml/badge.svg)](https://github.com/DeLFuS77/NXPress/actions/workflows/build.yml)
@@ -119,7 +120,7 @@ The screenshots show made-up games.
 
 ## More
 
-The [wiki](https://github.com/DeLFuS77/NXPress/wiki) has a guide to each section, which installers and emulators read each format, every option of the command line, frequent questions and what to do when something fails.
+The [wiki](https://github.com/DeLFuS77/NXPress/wiki) has a guide to each section, which installers and emulators read each format, every option of the command line, frequent questions and what to do when something fails. For help, ideas and news of new versions there is also a [Discord server](https://discord.gg/acQVZSEBR), shared with Switch Library Manager Web.
 
 ## License
 
