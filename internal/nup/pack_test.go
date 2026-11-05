@@ -5,11 +5,14 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/testnup"
 )
@@ -355,5 +358,60 @@ func TestPackBigFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		compareTrees(t, root, dest)
+	}
+}
+
+// fullDisk is a file that takes some bytes, then fails as a full disk does.
+type fullDisk struct {
+	file *os.File
+	left *atomic.Int64
+}
+
+func (f *fullDisk) Write(p []byte) (int, error) {
+	if f.left.Add(-int64(len(p))) < 0 {
+		return 0, errors.New("there is not enough space on the disk")
+	}
+	return f.file.Write(p)
+}
+
+func (f *fullDisk) Close() error {
+	return f.file.Close()
+}
+
+// A disk that fills up while a NUP is unpacked ends the work with its error, on one reader or
+// several, with zstd or raw data, and leaves nothing behind.
+func TestUnpackOnAFullDisk(t *testing.T) {
+	before := createOutput
+	t.Cleanup(func() { createOutput = before })
+	src := oldDump(t)
+	for _, level := range []int{3, 0} {
+		out, _ := pack(t, src, PackOptions{Level: level, Workers: 3, Readers: 3})
+		for _, room := range []int64{0, 100, 3 << 20, 12 << 20} {
+			for _, readers := range []int{1, 4} {
+				left := &atomic.Int64{}
+				left.Store(room)
+				createOutput = func(path string) (io.WriteCloser, error) {
+					file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+					return &fullDisk{file: file, left: left}, err
+				}
+				dest := filepath.Join(t.TempDir(), "out")
+				done := make(chan error, 1)
+				go func() {
+					_, err := Unpack(context.Background(), out, dest, 4, readers, nil)
+					done <- err
+				}()
+				select {
+				case err := <-done:
+					if err == nil || !strings.Contains(err.Error(), "not enough space") {
+						t.Errorf("level %d, room %d, %d readers: %v", level, room, readers, err)
+					}
+				case <-time.After(30 * time.Second):
+					t.Fatalf("level %d, room %d, %d readers: the unpacking hangs", level, room, readers)
+				}
+				if _, err := os.Stat(dest); err == nil {
+					t.Errorf("level %d, room %d: the folder is left behind", level, room)
+				}
+			}
+		}
 	}
 }

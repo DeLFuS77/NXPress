@@ -369,7 +369,7 @@ func (h *hasher) check(f *feed) error {
 	if len(job.outputs) > 0 {
 		writers := []io.Writer{hash}
 		for _, path := range job.outputs {
-			out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+			out, err := createOutput(path)
 			if err != nil {
 				return err
 			}
@@ -414,6 +414,11 @@ func (h *hasher) check(f *feed) error {
 		copy(job.sum[:], hash.Sum(nil))
 	}
 	return nil
+}
+
+// createOutput makes a new file of an unpacking; the tests make files that fail as a full disk does.
+var createOutput = func(path string) (io.WriteCloser, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 }
 
 // writeError is a file of an unpacking that could not be written, told apart from damaged data.
