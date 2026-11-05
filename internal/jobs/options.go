@@ -386,6 +386,20 @@ func DefaultThreads(files int) int {
 	return max(1, switchfs.UsableProcessors()/max(1, files))
 }
 
+// lz4Threads are the threads each file takes for the LZ4 blocks of the extra compression, checked
+// while it is compressed and made again when it is decompressed or verified: its threads, and
+// never more than its share of the usable processors among the files worked on at once. In the
+// window the threads of each file are not shared among the files at once by themselves, and two
+// files at once, each with every processor for its LZ4 blocks besides the threads of zstd, left
+// the computer slow to answer (#70).
+func lz4Threads(o Options) int {
+	share := DefaultThreads(o.Multi)
+	if o.Threads >= 1 && o.Threads < share {
+		return o.Threads
+	}
+	return share
+}
+
 // ErrOutputModes is told when both outputs for other programs are asked, as nsz tells it.
 var ErrOutputModes = errors.New("--minimal-output and --machine-readable cannot be used together")
 

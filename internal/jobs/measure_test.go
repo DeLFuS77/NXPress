@@ -37,3 +37,23 @@ func TestUsableProcessorsLeaveAMargin(t *testing.T) {
 		t.Fatalf("%d threads for each of two files", threads)
 	}
 }
+
+// The LZ4 blocks of the extra compression of each file keep to its threads, and to its share of
+// the usable processors among the files at once, even when its threads are more (#70).
+func TestLz4ThreadsKeepToTheShareOfEachFile(t *testing.T) {
+	for _, multi := range []int{1, 2, 4} {
+		share := DefaultThreads(multi)
+		for _, threads := range []int{0, 1, share, runtime.NumCPU() * 2} {
+			got := lz4Threads(Options{Threads: threads, Multi: multi})
+			if got < 1 || got > share || (threads >= 1 && got > threads) {
+				t.Errorf("%d threads, %d files at once: %d for the LZ4 blocks, share %d", threads, multi, got, share)
+			}
+		}
+		if got := lz4Threads(Options{Threads: runtime.NumCPU(), Multi: multi}); got != share {
+			t.Errorf("every processor on %d files at once: %d for the LZ4 blocks, want %d", multi, got, share)
+		}
+	}
+	if lz4Threads(Options{Threads: 1, Multi: 1}) != 1 {
+		t.Error("one thread: not one for the LZ4 blocks")
+	}
+}
