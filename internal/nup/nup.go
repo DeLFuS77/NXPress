@@ -306,7 +306,7 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 		if file.Size > 0 {
 			switch {
 			case file.ExtentOffset < blobOffset || file.ExtentOffset%16 != 0 ||
-				file.ExtentSize > total-file.ExtentOffset:
+				file.ExtentOffset > total || file.ExtentSize > total-file.ExtentOffset:
 				return nil, fmt.Errorf("NUP file %q has its data outside the file", fileName)
 			case file.Codec == CodecRaw && file.ExtentSize != file.Size:
 				return nil, fmt.Errorf("NUP file %q is stored raw with %d bytes instead of %d", fileName, file.ExtentSize, file.Size)

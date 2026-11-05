@@ -253,6 +253,9 @@ func TestReadRefusesMalformedTables(t *testing.T) {
 		"data outside the file": func(nup []byte) {
 			setFile(nup, 3, 0, func(record []byte) { binary.LittleEndian.PutUint64(record[0x10:], uint64(len(nup))) })
 		},
+		"data far outside the file": func(nup []byte) {
+			setFile(nup, 3, 0, func(record []byte) { binary.LittleEndian.PutUint64(record[0x10:], 1<<63) })
+		},
 		"data not aligned": func(nup []byte) {
 			setFile(nup, 3, 0, func(record []byte) {
 				binary.LittleEndian.PutUint64(record[0x10:], binary.LittleEndian.Uint64(record[0x10:])+1)
