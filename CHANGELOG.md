@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Extra compression is under Made for in Compress, beside what it changes, and its warning shows in Compress only (thanks @NikoMuffin, #76)
+- Watch the folders says it watches the folders added to the list, and names them while it is ticked (thanks @NikoMuffin, #77)
+- Combine can delete the dump folders once their NUP is read back whole and each file checked by its SHA-256: a box under Delete originals, off by default (`--rm-dumps`). A file the NUP does not hold, or one changed since the packing began, stays. Delete originals alone still keeps dump folders and NUP files, and its warning says so now (thanks @NikoMuffin, #79)
+- Shorter texts under each section of the side menu, each on one line in every language (thanks @NikoMuffin, #80)
+- Verify and Details tell whether Eglantine and Lichii, the emulators that open NUP files, open a NUP and can start its game, and why not, in orange: they are stricter than the format in a few things
+- A NUP whose metadata types are counted from 0, as a build of the packer of the format wrote them, is told in Verify and Details, and Details fixes it (`--fix-nup-meta`): only those numbers are written again, in place, so the emulators show its name, version and icon right
+- Combine stores the files of a NUP over 256 MiB as they are by default, as the packers of the emulators do: Eglantine and Lichii decompress such a file whole to the disk each time the game starts. A box compresses them too (`--nup-zstd-big`)
+- Each update in a NUP carries the version it shows, from its own control data, so emulators show the right one
+- The NUP of a Switch 2 dump without control data takes the name of its game from the list of the Switch 2 games, else from its folder made readable (MarioTennisFever_v1.1.1 is Mario Tennis Fever)
+
+### Fixes
+
+- Verify reads the code of NUP files and dump folders (main, rtld, sdk and subsdk of each ExeFS) and tells a dump whose code lost bytes: its NUP has hashes that match while the game stops as it starts, and the game must be dumped again. Combine still makes the NUP of such a dump, and the work fails with the warning. Verify takes dump folders too
+- Rename and the list name a NUP that carries no name by the label of its dump made readable (Nintendo Switch Sports Resort), not by the name of its file as it is
+
 ## 1.7.2
 
 ### Improvements
