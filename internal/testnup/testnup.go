@@ -39,6 +39,7 @@ const (
 	DisplayVersion  = 0x0004
 	TitleName       = 0x0005
 	Publisher       = 0x0006
+	SourceDump      = 0x0008
 	LocalizedTitles = 0x0009
 	LocalizedIcons  = 0x000A
 )

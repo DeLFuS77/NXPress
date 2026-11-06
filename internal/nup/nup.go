@@ -581,6 +581,12 @@ func (pkg Package) Name() string {
 	return ""
 }
 
+// SourceDump is the label of the dump a package was made of, as its packer stored it (the name
+// of its folder, "NintendoSwitchSportsResort_v1.1.0"); "" when it gives none.
+func (pkg Package) SourceDump() string {
+	return cleanName(pkg.Meta[tlvSourceDump])
+}
+
 // Publisher is the publisher a package gives, "" when it gives none.
 func (pkg Package) Publisher() string {
 	if publisher := text(pkg.Meta[tlvPublisher], 0x100); publisher != "" {
