@@ -676,7 +676,10 @@ func appPackage(sources []Source) int {
 }
 
 // metaBlock is the metadata of a package: its NPDM, its build ID and the dump it comes from; for
-// the game also its names, publisher, version and icon, from its control data or as given.
+// the game also its names, publisher, version and icon, from its control data or as given; for
+// an update also its version, from its own control data. Emulators show the version of the
+// newest update from its record, and without one make up a wrong one from its number (131072 is
+// not 2.0.0 for every game).
 func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 	records := map[uint16][]byte{}
 	if len(source.Npdm) > 0 {
@@ -686,7 +689,8 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		records[0x0007] = source.BuildID
 	}
 	records[0x0008] = []byte(label)
-	if app {
+	switch {
+	case app:
 		for kind, value := range controlRecords(source.Control) {
 			records[kind] = value
 		}
@@ -695,6 +699,10 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		}
 		if o.Publisher != "" {
 			records[tlvPublisher] = []byte(o.Publisher)
+		}
+	case source.Kind == KindUpdate:
+		if version := controlVersion(source.Control); version != "" {
+			records[tlvDisplayVersion] = []byte(version)
 		}
 	}
 	kinds := []int{}
@@ -766,6 +774,19 @@ func controlRecords(dir string) map[uint16][]byte {
 		result[tlvLocalizedIcons] = icons.Bytes()
 	}
 	return result
+}
+
+// controlVersion is the version shown (1.0.2) the control.nacp of a control folder gives, "" without
+// one.
+func controlVersion(dir string) string {
+	if dir == "" {
+		return ""
+	}
+	nacp, err := os.ReadFile(filepath.Join(dir, "control.nacp"))
+	if err != nil || len(nacp) < nacpVersionAt+nacpVersionSize {
+		return ""
+	}
+	return text(cString(nacp[nacpVersionAt:][:nacpVersionSize]), 0x0F)
 }
 
 // ControlName is the name of the game a control folder gives: American English, else the first

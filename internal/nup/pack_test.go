@@ -203,6 +203,8 @@ func TestPackNewLayout(t *testing.T) {
 	copy(nacp[0x200:], "Nobody Games")
 	copy(nacp[2*0x300:], "メイドアップ")
 	copy(nacp[0x3060:], "1.2.0")
+	updated := bytes.Clone(nacp)
+	copy(updated[0x3060:], "2.0.1\x00")
 	writeTree(t, root, map[string][]byte{
 		"base/program/0/exefs/main":                                  nso(1),
 		"base/program/0/exefs/main.npdm":                             npdm(0x040074A01BF12000),
@@ -212,6 +214,8 @@ func TestPackNewLayout(t *testing.T) {
 		"base/program/0/meta/x.cnmt":                                 []byte("cnmt"),
 		"updates/131072/program/0/exefs/main.npdm":                   npdm(0x040074A01BF12000),
 		"updates/131072/program/0/romfs/a.bin":                       []byte("b"),
+		"updates/131072/program/0/control/control.nacp":              updated,
+		"updates/131072/program/0/control/icon_AmericanEnglish.dat":  testnup.Jpeg,
 		"dlc/040074a01bf13001/0/base/program/0/romfs/d.bin":          []byte("dlc"),
 		"dlc/040074a01bf13001/0/updates/65536/program/0/romfs/d.bin": []byte("dlc update"),
 	})
@@ -233,6 +237,12 @@ func TestPackNewLayout(t *testing.T) {
 	}
 	if update := container.Packages[1]; update.Kind != KindUpdate || update.Version != 131072 || update.ExefsDir == NoDir {
 		t.Errorf("update %+v", update)
+	}
+	// the update carries its own version shown, which emulators show, and nothing else of its
+	// control data: the name and the icons stay in the game
+	update := container.Packages[1]
+	if string(update.Meta[tlvDisplayVersion]) != "2.0.1" || update.Meta[tlvTitleName] != nil || update.Meta[tlvIcon] != nil || update.Meta[tlvNacp] != nil {
+		t.Errorf("update records %v", update.Meta)
 	}
 	if dlc := container.Packages[2]; dlc.Kind != KindAddon || dlc.TitleID != 0x040074A01BF13001 || dlc.RomfsDir == NoDir {
 		t.Errorf("DLC %+v", dlc)
