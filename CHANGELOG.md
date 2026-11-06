@@ -1,14 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.7.1
 
 ### Improvements
 
-- Expand all and Collapse all, in the Log next to its filter, open or close at once every work shown, with the filter and the search as they are; each one is off when it has nothing to do (thanks @NikoMuffin, #75)
+- Expand all and Collapse all, in the Log next to its filter, open or close at once every work shown, with the filter and the search as they are (thanks @NikoMuffin, #75)
 
 ### Fixes
 
-- The Log no longer jerks when a work is opened: the list keeps the room of its scrollbar, so it does not narrow when it starts to scroll, and the hour stays on one line, also as "12:01 AM" (thanks @NikoMuffin, #78)
+- The Log no longer jerks when a work is opened, and the hour stays on one line, also as "12:01 AM" (thanks @NikoMuffin, #78)
 
 ## 1.7.0
 
