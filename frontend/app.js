@@ -1007,6 +1007,12 @@ function render() {
   const band = level <= 6 ? "3" : level <= 14 ? "12" : "19";
   for (const button of document.querySelectorAll("[data-level]")) button.classList.toggle("on", button.dataset.level === band);
   $("remove-warning").hidden = !$("remove").checked;
+  // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
+  // added on their own
+  const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
+  $("watch-folders").textContent = watched.length ? t("watchFolders")(watched.length, watched.map(path => path.split(/[\\/]/).filter(Boolean).pop() || path).join(", ")) : t("watchNoFolders");
+  $("watch-folders").title = watched.join("\n");
+  $("watch-folders").hidden = !$("watch").checked;
   // the files that use the extra compression do not go with the installers above as they are; it
   // is for Compress only, where its box is
   $("extra-target-warning").hidden = !$("extra").checked || state.mode !== "compress";
@@ -2242,7 +2248,7 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
-  $("remove").onchange = render;
+  $("remove").onchange = $("watch").onchange = render;
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
   $("extra").onchange = () => {
