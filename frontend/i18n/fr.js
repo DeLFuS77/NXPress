@@ -55,7 +55,7 @@ texts.fr = {
   updateFound: v => `NXPress ${v} est disponible.`, updateGet: "Télécharger", dismiss: "Fermer",
   report: "Copier le rapport", reportCopied: "Rapport copié : collez-le dans une issue GitHub ou dans le fil.",
   worklog: "Journal", hintWorklog: "ce qui a été fait", aboutWorklog: "Chaque travail de NXPress, du plus récent au plus ancien : chaque fichier, comment il s'est terminé et ce qu'il a fait gagner. Il est aussi gardé dans un fichier texte.", worklogPrefHint: "Chaque travail de NXPress, fichier par fichier.",
-  worklogFind: "Chercher un jeu ou un fichier", worklogAll: "Tout", worklogProblems: "Avec problèmes", worklogCount: (w, f) => `${w} ${w === 1 ? "travail" : "travaux"} · ${f} ${f === 1 ? "fichier" : "fichiers"}`,
+  worklogFind: "Chercher un jeu ou un fichier", worklogAll: "Tout", worklogProblems: "Avec problèmes", worklogExpandAll: "Tout déplier", worklogCollapseAll: "Tout replier", worklogCount: (w, f) => `${w} ${w === 1 ? "travail" : "travaux"} · ${f} ${f === 1 ? "fichier" : "fichiers"}`,
   worklogKeep: "Garder au plus", worklogKeepN: n => `${n} travaux`, worklogNoLimit: "Sans limite", worklogKeepHint: "Au-delà, les travaux les plus anciens sont retirés, du fichier texte aussi.",
   worklogFile: "Fichier texte", worklogFileHint: "Le même journal en texte brut, dans le dossier des réglages de NXPress : ouvrez-le avec n'importe quel éditeur ou collez-le dans une issue.",
   worklogClear: "Vider le journal", worklogClearHint: "Supprime la liste et le fichier texte ; Annuler les rétablit pendant quelques secondes.", worklogCleared: "Journal vidé",

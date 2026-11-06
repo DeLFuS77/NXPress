@@ -55,7 +55,7 @@ texts.de = {
   updateFound: v => `NXPress ${v} ist erschienen.`, updateGet: "Herunterladen", dismiss: "Schließen",
   report: "Bericht kopieren", reportCopied: "Bericht kopiert: füge ihn in ein GitHub-Issue oder in den Thread ein.",
   worklog: "Protokoll", hintWorklog: "was erledigt wurde", aboutWorklog: "Jede Arbeit von NXPress, die neueste zuerst: jede Datei, wie sie endete und was sie gespart hat. Es wird auch in einer Textdatei gespeichert.", worklogPrefHint: "Jede Arbeit von NXPress, Datei für Datei.",
-  worklogFind: "Nach einem Spiel oder einer Datei suchen", worklogAll: "Alle", worklogProblems: "Mit Problemen", worklogCount: (w, f) => `${w} ${w === 1 ? "Arbeit" : "Arbeiten"} · ${f} ${f === 1 ? "Datei" : "Dateien"}`,
+  worklogFind: "Nach einem Spiel oder einer Datei suchen", worklogAll: "Alle", worklogProblems: "Mit Problemen", worklogExpandAll: "Alle aufklappen", worklogCollapseAll: "Alle zuklappen", worklogCount: (w, f) => `${w} ${w === 1 ? "Arbeit" : "Arbeiten"} · ${f} ${f === 1 ? "Datei" : "Dateien"}`,
   worklogKeep: "Höchstens behalten", worklogKeepN: n => `${n} Arbeiten`, worklogNoLimit: "Ohne Grenze", worklogKeepHint: "Darüber hinaus fallen die ältesten Arbeiten weg, auch aus der Textdatei.",
   worklogFile: "Textdatei", worklogFileHint: "Dasselbe Protokoll als reiner Text, im Einstellungsordner von NXPress: Öffne es mit einem beliebigen Editor oder füge es in ein Issue ein.",
   worklogClear: "Protokoll leeren", worklogClearHint: "Löscht die Liste und die Textdatei; Rückgängig holt sie ein paar Sekunden lang zurück.", worklogCleared: "Protokoll geleert",

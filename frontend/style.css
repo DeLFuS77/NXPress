@@ -201,6 +201,9 @@ dialog p { margin: 8px 0; }
 #worklog-tools .segmented { margin-top: 0; }
 #worklog-tools .segmented button { flex: none; padding: 5px 10px; }
 input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.worklog-expand { display: flex; gap: 2px; }
+.worklog-expand button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-size: 12px; }
+.worklog-expand svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .worklog-count { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 /* the room of the scrollbar is kept: a work opened that makes the list scroll does not narrow it,
    which would make every row jump (and cross the narrow layout below) as it opens (#78) */

@@ -55,7 +55,7 @@ texts.ko = {
   updateFound: v => `NXPress ${v}가 나왔습니다.`, updateGet: "다운로드", dismiss: "닫기",
   report: "보고서 복사", reportCopied: "보고서를 복사했습니다. GitHub 이슈나 스레드에 붙여 넣으세요.",
   worklog: "기록", hintWorklog: "지금까지 한 작업", aboutWorklog: "NXPress가 한 작업을 최신순으로 보여줘요. 파일마다 어떻게 끝났는지, 얼마나 절약했는지도 나와요. 텍스트 파일로도 저장돼요.", worklogPrefHint: "NXPress가 한 모든 작업을 파일별로.",
-  worklogFind: "게임이나 파일 찾기", worklogAll: "전체", worklogProblems: "문제 있는 것", worklogCount: (w, f) => `작업 ${w}개 · 파일 ${f}개`,
+  worklogFind: "게임이나 파일 찾기", worklogAll: "전체", worklogProblems: "문제 있는 것", worklogExpandAll: "모두 펼치기", worklogCollapseAll: "모두 접기", worklogCount: (w, f) => `작업 ${w}개 · 파일 ${f}개`,
   worklogKeep: "최대 보관 수", worklogKeepN: n => `작업 ${n}개`, worklogNoLimit: "제한 없음", worklogKeepHint: "넘으면 가장 오래된 작업부터 지워져요. 텍스트 파일에서도요.",
   worklogFile: "텍스트 파일", worklogFileHint: "같은 기록을 일반 텍스트로 NXPress 설정 폴더에 저장해요. 아무 편집기로나 열거나 이슈에 붙여 넣을 수 있어요.",
   worklogClear: "기록 지우기", worklogClearHint: "목록과 텍스트 파일을 지워요. 몇 초 동안은 실행 취소로 되돌릴 수 있어요.", worklogCleared: "기록을 지웠어요",

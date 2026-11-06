@@ -55,7 +55,7 @@ texts.zh = {
   updateFound: v => `NXPress ${v} 已发布。`, updateGet: "下载", dismiss: "关闭",
   report: "复制报告", reportCopied: "报告已复制：粘贴到 GitHub issue 或帖子中。",
   worklog: "记录", hintWorklog: "做过的工作", aboutWorklog: "NXPress 的每次工作，从最新的开始：每个文件的结果和节省的空间。也会保存到一个文本文件中。", worklogPrefHint: "NXPress 的每次工作，逐个文件。",
-  worklogFind: "搜索游戏或文件", worklogAll: "全部", worklogProblems: "有问题的", worklogCount: (w, f) => `${w} 次工作 · ${f} 个文件`,
+  worklogFind: "搜索游戏或文件", worklogAll: "全部", worklogProblems: "有问题的", worklogExpandAll: "全部展开", worklogCollapseAll: "全部收起", worklogCount: (w, f) => `${w} 次工作 · ${f} 个文件`,
   worklogKeep: "最多保留", worklogKeepN: n => `${n} 次工作`, worklogNoLimit: "不限", worklogKeepHint: "超出后会删除最早的工作，文本文件中也一样。",
   worklogFile: "文本文件", worklogFileHint: "同样的记录以纯文本保存在 NXPress 的设置文件夹中：可以用任何编辑器打开，或粘贴到 issue 中。",
   worklogClear: "清空记录", worklogClearHint: "删除列表和文本文件；几秒内可用“撤销”恢复。", worklogCleared: "记录已清空",

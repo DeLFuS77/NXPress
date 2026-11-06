@@ -55,7 +55,7 @@ texts.pt = {
   updateFound: v => `O NXPress ${v} já saiu.`, updateGet: "Baixar", dismiss: "Fechar",
   report: "Copiar relatório", reportCopied: "Relatório copiado: cole-o numa issue do GitHub ou no tópico.",
   worklog: "Registro", hintWorklog: "o que foi feito", aboutWorklog: "Cada trabalho do NXPress, do mais recente ao mais antigo: cada arquivo, como terminou e quanto poupou. Fica guardado também num arquivo de texto.", worklogPrefHint: "Cada trabalho do NXPress, arquivo por arquivo.",
-  worklogFind: "Procurar um jogo ou um arquivo", worklogAll: "Tudo", worklogProblems: "Com problemas", worklogCount: (w, f) => `${w} ${w === 1 ? "trabalho" : "trabalhos"} · ${f} ${f === 1 ? "arquivo" : "arquivos"}`,
+  worklogFind: "Procurar um jogo ou um arquivo", worklogAll: "Tudo", worklogProblems: "Com problemas", worklogExpandAll: "Expandir tudo", worklogCollapseAll: "Recolher tudo", worklogCount: (w, f) => `${w} ${w === 1 ? "trabalho" : "trabalhos"} · ${f} ${f === 1 ? "arquivo" : "arquivos"}`,
   worklogKeep: "Guardar no máximo", worklogKeepN: n => `${n} trabalhos`, worklogNoLimit: "Sem limite", worklogKeepHint: "Acima disso, os trabalhos mais antigos são retirados, também do arquivo de texto.",
   worklogFile: "Arquivo de texto", worklogFileHint: "O mesmo registro em texto simples, na pasta de configurações do NXPress: abre-o em qualquer editor ou cola-o numa issue.",
   worklogClear: "Limpar o registro", worklogClearHint: "Apaga a lista e o arquivo de texto; Desfazer traz tudo de volta durante alguns segundos.", worklogCleared: "Registro limpo",

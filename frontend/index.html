@@ -85,6 +85,11 @@
         <button data-problems="" role="radio" data-t="worklogAll"></button>
         <button data-problems="1" role="radio" data-t="worklogProblems"></button>
       </div>
+      <!-- every work shown opened or closed at once (#75) -->
+      <div class="worklog-expand" id="worklog-expand">
+        <button class="quiet" id="worklog-expand-all"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/><path d="m7 15 5 5 5-5" opacity=".5"/></svg><span data-t="worklogExpandAll"></span></button>
+        <button class="quiet" id="worklog-collapse-all"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5-5 5 5"/><path d="m7 9 5-5 5 5" opacity=".5"/></svg><span data-t="worklogCollapseAll"></span></button>
+      </div>
       <span class="worklog-count" id="worklog-count"></span>
     </div>
     <div id="worklog-list" class="worklog-list"></div>
