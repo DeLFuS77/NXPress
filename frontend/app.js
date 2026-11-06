@@ -9,7 +9,7 @@ const groups = [
 ];
 // what each mode takes, to show it
 const takesShown = {
-  compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP", convert: "XCI XCZ",
+  compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP :takesCode", convert: "XCI XCZ",
   split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
 };
 

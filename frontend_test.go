@@ -174,6 +174,21 @@ const samples = [
   ["Game.nup:\n  0400486024DEC000 BASE v65536 Game\n    version 1.0.2\n    publisher: Nobody\n    605 files: 19.6 GB, 19.5 GB as stored\n  NUP: 38.9 GB, 39.5 GB of files uncompressed, 38.9 GB as stored", "as stored"],
   ["Game.nup:\n  0400486024DEC000 BASE v65536\n    1 file: 4.0 KB, 1.0 KB as stored", "as stored"],
   ["Game.nup:\n  0400486024DEC000 BASE v65536\n    publisher: Nobody", "publisher"],
+  ["3 code modules (NSO) checked by their headers; the other files of a dump folder have no hashes to be checked by; a dump folder holds no signatures of Nintendo; not compared with the DAT, which lists no dump folders", "code modules"],
+  ["3 code modules (NSO) checked by their headers; the other files of a dump folder have no hashes to be checked by; a dump folder holds no signatures of Nintendo; not compared with the DAT, which lists no dump folders", "no hashes"],
+  ["3 code modules (NSO) checked by their headers; the other files of a dump folder have no hashes to be checked by; a dump folder holds no signatures of Nintendo; not compared with the DAT, which lists no dump folders", "no signatures"],
+  ["3 code modules (NSO) checked by their headers; the other files of a dump folder have no hashes to be checked by; a dump folder holds no signatures of Nintendo; not compared with the DAT, which lists no dump folders", "lists no dump folders"],
+  ["checked on 2026-11-05, not changed since; 312 files checked by their SHA-256; 1 code module (NSO) checked by its header", "code module"],
+  ["the code of the game is damaged in this dump folder: dump the game again (game v0: exefs/main: it is 989 bytes shorter than its header says; update v655360: exefs/sdk: the SHA-256 of its text segment does not match its header; and 2 more); the NUP was made all the same, as the dump is", "dump the game again"],
+  ["the code of the game is damaged in this dump folder: dump the game again (game v0: exefs/main: it is 989 bytes shorter than its header says; update v655360: exefs/sdk: the SHA-256 of its text segment does not match its header; and 2 more); the NUP was made all the same, as the dump is", "bytes shorter"],
+  ["the code of the game is damaged in this dump folder: dump the game again (game v0: exefs/main: it is 989 bytes shorter than its header says; update v655360: exefs/sdk: the SHA-256 of its text segment does not match its header; and 2 more); the NUP was made all the same, as the dump is", "does not match its header"],
+  ["the code of the game is damaged in this dump folder: dump the game again (game v0: exefs/main: it is 989 bytes shorter than its header says; update v655360: exefs/sdk: the SHA-256 of its text segment does not match its header; and 2 more); the NUP was made all the same, as the dump is", "and 2 more"],
+  ["the code of the game is damaged in this dump folder: dump the game again (game v0: exefs/main: it is 989 bytes shorter than its header says; update v655360: exefs/sdk: the SHA-256 of its text segment does not match its header; and 2 more); the NUP was made all the same, as the dump is", "made all the same"],
+  ["the code of the game is damaged in the dump this NUP was made of: dump the game again (update v655360: exefs/main: its text segment does not decompress to the 29190 bytes its header says (LZ4))", "does not decompress"],
+  ["the code of the game is damaged in the dump this NUP was made of: dump the game again (update v655360: exefs/main: its text segment does not decompress to the 29190 bytes its header says (LZ4))", "this NUP was made of"],
+  ["the code of the game is damaged in the dump this NUP was made of: dump the game again (game v0: exefs/rtld: it ends in its header (128 of 256 bytes); game v0: exefs/sdk: its data segment cannot decompress to the 536870912 bytes its header says)", "ends in its header"],
+  ["the code of the game is damaged in the dump this NUP was made of: dump the game again (game v0: exefs/rtld: it ends in its header (128 of 256 bytes); game v0: exefs/sdk: its data segment cannot decompress to the 536870912 bytes its header says)", "cannot decompress"],
+  ["it holds no code module (NSO) to check, and the other files of a dump folder have no hashes to be checked by", "no code module"],
 ];
 // in English too: what the window says in its own words
 const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];

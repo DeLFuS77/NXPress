@@ -505,7 +505,9 @@ Usage: nxpress [options] file or folder...
                       folders
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ, and NUP: the SHA-256 of each of its
-                      files, without keys)
+                      files, without keys) and the dump folders given; the code modules of
+                      a NUP or a dump folder are read by their headers, which tell a dump
+                      that lost bytes of its code
   -Q, --quick-verify  the same as -V
   --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
                       the same), signature (the header of every NCA signed by Nintendo, in

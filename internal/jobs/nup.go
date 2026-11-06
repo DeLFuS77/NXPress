@@ -88,9 +88,57 @@ func nupReaders(path string, workers int) int {
 	return 1
 }
 
+// nupChecker is the version of the check of a NUP the cache keeps: 1 reads the code modules of
+// its ExeFS by their headers too. A NUP checked by an older version is read again.
+const nupChecker = 1
+
+// what to do with a game whose code is damaged: its hashes, made of the dump as it was, do not
+// tell it, and the game stops while it launches
+const (
+	codeDamagedNup  = "the code of the game is damaged in the dump this NUP was made of: dump the game again"
+	codeDamagedDump = "the code of the game is damaged in this dump folder: dump the game again"
+	// a dump folder has nothing else to check it by
+	dumpNoHashes = "the other files of a dump folder have no hashes to be checked by"
+	// a NUP made of a dump with its code damaged is kept, as the dump is
+	nupMadeAnyway = "the NUP was made all the same, as the dump is"
+)
+
+// codeOnly tells damaged files that are all code modules whose data is as it was packed.
+func codeOnly(damaged []nup.Damaged) bool {
+	for _, d := range damaged {
+		if !d.Code {
+			return false
+		}
+	}
+	return len(damaged) > 0
+}
+
+// codeDamaged is the error of damaged code modules: what to do, then the first of them by their
+// package and path, and why.
+func codeDamaged(head string, damaged []nup.Damaged) error {
+	parts := []string{}
+	for i, d := range damaged {
+		if i == damagedInError {
+			parts = append(parts, fmt.Sprintf("and %d more", len(damaged)-damagedInError))
+			break
+		}
+		parts = append(parts, d.Package+": "+d.Path+": "+d.Reason)
+	}
+	return fmt.Errorf("%s (%s)", head, strings.Join(parts, "; "))
+}
+
+// modulesNote tells the code modules read by their headers.
+func modulesNote(modules int) string {
+	if modules == 1 {
+		return "1 code module (NSO) checked by its header"
+	}
+	return fmt.Sprintf("%d code modules (NSO) checked by their headers", modules)
+}
+
 // verifyNup checks a NUP: the hash of its table of contents, then the SHA-256 of every file,
-// decompressed when it is stored with zstd; each damaged file is told by its path. A NUP holds
-// no signatures of Nintendo, and is in no DAT: only its own hashes are checked.
+// decompressed when it is stored with zstd, and the code modules of each ExeFS by their headers;
+// each damaged file is told by its path. A NUP holds no signatures of Nintendo, and is in no
+// DAT: only its own hashes are checked.
 func verifyNup(ctx context.Context, path string, o Options, out Output) (string, string, error) {
 	extra := []string{}
 	if o.VerifyLevel == "signature" || o.VerifyLevel == "both" {
@@ -99,7 +147,7 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 	if o.datFile != nil {
 		extra = append(extra, "not compared with the DAT, which lists no NUP files")
 	}
-	if entry, ok := cache.Checked.Find(path); ok && !o.NoCache {
+	if entry, ok := cache.Checked.Find(path); ok && !o.NoCache && entry.Checker >= nupChecker {
 		note := "checked on " + entry.Checked.Format("2006-01-02") + ", not changed since"
 		if entry.Note != "" {
 			note += "; " + entry.Note
@@ -117,6 +165,9 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		}
 		return "", "", err
 	}
+	if codeOnly(check.Damaged) {
+		return "", "", codeDamaged(codeDamagedNup, check.Damaged)
+	}
 	if len(check.Damaged) > 0 {
 		return "", "", damagedNup(path, check, out)
 	}
@@ -127,10 +178,12 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 	if check.Unplaced > 0 {
 		note += fmt.Sprintf(" (%d in no folder of any package)", check.Unplaced)
 	}
-	if len(check.Notes) > 0 {
-		note = joinNotes(append([]string{note}, check.Notes...)...)
+	notes := []string{note}
+	if check.Modules > 0 {
+		notes = append(notes, modulesNote(check.Modules))
 	}
-	cache.Checked.Keep(path, note)
+	note = joinNotes(append(notes, check.Notes...)...)
+	cache.Checked.KeepChecked(path, note, nupChecker)
 	return "", joinNotes(append(append([]string{note}, extra...), emulatorsNote(container))...), nil
 }
 
@@ -178,6 +231,30 @@ func emulatorsNote(container *nup.Container) string {
 // packer of the format wrote them: NXPress reads them where the format puts them, the emulators
 // do not.
 const zeroBasedNote = "Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them"
+
+// verifyDump checks the code of a dump folder: every code module of the ExeFS of each package by
+// its header, as its loader reads it. The other files of a dump have no hashes to be checked by,
+// and a dump holds no signatures of Nintendo and is in no DAT.
+func verifyDump(ctx context.Context, path string, o Options, out Output) (string, string, error) {
+	extra := []string{dumpNoHashes}
+	if o.VerifyLevel == "signature" || o.VerifyLevel == "both" {
+		extra = append(extra, "a dump folder holds no signatures of Nintendo")
+	}
+	if o.datFile != nil {
+		extra = append(extra, "not compared with the DAT, which lists no dump folders")
+	}
+	check, err := nup.CheckDumpCode(ctx, path)
+	if err != nil {
+		return "", "", err
+	}
+	if len(check.Damaged) > 0 {
+		return "", "", codeDamaged(codeDamagedDump, check.Damaged)
+	}
+	if check.Modules == 0 {
+		return "", "", Skipped("it holds no code module (NSO) to check, and " + dumpNoHashes)
+	}
+	return "", joinNotes(append([]string{modulesNote(check.Modules)}, extra...)...), nil
+}
 
 // the damaged files a failed NUP tells in its error, and the ones told on lines of their own
 const (
