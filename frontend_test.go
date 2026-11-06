@@ -131,6 +131,7 @@ const samples = [
   ["this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them", "--rename"],
   ["167315 files in 3 packages, 31.5 GB → 29.8 GB: 2104 with the data of another file, kept once, 9870 with zstd; dlc/040074a01bf13001/0/updates left out: NUP version 1 holds no updates of DLC", "with zstd"],
   ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the original is kept: --rm-source does not delete dump folders or NUP files", "--rm-source"],
+  ["3 files in 1 package, 1.2 GB → 1.1 GB: 2 with zstd, 1 over 256 MiB stored as they are, for Eglantine and Lichii", "stored as they are"],
   ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the dump folder is deleted: the NUP holds all its files, checked", "dump folder"],
   ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; 1 file stays in the dump folder, which the NUP does not hold as it is: the rest is deleted", "stays"],
   ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; 21 files stay in the dump folder, which the NUP does not hold as they are: the rest is deleted", "stay in"],

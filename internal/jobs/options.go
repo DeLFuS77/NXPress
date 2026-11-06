@@ -67,6 +67,9 @@ type Options struct {
 	Overwrite   bool
 	RmSource    bool
 	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
+	// --nup-raw-big: the files of a NUP over 256 MiB stored as they are, as the packers of
+	// Eglantine and Lichii store them, which decompress a big file whole the first time it is read
+	NupRawBig bool
 	Keys        string
 	Dat         string
 	datFile     *dat.Dat
@@ -108,7 +111,7 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--nup-raw-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
@@ -282,6 +285,8 @@ func (o *Options) flag(option optionName) {
 		o.RmSource = true
 	case "--rm-dumps":
 		o.RmDumps = true
+	case "--nup-raw-big":
+		o.NupRawBig = true
 	case "--info":
 		o.Info = true
 	case "--convert":
@@ -464,6 +469,9 @@ func (o *Options) Check() error {
 	if o.RmDumps && !o.Nup && o.Pack == "" && !o.PackGames && !o.PackOne {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --nup")
 	}
+	if o.NupRawBig && !o.Nup {
+		o.Notes = append(o.Notes, "--nup-raw-big has no effect without --nup")
+	}
 	if (o.Sparse || o.Archive) && !o.Compress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C")
 	}
@@ -537,6 +545,9 @@ Usage: nxpress [options] file or folder...
                       make it smaller, files with the same data kept once, the NUP checked
                       whole before it gets its name; no keys needed. -D turns a NUP back
                       into a folder, each file checked by its SHA-256
+  --nup-raw-big       with --nup, store the files over 256 MiB as they are, as the packers
+                      of Eglantine and Lichii do: these emulators decompress such a file
+                      whole into a temporary file each time a game starts to read it
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one

@@ -432,6 +432,7 @@ type Request struct {
 	RemoveSource bool     `json:"removeSource"`
 	// the dump folders too, once their NUP is checked: in Combine, with Delete originals (#79)
 	RemoveDumps  bool     `json:"removeDumps"`
+	NupRawBig    bool     `json:"nupRawBig"`
 	Pack         string   `json:"pack"`
 	PackGames    bool     `json:"packGames"`
 	PackTemplate string   `json:"packTemplate"`
@@ -467,6 +468,7 @@ func (a *App) Start(request Request) error {
 	o.Levels = request.Levels
 	o.Sparse = request.Sparse
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
+	o.NupRawBig = request.NupRawBig && request.Mode == "pack"
 	o.Archive = request.Archive
 	switch request.Mode {
 	case "compress":

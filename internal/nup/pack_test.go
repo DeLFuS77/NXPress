@@ -449,3 +449,34 @@ func TestUnpackOnAFullDisk(t *testing.T) {
 		}
 	}
 }
+
+// With RawOver the files bigger than it are stored as they are, as the packers of Eglantine and
+// Lichii store the files over 256 MiB, small or big, and the NUP still reads back whole.
+func TestPackRawOver(t *testing.T) {
+	src := oldDump(t)
+	for _, c := range []struct {
+		over int64
+		raw  []string
+		told int
+	}{{10 << 20, []string{"big.bin"}, 1}, {20000, []string{"big.bin", "shared.bin", "stage.bin"}, 5}} {
+		out, result := pack(t, src, PackOptions{Level: 3, Workers: 2, RawOver: c.over})
+		container, err := Open(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range container.Files {
+			for _, name := range c.raw {
+				if f.Name == name && f.Codec != CodecRaw {
+					t.Errorf("over %d: %s stored with zstd", c.over, name)
+				}
+			}
+		}
+		// over 20000 bytes, noise.bin too (raw anyway) and shared.bin twice, in the game and its update
+		if result.RawBig != c.told {
+			t.Errorf("over %d: %d told stored as they are, want %d", c.over, result.RawBig, c.told)
+		}
+		if _, check, err := Verify(context.Background(), out, 2, 2, nil); err != nil || len(check.Damaged) != 0 {
+			t.Errorf("over %d: %v %+v", c.over, err, check)
+		}
+	}
+}

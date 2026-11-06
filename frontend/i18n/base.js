@@ -91,6 +91,7 @@ const noteRules = [
   [/^(\d+) files in (\d+) packages, /, "nupPacked"],
   [/: (\d+) with the data of another file, kept once/g, "nupShared"],
   [/(, |: )(\d+) with zstd/g, "nupZstd"],
+  [/(, |: )(\d+) over 256 MiB stored as they are, for Eglantine and Lichii/g, "nupRawBig"],
   [/^(\d+) files, (.+?), checked by their SHA-256 as they were written/, "nupUnpacked"],
   [/the original is kept: --rm-source does not delete dump folders or NUP files/g, "nupKept"],
   // what --rm-dumps did with a dump folder once its NUP was checked (#79)

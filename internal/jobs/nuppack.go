@@ -213,8 +213,11 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	}
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
-	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)},
-		out.Progress(dir, "Packaging"))
+	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
+	if o.NupRawBig {
+		packing.RawOver = nup.RawBig
+	}
+	result, err := nup.Pack(ctx, dir, written, packing, out.Progress(dir, "Packaging"))
 	if err != nil {
 		return "", "", err
 	}
@@ -237,6 +240,9 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	}
 	if result.Zstd > 0 {
 		details = append(details, fmt.Sprintf("%d with zstd", result.Zstd))
+	}
+	if result.RawBig > 0 {
+		details = append(details, fmt.Sprintf("%d over 256 MiB stored as they are, for Eglantine and Lichii", result.RawBig))
 	}
 	if len(details) > 0 {
 		note += ": " + strings.Join(details, ", ")
