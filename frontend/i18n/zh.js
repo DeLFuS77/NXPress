@@ -107,7 +107,7 @@ texts.zh = {
     archiveNote: "$1 个 Nintendo LZ4 块以实验性存档格式 NCZSECT3 解压保存：安装前请用 NXPress 解压", lz4Unread: "$1 个 NCA 的 LZ4 块保持原样：无法读取其压缩存储", worksArchive: "支持：仅 NXPress，实验性存档格式 NCZSECT3：安装前请用 NXPress 解压",
     onlyFileOfGame: "这里只有该游戏的这一个文件:没有可合并的内容", packedInto: "已合并到 ",
     trimOnlyUpdates: "。只有更新才有增量片段",
-    notCompressibleWhy: "没有可压缩的内容,保持原样", sparseSkip: "该游戏使用稀疏存储。要用 NXPress 的实验性格式压缩它，请在“高级”中打开“额外压缩”", sparseWhy: "它使用稀疏存储：在“高级”中打开“额外压缩”，即可用 NXPress 的实验性格式压缩", encryptionWhy: "它的分区使用了 NXPress 无法读取的加密", noGameDataWhy: "其中没有游戏数据", alreadyCompressedWhy: "它已经压缩过(包含 NCZ 文件),是改了名字的 NSZ 或 XCZ", onlyMetaWhy: "除元数据外没有任何 NCA",
+    notCompressibleWhy: "没有可压缩的内容,保持原样", sparseSkip: "该游戏使用稀疏存储。要用 NXPress 的实验性格式压缩它，请在“用途”中打开“额外压缩”", sparseWhy: "它使用稀疏存储：在“用途”中打开“额外压缩”，即可用 NXPress 的实验性格式压缩", encryptionWhy: "它的分区使用了 NXPress 无法读取的加密", noGameDataWhy: "其中没有游戏数据", alreadyCompressedWhy: "它已经压缩过(包含 NCZ 文件),是改了名字的 NSZ 或 XCZ", onlyMetaWhy: "除元数据外没有任何 NCA",
     measureHead: "$1 个处理器，级别 $2（线程 × 同时文件数）：", measureBest: "最快：线程 $1，同时文件数 $2，$3 MB/s，10 GB 约需 $4（已应用）", notMeasurable: "没有可压缩的内容：请换一个游戏测试", notMeasurableAny: "列表中的游戏都没有可压缩的内容:请添加另一个游戏用于测试",
     alreadyThere: " 已存在（勾选“新文件已存在时替换”）",
     notCompressible: "没有可压缩的内容：保持原样", nothingToCompress: "没有可压缩的内容",

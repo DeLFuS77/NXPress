@@ -107,7 +107,7 @@ texts.ja = {
     archiveNote: "Nintendo の LZ4 ブロック $1 個を実験的なアーカイブ形式 NCZSECT3 で展開したまま保存: インストールするには NXPress で展開してください", lz4Unread: "NCA $1 個は LZ4 ブロックをそのまま保存: 圧縮ストレージを読み取れませんでした", worksArchive: "対応: NXPress のみ、実験的なアーカイブ形式 NCZSECT3: インストールするには NXPress で展開してください",
     onlyFileOfGame: "ここにあるのはこのゲームのファイル 1 つだけです: まとめる相手がありません", packedInto: "まとめた先: ",
     trimOnlyUpdates: "。デルタフラグメントがあるのはアップデートだけです",
-    notCompressibleWhy: "圧縮できるものがないため、そのままにしました", sparseSkip: "このゲームはスパースストレージを使っています。NXPress の実験的な形式で圧縮するには、詳細設定の「追加圧縮」をオンにしてください", sparseWhy: "スパースストレージを使っています。NXPress の実験的な形式で圧縮するには、詳細設定の「追加圧縮」をオンにしてください", encryptionWhy: "セクションが NXPress の読めない暗号化を使っています", noGameDataWhy: "ゲームのデータがありません", alreadyCompressedWhy: "すでに圧縮済みです(NCZ ファイルを含む)。名前の違う NSZ か XCZ です", onlyMetaWhy: "メタデータ以外の NCA がありません",
+    notCompressibleWhy: "圧縮できるものがないため、そのままにしました", sparseSkip: "このゲームはスパースストレージを使っています。NXPress の実験的な形式で圧縮するには、「用途」の「追加圧縮」をオンにしてください", sparseWhy: "スパースストレージを使っています。NXPress の実験的な形式で圧縮するには、「用途」の「追加圧縮」をオンにしてください", encryptionWhy: "セクションが NXPress の読めない暗号化を使っています", noGameDataWhy: "ゲームのデータがありません", alreadyCompressedWhy: "すでに圧縮済みです(NCZ ファイルを含む)。名前の違う NSZ か XCZ です", onlyMetaWhy: "メタデータ以外の NCA がありません",
     measureHead: "$1 プロセッサ、レベル $2（スレッド × 同時ファイル数）:", measureBest: "最速: スレッド $1、同時ファイル数 $2、$3 MB/s、10 GB で約 $4（適用済み）", notMeasurable: "圧縮できるものがありません: 別のゲームで測定してください", notMeasurableAny: "リストのゲームには圧縮できるものがありません: 測定用に別のゲームを追加してください",
     alreadyThere: " は既にあります（「新しいファイルが既にあれば置き換える」をオン）",
     notCompressible: "圧縮できる部分がありません：そのままです", nothingToCompress: "圧縮できる部分がありません",

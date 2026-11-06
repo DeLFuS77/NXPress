@@ -14,7 +14,7 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
-  [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Advanced, or use --extra$/, "sparseSkip"],
+  [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Made for, or use --extra$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which only the experimental format NCZSECT2 compresses/g, "sparseWhy"],

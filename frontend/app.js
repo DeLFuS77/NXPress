@@ -1007,8 +1007,9 @@ function render() {
   const band = level <= 6 ? "3" : level <= 14 ? "12" : "19";
   for (const button of document.querySelectorAll("[data-level]")) button.classList.toggle("on", button.dataset.level === band);
   $("remove-warning").hidden = !$("remove").checked;
-  // the files that use the extra compression do not go with the installers above as they are
-  $("extra-target-warning").hidden = !$("extra").checked;
+  // the files that use the extra compression do not go with the installers above as they are; it
+  // is for Compress only, where its box is
+  $("extra-target-warning").hidden = !$("extra").checked || state.mode !== "compress";
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
