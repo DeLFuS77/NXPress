@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.jpg" alt="NXPress and Switch Library Manager Web" width="100%"></p>
+
 # NXPress
 
 [![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/delfus77)
@@ -9,6 +11,8 @@
 ![Languages: 11](https://img.shields.io/badge/languages-11-blue)
 
 Compresses and decompresses Nintendo Switch NSP and XCI files to NSZ and XCZ, multi-title files (SuperNSP) included. It writes standard NSZ and XCZ, the same format nsz writes, so installers read them as usual.
+
+💬 Questions, ideas or news of new versions? Join the [Discord server](https://discord.gg/acQVZSEBR), shared with [Switch Library Manager Web](https://github.com/DeLFuS77/switch-library-manager-web).
 
 <p align="center">
   <a href="https://ko-fi.com/delfus77"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="36"></a>
