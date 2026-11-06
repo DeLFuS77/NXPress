@@ -123,8 +123,9 @@ NUP (`.nup`, [github.com/a55uka/nup](https://github.com/a55uka/nup)) is a contai
 - **Verify** (`-V`) checks the hash of the table of contents, then reads each piece of data once and checks the SHA-256 of every file, decompressing the ones stored with zstd: in order on a hard disk, with several readers at once on an SSD, and the hashing on every thread. A damaged file is told by its path in its package.
 - **Combine** (`--nup`) packs a dump folder into a NUP: the layout the packer of the format reads (`base`, `updates/<version>`, `dlc/<title ID>/<index>`, or the `exefs` and `romfs` of one package) or the new one of OunceCake (`program/<index>`, whose control data gives the name, the publisher and the icon of the game). Each file is stored with zstd at level 3, as the packer of the format does, or as it is when zstd does not make it smaller; files with the same data are kept once, and the listings FTP clients leave are left out. The NUP is read back whole and checked before it gets its name.
 - **Decompress** (`-D`) turns a NUP back into a folder in the layout the packer reads, each file checked by its SHA-256 as it is written. A folder there already is never written into, and a name that would climb out of its folder fails the work.
+- **Rename** (`--rename`) names a NUP by what it holds, with the same fields as a game file: the name of the game, its title ID, the version of its newest update, the titles of each kind and its size.
 
-The other works leave NUP files as they are, and say where they are made and unpacked.
+The other works leave NUP files as they are, and say where they are made, unpacked, verified and renamed.
 
 ## Building
 

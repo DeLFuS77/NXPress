@@ -85,8 +85,8 @@ const noteRules = [
   [/^(.+) is not a prod\.keys: it has no header_key$/, "notKeys"],
   [/^the priority could not go back to normal: /, "priorityNotNormal"],
   [/^(.+) cannot be read: its files are left out$/, "folderUnreadable"],
-  // NUP files, which NXPress shows and verifies only
-  [/NXPress does not compress, convert or trim NUP files: it makes them of dump folders \(Combine, --nup\), turns them back into folders \(Decompress, -D\), shows what they hold \(Details, -i\) and verifies them \(Verify, -V\)/g, "nupNotDone"],
+  // NUP files, which the works that do not take them leave as they are
+  [/this work leaves NUP files as they are: Combine \(--nup\) makes them of dump folders, compressed with zstd, Decompress \(-D\) turns them back into folders, Details \(-i\) shows what they hold, Verify \(-V\) checks them and Rename \(--rename\) renames them/g, "nupNotDone"],
   [/^(\d+) files in 1 package, /, "nupPackedOne"],
   [/^(\d+) files in (\d+) packages, /, "nupPacked"],
   [/: (\d+) with the data of another file, kept once/g, "nupShared"],

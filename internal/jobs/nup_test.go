@@ -58,7 +58,7 @@ func TestNupTitleAndCard(t *testing.T) {
 	}
 	out := &recording{}
 	RunJobs(t.Context(), Options{Compress: true, Files: []string{filepath.Dir(path)}, Multi: 1}, out)
-	if len(out.skipped) != 1 || !strings.Contains(out.skipped[0], "does not compress, convert or trim NUP files") {
+	if len(out.skipped) != 1 || !strings.Contains(out.skipped[0], "this work leaves NUP files as they are") {
 		t.Errorf("%+v", out)
 	}
 }

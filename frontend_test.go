@@ -128,7 +128,7 @@ const samples = [
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 40 s at level 3", " at level "],
   ["8.0 MB -> 42.3 KB, 99.5% smaller", " -> "],
-  ["NXPress does not compress, convert or trim NUP files: it makes them of dump folders (Combine, --nup), turns them back into folders (Decompress, -D), shows what they hold (Details, -i) and verifies them (Verify, -V)", "-V"],
+  ["this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them", "--rename"],
   ["167315 files in 3 packages, 31.5 GB → 29.8 GB: 2104 with the data of another file, kept once, 9870 with zstd; dlc/040074a01bf13001/0/updates left out: NUP version 1 holds no updates of DLC", "with zstd"],
   ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the original is kept: --rm-source does not delete dump folders or NUP files", "--rm-source"],
   ["1232 files, 39.5 GB, checked by their SHA-256 as they were written", "checked by"],
