@@ -9,7 +9,7 @@ replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/sw
 require (
 	github.com/dtrunk90/switch-library-manager-web v0.0.0-00010101000000-000000000000
 	github.com/go-ole/go-ole v1.3.0
-	github.com/klauspost/compress v1.18.7
+	github.com/klauspost/compress v1.20.3
 	github.com/wailsapp/wails/v2 v2.17.0
 	golang.org/x/sys v0.49.0
 )

@@ -11,6 +11,10 @@
 
 - Combine and Split name the SuperXCI too, not only the SuperNSP: a game card with its updates and DLC is made by Combine when an XCI is among the files, and Split writes each of its titles to a file of its own (thanks @NikoMuffin, #73)
 
+### Security
+
+- github.com/klauspost/compress 1.20.3 (GO-2026-6865), which fixes a crash with zstd data crafted for it
+
 ## 1.6.0
 
 ### New
