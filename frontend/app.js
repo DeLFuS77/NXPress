@@ -10,7 +10,7 @@ const groups = [
 // what each mode takes, to show it
 const takesShown = {
   compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP", convert: "XCI XCZ",
-  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
 };
 
 // a NUP holds its game decrypted: it is read and verified without keys
@@ -997,7 +997,7 @@ function render() {
   $("verify-level-hint").textContent = t({ full: "verifyFullHint", signature: "verifySignatureHint", both: "verifyBothHint" }[state.verifyLevel]);
   $("keys-banner").hidden = !!state.keys || !needsKeys(state.mode);
   // in the sections that take NUP files, the banner says they need no keys
-  $("keys-nup").hidden = !["verify", "info"].includes(state.mode);
+  $("keys-nup").hidden = !["verify", "info", "rename"].includes(state.mode);
   $("toolbar").hidden = state.items.length === 0;
   // the list stays as it is while its files are at work, also from the keyboard
   for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
