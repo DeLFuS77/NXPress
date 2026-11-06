@@ -217,11 +217,17 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	if err != nil {
 		return "", "", fmt.Errorf("the new NUP cannot be read back: %w", err)
 	}
-	if len(check.Damaged) > 0 {
+	// a dump whose code is damaged gives a NUP whose files are as they were packed: it is made
+	// all the same, and the work fails with what to do
+	code := codeOnly(check.Damaged)
+	if len(check.Damaged) > 0 && !code {
 		return "", "", fmt.Errorf("the new NUP does not read back whole: %d files are not what was packed", len(check.Damaged))
 	}
 	if err := finish(o, written, name); err != nil {
 		return "", "", err
+	}
+	if code {
+		return name, "", fmt.Errorf("%w; %s", codeDamaged(codeDamagedDump, check.Damaged), nupMadeAnyway)
 	}
 	note := fmt.Sprintf("%s in %s, %s → %s", count(result.Files, "file", "files"), count(len(result.Packages), "package", "packages"),
 		size(result.Size), size(result.FileSize))
@@ -235,7 +241,11 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	if len(details) > 0 {
 		note += ": " + strings.Join(details, ", ")
 	}
-	notes := append([]string{note}, result.Notes...)
+	notes := []string{note}
+	if check.Modules > 0 {
+		notes = append(notes, modulesNote(check.Modules))
+	}
+	notes = append(notes, result.Notes...)
 	if o.RmSource {
 		notes = append(notes, keptOriginal)
 	}

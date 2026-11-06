@@ -27,7 +27,8 @@ import (
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
 	"decompress": {".nsz", ".xcz", ".nup"},
-	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
+	// the dump folders, by the code of their games
+	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
 	"convert":    {".xci", ".xcz"},
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
@@ -158,7 +159,11 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 				// a new file checked as a game before it got its name need not be read again (a
 				// folder a NUP was unpacked into is no file to remember)
 				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
-					cache.Checked.Keep(output, "")
+					if isNup(output) {
+						cache.Checked.KeepChecked(output, "", nupChecker)
+					} else {
+						cache.Checked.Keep(output, "")
+					}
 				}
 				out.Done(path, output, note, shown(err))
 				if isFailure(err) {
@@ -508,6 +513,9 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	}
 	if action == "nup" {
 		return packNup(ctx, path, o, threads, out)
+	}
+	if action == "verify" && IsDumpFolder(path) {
+		return verifyDump(ctx, path, o, out)
 	}
 	switch action {
 	case "compress":
