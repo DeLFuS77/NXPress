@@ -4,14 +4,18 @@ name: Build
 # webview of each one (WebView2, WebKitGTK, WebKit), and cgo its C compiler for zstd. Each
 # program opens its window once, to show it starts there, with a screenshot kept. The
 # programs are kept as artifacts of the run; for a version tag (1.2.3), the release is made
-# with them and the matching section of CHANGELOG.md.
+# with them and the matching section of CHANGELOG.md. A beta tag (1.2.3-beta.4) makes a
+# pre-release: GitHub leaves it out of the latest release, which NXPress asks for, so only the
+# ones who run a beta are told of it.
 
 on:
   push:
     branches:
       - main
+      - beta
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
   pull_request:
   workflow_dispatch:
 
@@ -256,22 +260,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          beta=()
+          title="NXPress ${GITHUB_REF_NAME}"
+          case "${GITHUB_REF_NAME}" in
+            *-beta.*) beta=(--prerelease); title="NXPress ${GITHUB_REF_NAME} (beta)" ;;
+          esac
           gh release create "${GITHUB_REF_NAME}" \
-            --title "NXPress ${GITHUB_REF_NAME}" \
+            --title "${title}" \
+            "${beta[@]}" \
             --notes-file release-notes.md \
             --verify-tag \
             dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt
 
       # the notes in #releases of the Discord server, through the webhook kept in the secret
-      # DISCORD_WEBHOOK; without it (a fork) nothing is sent, and if Discord fails the release
-      # stays as it is
+      # DISCORD_WEBHOOK; a beta goes to the channel of the secret DISCORD_BETA_WEBHOOK instead, and
+      # without it to none. Without the secret (a fork) nothing is sent, and if Discord fails the
+      # release stays as it is
       - name: Announce on Discord
         continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_BETA_WEBHOOK: ${{ secrets.DISCORD_BETA_WEBHOOK }}
         run: |
+          case "${GITHUB_REF_NAME}" in
+            *-beta.*) DISCORD_WEBHOOK="${DISCORD_BETA_WEBHOOK}" ;;
+          esac
           if [ -z "${DISCORD_WEBHOOK}" ]; then
-            echo "No DISCORD_WEBHOOK secret: nothing sent to Discord"
+            echo "No webhook secret for this release: nothing sent to Discord"
             exit 0
           fi
           python3 .github/scripts/discord_release.py \

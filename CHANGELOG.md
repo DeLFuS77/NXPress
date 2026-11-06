@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.9.0-beta.1
+
+A beta: what the next version has, and features to try that may still change. NXPress tells of a newer beta only to the ones who run a beta, and GitHub does not show it as the latest version.
+
+### Experimental
+
+- `-s` / `--bs`, which NXPress took from nsz with no effect, sets the size of the blocks of an NSZ made with -B and of an XCZ, from 2^14 to 2^24 bytes (2^20, 1 MiB, by default). Bigger blocks make the file a little smaller and an emulator slower to start a game: in a test, blocks of 4 MiB were 2% smaller and 0.3 s slower, and blocks of 16 MiB 4% smaller and 1.2 s slower
+
+### Improvements
+
+- The zstd frames of NSZ and NUP files carry the checksum of their data with the zstd library in C too, as they did with the encoder in Go: a damaged file fails to decompress instead of giving damaged data, and every installer and emulator checks it
+
 ## 1.7.3
 
 ### Improvements
