@@ -37,6 +37,26 @@ func nupGame() []testnup.Package {
 	}
 }
 
+// A NUP made of a dump without its control data gives no name, only the label of its dump:
+// Rename and Details name it by that label made readable, not by the name of its file.
+func TestNupRenameWithoutName(t *testing.T) {
+	withoutKeys(t)
+	game := nupGame()
+	for i := range game {
+		game[i].Meta = []testnup.Record{{Type: testnup.SourceDump, Payload: []byte("NintendoSwitchSportsResort_v1.1.0")}}
+	}
+	folder := t.TempDir()
+	path := filepath.Join(folder, "NintendoSwitchSportsResortv1.1.0.nup")
+	os.WriteFile(path, testnup.Build(game), 0o644)
+	want := "Nintendo Switch Sports Resort [0400486024DEC000][v131072].nup"
+	if code, out := run("--rename", "{name} [{id}][v{version}]", path); code != 0 || !strings.Contains(out, "-> "+want) {
+		t.Fatalf("rename: %d\n%s", code, out)
+	}
+	if code, out := run("-i", filepath.Join(folder, want)); code != 0 || strings.Contains(out, "NintendoSwitchSportsResort_v1.1.0 ") {
+		t.Errorf("details: %d\n%s", code, out)
+	}
+}
+
 // --rename names a NUP by what it holds, without keys and with the fields of a game file: the
 // name of the game, its title ID, the version of its newest update and its titles (#82).
 func TestNupRename(t *testing.T) {

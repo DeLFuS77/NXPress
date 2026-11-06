@@ -340,6 +340,21 @@ func nupTitle(path string, withIcon bool) (GameTitle, error) {
 			result.Publisher = pkg.Publisher()
 		}
 	}
+	// a NUP made of a dump without its control data gives no name: the list of the games of the
+	// Switch 2 names it, else the label of its dump made readable, as Combine names it now
+	// (NintendoSwitchSportsResort_v1.1.0 is Nintendo Switch Sports Resort), so Rename and Details
+	// do not take the name of its file as it is
+	if result.Name == "" && first.Kind != nup.KindAddon {
+		result.Name = listName(nup.Source{TitleID: first.TitleID, Kind: first.Kind})
+	}
+	if result.Name == "" {
+		for _, pkg := range []nup.Package{first, shown} {
+			if name := dumpNameOf(pkg.SourceDump()); name != "" {
+				result.Name = name
+				break
+			}
+		}
+	}
 	if first.Kind != nup.KindBase {
 		kind := map[byte]string{nup.KindUpdate: "UPD", nup.KindAddon: "DLC"}[first.Kind]
 		if game, err := switchfs.GameTitleID(first.TitleIDText(), kind); err == nil {
