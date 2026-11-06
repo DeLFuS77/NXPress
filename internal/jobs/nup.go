@@ -27,7 +27,7 @@ import (
 const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true, "fixmeta": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
@@ -133,6 +133,22 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 	cache.Checked.Keep(path, note)
 	return "", joinNotes(append(append([]string{note}, extra...), emulatorsNote(container))...), nil
 }
+
+// FixNupMeta writes again the metadata of a NUP whose types are counted from 0 with them where the
+// format puts them, as Eglantine and Lichii read them; a NUP counted from 1 is skipped.
+func FixNupMeta(path string) (string, error) {
+	fixed, err := nup.FixZeroBased(path)
+	switch {
+	case err != nil:
+		return "", err
+	case fixed == 0:
+		return "", Skipped(countedFromOne)
+	}
+	return fmt.Sprintf("its metadata is counted from 1 now, as Eglantine and Lichii read it: %s written again, the files of the game as they were", count(fixed, "package", "packages")), nil
+}
+
+// countedFromOne is why --fix-nup-meta leaves a NUP as it is.
+const countedFromOne = "its metadata is counted from 1 already: nothing to write again"
 
 // emulatorsRefuseToo is said of a NUP NXPress does not read for a reason Eglantine and Lichii
 // refuse it too.
@@ -362,6 +378,10 @@ type NupDetails struct {
 	Uncompressed int64
 	Packages     []NupPackage
 	Emulators    string
+	// Eglantine and Lichii open it, start its game and show it right; its metadata is counted
+	// from 0, which --fix-nup-meta writes again
+	EmulatorsOK bool
+	ZeroBased   bool
 }
 
 // NupCard tells what a NUP holds, for its card in Details.
@@ -370,7 +390,9 @@ func NupCard(path string) (NupDetails, error) {
 	if err != nil {
 		return NupDetails{}, err
 	}
-	result := NupDetails{Size: container.FileSize, Uncompressed: int64(container.Totals().Size), Emulators: emulatorsNote(container)}
+	emulators := container.Emulators()
+	result := NupDetails{Size: container.FileSize, Uncompressed: int64(container.Totals().Size), Emulators: emulatorsNote(container),
+		EmulatorsOK: len(emulators.Refused) == 0 && emulators.NoStart == "" && !emulators.ZeroBased, ZeroBased: emulators.ZeroBased}
 	for i, pkg := range container.Packages {
 		summary, err := container.Summarize(i)
 		if err != nil {

@@ -51,6 +51,9 @@ type Options struct {
 	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
 	// a NUP, next to it or in -o
 	Nup bool
+	// --fix-nup-meta: the metadata of each NUP given whose types are counted from 0 written again
+	// with them where the format puts them, for Eglantine and Lichii
+	FixNupMeta bool
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string
@@ -119,7 +122,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false},
+	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
 	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
@@ -320,6 +323,8 @@ func (o *Options) flag(option optionName) {
 		o.PackOne = true
 	case "--nup":
 		o.Nup = true
+	case "--fix-nup-meta":
+		o.FixNupMeta = true
 	case "--minimal-output":
 		o.Minimal = true
 	case "--machine-readable":
@@ -426,13 +431,13 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup} {
+	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games and --nup")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --nup and --fix-nup-meta")
 	}
 	// a watch would look for new files a pack does not take, without end
 	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup) {
@@ -540,6 +545,10 @@ Usage: nxpress [options] file or folder...
                       empty; a file it does not hold, or one changed since, stays
   -i, --info          show the titles a file holds; of a NUP, each package (game, update,
                       DLC) with its files and their size, without keys
+  --fix-nup-meta      write again the metadata of each NUP given whose types are counted
+                      from 0, as a build of the packer of the format wrote them, with them
+                      where the format puts them, as Eglantine and Lichii read them: only
+                      those numbers change, in the NUP itself, checked after
   --nup               pack each dump folder given (base, updates and dlc, or exefs and
                       romfs, as OunceCake writes them) into a NUP, next to it or in -o:
                       each file with zstd (level 3, or -l) or as it is when zstd does not
@@ -637,6 +646,8 @@ func (o Options) Action() string {
 		return "pack"
 	case o.Nup:
 		return "nup"
+	case o.FixNupMeta:
+		return "fixmeta"
 	}
 	return "verify"
 }

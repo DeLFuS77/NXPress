@@ -71,6 +71,28 @@ func TestNupRename(t *testing.T) {
 	}
 }
 
+// --fix-nup-meta writes again the metadata of a NUP counted from 0, and leaves one counted from 1.
+func TestNupFixMeta(t *testing.T) {
+	withoutKeys(t)
+	packages := nupGame()
+	packages[0].Meta = []testnup.Record{{Type: 0, Payload: []byte("META")}, {Type: 4, Payload: []byte("Made-up Quest")}, {Type: 5, Payload: []byte("Nobody Games")}}
+	path := filepath.Join(t.TempDir(), "zero.nup")
+	os.WriteFile(path, testnup.Build(packages), 0o644)
+	if code, out := run("-V", path); code != 0 || !strings.Contains(out, "show its name, version and icon wrong") {
+		t.Errorf("verify before: %d\n%s", code, out)
+	}
+	code, out := run("--fix-nup-meta", path)
+	if code != 0 || !strings.Contains(out, "OK zero.nup (its metadata is counted from 1 now, as Eglantine and Lichii read it: 1 package written again") {
+		t.Fatalf("fix: %d\n%s", code, out)
+	}
+	if code, out := run("-V", path); code != 0 || strings.Contains(out, "show its name") || !strings.Contains(out, "3 files checked") {
+		t.Errorf("verify after: %d\n%s", code, out)
+	}
+	if code, out := run("--fix-nup-meta", path); code != 0 || !strings.Contains(out, "SKIPPED zero.nup (its metadata is counted from 1 already") {
+		t.Errorf("again: %d\n%s", code, out)
+	}
+}
+
 func run(args ...string) (int, string) {
 	var stdout, stderr bytes.Buffer
 	code := RunCommand(args, &stdout, &stderr)

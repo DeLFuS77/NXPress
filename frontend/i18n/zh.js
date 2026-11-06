@@ -27,6 +27,7 @@ texts.zh = {
   warnNewer: v => `列表中有更新的更新档 (${v})`, warnTwice: "此游戏在列表中出现了两次", warnSameName: "将与列表中的另一个文件同名", warnNoGame: "列表中没有它的本体游戏", warnNeedsGame: (need, reach) => `需要游戏 v${need}；列表最高为 v${reach}`, warnPublished: (version, date, have) => `已发布 v${version}${date ? ` (${date})` : ""}；你的是 v${have}`,
   tagEmulators: "模拟器", removeWarning: "新文件校验通过后，原文件将被永久删除。", removeKeepsDumps: "除非勾选上面的选项，转储文件夹会原样保留。", removeKeepsNup: "NUP 文件会原样保留：此选项不会删除它们。",
   nupBlock: "NUP 文件", nupRawBig: "超过 256 MiB 的文件不压缩存储", nupRawBigHint: "Eglantine 和 Lichii 在游戏第一次读取用 zstd 存储的文件时会把它整个解压，超过 256 MiB 的文件则在每次启动游戏时写入磁盘上的临时文件。它们自己的打包工具按原样存储这类文件，勾选此项后 NXPress 也这样做：NUP 会大出 zstd 本可节省的部分，但这些模拟器能立即读取。",
+  fixForEmulators: "为模拟器修复",
   removeDumps: "NUP 校验后也删除转储文件夹", removeDumpsHint: "NUP 完整读回、其中每个文件都按 SHA-256 校验后，会从转储文件夹中删除 NUP 包含的文件，再删除变空的文件夹。NUP 不包含的文件，或打包后有改动的文件，会保留在原处。", removeDumpsGo: "NUP 校验通过后，转储文件夹会被删除：只留下 NUP，可用“解压”还原成文件夹。",
   selected: (n, bytes) => `${n} 个文件 · ${size(bytes)}`, nothing: "还没有文件",
   working: (done, n, share) => `已完成 ${done}/${n} · ${share}%`,
@@ -142,6 +143,7 @@ texts.zh = {
     emuOk: "符合 Eglantine 和 Lichii 对 NUP 的要求", emuRefuseToo: "Eglantine 和 Lichii 也打不开它", emuRefused: "Eglantine 和 Lichii 打不开它：", emuNoStart: "Eglantine 和 Lichii 无法启动它：", emuKind: "包 $1 的类型为 $2，格式将其留作以后使用", emuFlags: "包 $1 的标志为 $2，只有第一个是已知的", emuLocalized: "包 $1 的各语言名称或图标超出了其记录", emuCodecFlagsOne: "1 个文件带有第 1 版没有的编解码器标志", emuCodecFlags: "$1 个文件带有第 1 版没有的编解码器标志", emuEmptyOne: "1 个 0 字节的文件留有数据位置，应为 0 和 0", emuEmpty: "$1 个 0 字节的文件留有数据位置，应为 0 和 0", emuTagged: "其文件夹用最高位标记文件，格式打包工具的某个版本曾这样做", emuLoop: "文件夹 $1 在它自己里面", emuDeep: "其文件夹超过 128 层", emuDlcOnly: "其中没有游戏或更新，而它们还不加载 NUP 文件中的 DLC", emuNoExefs: "其中的游戏和更新都没有 ExeFS", emuExefsGame: "游戏 v$1 的 ExeFS 缺少：", emuExefsUpdate: "更新 v$1 的 ExeFS 缺少：",
     emuZeroBased: "Eglantine 和 Lichii 会显示错误的名称、版本和图标：其元数据的类型从 0 开始计数，格式打包工具的某个版本曾这样写入",
     nupRawBig: "$1$2 个超过 256 MiB 的文件按原样存储，供 Eglantine 和 Lichii 使用",
+    fixMetaOne: "其元数据现在从 1 开始计数，与 Eglantine 和 Lichii 的读取方式一致：已重写 1 个包，游戏文件保持原样", fixMeta: "其元数据现在从 1 开始计数，与 Eglantine 和 Lichii 的读取方式一致：已重写 $1 个包，游戏文件保持原样", fixMetaNone: "其元数据已经从 1 开始计数：无需重写", fixMetaOther: "$1 是另一个 NUP 的元数据副本：删除它后才能继续", fixMetaNoCopy: "无法在旁边写入其元数据的副本：", fixMetaBack: "重写元数据后 NUP 读取结果不同，因此已恢复原样：", waitWork: "请等待工作结束",
     arrow: " → ", decimal: "$1.$2",
   },
 };

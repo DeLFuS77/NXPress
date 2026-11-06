@@ -38,7 +38,7 @@ func TestNupTitleAndCard(t *testing.T) {
 		t.Fatal(err)
 	}
 	size, uncompressed, cards := details.Size, details.Uncompressed, details.Packages
-	if size <= 0 || uncompressed != 5000*3+4 || len(cards) != 3 || details.Emulators == "" {
+	if size <= 0 || uncompressed != 5000*3+4 || len(cards) != 3 || details.Emulators == "" || details.ZeroBased {
 		t.Fatalf("%d %d %+v", size, uncompressed, details)
 	}
 	if cards[0].Name != "Made-up Book" || cards[0].Files != 2 || cards[0].Size != 5004 || cards[0].Stored >= cards[0].Size ||

@@ -27,6 +27,7 @@ texts.ja = {
   warnNewer: v => `リストにより新しいアップデートがあります (${v})`, warnTwice: "このタイトルはリストに2回入っています", warnSameName: "リストの別のファイルと同じ名前になります", warnNoGame: "本体ゲームがリストにありません", warnNeedsGame: (need, reach) => `ゲーム v${need} が必要ですが、リストは v${reach} までです`, warnPublished: (version, date, have) => `v${version} が公開されています${date ? ` (${date})` : ""}。手元は v${have} です`,
   tagEmulators: "エミュレーター", removeWarning: "新しいファイルの検証後、元のファイルは完全に削除されます。", removeKeepsDumps: "上のチェックボックスをオンにしない限り、ダンプフォルダーはそのまま残ります。", removeKeepsNup: "NUP ファイルはそのまま残ります。このオプションでは削除されません。",
   nupBlock: "NUP ファイル", nupRawBig: "256 MiB を超えるファイルを圧縮せずに保存", nupRawBigHint: "Eglantine と Lichii は、zstd で保存されたファイルをゲームが初めて読むときに丸ごと展開し、256 MiB を超えるものはゲームを起動するたびにディスク上の一時ファイルに書き出します。これらのエミュレーター自身のパッカーはそうしたファイルをそのまま保存し、このチェックで NXPress も同じようにします。NUP は zstd で節約できた分だけ大きくなりますが、エミュレーターはすぐに読めます。",
+  fixForEmulators: "エミュレーター向けに修正",
   removeDumps: "NUP の検証後にダンプフォルダーも削除", removeDumpsHint: "NUP をすべて読み直し、各ファイルを SHA-256 で検証したあと、NUP に入っているファイルをダンプフォルダーから削除し、空になったフォルダーも削除します。NUP に入っていないファイルや、パック後に変わったファイルはそのまま残ります。", removeDumpsGo: "NUP の検証後、ダンプフォルダーは削除されます。残るのは NUP だけで、「展開」で元のフォルダーに戻せます。",
   selected: (n, bytes) => `${n} 個のファイル · ${size(bytes)}`, nothing: "まだファイルがありません",
   working: (done, n, share) => `${n} 個中 ${done} 個完了 · ${share}%`,
@@ -142,6 +143,7 @@ texts.ja = {
     emuOk: "Eglantine と Lichii が NUP に求める条件を満たしています", emuRefuseToo: "Eglantine と Lichii でも開けません", emuRefused: "Eglantine と Lichii では開けません: ", emuNoStart: "Eglantine と Lichii では起動できません: ", emuKind: "パッケージ $1 の種類 $2 は、フォーマットが将来のために予約しているものです", emuFlags: "パッケージ $1 のフラグは $2 で、既知なのは最初のものだけです", emuLocalized: "パッケージ $1 の言語別の名前またはアイコンがレコードの外にはみ出しています", emuCodecFlagsOne: "1 個のファイルにバージョン 1 にないコーデックフラグがあります", emuCodecFlags: "$1 個のファイルにバージョン 1 にないコーデックフラグがあります", emuEmptyOne: "0 バイトのファイル 1 個にデータの場所があります（0 と 0 でなければなりません）", emuEmpty: "0 バイトのファイル $1 個にデータの場所があります（0 と 0 でなければなりません）", emuTagged: "フォルダーがファイルを最上位ビットで印付けしています（フォーマットのパッカーの一部のバージョンと同じ）", emuLoop: "フォルダー $1 が自分自身の中にあります", emuDeep: "フォルダーの階層が 128 を超えています", emuDlcOnly: "ゲームもアップデートも含まれておらず、NUP の DLC はまだ読み込まれません", emuNoExefs: "含まれるゲームとアップデートのどれにも ExeFS がありません", emuExefsGame: "ゲーム v$1 の ExeFS にないもの: ", emuExefsUpdate: "アップデート v$1 の ExeFS にないもの: ",
     emuZeroBased: "Eglantine と Lichii では名前・バージョン・アイコンが正しく表示されません: メタデータの種類が 0 から数えられています（フォーマットのパッカーの一部のバージョンがそう書いていました）",
     nupRawBig: "$1$2 個（256 MiB 超）は Eglantine と Lichii のためにそのまま保存",
+    fixMetaOne: "メタデータは Eglantine と Lichii が読むとおり 1 から数えるようになりました: 1 個のパッケージを書き直し、ゲームのファイルはそのままです", fixMeta: "メタデータは Eglantine と Lichii が読むとおり 1 から数えるようになりました: $1 個のパッケージを書き直し、ゲームのファイルはそのままです", fixMetaNone: "メタデータはすでに 1 から数えられています: 書き直すものはありません", fixMetaOther: "$1 は別の NUP のメタデータのコピーです: 続けるには削除してください", fixMetaNoCopy: "メタデータのコピーを横に書き込めません: ", fixMetaBack: "メタデータを書き直すと NUP が同じように読めないため、元に戻しました: ", waitWork: "作業が終わるまでお待ちください",
     arrow: " → ", decimal: "$1.$2",
   },
 };

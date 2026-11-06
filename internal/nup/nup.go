@@ -95,6 +95,8 @@ type Package struct {
 	// its metadata has its types counted from 0, as a build of the packer of the format wrote
 	// them: read here where the format puts them, and read wrong by Eglantine and Lichii
 	ZeroBased bool
+	// where its metadata is in the NUP
+	metaOffset, metaSize uint64
 }
 
 // Dir is a folder of the tree of a package.
@@ -289,6 +291,7 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 				return nil, refused(fmt.Errorf("NUP package %d metadata: %w", i, err))
 			}
 			pkg.Meta, pkg.ZeroBased = meta, shifted
+			pkg.metaOffset, pkg.metaSize = metaOffset, metaSize
 			if !strictLocalized(block) {
 				result.strict = append(result.strict, fmt.Sprintf("the names or icons by language of package %d run past their record", i))
 			}

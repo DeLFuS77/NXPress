@@ -27,6 +27,7 @@ texts.ko = {
   warnNewer: v => `목록에 더 새로운 업데이트가 있습니다 (${v})`, warnTwice: "이 타이틀이 목록에 두 번 있습니다", warnSameName: "목록의 다른 파일과 같은 이름이 됩니다", warnNoGame: "본편 게임이 목록에 없습니다", warnNeedsGame: (need, reach) => `게임 v${need} 이(가) 필요하지만 목록은 v${reach} 까지입니다`, warnPublished: (version, date, have) => `v${version} 이(가) 공개되었습니다${date ? ` (${date})` : ""}. 가진 것은 v${have} 입니다`,
   tagEmulators: "에뮬레이터", removeWarning: "새 파일이 검증되면 원본은 영구히 삭제됩니다.", removeKeepsDumps: "위 상자를 체크하지 않으면 덤프 폴더는 그대로 남습니다.", removeKeepsNup: "NUP 파일은 그대로 남습니다. 이 옵션은 NUP 파일을 지우지 않습니다.",
   nupBlock: "NUP 파일", nupRawBig: "256MiB가 넘는 파일은 압축하지 않고 저장", nupRawBigHint: "Eglantine과 Lichii는 zstd로 저장된 파일을 게임이 처음 읽을 때 통째로 풀고, 256MiB가 넘는 파일은 게임을 시작할 때마다 디스크의 임시 파일에 써요. 이 에뮬레이터들의 패커는 그런 파일을 그대로 저장하고, 이 상자를 켜면 NXPress도 그렇게 해요. NUP는 zstd로 줄일 수 있던 만큼 커지지만, 에뮬레이터가 바로 읽어요.",
+  fixForEmulators: "에뮬레이터용으로 고치기",
   removeDumps: "NUP 검증 후 덤프 폴더도 삭제", removeDumpsHint: "NUP를 처음부터 끝까지 다시 읽고 각 파일을 SHA-256으로 검증한 뒤, NUP에 들어 있는 파일을 덤프 폴더에서 지우고 비게 된 폴더도 지웁니다. NUP에 없는 파일이나 묶은 뒤에 바뀐 파일은 그대로 남습니다.", removeDumpsGo: "NUP가 검증되면 덤프 폴더는 삭제됩니다. NUP만 남고, '압축 해제'로 다시 폴더로 되돌릴 수 있습니다.",
   selected: (n, bytes) => `파일 ${n}개 · ${size(bytes)}`, nothing: "아직 파일이 없습니다",
   working: (done, n, share) => `${n}개 중 ${done}개 완료 · ${share}%`,
@@ -142,6 +143,7 @@ texts.ko = {
     emuOk: "Eglantine과 Lichii가 NUP에 요구하는 조건을 충족해요", emuRefuseToo: "Eglantine과 Lichii에서도 열리지 않아요", emuRefused: "Eglantine과 Lichii에서 열리지 않아요: ", emuNoStart: "Eglantine과 Lichii에서 실행할 수 없어요: ", emuKind: "패키지 $1의 종류 $2는 형식이 나중을 위해 남겨 둔 것이에요", emuFlags: "패키지 $1의 플래그가 $2인데, 알려진 건 첫 번째뿐이에요", emuLocalized: "패키지 $1의 언어별 이름이나 아이콘이 레코드를 벗어나요", emuCodecFlagsOne: "파일 1개에 버전 1에 없는 코덱 플래그가 있어요", emuCodecFlags: "파일 $1개에 버전 1에 없는 코덱 플래그가 있어요", emuEmptyOne: "0바이트 파일 1개에 데이터 자리가 있어요(0과 0이어야 해요)", emuEmpty: "0바이트 파일 $1개에 데이터 자리가 있어요(0과 0이어야 해요)", emuTagged: "폴더가 파일을 최상위 비트로 표시해요(형식 패커의 한 버전이 그랬어요)", emuLoop: "폴더 $1이 자기 안에 있어요", emuDeep: "폴더가 128단계보다 깊어요", emuDlcOnly: "게임도 업데이트도 없고, NUP의 DLC는 아직 불러오지 않아요", emuNoExefs: "안에 있는 게임과 업데이트 모두 ExeFS가 없어요", emuExefsGame: "게임 v$1의 ExeFS에 없는 것: ", emuExefsUpdate: "업데이트 v$1의 ExeFS에 없는 것: ",
     emuZeroBased: "Eglantine과 Lichii에서 이름, 버전, 아이콘이 잘못 보여요: 메타데이터 종류를 0부터 세었어요(형식 패커의 한 버전이 그렇게 썼어요)",
     nupRawBig: "$1$2개(256MiB 초과)는 Eglantine과 Lichii를 위해 그대로 저장",
+    fixMetaOne: "이제 메타데이터를 Eglantine과 Lichii가 읽는 대로 1부터 세요: 패키지 1개를 다시 썼고, 게임 파일은 그대로예요", fixMeta: "이제 메타데이터를 Eglantine과 Lichii가 읽는 대로 1부터 세요: 패키지 $1개를 다시 썼고, 게임 파일은 그대로예요", fixMetaNone: "메타데이터는 이미 1부터 세요: 다시 쓸 것이 없어요", fixMetaOther: "$1은 다른 NUP의 메타데이터 사본이에요: 계속하려면 지워 주세요", fixMetaNoCopy: "메타데이터 사본을 옆에 쓸 수 없어요: ", fixMetaBack: "메타데이터를 다시 쓰면 NUP가 똑같이 읽히지 않아서 원래대로 되돌렸어요: ", waitWork: "작업이 끝날 때까지 기다려 주세요",
     arrow: " → ", decimal: "$1.$2",
   },
 };
