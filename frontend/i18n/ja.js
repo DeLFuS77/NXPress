@@ -26,6 +26,7 @@ texts.ja = {
   menuShow: "フォルダーで表示", menuCopyId: "タイトル ID をコピー", menuCopyName: "名前をコピー", menuCopyPath: "パスをコピー", menuVerify: "これだけ検証", menuRemove: "リストから外す", copied: text => "コピーしました: " + text,
   warnNewer: v => `リストにより新しいアップデートがあります (${v})`, warnTwice: "このタイトルはリストに2回入っています", warnSameName: "リストの別のファイルと同じ名前になります", warnNoGame: "本体ゲームがリストにありません", warnNeedsGame: (need, reach) => `ゲーム v${need} が必要ですが、リストは v${reach} までです`, warnPublished: (version, date, have) => `v${version} が公開されています${date ? ` (${date})` : ""}。手元は v${have} です`,
   tagEmulators: "エミュレーター", removeWarning: "新しいファイルの検証後、元のファイルは完全に削除されます。", removeKeepsDumps: "上のチェックボックスをオンにしない限り、ダンプフォルダーはそのまま残ります。", removeKeepsNup: "NUP ファイルはそのまま残ります。このオプションでは削除されません。",
+  nupBlock: "NUP ファイル", nupRawBig: "256 MiB を超えるファイルを圧縮せずに保存", nupRawBigHint: "Eglantine と Lichii は、zstd で保存されたファイルをゲームが初めて読むときに丸ごと展開し、256 MiB を超えるものはゲームを起動するたびにディスク上の一時ファイルに書き出します。これらのエミュレーター自身のパッカーはそうしたファイルをそのまま保存し、このチェックで NXPress も同じようにします。NUP は zstd で節約できた分だけ大きくなりますが、エミュレーターはすぐに読めます。",
   removeDumps: "NUP の検証後にダンプフォルダーも削除", removeDumpsHint: "NUP をすべて読み直し、各ファイルを SHA-256 で検証したあと、NUP に入っているファイルをダンプフォルダーから削除し、空になったフォルダーも削除します。NUP に入っていないファイルや、パック後に変わったファイルはそのまま残ります。", removeDumpsGo: "NUP の検証後、ダンプフォルダーは削除されます。残るのは NUP だけで、「展開」で元のフォルダーに戻せます。",
   selected: (n, bytes) => `${n} 個のファイル · ${size(bytes)}`, nothing: "まだファイルがありません",
   working: (done, n, share) => `${n} 個中 ${done} 個完了 · ${share}%`,

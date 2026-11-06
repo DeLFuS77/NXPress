@@ -1012,6 +1012,8 @@ function render() {
   const kept = state.items.filter(item => state.mode === "pack" ? item.dump : state.mode === "decompress" && isNup(item.path)).length;
   const dumps = state.mode === "pack" && kept > 0;
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
+  // how their NUP is packed, only for dump folders
+  $("nup-block").hidden = !dumps;
   const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
   $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
@@ -1551,6 +1553,7 @@ function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
+    nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     lowPriority: $("low-priority").checked,
@@ -2196,6 +2199,8 @@ async function main() {
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("remove-dumps").checked = !!chosen.removeDumps;
+  // on unless it was turned off: Eglantine and Lichii read the big files of a NUP at once so
+  $("nup-raw-big").checked = chosen.nupRawBig !== false;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";

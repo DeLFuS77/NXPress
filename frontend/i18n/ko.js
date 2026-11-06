@@ -26,6 +26,7 @@ texts.ko = {
   menuShow: "폴더에서 보기", menuCopyId: "타이틀 ID 복사", menuCopyName: "이름 복사", menuCopyPath: "경로 복사", menuVerify: "이것만 검증", menuRemove: "목록에서 빼기", copied: text => "복사됨: " + text,
   warnNewer: v => `목록에 더 새로운 업데이트가 있습니다 (${v})`, warnTwice: "이 타이틀이 목록에 두 번 있습니다", warnSameName: "목록의 다른 파일과 같은 이름이 됩니다", warnNoGame: "본편 게임이 목록에 없습니다", warnNeedsGame: (need, reach) => `게임 v${need} 이(가) 필요하지만 목록은 v${reach} 까지입니다`, warnPublished: (version, date, have) => `v${version} 이(가) 공개되었습니다${date ? ` (${date})` : ""}. 가진 것은 v${have} 입니다`,
   tagEmulators: "에뮬레이터", removeWarning: "새 파일이 검증되면 원본은 영구히 삭제됩니다.", removeKeepsDumps: "위 상자를 체크하지 않으면 덤프 폴더는 그대로 남습니다.", removeKeepsNup: "NUP 파일은 그대로 남습니다. 이 옵션은 NUP 파일을 지우지 않습니다.",
+  nupBlock: "NUP 파일", nupRawBig: "256MiB가 넘는 파일은 압축하지 않고 저장", nupRawBigHint: "Eglantine과 Lichii는 zstd로 저장된 파일을 게임이 처음 읽을 때 통째로 풀고, 256MiB가 넘는 파일은 게임을 시작할 때마다 디스크의 임시 파일에 써요. 이 에뮬레이터들의 패커는 그런 파일을 그대로 저장하고, 이 상자를 켜면 NXPress도 그렇게 해요. NUP는 zstd로 줄일 수 있던 만큼 커지지만, 에뮬레이터가 바로 읽어요.",
   removeDumps: "NUP 검증 후 덤프 폴더도 삭제", removeDumpsHint: "NUP를 처음부터 끝까지 다시 읽고 각 파일을 SHA-256으로 검증한 뒤, NUP에 들어 있는 파일을 덤프 폴더에서 지우고 비게 된 폴더도 지웁니다. NUP에 없는 파일이나 묶은 뒤에 바뀐 파일은 그대로 남습니다.", removeDumpsGo: "NUP가 검증되면 덤프 폴더는 삭제됩니다. NUP만 남고, '압축 해제'로 다시 폴더로 되돌릴 수 있습니다.",
   selected: (n, bytes) => `파일 ${n}개 · ${size(bytes)}`, nothing: "아직 파일이 없습니다",
   working: (done, n, share) => `${n}개 중 ${done}개 완료 · ${share}%`,

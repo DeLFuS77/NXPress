@@ -204,6 +204,14 @@
       </div>
     </section>
 
+    <!-- how the NUP of a dump folder is packed, only when the list holds dump folders: the files
+         over 256 MiB as they are, for Eglantine and Lichii, unless the box is cleared -->
+    <section class="block" data-for="pack" id="nup-block">
+      <h2 data-t="nupBlock"></h2>
+      <label class="check"><input id="nup-raw-big" type="checkbox" checked><span data-t="nupRawBig"></span></label>
+      <p class="hint" data-t="nupRawBigHint"></p>
+    </section>
+
     <section class="block" data-for="compress decompress recompress trim convert split pack fat32">
       <h2 data-t="result"></h2>
       <div class="field" id="output-field" data-for="compress decompress recompress trim convert split fat32 pack">

@@ -214,7 +214,7 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
 	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
-	if o.NupRawBig {
+	if !o.NupZstdBig {
 		packing.RawOver = nup.RawBig
 	}
 	result, err := nup.Pack(ctx, dir, written, packing, out.Progress(dir, "Packaging"))
