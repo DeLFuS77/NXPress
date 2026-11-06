@@ -289,24 +289,38 @@ type FileCard struct {
 	Trimmable    int64  `json:"trimmable"`
 	// the experimental formats of NXPress its NCZ files are in, which only NXPress reads (#58)
 	Format string `json:"format,omitempty"`
-	// the packages of a NUP: its game, its updates and its DLC, with their files
-	Packages []jobs.NupPackage `json:"packages,omitempty"`
+	// the packages of a NUP: its game, its updates and its DLC, with their files, and whether
+	// Eglantine and Lichii open it, as a note
+	Packages    []jobs.NupPackage `json:"packages,omitempty"`
+	Emulators   string            `json:"emulators,omitempty"`
+	EmulatorsOK bool              `json:"emulatorsOk,omitempty"`
+	ZeroBased   bool              `json:"zeroBased,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
 func (a *App) Card(path string) (FileCard, error) {
 	if strings.EqualFold(filepath.Ext(path), ".nup") {
-		size, uncompressed, packages, err := jobs.NupCard(path)
+		details, err := jobs.NupCard(path)
 		if err != nil {
 			return FileCard{}, err
 		}
-		return FileCard{Kind: "NUP", Size: size, Decompressed: uncompressed, Packages: packages}, nil
+		return FileCard{Kind: "NUP", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
+			Emulators: details.Emulators, EmulatorsOK: details.EmulatorsOK, ZeroBased: details.ZeroBased}, nil
 	}
 	facts, err := switchfs.DescribeFile(path)
 	if err != nil {
 		return FileCard{}, err
 	}
 	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments, Format: jobs.FormatOf(facts)}, nil
+}
+
+// FixNupMeta writes again the metadata of a NUP counted from 0, from the button of its card in
+// Details, and tells what it did; not while a work is going on.
+func (a *App) FixNupMeta(path string) (string, error) {
+	if a.working() {
+		return "", errors.New("wait for the work to end")
+	}
+	return jobs.FixNupMeta(path)
 }
 
 // NewNames gives the names the files would get by a template, "" for a file that cannot be read;
@@ -429,7 +443,9 @@ type Request struct {
 	Overwrite    bool     `json:"overwrite"`
 	RemoveSource bool     `json:"removeSource"`
 	// the dump folders too, once their NUP is checked: in Combine, with Delete originals (#79)
-	RemoveDumps  bool     `json:"removeDumps"`
+	RemoveDumps bool `json:"removeDumps"`
+	// the files of a NUP over 256 MiB stored as they are, for Eglantine and Lichii
+	NupRawBig    bool     `json:"nupRawBig"`
 	Pack         string   `json:"pack"`
 	PackGames    bool     `json:"packGames"`
 	PackTemplate string   `json:"packTemplate"`
@@ -465,6 +481,7 @@ func (a *App) Start(request Request) error {
 	o.Levels = request.Levels
 	o.Sparse = request.Sparse
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
+	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
 	switch request.Mode {
 	case "compress":

@@ -27,7 +27,7 @@ import (
 const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true, "fixmeta": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
@@ -104,11 +104,17 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		if entry.Note != "" {
 			note += "; " + entry.Note
 		}
+		if container, err := nup.Open(path); err == nil {
+			extra = append(extra, emulatorsNote(container))
+		}
 		return "", joinNotes(append([]string{note}, extra...)...), nil
 	}
 	workers := nupWorkers(o)
-	_, check, err := nup.Verify(ctx, path, workers, nupReaders(path, workers), out.Progress(path, "Verifying"))
+	container, check, err := nup.Verify(ctx, path, workers, nupReaders(path, workers), out.Progress(path, "Verifying"))
 	if err != nil {
+		if nup.EmulatorsRefuse(err) {
+			err = fmt.Errorf("%w; %s", err, emulatorsRefuseToo)
+		}
 		return "", "", err
 	}
 	if len(check.Damaged) > 0 {
@@ -125,8 +131,53 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		note = joinNotes(append([]string{note}, check.Notes...)...)
 	}
 	cache.Checked.Keep(path, note)
-	return "", joinNotes(append([]string{note}, extra...)...), nil
+	return "", joinNotes(append(append([]string{note}, extra...), emulatorsNote(container))...), nil
 }
+
+// FixNupMeta writes again the metadata of a NUP whose types are counted from 0 with them where the
+// format puts them, as Eglantine and Lichii read them; a NUP counted from 1 is skipped.
+func FixNupMeta(path string) (string, error) {
+	fixed, err := nup.FixZeroBased(path)
+	switch {
+	case err != nil:
+		return "", err
+	case fixed == 0:
+		return "", Skipped(countedFromOne)
+	}
+	return fmt.Sprintf("its metadata is counted from 1 now, as Eglantine and Lichii read it: %s written again, the files of the game as they were", count(fixed, "package", "packages")), nil
+}
+
+// countedFromOne is why --fix-nup-meta leaves a NUP as it is.
+const countedFromOne = "its metadata is counted from 1 already: nothing to write again"
+
+// emulatorsRefuseToo is said of a NUP NXPress does not read for a reason Eglantine and Lichii
+// refuse it too.
+const emulatorsRefuseToo = "Eglantine and Lichii do not open it either"
+
+// emulatorsNote tells, in Verify and Details, whether Eglantine and Lichii open a NUP and can
+// start its game, and why not: they are stricter than the format in a few things.
+func emulatorsNote(container *nup.Container) string {
+	emulators := container.Emulators()
+	notes := []string{}
+	switch {
+	case len(emulators.Refused) > 0:
+		notes = append(notes, "Eglantine and Lichii do not open it: "+strings.Join(emulators.Refused, "; "))
+	case emulators.NoStart != "":
+		notes = append(notes, "Eglantine and Lichii cannot start it: "+emulators.NoStart)
+	}
+	if emulators.ZeroBased {
+		notes = append(notes, zeroBasedNote)
+	}
+	if len(notes) == 0 {
+		return "it meets what Eglantine and Lichii ask of a NUP"
+	}
+	return joinNotes(notes...)
+}
+
+// zeroBasedNote is said of a NUP whose metadata has its types counted from 0, as a build of the
+// packer of the format wrote them: NXPress reads them where the format puts them, the emulators
+// do not.
+const zeroBasedNote = "Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them"
 
 // the damaged files a failed NUP tells in its error, and the ones told on lines of their own
 const (
@@ -206,6 +257,7 @@ func infoNup(path string, versions *titledb.Versions, out Output) (string, error
 	totals := container.Totals()
 	lines = append(lines, fmt.Sprintf("NUP: %s, %s of files uncompressed, %s as stored", size(container.FileSize),
 		size(int64(totals.Size)), size(int64(totals.Stored))))
+	lines = append(lines, emulatorsNote(container))
 	lines = append(lines, "works with: programs that read NUP files; NXPress makes it of a dump folder (Combine, --nup) and turns it back into one (Decompress, -D)")
 	out.Say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	return count(len(container.Packages), "title", "titles"), nil
@@ -319,23 +371,38 @@ type NupPackage struct {
 	Stored    int64  `json:"stored"`
 }
 
-// NupCard tells what a NUP holds, for its card in Details: the size of the file, the size of its
-// files uncompressed, and its packages.
-func NupCard(path string) (size int64, uncompressed int64, packages []NupPackage, err error) {
+// NupDetails is what the card of a NUP in Details tells: the size of the file, the size of its
+// files uncompressed, its packages, and whether Eglantine and Lichii open it (a note).
+type NupDetails struct {
+	Size         int64
+	Uncompressed int64
+	Packages     []NupPackage
+	Emulators    string
+	// Eglantine and Lichii open it, start its game and show it right; its metadata is counted
+	// from 0, which --fix-nup-meta writes again
+	EmulatorsOK bool
+	ZeroBased   bool
+}
+
+// NupCard tells what a NUP holds, for its card in Details.
+func NupCard(path string) (NupDetails, error) {
 	container, err := nup.Open(path)
 	if err != nil {
-		return 0, 0, nil, err
+		return NupDetails{}, err
 	}
+	emulators := container.Emulators()
+	result := NupDetails{Size: container.FileSize, Uncompressed: int64(container.Totals().Size), Emulators: emulatorsNote(container),
+		EmulatorsOK: len(emulators.Refused) == 0 && emulators.NoStart == "" && !emulators.ZeroBased, ZeroBased: emulators.ZeroBased}
 	for i, pkg := range container.Packages {
 		summary, err := container.Summarize(i)
 		if err != nil {
-			return 0, 0, nil, err
+			return NupDetails{}, err
 		}
-		packages = append(packages, NupPackage{TitleID: pkg.TitleIDText(), Type: pkg.KindName(), Version: int(pkg.Version),
+		result.Packages = append(result.Packages, NupPackage{TitleID: pkg.TitleIDText(), Type: pkg.KindName(), Version: int(pkg.Version),
 			Shown: pkg.DisplayVersion(), Name: pkg.Name(), Publisher: pkg.Publisher(), Files: summary.Files,
 			Size: int64(summary.Size), Stored: int64(summary.Stored)})
 	}
-	return container.FileSize, int64(container.Totals().Size), packages, nil
+	return result, nil
 }
 
 // tellNupsLeft tells, for a work that does not take NUP files, each one given or in a folder

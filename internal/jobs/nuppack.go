@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/system"
+	"github.com/DeLFuS77/NXPress/internal/titledb"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -38,6 +40,26 @@ const keptOriginal = "the original is kept: --rm-source does not delete dump fol
 
 // dumpDeleted is what --rm-dumps did with a dump folder all of whose files its NUP holds.
 const dumpDeleted = "the dump folder is deleted: the NUP holds all its files, checked"
+
+// switch2Names are the names of the games of the Switch 2 the window downloads with the versions
+// published, for the dump folders without control data; nil without them.
+var switch2Names atomic.Pointer[titledb.Names]
+
+// UseNames gives the names of the games of the Switch 2 the dump folders without control data
+// take, nil for none.
+func UseNames(names *titledb.Names) {
+	switch2Names.Store(names)
+}
+
+// listName is the name the list of the games of the Switch 2 gives the game of a dump folder, ""
+// when it has none.
+func listName(main nup.Source) string {
+	if main.Kind == nup.KindAddon {
+		return ""
+	}
+	name, _ := switch2Names.Load().Name(main.TitleID)
+	return name
+}
 
 // dumpSummary is what a dump folder holds, as the window and the name of its NUP tell it.
 type dumpSummary struct {
@@ -68,6 +90,9 @@ func readDump(dir string) (dumpSummary, error) {
 	}
 	summary.name = nup.ControlName(summary.main.Control)
 	if summary.name == "" {
+		summary.name = listName(summary.main)
+	}
+	if summary.name == "" {
 		// the name of the folder, without the title ID and the version it may tell already
 		summary.name = strings.TrimSpace(folderTags.ReplaceAllString(filepath.Base(filepath.Clean(dir)), ""))
 	}
@@ -92,12 +117,17 @@ var (
 )
 
 // dumpGameName is the name a NUP carries for a dump folder without control data, so emulators show
-// a name and not the label of the dump: the name of the folder without its tags, the version at
-// its end and the word ROM, its underscores as spaces and its words set apart (MarioTennisFever_v1.1.1
-// is Mario Tennis Fever). A folder with control data gives none: the NUP takes the name of the game.
+// a name and not the label of the dump: the one of the list of the games of the Switch 2 when it
+// has the game, else the name of the folder without its tags, the version at its end and the word
+// ROM, its underscores as spaces and its words set apart (MarioTennisFever_v1.1.1 is Mario Tennis
+// Fever). A folder with control data gives none: the NUP takes the name of the game.
 func dumpGameName(dir string) string {
-	if summary, err := readDump(dir); err != nil || nup.ControlName(summary.main.Control) != "" {
+	summary, err := readDump(dir)
+	if err != nil || nup.ControlName(summary.main.Control) != "" {
 		return ""
+	}
+	if name := listName(summary.main); name != "" {
+		return name
 	}
 	return dumpNameOf(filepath.Base(filepath.Clean(dir)))
 }
@@ -213,8 +243,11 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	}
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
-	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)},
-		out.Progress(dir, "Packaging"))
+	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
+	if !o.NupZstdBig {
+		packing.RawOver = nup.RawBig
+	}
+	result, err := nup.Pack(ctx, dir, written, packing, out.Progress(dir, "Packaging"))
 	if err != nil {
 		return "", "", err
 	}
@@ -237,6 +270,9 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	}
 	if result.Zstd > 0 {
 		details = append(details, fmt.Sprintf("%d with zstd", result.Zstd))
+	}
+	if result.RawBig > 0 {
+		details = append(details, fmt.Sprintf("%d over 256 MiB stored as they are, for Eglantine and Lichii", result.RawBig))
 	}
 	if len(details) > 0 {
 		note += ": " + strings.Join(details, ", ")

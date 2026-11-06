@@ -127,6 +127,8 @@ func TestCheckTellsWhatHasNoEffect(t *testing.T) {
 		"--rm-dumps --rm-source -C":       {"--rm-dumps has no effect without --nup"},
 		"--rm-dumps --rm-source --nup":    nil,
 		"--rm-dumps --rm-source --pack p": nil,
+		"--nup-zstd-big -C":               {"--nup-zstd-big has no effect without --nup"},
+		"--nup-zstd-big --nup":            nil,
 		"-o out --rename {name}":          {"-o has no effect with --rename"},
 		"-o out -i":                       {"-o has no effect with -i"},
 		"-o out --estimate":               {"-o has no effect with --estimate"},

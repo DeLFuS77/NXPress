@@ -344,6 +344,13 @@ func TestTypesCountedFromZero(t *testing.T) {
 	if pkg.Name() != "Made-up Bananza" || pkg.Publisher() != "Nobody" || pkg.DisplayVersion() != "1.0.0" || string(pkg.Meta[1]) != "META npdm" {
 		t.Errorf("%q %q %q", pkg.Name(), pkg.Publisher(), pkg.DisplayVersion())
 	}
+	// told, as Eglantine and Lichii read it as the format numbers it
+	if !pkg.ZeroBased || !container.Emulators().ZeroBased {
+		t.Error("not told counted from 0")
+	}
+	if good := emulatorsOf(t, testnup.Build(playable())); good.ZeroBased {
+		t.Error("a NUP counted from 1 told counted from 0")
+	}
 }
 
 func TestNames(t *testing.T) {

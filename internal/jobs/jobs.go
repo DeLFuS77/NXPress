@@ -38,6 +38,8 @@ var Takes = map[string][]string{
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
 	"split": {".nsp", ".nsz", ".xci", ".xcz"},
 	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
+	// the NUP files whose metadata is counted from 0
+	"fixmeta": {".nup"},
 	// the dump folders packed into NUP files
 	"nup": {dumpFolders},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
@@ -55,6 +57,7 @@ var checksOutput = map[string]bool{
 	"trim":       true,
 	"fat32":      false,
 	"rename":     false,
+	"fixmeta":    false,
 	"split":      false,
 	"estimate":   false,
 	"measure":    false,
@@ -503,6 +506,9 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 			return unpackNup(ctx, path, o, threads, out)
 		case "rename":
 			return rename(ctx, path, o, out)
+		case "fixmeta":
+			note, err := FixNupMeta(path)
+			return "", note, err
 		}
 		return "", "", Skipped(NupNotDone)
 	}

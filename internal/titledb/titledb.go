@@ -83,8 +83,13 @@ type state struct {
 }
 
 func readState(folder string) state {
+	return readStateOf(folder, stateName)
+}
+
+// readStateOf is what NXPress remembers of a list kept, by the name of its file of state.
+func readStateOf(folder string, name string) state {
 	var kept state
-	if data, err := os.ReadFile(filepath.Join(folder, stateName)); err == nil {
+	if data, err := os.ReadFile(filepath.Join(folder, name)); err == nil {
 		_ = json.Unmarshal(data, &kept)
 	}
 	return kept
@@ -136,18 +141,39 @@ func remove(path string) error {
 // are nil.
 func Refresh(ctx context.Context, folder string, client *http.Client, now time.Time) (*Versions, error) {
 	kept, err := Load(folder)
-	known := readState(folder)
-	if err == nil && !known.Checked.After(now) && now.Sub(known.Checked) < Every {
-		return kept, nil
-	}
-	if err := os.MkdirAll(folder, 0o755); err != nil {
+	data, answer, err := refreshFile(ctx, folder, client, now, FileName, stateName, Addresses, err == nil, func(data []byte) error {
+		_, err := parse(data)
+		return err
+	})
+	if data == nil {
 		return kept, err
 	}
+	newest, _ := parse(data)
+	versions := &Versions{newest: newest, Date: now}
+	if day, err := http.ParseTime(answer.Modified); err == nil {
+		versions.Date = day
+	}
+	return versions, err
+}
+
+// refreshFile downloads again the file of a list into folder when the copy kept is a day old or
+// more (or there is none), asking the server that gave it whether it changed; it gives the data
+// of a new copy, written to the folder, or nil when the copy kept stands, and why no server gave
+// one. valid tells a file that is not the list.
+func refreshFile(ctx context.Context, folder string, client *http.Client, now time.Time, file string, stateFile string, addresses []string,
+	haveCopy bool, valid func(data []byte) error) ([]byte, state, error) {
+	known := readStateOf(folder, stateFile)
+	if haveCopy && !known.Checked.After(now) && now.Sub(known.Checked) < Every {
+		return nil, known, nil
+	}
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		return nil, known, err
+	}
 	failures := []error{}
-	for _, address := range Addresses {
+	for _, address := range addresses {
 		// what the server named the copy kept tells only of the address it came from
 		ask := state{}
-		if kept != nil && known.Address == address {
+		if haveCopy && known.Address == address {
 			ask = known
 		}
 		data, answer, err := fetch(ctx, client, address, ask)
@@ -161,23 +187,18 @@ func Refresh(ctx context.Context, folder string, client *http.Client, now time.T
 		answer.Checked = now
 		if data == nil {
 			// not changed: the copy kept is good for a day more
-			return kept, save(folder, stateName, answer)
+			return nil, answer, save(folder, stateFile, answer)
 		}
-		newest, err := parse(data)
-		if err != nil {
+		if err := valid(data); err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", address, err))
 			continue
 		}
-		if err := write(folder, FileName, data); err != nil {
-			return kept, err
+		if err := write(folder, file, data); err != nil {
+			return nil, answer, err
 		}
-		versions := &Versions{newest: newest, Date: now}
-		if day, err := http.ParseTime(answer.Modified); err == nil {
-			versions.Date = day
-		}
-		return versions, save(folder, stateName, answer)
+		return data, answer, save(folder, stateFile, answer)
 	}
-	return kept, errors.Join(failures...)
+	return nil, known, errors.Join(failures...)
 }
 
 // fetch downloads versions.json from an address, decompressed when the address is of the file

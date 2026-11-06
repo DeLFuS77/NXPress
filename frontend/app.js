@@ -262,7 +262,7 @@ function renderCard(row) {
   const element = document.createElement("div");
   element.className = "file-card";
   if (card.packages) {
-    renderNupCard(element, card);
+    renderNupCard(element, card, row);
     row.tr.querySelector(".note").after(element);
     return;
   }
@@ -286,11 +286,43 @@ function renderCard(row) {
   row.tr.querySelector(".note").after(element);
 }
 
+// the part of the note of a NUP that tells what keeps Eglantine and Lichii from opening it, from
+// starting its game or from showing it right: always at its end, after "; " (the note before it,
+// and that part, as NXPress gives them in English); "" when they read it well
+function splitEmulators(note) {
+  const found = /(^|; )Eglantine and Lichii (do not open it:|cannot start it:|show its )/.exec(note || "");
+  if (!found) return [note || "", ""];
+  return [note.slice(0, found.index), note.slice(found.index + found[1].length)];
+}
+
 // the card of a NUP: its size beside the one of its files uncompressed, then a line for each of
 // its packages (the game, an update, a DLC) with who it is and its files; the size as stored is
-// told only where it differs, for the files stored with zstd. NXPress only shows and verifies it.
-function renderNupCard(element, card) {
-  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="card-only"></div>`;
+// told only where it differs, for the files stored with zstd. Under them, whether Eglantine and
+// Lichii read it well, as the cards of the other files tell what reads them, and in orange what
+// keeps them from it, with a button to write its metadata again when it is counted from 0.
+function renderNupCard(element, card, row) {
+  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div><div class="card-only"></div>`;
+  for (const name of ["Eglantine", "Lichii"]) {
+    const tag = document.createElement("i");
+    tag.className = card.emulatorsOk ? "yes" : "warn";
+    tag.textContent = name;
+    element.querySelector(".tags").append(tag);
+  }
+  if (!card.emulatorsOk && card.emulators) {
+    const fix = document.createElement("div");
+    fix.className = "card-fix";
+    fix.innerHTML = `<p class="warning"></p>`;
+    fix.querySelector("p").textContent = noteText(card.emulators);
+    if (card.zeroBased) {
+      const button = document.createElement("button");
+      button.className = "outline";
+      button.textContent = t("fixForEmulators");
+      button.disabled = state.busy;
+      button.onclick = () => fixNupMeta(row, button);
+      fix.append(button);
+    }
+    element.querySelector(".tags").after(fix);
+  }
   element.querySelector(".kind").textContent = card.kind;
   const whole = Math.max(card.decompressed, card.size);
   element.querySelector(".card-bar div").style.width = (whole ? card.size / whole * 100 : 100).toFixed(1) + "%";
@@ -308,6 +340,22 @@ function renderNupCard(element, card) {
     element.querySelector(".nup-packages").append(line);
   }
   element.querySelector(".card-only").textContent = t("nupOnly");
+}
+
+// writes again the metadata of a NUP counted from 0, from its card, then reads the NUP again
+async function fixNupMeta(row, button) {
+  button.disabled = true;
+  try {
+    const note = await app().FixNupMeta(row.item.path);
+    showToast(noteText(note));
+    row.card = await app().Card(row.item.path);
+    renderCard(row);
+    row.game = await app().Describe(row.item.path);
+    paint(row);
+  } catch (error) {
+    button.disabled = false;
+    showToast(noteText(String(error)));
+  }
 }
 
 // the colors NXPress can wear, chosen in Settings: its own and three more with a scene (RuneStone, Vampire and Huntress), each with its background
@@ -1012,6 +1060,8 @@ function render() {
   const kept = state.items.filter(item => state.mode === "pack" ? item.dump : state.mode === "decompress" && isNup(item.path)).length;
   const dumps = state.mode === "pack" && kept > 0;
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
+  // how their NUP is packed, only for dump folders
+  $("nup-block").hidden = !dumps;
   const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
   $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
@@ -1426,6 +1476,20 @@ function paint(row) {
   }
   note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" || row.status === "modified" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
+  // what keeps Eglantine and Lichii from opening a NUP checked whole, from starting its game or
+  // from showing it right goes on a line of its own, in orange: the note stays grey, as the file
+  // is whole
+  row.tr.querySelector(".emu-warn")?.remove();
+  if (row.status === "ok" && isNup(row.item.path)) {
+    const [kept, warn] = splitEmulators(row.note);
+    if (warn) {
+      note.textContent = noteText(kept);
+      const line = document.createElement("div");
+      line.className = "emu-warn";
+      line.textContent = noteText(warn);
+      note.after(line);
+    }
+  }
   // an error, or a file modified, opens to say what to do, with its detail to copy; it stays
   // open while drawn again
   row.tr.querySelector(".error-more")?.remove();
@@ -1551,6 +1615,7 @@ function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
+    nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     lowPriority: $("low-priority").checked,
@@ -2196,6 +2261,8 @@ async function main() {
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("remove-dumps").checked = !!chosen.removeDumps;
+  // on unless it was turned off: Eglantine and Lichii read the big files of a NUP at once so
+  $("nup-raw-big").checked = chosen.nupRawBig !== false;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";

@@ -35,6 +35,17 @@ var keptVersions = func() *titledb.Versions {
 	return versions
 }
 
+// keptNames gives the names of the games of the Switch 2 the window keeps, nil when it keeps none:
+// --nup names with them a dump folder without control data
+var keptNames = func() *titledb.Names {
+	folder, err := portable.DataFolder()
+	if err != nil {
+		return nil
+	}
+	names, _ := titledb.LoadNames(folder)
+	return names
+}
+
 // RunCommand does what the command line asks, printing to stdout and stderr, and gives the
 // exit code.
 func RunCommand(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -76,6 +87,11 @@ func RunCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	// is on: the command line does not go on the internet
 	if o.Info {
 		o.Versions = keptVersions()
+	}
+	// --nup names a dump folder without control data from the names of the games of the Switch 2
+	// the window keeps, the same way
+	if o.Nup {
+		jobs.UseNames(keptNames())
 	}
 
 	if o.LowPriority {
