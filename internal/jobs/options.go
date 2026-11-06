@@ -532,8 +532,8 @@ Usage: nxpress [options] file or folder...
   -B, --block         block compression (always for XCZ): emulators that read NSZ run it
                       as it is; every installer takes it but Awoo
   -s, --bs N          with -B, blocks of 2^N bytes, 14 to 24 (default 20, 1 MiB, as nsz):
-                      24 (16 MiB) makes the file about 8%% smaller, and an emulator
-                      decompresses 16 MiB for each block it reads
+                      bigger blocks make the file a little smaller and the emulator slower
+                      to start a game (22: 2%% smaller, 0.3 s more; 24: 4%% and 1.2 s)
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
   --extra             experimental, extra compression that only NXPress reads: base games
