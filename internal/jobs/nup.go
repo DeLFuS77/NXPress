@@ -104,11 +104,17 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		if entry.Note != "" {
 			note += "; " + entry.Note
 		}
+		if container, err := nup.Open(path); err == nil {
+			extra = append(extra, emulatorsNote(container))
+		}
 		return "", joinNotes(append([]string{note}, extra...)...), nil
 	}
 	workers := nupWorkers(o)
-	_, check, err := nup.Verify(ctx, path, workers, nupReaders(path, workers), out.Progress(path, "Verifying"))
+	container, check, err := nup.Verify(ctx, path, workers, nupReaders(path, workers), out.Progress(path, "Verifying"))
 	if err != nil {
+		if nup.EmulatorsRefuse(err) {
+			err = fmt.Errorf("%w; %s", err, emulatorsRefuseToo)
+		}
 		return "", "", err
 	}
 	if len(check.Damaged) > 0 {
@@ -125,7 +131,24 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 		note = joinNotes(append([]string{note}, check.Notes...)...)
 	}
 	cache.Checked.Keep(path, note)
-	return "", joinNotes(append([]string{note}, extra...)...), nil
+	return "", joinNotes(append(append([]string{note}, extra...), emulatorsNote(container))...), nil
+}
+
+// emulatorsRefuseToo is said of a NUP NXPress does not read for a reason Eglantine and Lichii
+// refuse it too.
+const emulatorsRefuseToo = "Eglantine and Lichii do not open it either"
+
+// emulatorsNote tells, in Verify and Details, whether Eglantine and Lichii open a NUP and can
+// start its game, and why not: they are stricter than the format in a few things.
+func emulatorsNote(container *nup.Container) string {
+	emulators := container.Emulators()
+	switch {
+	case len(emulators.Refused) > 0:
+		return "Eglantine and Lichii do not open it: " + strings.Join(emulators.Refused, "; ")
+	case emulators.NoStart != "":
+		return "Eglantine and Lichii cannot start it: " + emulators.NoStart
+	}
+	return "it meets what Eglantine and Lichii ask of a NUP"
 }
 
 // the damaged files a failed NUP tells in its error, and the ones told on lines of their own
@@ -206,6 +229,7 @@ func infoNup(path string, versions *titledb.Versions, out Output) (string, error
 	totals := container.Totals()
 	lines = append(lines, fmt.Sprintf("NUP: %s, %s of files uncompressed, %s as stored", size(container.FileSize),
 		size(int64(totals.Size)), size(int64(totals.Stored))))
+	lines = append(lines, emulatorsNote(container))
 	lines = append(lines, "works with: programs that read NUP files; NXPress makes it of a dump folder (Combine, --nup) and turns it back into one (Decompress, -D)")
 	out.Say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	return count(len(container.Packages), "title", "titles"), nil
@@ -319,23 +343,32 @@ type NupPackage struct {
 	Stored    int64  `json:"stored"`
 }
 
-// NupCard tells what a NUP holds, for its card in Details: the size of the file, the size of its
-// files uncompressed, and its packages.
-func NupCard(path string) (size int64, uncompressed int64, packages []NupPackage, err error) {
+// NupDetails is what the card of a NUP in Details tells: the size of the file, the size of its
+// files uncompressed, its packages, and whether Eglantine and Lichii open it (a note).
+type NupDetails struct {
+	Size         int64
+	Uncompressed int64
+	Packages     []NupPackage
+	Emulators    string
+}
+
+// NupCard tells what a NUP holds, for its card in Details.
+func NupCard(path string) (NupDetails, error) {
 	container, err := nup.Open(path)
 	if err != nil {
-		return 0, 0, nil, err
+		return NupDetails{}, err
 	}
+	result := NupDetails{Size: container.FileSize, Uncompressed: int64(container.Totals().Size), Emulators: emulatorsNote(container)}
 	for i, pkg := range container.Packages {
 		summary, err := container.Summarize(i)
 		if err != nil {
-			return 0, 0, nil, err
+			return NupDetails{}, err
 		}
-		packages = append(packages, NupPackage{TitleID: pkg.TitleIDText(), Type: pkg.KindName(), Version: int(pkg.Version),
+		result.Packages = append(result.Packages, NupPackage{TitleID: pkg.TitleIDText(), Type: pkg.KindName(), Version: int(pkg.Version),
 			Shown: pkg.DisplayVersion(), Name: pkg.Name(), Publisher: pkg.Publisher(), Files: summary.Files,
 			Size: int64(summary.Size), Stored: int64(summary.Stored)})
 	}
-	return container.FileSize, int64(container.Totals().Size), packages, nil
+	return result, nil
 }
 
 // tellNupsLeft tells, for a work that does not take NUP files, each one given or in a folder

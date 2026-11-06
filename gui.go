@@ -289,18 +289,20 @@ type FileCard struct {
 	Trimmable    int64  `json:"trimmable"`
 	// the experimental formats of NXPress its NCZ files are in, which only NXPress reads (#58)
 	Format string `json:"format,omitempty"`
-	// the packages of a NUP: its game, its updates and its DLC, with their files
-	Packages []jobs.NupPackage `json:"packages,omitempty"`
+	// the packages of a NUP: its game, its updates and its DLC, with their files, and whether
+	// Eglantine and Lichii open it, as a note
+	Packages  []jobs.NupPackage `json:"packages,omitempty"`
+	Emulators string            `json:"emulators,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
 func (a *App) Card(path string) (FileCard, error) {
 	if strings.EqualFold(filepath.Ext(path), ".nup") {
-		size, uncompressed, packages, err := jobs.NupCard(path)
+		details, err := jobs.NupCard(path)
 		if err != nil {
 			return FileCard{}, err
 		}
-		return FileCard{Kind: "NUP", Size: size, Decompressed: uncompressed, Packages: packages}, nil
+		return FileCard{Kind: "NUP", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages, Emulators: details.Emulators}, nil
 	}
 	facts, err := switchfs.DescribeFile(path)
 	if err != nil {

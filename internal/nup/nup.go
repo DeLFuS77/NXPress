@@ -57,6 +57,8 @@ const (
 	KindUpdate = 1
 	KindAddon  = 2
 	kindLast   = 4
+	// the flag of an update stored without its game, the only one of version 1
+	flagStandalone = 0x01
 )
 
 // codecs of the data of a file
@@ -121,6 +123,9 @@ type Container struct {
 	// the children of the folders, each a node: a folder below len(Dirs), else the file at
 	// node - len(Dirs)
 	Children []uint32
+	// what Eglantine and Lichii refuse in it that the format and this reader let be (see
+	// Emulators)
+	strict []string
 }
 
 // IsNup tells a NUP by the extension of its name.
@@ -174,7 +179,7 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 	case headerLength < headerSize:
 		return nil, errors.New("NUP header is too small")
 	case flags != 0:
-		return nil, fmt.Errorf("NUP flags %#x are not supported", flags)
+		return nil, refused(fmt.Errorf("NUP flags %#x are not supported", flags))
 	// anywhere after the header and in the file, as the format lets a writer put it
 	case tocOffset < headerLength || tocOffset > total:
 		return nil, errors.New("NUP table of contents is outside the file")
@@ -184,8 +189,10 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 		return nil, fmt.Errorf("NUP has an invalid number of packages (%d)", packageCount)
 	case tocHeadSize+packageCount*packageSize > tocSize:
 		return nil, errors.New("NUP packages do not fit in the table of contents")
-	case blobOffset%16 != 0 || blobOffset < tocOffset+tocSize:
+	case blobOffset < tocOffset+tocSize:
 		return nil, errors.New("NUP data region overlaps the table of contents")
+	case blobOffset%16 != 0:
+		return nil, refused(errors.New("NUP data region does not start at a multiple of 16 bytes"))
 	}
 	if uint64(size) < total {
 		return nil, cutShort{size: size, total: total}
@@ -236,6 +243,7 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 	result := &Container{FileSize: size, Packages: make([]Package, 0, packageCount),
 		Dirs: make([]Dir, dirCount), Files: make([]File, fileCount), Children: make([]uint32, children)}
 	metaTotal := uint64(0)
+	codecFlags, placedEmpty := 0, 0
 	for i := uint64(0); i < packageCount; i++ {
 		record := toc[tocHeadSize+i*packageSize:][:packageSize]
 		pkg := Package{
@@ -248,7 +256,13 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 			Flags:    record[0x19],
 		}
 		if pkg.Kind > kindLast {
-			return nil, fmt.Errorf("NUP package %d has an unknown kind (%d)", i, pkg.Kind)
+			return nil, refused(fmt.Errorf("NUP package %d has an unknown kind (%d)", i, pkg.Kind))
+		}
+		if pkg.Kind > KindAddon {
+			result.strict = append(result.strict, fmt.Sprintf("package %d is of kind %d, which the format keeps for later", i, pkg.Kind))
+		}
+		if pkg.Flags&^flagStandalone != 0 {
+			result.strict = append(result.strict, fmt.Sprintf("package %d has the flags %#x, and only the first is known", i, pkg.Flags))
 		}
 		if uint64(pkg.RootDir) >= dirCount || pkg.ExefsDir != NoDir && uint64(pkg.ExefsDir) >= dirCount ||
 			pkg.RomfsDir != NoDir && uint64(pkg.RomfsDir) >= dirCount {
@@ -269,9 +283,12 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 			}
 			meta, err := parseTlvs(block)
 			if err != nil {
-				return nil, fmt.Errorf("NUP package %d metadata: %w", i, err)
+				return nil, refused(fmt.Errorf("NUP package %d metadata: %w", i, err))
 			}
 			pkg.Meta = meta
+			if !strictLocalized(block) {
+				result.strict = append(result.strict, fmt.Sprintf("the names or icons by language of package %d run past their record", i))
+			}
 		}
 		result.Packages = append(result.Packages, pkg)
 	}
@@ -301,14 +318,15 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 			ExtentSize: le.Uint64(record[0x18:]), Codec: record[0x40]}
 		copy(file.Hash[:], record[0x20:0x40])
 		if file.Codec > CodecZstd {
-			return nil, fmt.Errorf("NUP file %q is stored with codec %d, which NUP version 1 does not have", fileName, file.Codec)
+			return nil, refused(fmt.Errorf("NUP file %q is stored with codec %d, which NUP version 1 does not have", fileName, file.Codec))
 		}
 		// a file of 0 bytes has no data; any other has its data in the data region, aligned
 		if file.Size > 0 {
 			switch {
-			case file.ExtentOffset < blobOffset || file.ExtentOffset%16 != 0 ||
-				file.ExtentOffset > total || file.ExtentSize > total-file.ExtentOffset:
+			case file.ExtentOffset < blobOffset || file.ExtentOffset > total || file.ExtentSize > total-file.ExtentOffset:
 				return nil, fmt.Errorf("NUP file %q has its data outside the file", fileName)
+			case file.ExtentOffset%16 != 0:
+				return nil, refused(fmt.Errorf("NUP file %q has its data at an offset that is not a multiple of 16 bytes", fileName))
 			case file.Codec == CodecRaw && file.ExtentSize != file.Size:
 				return nil, fmt.Errorf("NUP file %q is stored raw with %d bytes instead of %d", fileName, file.ExtentSize, file.Size)
 			case file.Codec == CodecZstd && file.ExtentSize == 0:
@@ -316,17 +334,34 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 			}
 		}
 		result.Files[i] = file
+		if record[0x41] != 0 {
+			codecFlags++
+		}
+		if file.Size == 0 && (file.ExtentOffset != 0 || file.ExtentSize != 0) {
+			placedEmpty++
+		}
 	}
+	tagged := 0
 	for i := range result.Children {
 		node := le.Uint32(toc[position:])
 		position += 4
 		if node >= fileTag {
 			node = uint32(dirCount) + (node - fileTag)
+			tagged++
 		}
 		if uint64(node) >= dirCount+fileCount {
 			return nil, errors.New("NUP folder holds a file or a folder that is not in the table of contents")
 		}
 		result.Children[i] = node
+	}
+	if codecFlags > 0 {
+		result.strict = append(result.strict, fmt.Sprintf("%s codec flags, which version 1 does not have", countOf(codecFlags, "file has", "files have")))
+	}
+	if placedEmpty > 0 {
+		result.strict = append(result.strict, fmt.Sprintf("%s of 0 bytes with a place for data, which must be 0 and 0", countOf(placedEmpty, "file", "files")))
+	}
+	if tagged > 0 {
+		result.strict = append(result.strict, "its folders mark their files with the high bit, as a build of the packer of the format did")
 	}
 	return result, nil
 }

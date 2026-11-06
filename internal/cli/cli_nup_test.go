@@ -86,18 +86,19 @@ func TestNupWithoutKeys(t *testing.T) {
 	os.WriteFile(good, testnup.Build(nupGame()), 0o644)
 
 	code, out := run("-V", good)
-	if code != 0 || !strings.Contains(out, "OK Made-up Quest.nup (3 files checked by their SHA-256)") {
+	// and whether Eglantine and Lichii open it and can start its game: its ExeFS lacks main.npdm
+	if code != 0 || !strings.Contains(out, "OK Made-up Quest.nup (3 files checked by their SHA-256; Eglantine and Lichii cannot start it: the ExeFS of the game v65536 lacks: main.npdm)") {
 		t.Errorf("verify: %d\n%s", code, out)
 	}
 	// checked before and not changed since
 	code, out = run("-V", good)
-	if code != 0 || !strings.Contains(out, "not changed since; 3 files checked") {
+	if code != 0 || !strings.Contains(out, "not changed since; 3 files checked") || !strings.Contains(out, "Eglantine and Lichii cannot start it") {
 		t.Errorf("verify again: %d\n%s", code, out)
 	}
 
 	code, out = run("-i", good)
 	for _, want := range []string{"0400486024DEC000 BASE v65536 Made-up Quest", "publisher: Nobody Games", "0400486024DEC800 UPD v131072",
-		"2 files: ", "NUP: ", "OK Made-up Quest.nup (2 titles)"} {
+		"2 files: ", "NUP: ", "Eglantine and Lichii cannot start it: the ExeFS of the game v65536 lacks: main.npdm", "OK Made-up Quest.nup (2 titles)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("info: %q missing (%d)\n%s", want, code, out)
 		}
