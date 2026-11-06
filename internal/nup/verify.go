@@ -50,6 +50,9 @@ type Check struct {
 	Damaged []Damaged
 	// files of the table that no folder of any package holds: checked all the same
 	Unplaced int
+	// what the metadata of the packages tells otherwise than their files, which the format
+	// allows (see checkMeta)
+	Notes []string
 }
 
 // extentJob is a piece of data of the NUP to read and check, with the files it is the data of.
@@ -78,7 +81,8 @@ type feed struct {
 // so, several for an SSD, and workers hash and decompress what they read; nothing is held in
 // memory but a few buffers. The header and the table of contents are checked first, by their hash: a NUP whose
 // table is damaged fails as a whole, a NUP whose files are damaged gives them in
-// Check.Damaged. progress is told the bytes read of the ones to read.
+// Check.Damaged, with the metadata of a package that cannot be what it says (checkMeta).
+// progress is told the bytes read of the ones to read.
 func Verify(ctx context.Context, path string, workers int, readers int, progress func(done int64, total int64)) (*Container, Check, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -178,6 +182,13 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 			}
 		}
 	}
+	damagedFiles := make([]bool, len(reasons))
+	for index, reason := range reasons {
+		damagedFiles[index] = reason != ""
+	}
+	meta, notes := checkMeta(file, container, damagedFiles)
+	check.Damaged = append(check.Damaged, meta...)
+	check.Notes = notes
 	return container, check, nil
 }
 

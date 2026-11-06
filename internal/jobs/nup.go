@@ -121,6 +121,9 @@ func verifyNup(ctx context.Context, path string, o Options, out Output) (string,
 	if check.Unplaced > 0 {
 		note += fmt.Sprintf(" (%d in no folder of any package)", check.Unplaced)
 	}
+	if len(check.Notes) > 0 {
+		note = joinNotes(append([]string{note}, check.Notes...)...)
+	}
 	cache.Checked.Keep(path, note)
 	return "", joinNotes(append([]string{note}, extra...)...), nil
 }
