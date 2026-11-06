@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/system"
@@ -34,6 +35,9 @@ func IsDumpFolder(path string) bool {
 
 // keptOriginal is why --rm-source leaves a dump folder or a NUP where it is.
 const keptOriginal = "the original is kept: --rm-source does not delete dump folders or NUP files"
+
+// dumpDeleted is what --rm-dumps did with a dump folder all of whose files its NUP holds.
+const dumpDeleted = "the dump folder is deleted: the NUP holds all its files, checked"
 
 // dumpSummary is what a dump folder holds, as the window and the name of its NUP tell it.
 type dumpSummary struct {
@@ -207,6 +211,8 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	if penalty, known := system.SeekPenalty(dir); known && !penalty {
 		readers = workers
 	}
+	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
+	started := time.Now()
 	result, err := nup.Pack(ctx, dir, written, nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)},
 		out.Progress(dir, "Packaging"))
 	if err != nil {
@@ -236,10 +242,80 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 		note += ": " + strings.Join(details, ", ")
 	}
 	notes := append([]string{note}, result.Notes...)
-	if o.RmSource {
+	switch {
+	case o.RmSource && o.RmDumps:
+		notes = append(notes, removeDump(dir, name, result.Packages, started))
+	case o.RmSource:
 		notes = append(notes, keptOriginal)
 	}
 	return name, joinNotes(notes...), nil
+}
+
+// removeDump deletes, with --rm-dumps, the files of a dump folder its NUP holds, the NUP read back
+// whole and checked already: each file of a package whose copy in the folder is a plain file of
+// the same size, not changed since the packing began; then the folders left empty, the dump
+// folder too. A file the NUP does not hold stays, and so does one changed since: the note tells
+// how many stay.
+func removeDump(dir string, nupPath string, sources []nup.Source, since time.Time) string {
+	container, err := nup.Open(nupPath)
+	if err != nil {
+		return "the dump folder is kept: the NUP cannot be read again: " + err.Error()
+	}
+	if len(container.Packages) != len(sources) {
+		return "the dump folder is kept: the NUP does not hold the packages of the folder"
+	}
+	var held []string
+	for i, source := range sources {
+		if pkg := container.Packages[i]; pkg.Kind != source.Kind || pkg.Version != source.Version {
+			return "the dump folder is kept: the NUP does not hold the packages of the folder"
+		}
+		root := filepath.Clean(source.Dir)
+		err := container.Walk(i, func(path string, file int) error {
+			local := filepath.Join(root, filepath.FromSlash(path))
+			if rel, err := filepath.Rel(root, local); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return nil
+			}
+			info, err := os.Lstat(local)
+			if err == nil && info.Mode().IsRegular() && uint64(info.Size()) == container.Files[file].Size && !info.ModTime().After(since) {
+				held = append(held, local)
+			}
+			return nil
+		})
+		if err != nil {
+			return "the dump folder is kept: " + err.Error()
+		}
+	}
+	if len(held) == 0 {
+		return "the dump folder is kept: none of its files is in the NUP as it is now"
+	}
+	for _, path := range held {
+		os.Remove(path)
+	}
+	// the folders left empty, the deepest first: a folder that still holds something stays
+	var folders []string
+	filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err == nil && entry.IsDir() {
+			folders = append(folders, path)
+		}
+		return nil
+	})
+	for i := len(folders) - 1; i >= 0; i-- {
+		os.Remove(folders[i])
+	}
+	left := 0
+	filepath.WalkDir(dir, func(_ string, entry fs.DirEntry, err error) error {
+		if err == nil && !entry.IsDir() {
+			left++
+		}
+		return nil
+	})
+	if _, err := os.Lstat(dir); os.IsNotExist(err) {
+		return dumpDeleted
+	}
+	if left == 1 {
+		return "1 file stays in the dump folder, which the NUP does not hold as it is: the rest is deleted"
+	}
+	return fmt.Sprintf("%d files stay in the dump folder, which the NUP does not hold as they are: the rest is deleted", left)
 }
 
 // unpackNup turns a NUP into a folder of the same name next to it, or in the output folder: each

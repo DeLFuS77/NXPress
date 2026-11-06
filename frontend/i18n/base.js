@@ -93,6 +93,13 @@ const noteRules = [
   [/(, |: )(\d+) with zstd/g, "nupZstd"],
   [/^(\d+) files, (.+?), checked by their SHA-256 as they were written/, "nupUnpacked"],
   [/the original is kept: --rm-source does not delete dump folders or NUP files/g, "nupKept"],
+  // what --rm-dumps did with a dump folder once its NUP was checked (#79)
+  [/the dump folder is deleted: the NUP holds all its files, checked/g, "dumpDeleted"],
+  [/\b1 file stays in the dump folder, which the NUP does not hold as it is: the rest is deleted/g, "dumpStaysOne"],
+  [/\b(\d+) files stay in the dump folder, which the NUP does not hold as they are: the rest is deleted/g, "dumpStays"],
+  [/the dump folder is kept: the NUP cannot be read again: /g, "dumpKeptUnread"],
+  [/the dump folder is kept: the NUP does not hold the packages of the folder/g, "dumpKeptPackages"],
+  [/the dump folder is kept: none of its files is in the NUP as it is now/g, "dumpKeptNone"],
   [/^(.+) is already there: move or rename it to unpack the NUP again$/, "nupThere"],
   [/^(.+), left by a work that stopped, is in the way: remove it first$/, "nupLeftover"],
   [/^the new NUP cannot be read back: /, "nupReadBack"],

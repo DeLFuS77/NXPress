@@ -213,7 +213,10 @@
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
       <p class="hint" data-t="overwriteHint"></p>
       <label class="check" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
-      <p class="warning" id="remove-warning" data-t="removeWarning" hidden></p>
+      <!-- the dump folders Combine packs go too, once their NUP is checked, only when asked (#79) -->
+      <label class="check sub-check" id="remove-dumps-option" hidden><input id="remove-dumps" type="checkbox"><span data-t="removeDumps"></span></label>
+      <p class="hint" data-t="removeDumpsHint"></p>
+      <p class="warning" id="remove-warning" hidden></p>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim verify">

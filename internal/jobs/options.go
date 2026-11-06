@@ -66,6 +66,7 @@ type Options struct {
 	Output      string
 	Overwrite   bool
 	RmSource    bool
+	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
 	Keys        string
 	Dat         string
 	datFile     *dat.Dat
@@ -107,7 +108,7 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
@@ -279,6 +280,8 @@ func (o *Options) flag(option optionName) {
 		o.Overwrite = true
 	case "--rm-source":
 		o.RmSource = true
+	case "--rm-dumps":
+		o.RmDumps = true
 	case "--info":
 		o.Info = true
 	case "--convert":
@@ -455,6 +458,12 @@ func (o *Options) Check() error {
 	if o.PackName != "" && !o.PackGames && !o.PackOne {
 		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games or --pack-one")
 	}
+	if o.RmDumps && !o.RmSource {
+		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
+	}
+	if o.RmDumps && !o.Nup && o.Pack == "" && !o.PackGames && !o.PackOne {
+		o.Notes = append(o.Notes, "--rm-dumps has no effect without --nup")
+	}
 	if (o.Sparse || o.Archive) && !o.Compress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C")
 	}
@@ -517,6 +526,9 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
+  --rm-dumps          with --rm-source, delete each dump folder too once its NUP is read
+                      back and checked: the files the NUP holds, then the folders left
+                      empty; a file it does not hold, or one changed since, stays
   -i, --info          show the titles a file holds; of a NUP, each package (game, update,
                       DLC) with its files and their size, without keys
   --nup               pack each dump folder given (base, updates and dlc, or exefs and
