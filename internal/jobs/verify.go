@@ -89,5 +89,5 @@ func checkSignatures(path string) (string, error) {
 }
 
 // sparseSkipped is why a game in sparse storage is left as it is, and how to compress it: only
-// the experimental format NCZSECT2 does, asked with --extra (or --sparse) or under Advanced.
-const sparseSkipped = "this game uses sparse storage: to compress it with the experimental format of NXPress (NCZSECT2), turn on Extra compression under Advanced, or use --extra"
+// the experimental format NCZSECT2 does, asked with --extra (or --sparse) or under Made for.
+const sparseSkipped = "this game uses sparse storage: to compress it with the experimental format of NXPress (NCZSECT2), turn on Extra compression under Made for, or use --extra"

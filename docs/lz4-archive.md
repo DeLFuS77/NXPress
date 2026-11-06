@@ -1,6 +1,6 @@
 # Archive format with the LZ4 of Nintendo made again (`NCZSECT3`)
 
-Status: **experimental, for keeping files only**. Written and read by NXPress, with its extra compression (`--extra`, or the box under Advanced, which also turns on NCZSECT2 for games in sparse storage; `--archive` alone turns on this one). No installer reads it: a file in this format is decompressed with NXPress before it is installed. An NCA without compressed storage is written as NCZSECT2 or plain NCZ, as it would be without it.
+Status: **experimental, for keeping files only**. Written and read by NXPress, with its extra compression (`--extra`, or the box under Made for, which also turns on NCZSECT2 for games in sparse storage; `--archive` alone turns on this one). No installer reads it: a file in this format is decompressed with NXPress before it is installed. An NCA without compressed storage is written as NCZSECT2 or plain NCZ, as it would be without it.
 
 ## Why
 

@@ -139,14 +139,21 @@
         <button id="compare-levels" class="link" data-t="compareLevels"></button>
         <p class="hint" data-t="compareHint"></p>
       </div>
-      <div class="field" role="radiogroup">
+      <div class="field">
         <div class="label" data-t="target"></div>
+        <div role="radiogroup" data-t-label="target">
         <label class="choice"><input type="radio" name="target" value="solid" id="target-solid">
           <span><b data-t="forInstallers"></b><small data-t="forInstallersHint"></small>
           <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="yes">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="no" data-t="tagEmulators"></i></span></span></label>
         <label class="choice"><input type="radio" name="target" value="block" id="target-block">
           <span><b data-t="forEmulators"></b><small data-t="forEmulatorsHint"></small>
           <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
+        </div>
+        <!-- the extra compression goes with what the files are made for, as it changes what reads them (#76) -->
+        <div class="extra-field" data-for="compress">
+          <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
+          <p class="hint" data-t="extraHint"></p>
+        </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
         <p class="hint" data-t="xczBlock"></p>
       </div>
@@ -206,13 +213,18 @@
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
       <p class="hint" data-t="overwriteHint"></p>
       <label class="check" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
-      <p class="warning" id="remove-warning" data-t="removeWarning" hidden></p>
+      <!-- the dump folders Combine packs go too, once their NUP is checked, only when asked (#79) -->
+      <label class="check sub-check" id="remove-dumps-option" hidden><input id="remove-dumps" type="checkbox"><span data-t="removeDumps"></span></label>
+      <p class="hint" data-t="removeDumpsHint"></p>
+      <p class="warning" id="remove-warning" hidden></p>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim verify">
       <h2 data-t="auto"></h2>
       <label class="check"><input id="watch" type="checkbox"><span data-t="watch"></span></label>
       <p class="hint" data-t="watchHint"></p>
+      <!-- the folders watched, by name (#77) -->
+      <p class="hint always" id="watch-folders" hidden></p>
     </section>
 
     <details class="block advanced" data-for="compress decompress recompress trim verify convert split fat32" id="advanced">
@@ -222,10 +234,6 @@
       </div>
       <div class="field row">
         <label for="multi" data-t="multi"></label><input id="multi" type="number" min="1" max="16">
-      </div>
-      <div class="field" data-for="compress">
-        <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
-        <p class="hint" data-t="extraHint"></p>
       </div>
       <div class="field" data-for="compress">
         <button id="measure" class="link"></button>

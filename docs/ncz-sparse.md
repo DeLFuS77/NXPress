@@ -1,6 +1,6 @@
 # NCZ with counter offsets (`NCZSECT2`)
 
-Status: **experimental**. Written by NXPress, which also reads it back, with its extra compression (`--extra`, or the box under Advanced, which also keeps the LZ4 blocks of Nintendo decompressed: docs/lz4-archive.md; `--sparse` alone turns on this one). Other tools do not read it yet.
+Status: **experimental**. Written by NXPress, which also reads it back, with its extra compression (`--extra`, or the box under Made for, which also keeps the LZ4 blocks of Nintendo decompressed: docs/lz4-archive.md; `--sparse` alone turns on this one). Other tools do not read it yet.
 
 This page describes a small extension of the NCZ format of [nsz](https://github.com/nicoboss/nsz). It exists so that NCAs in **sparse storage** can be compressed and then rebuilt byte for byte. Tools that do not know the extension stop with an error instead of writing a wrong NCA.
 

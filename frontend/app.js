@@ -1006,9 +1006,24 @@ function render() {
   const level = +$("level").value;
   const band = level <= 6 ? "3" : level <= 14 ? "12" : "19";
   for (const button of document.querySelectorAll("[data-level]")) button.classList.toggle("on", button.dataset.level === band);
+  // Delete originals deletes the files a work was given; the dump folders Combine packs, unless
+  // the box under it asks for them too, and the NUP files Decompress unpacks stay as they are
+  // (#79): the warning tells it for the list shown
+  const kept = state.items.filter(item => state.mode === "pack" ? item.dump : state.mode === "decompress" && isNup(item.path)).length;
+  const dumps = state.mode === "pack" && kept > 0;
+  $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
+  const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
+  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
-  // the files that use the extra compression do not go with the installers above as they are
-  $("extra-target-warning").hidden = !$("extra").checked;
+  // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
+  // added on their own
+  const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
+  $("watch-folders").textContent = watched.length ? t("watchFolders")(watched.length, watched.map(path => path.split(/[\\/]/).filter(Boolean).pop() || path).join(", ")) : t("watchNoFolders");
+  $("watch-folders").title = watched.join("\n");
+  $("watch-folders").hidden = !$("watch").checked;
+  // the files that use the extra compression do not go with the installers above as they are; it
+  // is for Compress only, where its box is
+  $("extra-target-warning").hidden = !$("extra").checked || state.mode !== "compress";
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
@@ -1535,7 +1550,7 @@ function previewNames() {
 function settings() {
   return {
     level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
-    overwrite: $("overwrite").checked, removeSource: $("remove").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
+    overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     lowPriority: $("low-priority").checked,
@@ -2180,6 +2195,7 @@ async function main() {
   $("multi").value = number(chosen.multi) || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
+  $("remove-dumps").checked = !!chosen.removeDumps;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
@@ -2241,7 +2257,7 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
-  $("remove").onchange = render;
+  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = render;
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
   $("extra").onchange = () => {
