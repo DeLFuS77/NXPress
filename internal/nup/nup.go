@@ -92,6 +92,9 @@ type Package struct {
 	RomfsDir uint32
 	// the metadata of the package by type, the first record of each type
 	Meta map[uint16][]byte
+	// its metadata has its types counted from 0, as a build of the packer of the format wrote
+	// them: read here where the format puts them, and read wrong by Eglantine and Lichii
+	ZeroBased bool
 }
 
 // Dir is a folder of the tree of a package.
@@ -281,11 +284,11 @@ func Read(r io.ReaderAt, size int64) (*Container, error) {
 			if _, err := r.ReadAt(block, int64(metaOffset)); err != nil {
 				return nil, fmt.Errorf("NUP package %d metadata: %w", i, err)
 			}
-			meta, err := parseTlvs(block)
+			meta, shifted, err := parseTlvs(block)
 			if err != nil {
 				return nil, refused(fmt.Errorf("NUP package %d metadata: %w", i, err))
 			}
-			pkg.Meta = meta
+			pkg.Meta, pkg.ZeroBased = meta, shifted
 			if !strictLocalized(block) {
 				result.strict = append(result.strict, fmt.Sprintf("the names or icons by language of package %d run past their record", i))
 			}
@@ -387,10 +390,10 @@ func (e cutShort) Unwrap() error {
 // The packer of the format counted the types from 0 for a while (NPDM 0, NACP 1, the name 4,
 // the publisher 5), one below the ones the format gives them: type 0 is no type of the format,
 // so a block that has one is read with each of its types one up.
-func parseTlvs(block []byte) (map[uint16][]byte, error) {
+func parseTlvs(block []byte) (map[uint16][]byte, bool, error) {
 	result, err := splitTlvs(block)
 	if _, shifted := result[0]; err != nil || !shifted {
-		return result, err
+		return result, false, err
 	}
 	moved := map[uint16][]byte{}
 	for kind, value := range result {
@@ -399,7 +402,7 @@ func parseTlvs(block []byte) (map[uint16][]byte, error) {
 		}
 		moved[kind] = value
 	}
-	return moved, nil
+	return moved, true, nil
 }
 
 func splitTlvs(block []byte) (map[uint16][]byte, error) {

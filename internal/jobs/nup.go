@@ -142,14 +142,26 @@ const emulatorsRefuseToo = "Eglantine and Lichii do not open it either"
 // start its game, and why not: they are stricter than the format in a few things.
 func emulatorsNote(container *nup.Container) string {
 	emulators := container.Emulators()
+	notes := []string{}
 	switch {
 	case len(emulators.Refused) > 0:
-		return "Eglantine and Lichii do not open it: " + strings.Join(emulators.Refused, "; ")
+		notes = append(notes, "Eglantine and Lichii do not open it: "+strings.Join(emulators.Refused, "; "))
 	case emulators.NoStart != "":
-		return "Eglantine and Lichii cannot start it: " + emulators.NoStart
+		notes = append(notes, "Eglantine and Lichii cannot start it: "+emulators.NoStart)
 	}
-	return "it meets what Eglantine and Lichii ask of a NUP"
+	if emulators.ZeroBased {
+		notes = append(notes, zeroBasedNote)
+	}
+	if len(notes) == 0 {
+		return "it meets what Eglantine and Lichii ask of a NUP"
+	}
+	return joinNotes(notes...)
 }
+
+// zeroBasedNote is said of a NUP whose metadata has its types counted from 0, as a build of the
+// packer of the format wrote them: NXPress reads them where the format puts them, the emulators
+// do not.
+const zeroBasedNote = "Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them"
 
 // the damaged files a failed NUP tells in its error, and the ones told on lines of their own
 const (

@@ -41,6 +41,9 @@ type Emulators struct {
 	Refused []string
 	// why they cannot start its game, "" when they can
 	NoStart string
+	// its metadata has its types counted from 0, which they read as the format numbers them:
+	// they show the publisher as its name, its name as its version and a broken icon
+	ZeroBased bool
 }
 
 // Emulators tells whether Eglantine and Lichii open a NUP and can start its game.
@@ -50,6 +53,9 @@ func (c *Container) Emulators() Emulators {
 		result.Refused = append(result.Refused, reason)
 	}
 	result.NoStart = c.startFault()
+	for _, pkg := range c.Packages {
+		result.ZeroBased = result.ZeroBased || pkg.ZeroBased
+	}
 	return result
 }
 

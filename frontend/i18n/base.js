@@ -157,6 +157,7 @@ const noteRules = [
   [/no game or update in it has an ExeFS/g, "emuNoExefs"],
   [/the ExeFS of the game v(\d+) lacks: /g, "emuExefsGame"],
   [/the ExeFS of the update v(\d+) lacks: /g, "emuExefsUpdate"],
+  [/Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them/g, "emuZeroBased"],
   [/^cannot be read: /, "cannotRead"],
   [/^(\d+) files: /, "filesSplit"],
   [/^1 title$/, "oneTitleCount"],

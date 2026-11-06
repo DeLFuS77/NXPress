@@ -157,6 +157,7 @@ const samples = [
   ["Eglantine and Lichii cannot start it: no game or update in it has an ExeFS", "no game or update"],
   ["Eglantine and Lichii cannot start it: it holds no game or update, and they do not load DLC from NUP files yet", "DLC from NUP"],
   ["cannot be read: NUP flags 0x1 are not supported; Eglantine and Lichii do not open it either", "do not open it either"],
+  ["3 files checked by their SHA-256; Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them", "counted from 0"],
   ["3 of 372587 files are damaged: game v65536: romfs/a.bin (its SHA-256 does not match); update v131072: romfs/b.bin (its zstd data cannot be decompressed (bad magic)); and 1 more", "damaged"],
   ["x.bin (in no folder) (its data decompresses to 5 bytes instead of 9); y.bin (its data cannot be read (I/O error)); z.bin (its data decompresses to more than its 9 bytes)", "its data"],
   ["Game.nup: damaged files:\n  game v0: romfs/a.bin: its SHA-256 does not match\n  and 3 more", "damaged files"],
