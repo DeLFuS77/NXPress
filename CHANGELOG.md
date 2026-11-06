@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.2
+
+### Improvements
+
+- Rename takes NUP files too, without keys: a NUP is named by what it holds, with the same fields as a game file (the name of the game, its title ID, the version of its newest update and the rest); a NUP that does not carry the name of its game keeps the one of its file (thanks @NikoMuffin, #82)
+
+### Fixes
+
+- The note told when a NUP is given to a work that does not take it no longer says NXPress does not compress NUP files, which Combine makes compressed with zstd: it now tells which work does what with them
+
 ## 1.7.1
 
 ### Improvements
