@@ -202,14 +202,17 @@ dialog p { margin: 8px 0; }
 #worklog-tools .segmented button { flex: none; padding: 5px 10px; }
 input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .worklog-count { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.worklog-list { flex: 1; overflow: auto; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); container-type: inline-size; }
+/* the room of the scrollbar is kept: a work opened that makes the list scroll does not narrow it,
+   which would make every row jump (and cross the narrow layout below) as it opens (#78) */
+.worklog-list { flex: 1; overflow: auto; scrollbar-gutter: stable; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); container-type: inline-size; }
 .worklog-day { position: sticky; top: 0; z-index: 1; padding: 8px 14px 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); }
 .worklog-work { border-bottom: 1px solid var(--line); }
 .worklog-work:last-child { border-bottom: 0; }
-.worklog-row { width: 100%; display: grid; grid-template-columns: 44px 30px minmax(0, 1fr) auto auto 16px; align-items: center; gap: 12px; padding: 9px 14px; border: 0; border-radius: 0; background: transparent; text-align: left; }
+.worklog-row { width: 100%; display: grid; grid-template-columns: auto 30px minmax(0, 1fr) auto auto 16px; align-items: center; gap: 12px; padding: 9px 14px; border: 0; border-radius: 0; background: transparent; text-align: left; }
 .worklog-row:hover:not(:disabled) { background: var(--raised); }
 .worklog-row:focus-visible { outline-offset: -2px; }
-.worklog-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* the hour on one line, as wide as the clock of the language: "12:01 AM" is wider than "00:01" */
+.worklog-time { min-width: 44px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .worklog-row .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .worklog-what { min-width: 0; }
 .worklog-what b { display: block; font-weight: 600; }

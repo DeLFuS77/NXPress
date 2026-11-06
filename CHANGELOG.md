@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The Log no longer jerks when a work is opened: the list keeps the room of its scrollbar, so it does not narrow when it starts to scroll, and the hour stays on one line, also as "12:01 AM" (thanks @NikoMuffin, #78)
+
 ## 1.7.0
 
 > **Note:** the support of NUP files is new. It was tried with the games at hand, and packed NUP files were tried in Eglantine, but not with every case yet, so some rough edges may remain.
