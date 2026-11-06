@@ -863,27 +863,27 @@ type copyJob struct {
 	hashed bool
 }
 
-// readAhead is the megabytes of files the workers may hold ahead of the writer: enough for
-// every worker to be busy while the writer waits for a slow file, and no more than the files
-// held at once before the writer took them in their order.
+// readAhead is the memory the workers may hold ahead of the writer, in pieces of 64 KiB
+// (64 MiB and 8 MiB a worker): the writer takes the files in their order, and the workers go
+// on with the ones after while it waits for a slow one, a few thousand small files ahead.
 func readAhead(workers int) int {
-	return 64 + 8*workers
+	return (64 + 8*workers) << 4
 }
 
-// holding is the megabytes of memory a file takes while a worker prepares it and the writer has
-// not taken it: a small file whole, and the start of a big one; at least one, so the files
-// waiting for the writer are as many as that at most.
+// holding is the memory a file takes, in pieces of 64 KiB, while a worker prepares it and the
+// writer has not taken it: a small file whole, and the start of a big one; at least one piece,
+// so the files waiting for the writer are as many as the pieces at most.
 func holding(node *packNode) int {
 	if node.size > wholeLimit {
-		return 1 + sampleSize>>20
+		return 1 + sampleSize>>16
 	}
-	return 1 + int(node.size>>20)
+	return 1 + int(node.size>>16)
 }
 
 // writeExtents writes the data of every file into the NUP, each piece once. The workers read,
 // hash and compress the small files and look at the big ones; the writer takes what they give
 // in the order of the files, so the same folder gives the same NUP whatever the number of
-// workers, and they read ahead of it up to readAhead bytes; a big file zstd does not make
+// workers, and they read ahead of it up to readAhead; a big file zstd does not make
 // smaller goes into a place the writer leaves for it, written by a copier while the writer goes
 // on, and a big file zstd makes smaller is streamed by the writer, with zstd on several threads.
 // No more files are read at once than the drive of the folder reads best (o.Readers). A big
@@ -927,7 +927,7 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 
 	jobs := make(chan int)
 	results := make(chan prepared, workers)
-	// the megabytes the workers may hold ahead of the writer
+	// the memory the workers may hold ahead of the writer, a piece of 64 KiB a slot
 	ahead := make(chan struct{}, readAhead(workers))
 	var wait sync.WaitGroup
 	for range workers {
