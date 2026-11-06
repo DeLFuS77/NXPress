@@ -17,8 +17,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"github.com/klauspost/compress/zstd"
 )
 
 // The packing of a dump folder into a NUP, as the packer of the format does it
@@ -865,19 +863,37 @@ type copyJob struct {
 	hashed bool
 }
 
+// readAhead is the megabytes of files the workers may hold ahead of the writer: enough for
+// every worker to be busy while the writer waits for a slow file, and no more than the files
+// held at once before the writer took them in their order.
+func readAhead(workers int) int {
+	return 64 + 8*workers
+}
+
+// holding is the megabytes of memory a file takes while a worker prepares it and the writer has
+// not taken it: a small file whole, and the start of a big one; at least one, so the files
+// waiting for the writer are as many as that at most.
+func holding(node *packNode) int {
+	if node.size > wholeLimit {
+		return 1 + sampleSize>>20
+	}
+	return 1 + int(node.size>>20)
+}
+
 // writeExtents writes the data of every file into the NUP, each piece once. The workers read,
-// hash and compress the small files and look at the big ones; the writer writes what they give
-// in the order they give it; a big file zstd does not make smaller goes into a place the writer
-// leaves for it, written by a copier while the writer goes on, and a big file zstd makes smaller
-// is streamed by the writer, with zstd on every worker. No more files are read at once than the
-// drive of the folder reads best (o.Readers). A big file whose size another file has is hashed
-// first, so its data is written once.
+// hash and compress the small files and look at the big ones; the writer takes what they give
+// in the order of the files, so the same folder gives the same NUP whatever the number of
+// workers, and they read ahead of it up to readAhead bytes; a big file zstd does not make
+// smaller goes into a place the writer leaves for it, written by a copier while the writer goes
+// on, and a big file zstd makes smaller is streamed by the writer, with zstd on several threads.
+// No more files are read at once than the drive of the folder reads best (o.Readers). A big
+// file whose size another file has is hashed first, so its data is written once.
 func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packNode, o PackOptions, total int64,
 	progress func(done int64, total int64)) ([]fileOut, error) {
 	outs := make([]fileOut, len(files))
 	workers := max(1, o.Workers)
 	slots := make(chan struct{}, max(1, o.Readers))
-	level := zstd.EncoderLevelFromZstd(max(1, o.Level))
+	level := max(1, o.Level)
 	sizes := map[int64]int{}
 	bigs := 0
 	for _, node := range files {
@@ -911,15 +927,17 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 
 	jobs := make(chan int)
 	results := make(chan prepared, workers)
+	// the megabytes the workers may hold ahead of the writer
+	ahead := make(chan struct{}, readAhead(workers))
 	var wait sync.WaitGroup
 	for range workers {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			var encoder *zstd.Encoder
+			var encoder wholeEncoder
 			if o.Level > 0 {
-				encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(level), zstd.WithEncoderConcurrency(1))
-				defer encoder.Close()
+				encoder = newWholeEncoder(level)
+				defer encoder.close()
 			}
 			for index := range jobs {
 				p := prepareFile(ctx, index, files[index], encoder, sizes[files[index].size] > 1, slots)
@@ -934,6 +952,13 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 	go func() {
 		defer close(jobs)
 		for index := range files {
+			for range holding(files[index]) {
+				select {
+				case ahead <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
+			}
 			select {
 			case jobs <- index:
 			case <-ctx.Done():
@@ -987,29 +1012,30 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 		copiers.Wait()
 	}
 
-	var streamer *zstd.Encoder
+	var streamer streamEncoder
 	if o.Level > 0 {
-		streamer, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(level), zstd.WithEncoderConcurrency(workers))
-		defer streamer.Close()
+		streamer = newStreamEncoder(level, workers)
+		defer streamer.close()
 	}
 	type key struct {
 		hash [32]byte
 		size uint64
 	}
 	seen := map[key]int{}
-	for p := range results {
+	// write takes one file, in the order of the files; false stops the work
+	write := func(p prepared) bool {
 		if ctx.Err() != nil {
-			break
+			return false
 		}
 		if p.err != nil {
 			fail(p.err)
-			break
+			return false
 		}
 		node := files[p.index]
 		size := uint64(node.size)
 		if size == 0 {
 			outs[p.index] = fileOut{hash: sha256.Sum256(nil)}
-			continue
+			return true
 		}
 		// the same data is kept once: a file whose data is there already is not written
 		if p.hashed {
@@ -1017,13 +1043,13 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 				outs[p.index] = outs[known]
 				outs[p.index].hash = p.hash
 				tell(node.size)
-				continue
+				return true
 			}
 		}
 		start := w.at
 		if err := w.align(); err != nil {
 			fail(err)
-			break
+			return false
 		}
 		at := w.at
 		switch {
@@ -1063,11 +1089,32 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 			outs[p.index] = out
 		}
 		if ctx.Err() != nil {
-			break
+			return false
 		}
 		if p.hashed || !p.big {
 			if _, ok := seen[key{outs[p.index].hash, size}]; !ok {
 				seen[key{outs[p.index].hash, size}] = p.index
+			}
+		}
+		return true
+	}
+	waiting := map[int]prepared{}
+	next := 0
+take:
+	for p := range results {
+		waiting[p.index] = p
+		for {
+			p, ok := waiting[next]
+			if !ok {
+				break
+			}
+			delete(waiting, next)
+			for range holding(files[next]) {
+				<-ahead
+			}
+			next++
+			if !write(p) {
+				break take
 			}
 		}
 	}
@@ -1090,7 +1137,7 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 // zstd does not make it smaller. Of a big file it tells whether zstd makes its start smaller, and
 // hashes it when another file has its size (it may hold the same data). A file is read only
 // while a slot of the drive is free.
-func prepareFile(ctx context.Context, index int, node *packNode, encoder *zstd.Encoder, shared bool, slots chan struct{}) prepared {
+func prepareFile(ctx context.Context, index int, node *packNode, encoder wholeEncoder, shared bool, slots chan struct{}) prepared {
 	p := prepared{index: index}
 	if node.size == 0 || ctx.Err() != nil {
 		return p
@@ -1111,7 +1158,10 @@ func prepareFile(ctx context.Context, index int, node *packNode, encoder *zstd.E
 				p.err = fmt.Errorf("%s: %w", node.path, err)
 				return p
 			}
-			p.compress = float64(len(encoder.EncodeAll(sample, nil))) < float64(len(sample))*sampleRatio
+			if !compressedAlready(sample) {
+				compressed := encoder.encode(sample)
+				p.compress = compressed != nil && float64(len(compressed)) < float64(len(sample))*sampleRatio
+			}
 		}
 		if shared {
 			if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -1144,8 +1194,8 @@ func prepareFile(ctx context.Context, index int, node *packNode, encoder *zstd.E
 	}
 	p.hash, p.hashed = sha256.Sum256(data), true
 	p.data, p.codec = data, CodecRaw
-	if encoder != nil {
-		if compressed := encoder.EncodeAll(data, make([]byte, 0, len(data)/2)); len(compressed) < len(data) {
+	if encoder != nil && !compressedAlready(data) {
+		if compressed := encoder.encode(data); compressed != nil && len(compressed) < len(data) {
 			p.data, p.codec = compressed, CodecZstd
 		}
 	}
@@ -1153,18 +1203,20 @@ func prepareFile(ctx context.Context, index int, node *packNode, encoder *zstd.E
 }
 
 // streamFile writes a big file zstd makes smaller into the NUP as it reads it, with zstd on
-// every worker; when the whole of it was not made smaller, it is written again as it is.
-func streamFile(ctx context.Context, w *blobWriter, node *packNode, streamer *zstd.Encoder, tell func(int64)) (fileOut, error) {
+// several threads; when the whole of it was not made smaller, it is written again as it is.
+func streamFile(ctx context.Context, w *blobWriter, node *packNode, streamer streamEncoder, tell func(int64)) (fileOut, error) {
 	at := w.at
 	size := node.size
-	streamer.ResetContentSize(w, size)
+	if err := streamer.start(w, size); err != nil {
+		return fileOut{}, err
+	}
 	read := int64(0)
 	hash, n, err := copyFile(ctx, streamer, node, func(total int64) {
 		tell(total - read)
 		read = total
 	})
-	if err == nil {
-		err = streamer.Close()
+	if finished := streamer.finish(); err == nil {
+		err = finished
 	}
 	if err != nil {
 		return fileOut{}, err

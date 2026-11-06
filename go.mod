@@ -7,6 +7,7 @@ toolchain go1.27.3
 replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261104201927-9e606b2030dd
 
 require (
+	github.com/DataDog/zstd v1.5.7
 	github.com/dtrunk90/switch-library-manager-web v0.0.0-00010101000000-000000000000
 	github.com/go-ole/go-ole v1.3.0
 	github.com/klauspost/compress v1.20.3
@@ -16,7 +17,6 @@ require (
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
-	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/avast/retry-go/v5 v5.0.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.16 // indirect
