@@ -77,6 +77,10 @@ func TestPackFramesTellTheirSize(t *testing.T) {
 			if !h.HasFCS || h.FrameContentSize != f.Size {
 				t.Errorf("%s: the frame does not tell its size (%v %d of %d)", f.Name, h.HasFCS, h.FrameContentSize, f.Size)
 			}
+			// with the checksum of its data, with the library in C as with the encoder in Go
+			if head[4]&0x04 == 0 {
+				t.Errorf("%s: the frame has no checksum", f.Name)
+			}
 			frames++
 			if f.Size > wholeLimit {
 				streamed++

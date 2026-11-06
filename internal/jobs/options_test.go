@@ -9,14 +9,20 @@ import (
 // The options of nsz work as there: with their value after them or after "=", short and long,
 // and the ones without use here accepted and told.
 func TestParseOptions(t *testing.T) {
-	o, err := ParseOptions([]string{"-C", "-l", "12", "--threads=0", "-m", "2", "-B", "-o", "out", "--keep", "--bs=4", "a.nsp", "--", "-b.nsp"})
+	o, err := ParseOptions([]string{"-C", "-l", "12", "--threads=0", "-m", "2", "-B", "-o", "out", "--keep", "--bs=22", "a.nsp", "--", "-b.nsp"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !o.Compress || o.Level != 12 || o.Threads != 0 || o.Multi != 2 || !o.Block || o.Output != "out" {
+	if !o.Compress || o.Level != 12 || o.Threads != 0 || o.Multi != 2 || !o.Block || o.Output != "out" || o.BlockExponent != 22 {
 		t.Fatalf("options: %+v", o)
 	}
-	if !reflect.DeepEqual(o.Ignored, []string{"--keep", "--bs"}) || !reflect.DeepEqual(o.Files, []string{"a.nsp", "-b.nsp"}) {
+	// blocks of 2^4 bytes, as an old line for nsz could ask, are not ones readers take
+	for _, bad := range [][]string{{"--bs=4"}, {"--bs=25"}, {"-s", "13"}} {
+		if _, err := ParseOptions(append(append([]string{"-C", "-B"}, bad...), "a.nsp")); err == nil {
+			t.Errorf("%v is taken", bad)
+		}
+	}
+	if !reflect.DeepEqual(o.Ignored, []string{"--keep"}) || !reflect.DeepEqual(o.Files, []string{"a.nsp", "-b.nsp"}) {
 		t.Fatalf("ignored %v, files %v", o.Ignored, o.Files)
 	}
 	if o, _ := ParseOptions([]string{"-B", "-S", "-"}); o.Block || !reflect.DeepEqual(o.Files, []string{"-"}) {

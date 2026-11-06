@@ -25,7 +25,7 @@ func estimate(ctx context.Context, path string, o Options, threads int, out Outp
 		return compareLevels(ctx, path, o, threads, out)
 	}
 	result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
-		Level: strconv.Itoa(o.Level), Workers: threads, Blocks: o.Block, Sparse: o.Sparse, Progress: out.Progress(path, "Estimating"),
+		Level: strconv.Itoa(o.Level), Workers: threads, Blocks: o.Block, BlockExponent: o.BlockExponent, Sparse: o.Sparse, Progress: out.Progress(path, "Estimating"),
 	}, estimateSamples, estimateSampleSize)
 	if errors.Is(err, switchfs.ErrNothingToMeasure) {
 		return nothingToEstimate(path)
@@ -55,7 +55,7 @@ func compareLevels(ctx context.Context, path string, o Options, threads int, out
 	progress := out.Progress(path, "Estimating")
 	for i, level := range comparedLevels {
 		result, err := switchfs.EstimateCompression(ctx, path, switchfs.CompressOptions{
-			Level: strconv.Itoa(level), Workers: threads, Blocks: o.Block,
+			Level: strconv.Itoa(level), Workers: threads, Blocks: o.Block, BlockExponent: o.BlockExponent,
 		}, estimateSamples/2, estimateSampleSize)
 		if errors.Is(err, switchfs.ErrNothingToMeasure) {
 			return nothingToEstimate(path)

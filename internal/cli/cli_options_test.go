@@ -75,7 +75,10 @@ func TestOptionsAsArgparse(t *testing.T) {
 		{[]string{"--min"}, func(o jobs.Options) bool { return o.Minimal }},
 		{[]string{"--keep"}, func(o jobs.Options) bool { return reflect.DeepEqual(o.Ignored, []string{"--keep"}) && !o.KeepNamed }},
 		{[]string{"--keep-n"}, func(o jobs.Options) bool { return o.KeepNamed }},
-		{[]string{"-Ks4", "-L"}, func(o jobs.Options) bool { return reflect.DeepEqual(o.Ignored, []string{"--keep", "--bs", "--long"}) }},
+		{[]string{"-Ks16", "-L"}, func(o jobs.Options) bool {
+			return reflect.DeepEqual(o.Ignored, []string{"--keep", "--long"}) && o.BlockExponent == 16
+		}},
+		{[]string{"-B", "--bs", "24"}, func(o jobs.Options) bool { return o.Block && o.BlockExponent == 24 }},
 		{[]string{"-h"}, func(o jobs.Options) bool { return o.Help }},
 		{[]string{"--he"}, func(o jobs.Options) bool { return o.Help }},
 	} {
@@ -115,6 +118,8 @@ func TestOptionsAsArgparse(t *testing.T) {
 func TestCheckTellsWhatHasNoEffect(t *testing.T) {
 	for args, want := range map[string][]string{
 		"--levels -C":                     {"--levels has no effect without --estimate"},
+		"--bs 22 -C":                      {"--bs changes only the files in blocks: an NSZ with -B, and an XCZ"},
+		"--bs 22 -C -B":                   nil,
 		"--levels --estimate":             nil,
 		"--keep-named -C":                 {"--keep-named has no effect without --rename"},
 		"--pack-name {name} -C":           {"--pack-name has no effect without --pack-games or --pack-one"},

@@ -59,17 +59,20 @@ type Options struct {
 	Origins []string
 	Level   int
 	// whether -l was given: the files of a NUP take zstd at level 3 unless it was
-	LevelGiven  bool
-	Block       bool
-	LowPriority bool
-	Sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
-	Archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
-	Threads     int
-	Multi       int
-	Output      string
-	Overwrite   bool
-	RmSource    bool
-	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
+	LevelGiven bool
+	Block      bool
+	// -s/--bs: the size of each block with -B (and of an XCZ) as a power of two, as in nsz; 0 is
+	// 20 (1 MiB)
+	BlockExponent int
+	LowPriority   bool
+	Sparse        bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
+	Archive       bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
+	Threads       int
+	Multi         int
+	Output        string
+	Overwrite     bool
+	RmSource      bool
+	RmDumps       bool // with RmSource, the dump folders whose NUP is checked go too
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
 	// file whole into a temporary file each time a game starts to read it
@@ -131,7 +134,7 @@ var optionNames = []optionName{
 
 // the options of nsz that NXPress accepts and has no use for
 var noEffect = map[string]bool{
-	"--long": true, "--keep": true, "--fix-padding": true, "--alwaysParseCnmt": true, "--rm-old-version": true, "--bs": true, "--depth": true,
+	"--long": true, "--keep": true, "--fix-padding": true, "--alwaysParseCnmt": true, "--rm-old-version": true, "--depth": true,
 }
 
 // ParseOptions reads the command line as argparse reads the one of nsz: letters together
@@ -371,6 +374,11 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Threads, err = number(1)
 	case "--multi":
 		o.Multi, err = number(1)
+	case "--bs":
+		o.BlockExponent, err = number(1)
+		if err == nil && (o.BlockExponent < switchfs.MinBlockExponent || o.BlockExponent > switchfs.MaxBlockExponent) {
+			err = fmt.Errorf("%s takes %d to %d (blocks of 16 KiB to 16 MiB), not %d", told, switchfs.MinBlockExponent, switchfs.MaxBlockExponent, o.BlockExponent)
+		}
 	case "--output":
 		o.Output = value
 	case "--keys":
@@ -463,6 +471,9 @@ func (o *Options) Check() error {
 	if o.Levels && !o.Estimate {
 		o.Notes = append(o.Notes, "--levels has no effect without --estimate")
 	}
+	if o.BlockExponent != 0 && !o.Block {
+		o.Notes = append(o.Notes, "--bs changes only the files in blocks: an NSZ with -B, and an XCZ")
+	}
 	if o.KeepNamed && o.Template == "" {
 		o.Notes = append(o.Notes, "--keep-named has no effect without --rename")
 	}
@@ -520,6 +531,9 @@ Usage: nxpress [options] file or folder...
   -l, --level N       compression level, 1 to 19 (default 18)
   -B, --block         block compression (always for XCZ): emulators that read NSZ run it
                       as it is; every installer takes it but Awoo
+  -s, --bs N          with -B, blocks of 2^N bytes, 14 to 24 (default 20, 1 MiB, as nsz):
+                      24 (16 MiB) makes the file about 8%% smaller, and an emulator
+                      decompresses 16 MiB for each block it reads
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
   --extra             experimental, extra compression that only NXPress reads: base games

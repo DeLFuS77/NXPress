@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/DataDog/zstd"
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
 // nativeZstd tells NXPress is built with the zstd library in C.
@@ -21,9 +22,14 @@ func newNativeWhole(level int) wholeEncoder {
 	return nativeWhole{ctx: zstd.NewCtx(), level: level}
 }
 
+// encode gives the frame with the checksum of its data, as the encoder in Go writes it: the
+// Go package of the library in C cannot ask for it (switchfs.AddZstdChecksum).
 func (e nativeWhole) encode(src []byte) []byte {
 	out, err := e.ctx.CompressLevel(nil, src, e.level)
 	if err != nil {
+		return nil
+	}
+	if out, err = switchfs.AddZstdChecksum(out, src); err != nil {
 		return nil
 	}
 	return out
@@ -39,6 +45,8 @@ type nativeStream struct {
 	level   int
 	threads int
 	writer  *zstd.Writer
+	// the frame passed on with the checksum of its data
+	frame *switchfs.ZstdChecksumFrame
 }
 
 func newNativeStream(level int, threads int) streamEncoder {
@@ -47,7 +55,8 @@ func newNativeStream(level int, threads int) streamEncoder {
 
 func (e *nativeStream) start(w io.Writer, size int64) error {
 	e.close()
-	e.writer = zstd.NewWriterLevel(&sizedFrame{w: w, size: uint64(size)}, e.level)
+	e.frame = switchfs.NewZstdChecksumFrame(w)
+	e.writer = zstd.NewWriterLevel(&sizedFrame{w: e.frame, size: uint64(size)}, e.level)
 	if err := e.writer.SetNbWorkers(e.threads); err != nil {
 		e.close()
 		return err
@@ -56,7 +65,9 @@ func (e *nativeStream) start(w io.Writer, size int64) error {
 }
 
 func (e *nativeStream) Write(p []byte) (int, error) {
-	return e.writer.Write(p)
+	n, err := e.writer.Write(p)
+	e.frame.Content(p[:n])
+	return n, err
 }
 
 func (e *nativeStream) finish() error {
@@ -65,6 +76,9 @@ func (e *nativeStream) finish() error {
 	}
 	err := e.writer.Close()
 	e.writer = nil
+	if err == nil {
+		err = e.frame.Finish()
+	}
 	return err
 }
 
