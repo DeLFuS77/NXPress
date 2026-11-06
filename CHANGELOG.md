@@ -12,12 +12,12 @@
 - A NUP whose metadata types are counted from 0, as a build of the packer of the format wrote them, is told in Verify and Details, and Details fixes it (`--fix-nup-meta`): only those numbers are written again, in place, so the emulators show its name, version and icon right
 - Combine stores the files of a NUP over 256 MiB as they are by default, as the packers of the emulators do: Eglantine and Lichii decompress such a file whole to the disk each time the game starts. A box compresses them too (`--nup-zstd-big`)
 - Each update in a NUP carries the version it shows, from its own control data, so emulators show the right one
-- The NUP of a Switch 2 dump without control data takes the name of its game from the list of the Switch 2 games, else from its folder made readable (MarioTennisFever_v1.1.1 is Mario Tennis Fever)
+- The NUP of a Switch 2 dump without control data takes the name of its game from the list of the Switch 2 games, else from its folder made readable (MadeUpQuest_v1.1.0 is Made Up Quest)
 
 ### Fixes
 
 - Verify reads the code of NUP files and dump folders (main, rtld, sdk and subsdk of each ExeFS) and tells a dump whose code lost bytes: its NUP has hashes that match while the game stops as it starts, and the game must be dumped again. Combine still makes the NUP of such a dump, and the work fails with the warning. Verify takes dump folders too
-- Rename and the list name a NUP that carries no name by the label of its dump made readable (Nintendo Switch Sports Resort), not by the name of its file as it is
+- Rename and the list name a NUP that carries no name by the label of its dump made readable, not by the name of its file as it is
 
 ## 1.7.2
 
