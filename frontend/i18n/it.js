@@ -55,7 +55,7 @@ texts.it = {
   updateFound: v => `È uscito NXPress ${v}.`, updateGet: "Scarica", dismiss: "Chiudi",
   report: "Copia rapporto", reportCopied: "Rapporto copiato: incollalo in una issue di GitHub o nel thread.",
   worklog: "Registro", hintWorklog: "ciò che è stato fatto", aboutWorklog: "Ogni lavoro di NXPress, dal più recente al più vecchio: ogni file, come è finito e quanto ha risparmiato. Viene salvato anche in un file di testo.", worklogPrefHint: "Ogni lavoro di NXPress, file per file.",
-  worklogFind: "Cerca un gioco o un file", worklogAll: "Tutto", worklogProblems: "Con problemi", worklogCount: (w, f) => `${w} ${w === 1 ? "lavoro" : "lavori"} · ${f} file`,
+  worklogFind: "Cerca un gioco o un file", worklogAll: "Tutto", worklogProblems: "Con problemi", worklogExpandAll: "Espandi tutto", worklogCollapseAll: "Comprimi tutto", worklogCount: (w, f) => `${w} ${w === 1 ? "lavoro" : "lavori"} · ${f} file`,
   worklogKeep: "Tieni al massimo", worklogKeepN: n => `${n} lavori`, worklogNoLimit: "Senza limite", worklogKeepHint: "Oltre questo numero, i lavori più vecchi vengono tolti, anche dal file di testo.",
   worklogFile: "File di testo", worklogFileHint: "Lo stesso registro in testo semplice, nella cartella delle impostazioni di NXPress: aprilo con qualsiasi editor o incollalo in una issue.",
   worklogClear: "Svuota il registro", worklogClearHint: "Cancella l'elenco e il file di testo; Annulla li riporta indietro per qualche secondo.", worklogCleared: "Registro svuotato",

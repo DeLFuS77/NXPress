@@ -62,7 +62,7 @@ texts.ru = {
   updateFound: v => `Вышел NXPress ${v}.`, updateGet: "Скачать", dismiss: "Закрыть",
   report: "Копировать отчёт", reportCopied: "Отчёт скопирован: вставьте его в issue на GitHub или в тему.",
   worklog: "Журнал", hintWorklog: "что было сделано", aboutWorklog: "Каждая работа NXPress, начиная с последней: каждый файл, чем он закончился и сколько места сэкономлено. Журнал хранится и в текстовом файле.", worklogPrefHint: "Каждая работа NXPress, файл за файлом.",
-  worklogFind: "Найти игру или файл", worklogAll: "Все", worklogProblems: "С проблемами", worklogCount: (w, f) => `${w} ${ruPlural(w, "работа", "работы", "работ")} · ${ruFiles(f)}`,
+  worklogFind: "Найти игру или файл", worklogAll: "Все", worklogProblems: "С проблемами", worklogExpandAll: "Развернуть все", worklogCollapseAll: "Свернуть все", worklogCount: (w, f) => `${w} ${ruPlural(w, "работа", "работы", "работ")} · ${ruFiles(f)}`,
   worklogKeep: "Хранить не больше", worklogKeepN: n => `${n} ${ruPlural(n, "работы", "работ", "работ")}`, worklogNoLimit: "Без ограничения", worklogKeepHint: "Сверх этого самые старые работы удаляются, и из текстового файла тоже.",
   worklogFile: "Текстовый файл", worklogFileHint: "Тот же журнал простым текстом, в папке настроек NXPress: открой его в любом редакторе или вставь в issue.",
   worklogClear: "Очистить журнал", worklogClearHint: "Удаляет список и текстовый файл; «Отменить» вернёт их в течение нескольких секунд.", worklogCleared: "Журнал очищен",

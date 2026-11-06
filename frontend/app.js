@@ -76,6 +76,8 @@ const state = {
   // the log of the works, the oldest first, its text file, the works open in it, and whether it
   // shows only the ones with problems (#69)
   worklog: [], worklogFile: "", worklogOpen: new Set(), worklogProblems: false,
+  // the works a search opens by itself stay closed after Collapse all, until the search changes
+  worklogFindClosed: false,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -1944,6 +1946,18 @@ function paintWorklog() {
   list.innerHTML = "";
   const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
   const shown = works.filter(work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches));
+  // Expand all and Collapse all act on the works shown, each off when it has nothing to do
+  $("worklog-expand").hidden = !shown.length;
+  $("worklog-expand-all").onclick = () => {
+    for (const work of shown) state.worklogOpen.add(work.when);
+    state.worklogFindClosed = false;
+    paintWorklog();
+  };
+  $("worklog-collapse-all").onclick = () => {
+    for (const work of shown) state.worklogOpen.delete(work.when);
+    state.worklogFindClosed = !!find;
+    paintWorklog();
+  };
   if (!shown.length) {
     list.innerHTML = `<div class="worklog-empty"><svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true">${icons.worklog}</svg><div class="big"></div><div class="muted"></div></div>`;
     list.querySelector(".big").textContent = t(works.length ? "worklogNone" : "worklogEmpty");
@@ -1961,7 +1975,7 @@ function paintWorklog() {
       head.textContent = label;
       list.append(head);
     }
-    const open = state.worklogOpen.has(work.when) || !!find;
+    const open = state.worklogOpen.has(work.when) || (!!find && !state.worklogFindClosed);
     const item = document.createElement("div");
     item.className = "worklog-work" + (open ? " open" : "");
     item.innerHTML = `<button class="worklog-row" aria-expanded="${open}"><span class="worklog-time"></span>${workTile(work.mode)}<span class="worklog-what"><b></b><small></small></span><span class="worklog-counts"></span><span class="worklog-saved"></span><svg class="worklog-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><div class="worklog-files"><table><tbody></tbody></table><button class="link small-link worklog-copy"></button></div>`;
@@ -2003,9 +2017,17 @@ function paintWorklog() {
       const now = state.worklogOpen.has(work.when);
       item.classList.toggle("open", now);
       button.setAttribute("aria-expanded", now);
+      syncWorklogExpand();
     };
     list.append(item);
   }
+  syncWorklogExpand();
+}
+// Expand all is off when every work shown is open, Collapse all when none is
+function syncWorklogExpand() {
+  const works = [...$("worklog-list").querySelectorAll(".worklog-work")];
+  $("worklog-expand-all").disabled = !works.some(work => !work.classList.contains("open"));
+  $("worklog-collapse-all").disabled = !works.some(work => work.classList.contains("open"));
 }
 
 // the turning off, with 60 seconds to keep the computer on
@@ -2335,7 +2357,7 @@ async function main() {
   $("last-report").onclick = openWorklog;
   // the log: what is looked for, the works with problems only, the most kept, its text file, and
   // clearing it, which Undo takes back
-  $("worklog-find").oninput = paintWorklog;
+  $("worklog-find").oninput = () => { state.worklogFindClosed = false; paintWorklog(); };
   $("worklog-filter").onclick = event => {
     const button = event.target.closest("button");
     if (!button) return;

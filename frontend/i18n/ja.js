@@ -55,7 +55,7 @@ texts.ja = {
   updateFound: v => `NXPress ${v} が公開されました。`, updateGet: "ダウンロード", dismiss: "閉じる",
   report: "レポートをコピー", reportCopied: "レポートをコピーしました。GitHub の issue かスレッドに貼り付けてください。",
   worklog: "履歴", hintWorklog: "これまでの作業", aboutWorklog: "NXPress の作業を新しい順に表示します。ファイルごとの結果と節約できた容量もわかります。テキストファイルにも保存されます。", worklogPrefHint: "NXPress の作業をファイルごとに。",
-  worklogFind: "ゲームやファイルを検索", worklogAll: "すべて", worklogProblems: "問題あり", worklogCount: (w, f) => `${w} 件の作業 · ${f} ファイル`,
+  worklogFind: "ゲームやファイルを検索", worklogAll: "すべて", worklogProblems: "問題あり", worklogExpandAll: "すべて開く", worklogCollapseAll: "すべて閉じる", worklogCount: (w, f) => `${w} 件の作業 · ${f} ファイル`,
   worklogKeep: "保存する上限", worklogKeepN: n => `${n} 件`, worklogNoLimit: "上限なし", worklogKeepHint: "上限を超えると、古い作業から削除されます(テキストファイルからも)。",
   worklogFile: "テキストファイル", worklogFileHint: "同じ履歴をプレーンテキストで NXPress の設定フォルダーに保存します。どのエディターでも開けて、issue にも貼り付けられます。",
   worklogClear: "履歴を消去", worklogClearHint: "一覧とテキストファイルを削除します。数秒間は「元に戻す」で戻せます。", worklogCleared: "履歴を消去しました",
