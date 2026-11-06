@@ -37,6 +37,40 @@ func nupGame() []testnup.Package {
 	}
 }
 
+// --rename names a NUP by what it holds, without keys and with the fields of a game file: the
+// name of the game, its title ID, the version of its newest update and its titles (#82).
+func TestNupRename(t *testing.T) {
+	withoutKeys(t)
+	folder := t.TempDir()
+	path := filepath.Join(folder, "game.nup")
+	os.WriteFile(path, testnup.Build(nupGame()), 0o644)
+	const template = "{name} [{id}][v{version}]"
+	want := "Made-up Quest [0400486024DEC000][v131072].nup"
+	code, out := run("--rename", template, path)
+	if code != 0 || !strings.Contains(out, "OK game.nup -> "+want) {
+		t.Fatalf("rename: %d\n%s", code, out)
+	}
+	if _, err := os.Stat(filepath.Join(folder, want)); err != nil {
+		t.Errorf("renamed: %v", err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("the old name is still there: %v", err)
+	}
+	// renamed again, it keeps its name
+	if code, out = run("--rename", template, filepath.Join(folder, want)); code != 0 || !strings.Contains(out, "the name is already that one") {
+		t.Errorf("again: %d\n%s", code, out)
+	}
+	// --keep-named leaves a NUP whose name has its title ID
+	if code, out = run("--rename", "{name}", "--keep-named", folder); code != 0 || !strings.Contains(out, "its name has its title ID, it is kept") {
+		t.Errorf("--keep-named: %d\n%s", code, out)
+	}
+	// a folder given, the NUP in it is renamed, and is not told left as it is
+	if code, out = run("--rename", "{name} [{id}]", folder); code != 0 || !strings.Contains(out, "Made-up Quest [0400486024DEC000].nup") ||
+		strings.Contains(out, "leaves NUP files as they are") {
+		t.Errorf("folder: %d\n%s", code, out)
+	}
+}
+
 func run(args ...string) (int, string) {
 	var stdout, stderr bytes.Buffer
 	code := RunCommand(args, &stdout, &stderr)
@@ -89,7 +123,7 @@ func TestNupWithoutKeys(t *testing.T) {
 	// no other work takes a NUP: it is told, and is no failure
 	for _, args := range [][]string{{"-C"}, {"--convert"}, {"--recompress"}, {"--trim"}, {"--split"}} {
 		code, out = run(append(args, good)...)
-		if code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest.nup (NXPress does not compress, convert or trim NUP files") {
+		if code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest.nup (this work leaves NUP files as they are") {
 			t.Errorf("%v: %d\n%s", args, code, out)
 		}
 		if strings.Contains(out, "no file to") {

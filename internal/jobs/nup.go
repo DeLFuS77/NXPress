@@ -20,14 +20,14 @@ import (
 
 // NUP files (.nup) hold decrypted games of the Switch and the Switch 2, a game with its updates
 // and its DLC, as plain files: NXPress shows what they hold and verifies them, makes them of dump
-// folders and turns them back into folders, without keys. The other works leave them as they
-// are, and say so.
+// folders, turns them back into folders and renames them by what they hold, without keys. The
+// other works leave them as they are, and say so.
 
 // NupNotDone is why a NUP given to any other work is left as it is.
-const NupNotDone = "NXPress does not compress, convert or trim NUP files: it makes them of dump folders (Combine, --nup), turns them back into folders (Decompress, -D), shows what they hold (Details, -i) and verifies them (Verify, -V)"
+const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
