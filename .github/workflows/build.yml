@@ -216,6 +216,20 @@ jobs:
           sha256sum nxpress.exe nxpress-* > SHA256SUMS.txt
           ls -l
 
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # the checksums signed with the key of the project, which NXPress checks before it installs
+      # a new version by itself (#91); without the secret NXPRESS_SIGNING_KEY, or with a key that
+      # is not the one NXPress is built with, the release goes out unsigned, and NXPress only
+      # offers to download it
+      - name: Sign the checksums
+        env:
+          NXPRESS_SIGNING_KEY: ${{ secrets.NXPRESS_SIGNING_KEY }}
+        run: go run ./tools/releasesign -version "${GITHUB_REF_NAME}" dist/SHA256SUMS.txt
+
       # proof that each file was built by this workflow from this tag
       - name: Attest the programs
         id: attest
@@ -251,6 +265,9 @@ jobs:
           \`SHA256SUMS.txt\` has the checksums of the files, and
           \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here.
           EOF
+          if [ -f dist/SHA256SUMS.txt.minisig ]; then
+            echo "\`SHA256SUMS.txt.minisig\` is their signature with the key of NXPress (minisign), which NXPress checks before it installs a new version." >> release-notes.md
+          fi
 
       - name: Create release
         env:
@@ -260,7 +277,7 @@ jobs:
             --title "NXPress ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             --verify-tag \
-            dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt
+            dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt*
 
       # the notes in #releases of the Discord server, through the webhook kept in the secret
       # DISCORD_WEBHOOK; without it (a fork) nothing is sent, and if Discord fails the release

@@ -4,9 +4,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/cli"
+	"github.com/DeLFuS77/NXPress/internal/selfupdate"
 	"github.com/DeLFuS77/NXPress/internal/system"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
 )
@@ -17,13 +20,30 @@ var version = "dev"
 func main() {
 	cli.Version = version
 	titledb.UserAgent = "NXPress/" + version
+	args := afterUpdate(os.Args[1:])
 	// the window, with the files it is given (see windowLaunch). Started from the Explorer, the
 	// console Windows opened for it is closed
-	if start, ok := windowLaunch(os.Args[1:]); ok {
+	if start, ok := windowLaunch(args); ok {
 		system.HideConsole()
 		os.Exit(runWindow(start))
 	}
-	os.Exit(run(os.Args[1:]))
+	os.Exit(run(args))
+}
+
+// afterUpdate takes away --after-update and the process it names, which the NXPress an update
+// replaced starts the new one with (#91): the new one waits for it to stop, so its window has
+// gone, then deletes what it left. Any other start deletes what an update left too.
+func afterUpdate(args []string) []string {
+	if len(args) >= 2 && args[0] == "--after-update" {
+		if pid, err := strconv.Atoi(args[1]); err == nil {
+			system.WaitForExit(pid, 30*time.Second)
+		}
+		args = args[2:]
+	}
+	if program, err := system.Executable(); err == nil {
+		selfupdate.CleanOld(program)
+	}
+	return args
 }
 
 // launch is what the window opens with: files, and how they came.

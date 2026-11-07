@@ -3,19 +3,33 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DeLFuS77/NXPress/internal/selfupdate"
+	"github.com/DeLFuS77/NXPress/internal/system"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // the latest release of NXPress, as GitHub tells it
 const latestRelease = "https://api.github.com/repos/DeLFuS77/NXPress/releases/latest"
 
-// Update is a newer version of NXPress, when there is one.
+// Update is a newer version of NXPress, when there is one, and whether NXPress can install it by
+// itself (#91): it is signed, it has the program of this system, and NXPress can write in its
+// folder; else why not ("unsigned", "unsupported", "write").
 type Update struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
+	Version     string `json:"version"`
+	URL         string `json:"url"`
+	Installable bool   `json:"installable"`
+	Reason      string `json:"reason,omitempty"`
 }
 
 // CheckUpdate asks GitHub for the latest version of NXPress: one of the two times NXPress goes on
@@ -39,16 +53,123 @@ func (a *App) CheckUpdate() Update {
 	}
 	defer response.Body.Close()
 	var release struct {
-		Tag string `json:"tag_name"`
-		URL string `json:"html_url"`
+		Tag        string `json:"tag_name"`
+		URL        string `json:"html_url"`
+		Prerelease bool   `json:"prerelease"`
+		Assets     []struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		} `json:"assets"`
 	}
 	if response.StatusCode != http.StatusOK || json.NewDecoder(response.Body).Decode(&release) != nil {
 		return Update{}
 	}
-	if newer(release.Tag, version) && strings.HasPrefix(release.URL, "https://github.com/") {
-		return Update{Version: release.Tag, URL: release.URL}
+	if !newer(release.Tag, version) || !strings.HasPrefix(release.URL, "https://github.com/") {
+		return Update{}
 	}
-	return Update{}
+	found := selfupdate.Release{Tag: release.Tag, Prerelease: release.Prerelease, Assets: map[string]string{}}
+	for _, asset := range release.Assets {
+		found.Assets[asset.Name] = asset.URL
+	}
+	a.updateMutex.Lock()
+	a.release = found
+	a.updateMutex.Unlock()
+	update := Update{Version: release.Tag, URL: release.URL}
+	update.Reason = installReason(found)
+	update.Installable = update.Reason == ""
+	return update
+}
+
+// installReason tells why NXPress cannot install a release by itself, "" when it can: a system
+// it does not replace itself on, a release without signature, or a folder it cannot write in.
+func installReason(release selfupdate.Release) string {
+	switch {
+	case selfupdate.AssetName(runtime.GOOS, runtime.GOARCH, release.Tag) == "" || len(selfupdate.Keys()) == 0:
+		return "unsupported"
+	case !selfupdate.Installable(release, selfupdate.Keys(), runtime.GOOS, runtime.GOARCH):
+		return "unsigned"
+	case !writableBeside():
+		return "write"
+	}
+	return ""
+}
+
+// writableBeside tells whether NXPress can write in the folder of its program: not in Program
+// Files, for one.
+func writableBeside() bool {
+	program, err := system.Executable()
+	if err != nil {
+		return false
+	}
+	probe, err := os.CreateTemp(filepath.Dir(program), ".nxpress-update-probe-*")
+	if err != nil {
+		return false
+	}
+	probe.Close()
+	os.Remove(probe.Name())
+	return true
+}
+
+// SelfUpdate tells whether this NXPress can install its new versions by itself: Windows and
+// Linux, built with the key of the releases.
+func SelfUpdate() bool {
+	return selfupdate.AssetName(runtime.GOOS, runtime.GOARCH, "1.0.0") != "" && len(selfupdate.Keys()) > 0
+}
+
+// InstallUpdate installs the version CheckUpdate found, and opens it with the files of the list
+// in their section; this NXPress closes then (#91). Its error starts with its reason, as
+// selfupdate.Code names it; the progress goes to the page as "update-progress".
+func (a *App) InstallUpdate(mode string, files []string) error {
+	if a.working() {
+		return errors.New("work: a work is going on")
+	}
+	a.updateMutex.Lock()
+	release := a.release
+	if a.updateCancel != nil || release.Tag == "" {
+		a.updateMutex.Unlock()
+		return errors.New("failed: no update to install")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.updateCancel = cancel
+	a.updateMutex.Unlock()
+	defer func() {
+		a.updateMutex.Lock()
+		a.updateCancel = nil
+		a.updateMutex.Unlock()
+		cancel()
+	}()
+	program, err := system.Executable()
+	if err != nil {
+		return errors.New("failed: " + err.Error())
+	}
+	installer := selfupdate.Installer{
+		Program: program, Version: version, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, Keys: selfupdate.Keys(),
+		Progress: func(step string, done, total int64) {
+			wailsruntime.EventsEmit(a.ctx, "update-progress", map[string]any{"step": step, "done": done, "total": total})
+		},
+	}
+	if err := installer.Install(ctx, release); err != nil {
+		return errors.New(selfupdate.Code(err) + ": " + err.Error())
+	}
+	// the new one waits for this one to stop, then opens with the list
+	args := []string{"--after-update", strconv.Itoa(os.Getpid())}
+	if len(files) > 0 && slices.Contains(sections, mode) {
+		args = append(append(args, "--section", mode), files...)
+	}
+	if err := system.StartDetached(program, args...); err != nil {
+		return errors.New("restart: " + err.Error())
+	}
+	wailsruntime.Quit(a.ctx)
+	return nil
+}
+
+// CancelUpdate stops the download of a new version: nothing is replaced.
+func (a *App) CancelUpdate() {
+	a.updateMutex.Lock()
+	defer a.updateMutex.Unlock()
+	if a.updateCancel != nil {
+		a.updateCancel()
+	}
 }
 
 // discordInvite is the invite to the Discord server NXPress shares with Switch Library Manager
