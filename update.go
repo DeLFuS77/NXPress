@@ -30,6 +30,8 @@ type Update struct {
 	URL         string `json:"url"`
 	Installable bool   `json:"installable"`
 	Reason      string `json:"reason,omitempty"`
+	// what is new in it, the notes of the release without how to download it
+	Notes string `json:"notes"`
 }
 
 // CheckUpdate asks GitHub for the latest version of NXPress: one of the two times NXPress goes on
@@ -55,6 +57,7 @@ func (a *App) CheckUpdate() Update {
 	var release struct {
 		Tag        string `json:"tag_name"`
 		URL        string `json:"html_url"`
+		Body       string `json:"body"`
 		Prerelease bool   `json:"prerelease"`
 		Assets     []struct {
 			Name string `json:"name"`
@@ -74,7 +77,7 @@ func (a *App) CheckUpdate() Update {
 	a.updateMutex.Lock()
 	a.release = found
 	a.updateMutex.Unlock()
-	update := Update{Version: release.Tag, URL: release.URL}
+	update := Update{Version: release.Tag, URL: release.URL, Notes: releaseNotes(release.Body)}
 	update.Reason = installReason(found)
 	update.Installable = update.Reason == ""
 	return update
@@ -110,24 +113,30 @@ func writableBeside() bool {
 	return true
 }
 
-// SelfUpdate tells whether this NXPress can install its new versions by itself: Windows and
-// Linux, built with the key of the releases.
-func SelfUpdate() bool {
-	return selfupdate.AssetName(runtime.GOOS, runtime.GOARCH, "1.0.0") != "" && len(selfupdate.Keys()) > 0
+// releaseNotes are the notes of a release as the window shows them: the section of the
+// CHANGELOG, without the table of the downloads the release adds under it.
+func releaseNotes(body string) string {
+	if cut := strings.Index(body, "### Downloads"); cut >= 0 {
+		body = body[:cut]
+	}
+	return strings.TrimSpace(body)
 }
 
-// InstallUpdate installs the version CheckUpdate found, and opens it with the files of the list
-// in their section; this NXPress closes then (#91). Its error starts with its reason, as
-// selfupdate.Code names it; the progress goes to the page as "update-progress".
-func (a *App) InstallUpdate(mode string, files []string) error {
-	if a.working() {
-		return errors.New("work: a work is going on")
-	}
+// InstallUpdate installs the version CheckUpdate found in place of this NXPress (#91): it opens
+// the next time NXPress starts, or now with RestartUpdated. A work going on goes on, as the
+// program running is not touched. Its error starts with its reason, as selfupdate.Code names it;
+// the progress goes to the page as "update-progress".
+func (a *App) InstallUpdate() error {
 	a.updateMutex.Lock()
 	release := a.release
 	if a.updateCancel != nil || release.Tag == "" {
 		a.updateMutex.Unlock()
 		return errors.New("failed: no update to install")
+	}
+	// installed already: it only waits to be opened
+	if a.installed == release.Tag {
+		a.updateMutex.Unlock()
+		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.updateCancel = cancel
@@ -150,6 +159,28 @@ func (a *App) InstallUpdate(mode string, files []string) error {
 	}
 	if err := installer.Install(ctx, release); err != nil {
 		return errors.New(selfupdate.Code(err) + ": " + err.Error())
+	}
+	a.updateMutex.Lock()
+	a.installed = release.Tag
+	a.updateMutex.Unlock()
+	return nil
+}
+
+// RestartUpdated opens the version installed, with the files of the list in their section, and
+// closes this NXPress; not during a work.
+func (a *App) RestartUpdated(mode string, files []string) error {
+	if a.working() {
+		return errors.New("work: a work is going on")
+	}
+	a.updateMutex.Lock()
+	installed := a.installed
+	a.updateMutex.Unlock()
+	if installed == "" {
+		return errors.New("failed: no new version installed")
+	}
+	program, err := system.Executable()
+	if err != nil {
+		return errors.New("restart: " + err.Error())
 	}
 	// the new one waits for this one to stop, then opens with the list
 	args := []string{"--after-update", strconv.Itoa(os.Getpid())}
