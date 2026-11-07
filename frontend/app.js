@@ -668,12 +668,17 @@ function showRowMenu(row, remove, x, y) {
     /\.(nsp|nsz|xci|xcz)$/i.test(row.item.path) && ["menuVerify", () => start("verify", { files: [row.item.path], removeSource: false, output: "", watch: false }), true],
     ["menuRemove", remove, true],
   ].filter(Boolean);
+  openMenu(items.map(([key, action, needsIdle]) => [t(key), action, !!needsIdle && state.busy]), x, y);
+}
+// openMenu shows a menu of [text, action, off] at x, y, inside the window
+function openMenu(entries, x, y) {
+  const menu = $("row-menu");
   menu.innerHTML = "";
-  for (const [key, action, needsIdle] of items) {
+  for (const [text, action, off] of entries) {
     const button = document.createElement("button");
     button.setAttribute("role", "menuitem");
-    button.textContent = t(key);
-    button.disabled = !!needsIdle && state.busy;
+    button.textContent = text;
+    button.disabled = !!off;
     button.onclick = () => { hideRowMenu(); action(); };
     menu.append(button);
   }
@@ -686,6 +691,37 @@ function showRowMenu(row, remove, x, y) {
   menu.querySelector("button:not(:disabled)")?.focus();
 }
 let menuOpener = null;
+
+// the export of Details and of the log to a spreadsheet (#89): a menu of the two formats under
+// the button, then where to save it
+function exportMenu(button, run) {
+  const box = button.getBoundingClientRect();
+  openMenu([[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]], box.left, box.bottom + 4);
+}
+const today = () => { const now = new Date(); return [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-"); };
+async function exported(call) {
+  try {
+    const path = await call();
+    if (path) showToast(t("exported")(path.split(/[\\/]/).pop()));
+  } catch (error) { setStatus(String(error)); }
+}
+// Details: a row for each title of each file, in the order of the list
+function exportDetails(format) {
+  const byRow = new Map([...state.rows].map(([path, row]) => [row.tr, path]));
+  const paths = [...$("files").tBodies[0].rows].map(tr => byRow.get(tr)).filter(Boolean);
+  const header = [t("file"), t("colFormat"), t("colSize"), t("colTitleId"), t("colType"), t("colVersion"), t("colShown"), t("colName"), t("colPublisher"), t("colNewest"), t("colFolder"), t("colProblem")];
+  const kinds = Object.fromEntries(["BASE", "UPD", "DLC"].map(kind => [kind, t("gameKind")(kind)]));
+  exported(() => app().ExportDetails(paths, format, { sheet: t("info"), file: `NXPress ${t("info")} ${today()}`, header, kinds }));
+}
+// the log: a row for each file of the works shown, as they are shown
+function exportLog(format) {
+  const { workShown, rowShown } = worklogFilter();
+  const stamp = when => { const date = new Date(when); return [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(n => String(n).padStart(2, "0")).join("-") + " " + date.toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" }); };
+  const rows = state.worklog.slice().reverse().filter(workShown).flatMap(work => work.rows.filter(rowShown).map(row => [stamp(work.when), workName(work.mode), row.name, stateWord(row.status, work.mode, row.damaged), row.note || ""]));
+  const header = [t("colDate"), t("colSection"), t("file"), t("colResult"), t("colNote")];
+  exported(() => app().ExportLog(format, { sheet: t("worklog"), file: `NXPress ${t("worklog")} ${today()}`, header, kinds: {} }, rows));
+}
+
 function hideRowMenu() {
   const menu = $("row-menu");
   if (menu.hidden) return;
@@ -2113,9 +2149,16 @@ function workDay(when) {
   if (days === 1) return `${t("worklogYesterday")} · ${date}`;
   return day.toLocaleDateString(state.language, { weekday: "long", day: "numeric", month: "long", ...year });
 }
-function paintWorklog() {
+// the works and the files the log shows: the ones with problems only, when asked, and the ones
+// with what is looked for
+function worklogFilter() {
   const find = $("worklog-find").value.trim().toLowerCase();
   const problems = !!state.worklogProblems;
+  const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
+  return { find, problems, workShown: work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches), rowShown: row => (!problems || row.status !== "ok") && matches(row) };
+}
+function paintWorklog() {
+  const { find, problems, workShown, rowShown } = worklogFilter();
   for (const button of $("worklog-filter").querySelectorAll("button")) {
     const on = !!button.dataset.problems === problems;
     button.classList.toggle("on", on);
@@ -2131,8 +2174,8 @@ function paintWorklog() {
   $("worklog-show").hidden = !works.length;
   const list = $("worklog-list");
   list.innerHTML = "";
-  const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
-  const shown = works.filter(work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches));
+  const shown = works.filter(workShown);
+  $("worklog-export").disabled = !shown.length;
   // Expand all and Collapse all act on the works shown, each off when it has nothing to do
   $("worklog-expand").hidden = !shown.length;
   $("worklog-expand-all").onclick = () => {
@@ -2184,7 +2227,7 @@ function paintWorklog() {
     }
     item.querySelector(".worklog-saved").textContent = work.saved > 0 ? "−" + size(work.saved) : "";
     // its files, the problems first, and only the ones looked for
-    const rows = work.rows.filter(row => (!problems || row.status !== "ok") && matches(row)).sort((a, b) => order[a.status] - order[b.status]);
+    const rows = work.rows.filter(rowShown).sort((a, b) => order[a.status] - order[b.status]);
     for (const row of rows) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td><div class="report-name"></div><div class="report-note"></div></td><td class="state"><span class="badge"></span></td>`;
@@ -2462,6 +2505,8 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
+  $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
   $("space-cancel").onclick = () => $("space-dialog").close();

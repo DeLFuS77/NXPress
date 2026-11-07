@@ -52,6 +52,8 @@
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
+      <!-- what Details tells, to a spreadsheet (#89) -->
+      <button id="export" class="menu-button" data-for="info" aria-haspopup="menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><span data-t="export"></span><span class="caret" aria-hidden="true">▾</span></button>
       <div class="view-switch segmented" role="radiogroup">
         <button data-view="list" role="radio" data-t-title="viewList"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
         <button data-view="grid" role="radio" data-t-title="viewGrid"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
@@ -91,6 +93,8 @@
         <button class="quiet" id="worklog-collapse-all"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5-5 5 5"/><path d="m7 9 5-5 5 5" opacity=".5"/></svg><span data-t="worklogCollapseAll"></span></button>
       </div>
       <span class="worklog-count" id="worklog-count"></span>
+      <!-- the works shown, to a spreadsheet (#89) -->
+      <button id="worklog-export" class="menu-button" aria-haspopup="menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><span data-t="export"></span><span class="caret" aria-hidden="true">▾</span></button>
     </div>
     <div id="worklog-list" class="worklog-list"></div>
 

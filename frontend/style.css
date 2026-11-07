@@ -527,6 +527,10 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 table.grid .dump-plan { display: none; }
 
 /* the switch of the list: rows or a grid of covers */
+/* Export, with the menu of its formats (#89) */
+.menu-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.menu-button .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.menu-button .caret { font-size: 10px; color: var(--muted); }
 .view-switch { margin: 0 0 0 auto; }
 .view-switch button { padding: 4px 8px; display: grid; place-items: center; }
 .view-switch .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
