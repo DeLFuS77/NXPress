@@ -83,9 +83,9 @@ const state = {
   // open: the ones waiting for the work to end, when the last came, how many make the list, and
   // the list they took the place of, for Undo
   explorer: { menu: "", files: "", others: [] }, openedWaiting: [], openedAt: 0, openedCount: 0, openedBefore: null,
-  // a new version being installed from NXPress (#91): its step and bytes, what kept it from
-  // installing it, and whether it waits for the work to end
-  installing: null, installError: "", installAfterWork: false,
+  // a new version installed from NXPress (#91): its step and bytes while it goes, what kept it
+  // from installing it, the version installed, and whether the restart waits for the work
+  installing: null, installError: "", installed: "", restartAfterWork: false,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -1169,9 +1169,6 @@ function render() {
   $("language-select").value = state.language;
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   paintUpdate();
-  // Install them from NXPress, where NXPress can, and only with the new versions looked for (#91)
-  $("install-updates-row").hidden = !state.setup.selfUpdate;
-  $("install-updates").disabled = !$("updates").checked;
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   paintPalettes();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
@@ -2076,9 +2073,8 @@ function listen() {
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
     if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
-    // a new version asked to be installed at the end of the work (#91)
-    if (state.installAfterWork && !event.cancelled) setTimeout(installUpdate, 0);
-    else if (state.installAfterWork) { state.installAfterWork = false; paintUpdate(); }
+    // the new version installed opens once the work is over (#91)
+    if (state.restartAfterWork) setTimeout(restartUpdated, 0);
     // the files the Explorer gave meanwhile come in now
     if (state.openedWaiting.length) {
       const waiting = state.openedWaiting.splice(0);
@@ -2367,55 +2363,124 @@ async function checkUpdate() {
   // kept, to tell it again in another language
   state.update = update;
   $("update-get").onclick = () => app().OpenURL(update.url);
-  $("update-notes").onclick = () => app().OpenURL(update.url);
-  $("update-close").onclick = () => { save("dismissedUpdate", update.version); state.installError = ""; $("update-banner").hidden = true; };
+  $("update-close").onclick = () => { save("dismissedUpdate", update.version); $("update-banner").hidden = true; };
   $("update-banner").hidden = false;
   paintUpdate();
 }
 
-// the notice of a new version (#91): Download, as always; with Install them from NXPress on and a
-// version NXPress can install, Install and restart, then its progress in the blue of work, and
-// in red what kept it from installing it, nothing replaced
+// the notice of a new version (#91): one signed that NXPress can install opens the window of the
+// update; another offers Download, as before; one installed already waits to be opened
 function paintUpdate() {
   const update = state.update;
   if (!update) return;
-  const asked = !!(state.setup.selfUpdate && $("install-updates").checked);
-  const install = asked && update.installable;
+  const installed = state.installed === update.version;
+  let text = t(installed ? "updateInstalled" : "updateFound")(update.version);
+  if (!installed && !update.installable && update.reason === "write") text += " " + t("updateNoWrite");
+  $("update-text").textContent = text;
+  $("update-install").hidden = !update.installable;
+  $("update-install").textContent = t(installed ? "updateRestart" : "updateInstall");
+  $("update-get").hidden = update.installable;
+  paintUpdateDialog();
+}
+
+// the window of the update: what is new, then how far it is, what kept it from it, or Restart now
+function paintUpdateDialog() {
+  const update = state.update;
+  if (!update) return;
   const going = state.installing;
   const failed = !going && state.installError;
-  const banner = $("update-banner");
-  banner.classList.toggle("installing", !!going);
-  banner.classList.toggle("failed", !!failed);
-  let text = t("updateFound")(update.version);
-  if (going) text = going.step === "download" ? t("updateDownloading")(update.version, going.total > 0 ? `${size(going.done)} / ${size(going.total)}` : size(going.done)) : going.step === "check" ? t("updateChecking") : t("updateRestarting");
-  else if (failed) text = t("updateError")(failed);
-  else if (asked && !update.installable) text += " " + t(update.reason === "write" ? "updateNoWrite" : "updateOnlyDownload");
-  $("update-text").textContent = text;
-  $("update-bar").hidden = !(going && going.step === "download");
-  $("update-bar").firstElementChild.style.width = going && going.total > 0 ? Math.min(100, going.done / going.total * 100).toFixed(1) + "%" : "0%";
-  $("update-install").hidden = !install || !!going || !!failed;
-  $("update-install").textContent = t(state.installAfterWork ? "updateInstallWaiting" : state.busy || state.starting ? "updateInstallLater" : "updateInstall");
-  $("update-install").disabled = !!state.installAfterWork;
-  $("update-get").hidden = !!going || (install && !failed);
-  $("update-get").textContent = t(failed ? "updateOpenPage" : "updateGet");
-  $("update-notes").hidden = !install || !!going || !!failed;
+  const ready = !going && !failed && state.installed === update.version;
+  $("update-version").textContent = update.version;
+  let step = "", percent = "";
+  if (going && going.step === "download") {
+    step = t("updateDownloading")(update.version, going.total > 0 ? `${size(going.done)} / ${size(going.total)}` : size(going.done));
+    if (going.total > 0) percent = Math.floor(going.done / going.total * 100) + " %";
+  } else if (going) step = t(going.step === "check" ? "updateChecking" : going.step === "restart" ? "updateRestarting" : "updateReplacing");
+  else if (ready) step = t("updateReady")(update.version);
+  $("update-step").textContent = step;
+  $("update-percent").textContent = ready ? "✓" : percent;
+  $("update-progress").hidden = !going && !ready;
+  $("update-bar").classList.toggle("done", ready);
+  $("update-bar").firstElementChild.style.width = going && going.step === "download" && going.total > 0 ? Math.min(100, going.done / going.total * 100).toFixed(1) + "%" : going ? "100%" : "";
+  $("update-error").hidden = !failed;
+  $("update-error").textContent = failed ? t("updateError")(failed) : "";
+  $("update-hint").textContent = ready ? t("updateListBack") : failed ? "" : t("updateSigned");
   $("update-cancel").hidden = !(going && going.step === "download");
-  $("update-close").hidden = !!going;
+  $("update-dialog-close").hidden = !failed;
+  $("update-page").hidden = !failed;
+  $("update-later").hidden = !ready;
+  $("update-restart").hidden = !ready;
+  $("update-restart").disabled = state.restartAfterWork;
+  $("update-restart").textContent = t(state.restartAfterWork ? "updateRestartWaiting" : state.busy || state.starting ? "updateRestartLater" : "updateRestart");
 }
-// installs the new version: NXPress closes and opens again in it, with the list of the section;
-// what went wrong is told in the notice, and a Cancel is no error
+
+// the notes of a version, as GitHub keeps them (the section of the CHANGELOG): its headings, its
+// lists and its paragraphs, written as text, `code` as code, links by their text only
+function renderNotes(notes, element) {
+  element.innerHTML = "";
+  const fill = (block, text) => {
+    for (const part of text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\*\*/g, "").split(/(`[^`]+`)/)) {
+      if (/^`[^`]+`$/.test(part)) {
+        const code = document.createElement("code");
+        code.textContent = part.slice(1, -1);
+        block.append(code);
+      } else if (part) block.append(part);
+    }
+  };
+  let list = null;
+  for (const raw of (notes || "").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) { list = null; continue; }
+    if (/^[-*] /.test(line)) {
+      if (!list) { list = document.createElement("ul"); element.append(list); }
+      const item = document.createElement("li");
+      fill(item, line.slice(2));
+      list.append(item);
+      continue;
+    }
+    list = null;
+    const block = document.createElement(/^#{1,6} /.test(line) ? "h3" : "p");
+    fill(block, line.replace(/^#{1,6} /, ""));
+    element.append(block);
+  }
+}
+
+// installs the new version in place of this one, in its window: NXPress keeps working meanwhile,
+// and the new one opens with Restart now, or the next time NXPress starts
 async function installUpdate() {
-  state.installAfterWork = false;
+  const update = state.update;
+  if (!update) return;
+  renderNotes(update.notes, $("update-notes"));
+  if (state.installed === update.version) { paintUpdate(); openDialog($("update-dialog")); return; }
   state.installError = "";
   state.installing = { step: "download", done: 0, total: 0 };
   paintUpdate();
+  openDialog($("update-dialog"));
   try {
-    await app().InstallUpdate(state.mode, state.sources.length ? state.sources : state.items.map(item => item.path));
+    await app().InstallUpdate();
+    state.installed = update.version;
   } catch (error) {
     const code = String(error).split(":")[0].trim();
-    state.installing = null;
     state.installError = code === "cancelled" ? "" : code;
+    if (code === "cancelled") $("update-dialog").close();
+  }
+  state.installing = null;
+  paintUpdate();
+}
+
+// opens the version installed with the list as it is; during a work, once it is over
+async function restartUpdated() {
+  if (state.busy || state.starting) { state.restartAfterWork = true; paintUpdate(); return; }
+  state.restartAfterWork = false;
+  state.installing = { step: "restart", done: 0, total: 0 };
+  paintUpdate();
+  try {
+    await app().RestartUpdated(state.mode, state.sources.length ? state.sources : state.items.map(item => item.path));
+  } catch (error) {
+    state.installing = null;
+    state.installError = String(error).split(":")[0].trim();
     paintUpdate();
+    if (!$("update-dialog").open) openDialog($("update-dialog"));
   }
 }
 
@@ -2499,7 +2564,6 @@ async function main() {
   // experimental, and off unless it was turned on
   $("extra").checked = !!(chosen.sparse || chosen.archive);
   $("updates").checked = load("updates", true);
-  $("install-updates").checked = load("installUpdates", false);
   $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
   const sort = load("sort", null);
@@ -2644,13 +2708,17 @@ async function main() {
     render();
   };
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); render(); };
-  $("install-updates").onchange = () => { save("installUpdates", $("install-updates").checked); render(); };
-  // during a work, Install waits for its end
-  $("update-install").onclick = () => {
-    if (state.busy || state.starting) { state.installAfterWork = true; paintUpdate(); return; }
-    installUpdate();
-  };
+  // a new version (#91): its window, which installs it, and what it offers then
+  $("update-install").onclick = installUpdate;
   $("update-cancel").onclick = () => app().CancelUpdate();
+  $("update-restart").onclick = restartUpdated;
+  $("update-later").onclick = () => $("update-dialog").close();
+  $("update-dialog-close").onclick = () => $("update-dialog").close();
+  $("update-page").onclick = () => { if (state.update) app().OpenURL(state.update.url); };
+  // Esc cancels the download, and leaves the window open until it has stopped
+  $("update-dialog").addEventListener("cancel", event => {
+    if (state.installing) { event.preventDefault(); if (state.installing.step === "download") app().CancelUpdate(); }
+  });
   // turned off, the versions published are forgotten, and the copy kept removed
   $("published").onchange = () => {
     save("published", $("published").checked);

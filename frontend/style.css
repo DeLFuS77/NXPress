@@ -118,13 +118,26 @@ nav button.on b { color: var(--text); }
 .banner.warn { background: color-mix(in srgb, var(--warn) 12%, transparent); border-color: var(--warn); }
 .banner-buttons { display: flex; gap: 6px; flex: none; }
 .topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; background: var(--ok-soft); border-bottom: 1px solid var(--line); font-weight: 600; }
-/* a new version being installed, in the blue of work, and what kept it from it, in red (#91) */
-.topbar.installing { background: var(--accent-soft); }
-.topbar.failed { background: var(--bad-soft); }
-.update-bar { width: 180px; height: 6px; border-radius: 3px; background: var(--bar); overflow: hidden; flex: none; }
+/* the window of a new version (#91): what is new in it, its progress in the blue of work, green
+   once it is in place, and what kept it from it in red */
+dialog.update-dialog { max-width: 560px; }
+.update-dialog h2 { display: flex; align-items: center; gap: 8px; }
+.update-version { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; }
+.update-notes { max-height: 240px; overflow: auto; margin-top: 10px; padding: 6px 14px 8px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--bg); font-size: 13px; user-select: text; -webkit-user-select: text; }
+.update-notes:empty { display: none; }
+.update-notes h3 { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.update-notes ul { margin: 0; padding-left: 18px; }
+.update-notes li { margin: 3px 0; }
+.update-notes p { margin: 6px 0; }
+.update-notes code { font: 12px "Cascadia Mono", Consolas, monospace; }
+.update-progress { margin-top: 14px; }
+.update-step { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; margin-bottom: 6px; }
+.update-bar { height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
 .update-bar span { display: block; height: 100%; width: 0; background-color: var(--accent); background-image: linear-gradient(135deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%); background-size: 24px 24px; animation: stripes .8s linear infinite; transition: width .2s; }
-.topbar button.link.small-link { margin: 0; }
-.pref-item.pref-sub { padding-left: 22px; }
+.update-bar.done span { width: 100%; background-color: var(--ok); background-image: none; animation: none; }
+.update-error { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--radius-small); background: var(--bad-soft); border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.update-dialog .dialog-actions { align-items: center; }
+.update-hint { flex: 1; font-size: 12px; color: var(--muted); }
 .toolbar { display: flex; gap: 8px; align-items: center; padding: 12px 24px 0; }
 #drop { flex: 1; overflow: auto; margin: 12px 24px; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--panel); --wails-drop-target: drop; transition: border-color .15s, background .15s; }
 /* with files in it, the list is a plain surface: the dashes only invite a drop */

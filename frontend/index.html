@@ -11,12 +11,9 @@
 <!-- the name and the version are in the title of the window: no bar of its own above (#44) -->
 <div id="update-banner" class="topbar" hidden>
   <span id="update-text"></span>
-  <!-- installing it from NXPress (#91): its progress in the blue of work, and Cancel -->
-  <span class="update-bar" id="update-bar" hidden><span></span></span>
+  <!-- a signed version NXPress can install opens the window of the update (#91); else Download -->
   <button id="update-install" class="primary small" hidden></button>
-  <button id="update-get" class="primary small"></button>
-  <button id="update-notes" class="link small-link" data-t="updateNotes" hidden></button>
-  <button id="update-cancel" class="quiet small" data-t="cancel" hidden></button>
+  <button id="update-get" class="primary small" data-t="updateGet"></button>
   <button id="update-close" class="quiet icon" data-t-title="dismiss" data-t-label="dismiss">✕</button>
 </div>
 
@@ -353,11 +350,6 @@
           <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
           <input id="updates" type="checkbox" class="switch" role="switch">
         </div>
-        <!-- the new versions installed from NXPress, when asked, where it can (#91) -->
-        <div class="pref-item pref-sub" id="install-updates-row">
-          <div class="pref-text"><b data-t="installUpdates"></b><small data-t="installUpdatesHint"></small></div>
-          <input id="install-updates" type="checkbox" class="switch" role="switch">
-        </div>
         <div class="pref-item">
           <div class="pref-text"><b data-t="published"></b><small data-t="publishedHint"></small><small class="pref-status" id="published-status"></small></div>
           <input id="published" type="checkbox" class="switch" role="switch">
@@ -424,6 +416,26 @@
     <li data-t="extraWarnFormat"></li>
   </ul>
   <div class="dialog-actions"><button id="extra-cancel" data-t="cancel"></button><button id="extra-on" class="primary" data-t="extraWarnOn"></button></div>
+</dialog>
+<!-- a new version installed from NXPress (#91): what is new in it while it is downloaded and
+     checked, its progress in the blue of work, what kept it from it in red, and at the end
+     Restart now or Later -->
+<dialog id="update-dialog" class="update-dialog" aria-labelledby="update-title">
+  <h2 id="update-title"><span data-t="updateWhatsNew"></span> <span class="update-version" id="update-version"></span></h2>
+  <div class="update-notes" id="update-notes"></div>
+  <div class="update-progress" id="update-progress">
+    <div class="update-step"><span id="update-step"></span><span id="update-percent"></span></div>
+    <div class="update-bar" id="update-bar"><span></span></div>
+  </div>
+  <p class="update-error" id="update-error" role="alert" hidden></p>
+  <div class="dialog-actions">
+    <span class="update-hint" id="update-hint"></span>
+    <button id="update-cancel" data-t="cancel"></button>
+    <button id="update-dialog-close" data-t="close" hidden></button>
+    <button id="update-page" class="primary" data-t="updateOpenPage" hidden></button>
+    <button id="update-later" data-t="updateLater" hidden></button>
+    <button id="update-restart" class="primary" hidden></button>
+  </div>
 </dialog>
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>

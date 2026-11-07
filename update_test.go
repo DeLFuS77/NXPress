@@ -34,3 +34,14 @@ func TestPageOfNXPress(t *testing.T) {
 		}
 	}
 }
+
+// The notes of a release show without the table of its downloads (#91).
+func TestReleaseNotes(t *testing.T) {
+	body := "### Improvements\n\n- One thing\n\n### Downloads\n\n| System | File |\n"
+	if got := releaseNotes(body); got != "### Improvements\n\n- One thing" {
+		t.Errorf("%q", got)
+	}
+	if got := releaseNotes("  - Only this  "); got != "- Only this" {
+		t.Errorf("%q", got)
+	}
+}
