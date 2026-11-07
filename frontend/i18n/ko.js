@@ -72,7 +72,7 @@ texts.ko = {
   soundDefault: "기본값", soundFailed: "선택한 소리를 재생할 수 없습니다", sortHint: "이 열로 정렬합니다. 세 번째로 클릭하면 파일을 추가한 순서로 돌아갑니다",
   shutdownFailed: forced => `컴퓨터가 꺼지지 않았어요: ${forced ? "무언가가 막았어요" : "저장하지 않은 작업이 있는 프로그램이 막은 것 같아요. ‘강제로’를 선택하면 그런 프로그램을 저장하지 않고 닫아요"}.`,
   resumeFound: n => `지난번에 파일 ${n}개가 끝나지 않았습니다.`, resumeGo: "이어서 하기", resumeDrop: "잊기",
-  presets: "저장한 설정", presetNone: "선택…", presetSave: "저장", presetDelete: "삭제", presetName: "이 설정의 이름 입력",
+  presets: "저장한 설정", presetNone: "선택…", presetSave: "저장", presetReplace: "바꾸기", presetExists: name => `'${name}'이(가) 이미 있습니다: 바꾸기를 누르면 덮어씁니다.`, presetBuiltin: "NXPress 기본 설정이 쓰는 이름입니다: 다른 이름을 고르세요.", presetReplaced: name => `설정 '${name}'을(를) 바꿨습니다`, presetDelete: "삭제", presetName: "이 설정의 이름 입력",
   presetInstallers: "설치 프로그램용", presetEmulators: "에뮬레이터용", presetFast: "빠르게",
   compareLevels: "이 컴퓨터에서 레벨 비교", compareHint: "각 레벨로 파일의 샘플을 압축해 크기와 시간을 알려 줍니다. 아무것도 쓰지 않습니다.",
   measurePc: "이 PC 측정", measureMac: "이 Mac 측정", measureComputer: "이 컴퓨터 측정",

@@ -126,9 +126,12 @@
           <button id="preset-delete" class="quiet icon" data-t-title="presetDelete" data-t-label="presetDelete">🗑</button>
         </div>
         <div class="presets-row" id="preset-new">
-          <input id="preset-name" type="text" maxlength="40">
-          <button id="preset-save" data-t="presetSave"></button>
+          <input id="preset-name" type="text" maxlength="40" aria-describedby="preset-warning">
+          <button id="preset-save"></button>
         </div>
+        <!-- a name in use: Save becomes Replace and says so, and the names of NXPress are not
+             taken (#93) -->
+        <p class="warning" id="preset-warning" hidden></p>
       </div>
       <div class="field">
         <div class="level-head"><span id="level-name" data-t="level"></span><b id="level-value"></b></div>

@@ -72,7 +72,7 @@ texts.es = {
   soundDefault: "El de serie", soundFailed: "no se pudo reproducir el sonido elegido", sortHint: "Ordena por esta columna; el tercer clic vuelve al orden en que llegaron los archivos",
   shutdownFailed: forced => `El equipo no se ha apagado: ${forced ? "algo lo impidió" : "un programa lo impidió, seguramente con algo sin guardar. Marca «Forzar» para cerrar esos programas sin guardar"}.`,
   resumeFound: n => n === 1 ? "La última vez quedó 1 archivo sin terminar." : `La última vez quedaron ${n} archivos sin terminar.`, resumeGo: "Continuar con ellos", resumeDrop: "Olvidarlos",
-  presets: "Ajustes guardados", presetNone: "Elegir…", presetSave: "Guardar", presetDelete: "Borrar", presetName: "Escribe un nombre",
+  presets: "Ajustes guardados", presetNone: "Elegir…", presetSave: "Guardar", presetReplace: "Reemplazar", presetExists: name => `«${name}» ya existe: Reemplazar guarda encima.`, presetBuiltin: "NXPress usa este nombre para sus propios ajustes: elige otro.", presetReplaced: name => `Ajustes «${name}» reemplazados`, presetDelete: "Borrar", presetName: "Escribe un nombre",
   presetInstallers: "Para instaladores", presetEmulators: "Para emuladores", presetFast: "Rápido",
   compareLevels: "Comparar los niveles en este equipo", compareHint: "Comprime muestras de los archivos en cada nivel para decir el tamaño y el tiempo de cada uno: no se escribe nada.",
   measurePc: "Medir este PC", measureMac: "Medir este Mac", measureComputer: "Medir este equipo",

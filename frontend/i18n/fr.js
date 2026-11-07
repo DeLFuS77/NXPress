@@ -72,7 +72,7 @@ texts.fr = {
   soundDefault: "Par défaut", soundFailed: "le son choisi n'a pas pu être joué", sortHint: "Trier selon cette colonne ; un troisième clic revient à l'ordre d'arrivée des fichiers",
   shutdownFailed: forced => `L'ordinateur ne s'est pas éteint : ${forced ? "quelque chose l'en a empêché" : "un programme l'en a empêché, sans doute avec un travail non enregistré. Cochez « Forcer » pour fermer ces programmes sans enregistrer"}.`,
   resumeFound: n => n === 1 ? "1 fichier est resté inachevé la dernière fois." : `${n} fichiers sont restés inachevés la dernière fois.`, resumeGo: "Les reprendre", resumeDrop: "Les oublier",
-  presets: "Réglages enregistrés", presetNone: "Choisir…", presetSave: "Enregistrer", presetDelete: "Supprimer", presetName: "Entrez un nom",
+  presets: "Réglages enregistrés", presetNone: "Choisir…", presetSave: "Enregistrer", presetReplace: "Remplacer", presetExists: name => `« ${name} » existe déjà : Remplacer enregistre par-dessus.`, presetBuiltin: "NXPress utilise ce nom pour ses propres réglages : choisissez-en un autre.", presetReplaced: name => `Réglages « ${name} » remplacés`, presetDelete: "Supprimer", presetName: "Entrez un nom",
   presetInstallers: "Pour installeurs", presetEmulators: "Pour émulateurs", presetFast: "Rapide",
   compareLevels: "Comparer les niveaux sur cet ordinateur", compareHint: "Compresse des échantillons des fichiers à chaque niveau pour indiquer la taille et le temps de chacun : rien n'est écrit.",
   measurePc: "Mesurer ce PC", measureMac: "Mesurer ce Mac", measureComputer: "Mesurer cet ordinateur",

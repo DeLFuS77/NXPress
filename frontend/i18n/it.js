@@ -72,7 +72,7 @@ texts.it = {
   soundDefault: "Predefinito", soundFailed: "non è stato possibile riprodurre il suono scelto", sortHint: "Ordina per questa colonna; un terzo clic torna all'ordine in cui sono arrivati i file",
   shutdownFailed: forced => `Il computer non si è spento: ${forced ? "qualcosa lo ha impedito" : "un programma lo ha impedito, probabilmente con lavoro non salvato. Spunta «Forza» per chiudere quei programmi senza salvare"}.`,
   resumeFound: n => n === 1 ? "L'ultima volta 1 file è rimasto incompleto." : `L'ultima volta ${n} file sono rimasti incompleti.`, resumeGo: "Riprendili", resumeDrop: "Dimenticali",
-  presets: "Impostazioni salvate", presetNone: "Scegli…", presetSave: "Salva", presetDelete: "Elimina", presetName: "Scrivi un nome",
+  presets: "Impostazioni salvate", presetNone: "Scegli…", presetSave: "Salva", presetReplace: "Sostituisci", presetExists: name => `«${name}» esiste già: Sostituisci salva sopra.`, presetBuiltin: "NXPress usa questo nome per le sue impostazioni: scegline un altro.", presetReplaced: name => `Impostazioni «${name}» sostituite`, presetDelete: "Elimina", presetName: "Scrivi un nome",
   presetInstallers: "Per installer", presetEmulators: "Per emulatori", presetFast: "Veloce",
   compareLevels: "Confronta i livelli su questo computer", compareHint: "Comprime campioni dei file a ogni livello per indicarne dimensione e tempo: non viene scritto nulla.",
   measurePc: "Misura questo PC", measureMac: "Misura questo Mac", measureComputer: "Misura questo computer",

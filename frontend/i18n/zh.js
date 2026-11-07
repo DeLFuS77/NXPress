@@ -72,7 +72,7 @@ texts.zh = {
   soundDefault: "默认", soundFailed: "无法播放所选的声音", sortHint: "按此列排序；第三次点击恢复文件加入时的顺序",
   shutdownFailed: forced => `电脑没有关机:${forced ? "有程序阻止了关机" : "有程序阻止了关机,可能有未保存的内容。勾选“强制”可不保存就关闭这些程序"}。`,
   resumeFound: n => `上次有 ${n} 个文件没有完成。`, resumeGo: "继续处理", resumeDrop: "忽略",
-  presets: "已保存的设置", presetNone: "选择…", presetSave: "保存", presetDelete: "删除", presetName: "输入这组设置的名称",
+  presets: "已保存的设置", presetNone: "选择…", presetSave: "保存", presetReplace: "替换", presetExists: name => `“${name}”已存在：点“替换”会覆盖它。`, presetBuiltin: "NXPress 自带的设置使用了这个名称：请换一个。", presetReplaced: name => `已替换设置“${name}”`, presetDelete: "删除", presetName: "输入这组设置的名称",
   presetInstallers: "适合安装器", presetEmulators: "适合模拟器", presetFast: "快速",
   compareLevels: "在这台电脑上比较各等级", compareHint: "用每个等级压缩文件样本，给出各自的大小和用时：不会写入任何文件。",
   measurePc: "测试这台电脑", measureMac: "测试这台 Mac", measureComputer: "测试这台计算机",

@@ -72,7 +72,7 @@ texts.nl = {
   soundDefault: "Standaard", soundFailed: "het gekozen geluid kon niet worden afgespeeld", sortHint: "Sorteren op deze kolom; een derde klik zet de volgorde terug waarin de bestanden kwamen",
   shutdownFailed: forced => `De computer is niet uitgeschakeld: ${forced ? "iets hield het tegen" : "een programma hield het tegen, waarschijnlijk met niet-opgeslagen werk. Vink ‘Forceren’ aan om zulke programma's zonder opslaan te sluiten"}.`,
   resumeFound: n => n === 1 ? "Vorige keer bleef 1 bestand onafgemaakt." : `Vorige keer bleven ${n} bestanden onafgemaakt.`, resumeGo: "Ermee doorgaan", resumeDrop: "Vergeten",
-  presets: "Opgeslagen instellingen", presetNone: "Kiezen…", presetSave: "Opslaan", presetDelete: "Verwijderen", presetName: "Typ een naam",
+  presets: "Opgeslagen instellingen", presetNone: "Kiezen…", presetSave: "Opslaan", presetReplace: "Vervangen", presetExists: name => `„${name}” bestaat al: Vervangen slaat erover op.`, presetBuiltin: "NXPress gebruikt deze naam voor zijn eigen instellingen: kies een andere.", presetReplaced: name => `Instellingen „${name}” vervangen`, presetDelete: "Verwijderen", presetName: "Typ een naam",
   presetInstallers: "Voor installers", presetEmulators: "Voor emulators", presetFast: "Snel",
   compareLevels: "Niveaus vergelijken op deze computer", compareHint: "Comprimeert stukjes van de bestanden op elk niveau om grootte en tijd van elk te geven: er wordt niets geschreven.",
   measurePc: "Deze pc meten", measureMac: "Deze Mac meten", measureComputer: "Deze computer meten",

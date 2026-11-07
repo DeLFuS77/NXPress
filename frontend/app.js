@@ -1798,6 +1798,25 @@ function renderPresets() {
   $("preset-delete").hidden = !select.value || all[+select.value].builtin;
   $("preset-name").placeholder = t("presetName");
   save("preset", select.value === "" ? "" : presetKey(all, +select.value));
+  paintPresetName();
+}
+// the name typed for saved settings (#93): new, the name of saved settings, which Save replaces,
+// or one of the settings of NXPress, which is not taken; told without telling capitals apart
+function presetNameState() {
+  const name = $("preset-name").value.trim().toLowerCase();
+  if (!name) return { kind: "" };
+  if (builtinPresets().some(preset => preset.name.toLowerCase() === name)) return { kind: "builtin" };
+  const index = savedPresets().findIndex(preset => preset.name.toLowerCase() === name);
+  return index >= 0 ? { kind: "replace", index } : { kind: "new" };
+}
+// Save becomes Replace, in orange, while the name is in use, and a line under it tells why
+function paintPresetName() {
+  const { kind } = presetNameState();
+  $("preset-save").textContent = t(kind === "replace" ? "presetReplace" : "presetSave");
+  $("preset-save").classList.toggle("replace", kind === "replace");
+  $("preset-save").disabled = kind === "builtin";
+  $("preset-warning").textContent = kind === "replace" ? t("presetExists")($("preset-name").value.trim()) : kind === "builtin" ? t("presetBuiltin") : "";
+  $("preset-warning").hidden = !$("preset-warning").textContent;
 }
 function applyPreset() {
   const preset = [...builtinPresets(), ...savedPresets()][+$("preset").value];
@@ -2635,17 +2654,25 @@ async function main() {
   $("when-done").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
+  $("preset-name").oninput = paintPresetName;
+  // saved settings of the same name are replaced where they are, and Undo brings them back (#93)
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();
     if (!name) { $("preset-name").focus(); return; }
-    const presets = savedPresets().filter(preset => preset.name !== name);
+    const found = presetNameState();
+    if (found.kind === "builtin") return;
+    const before = savedPresets();
+    const presets = before.slice();
     const now = settings();
-    presets.push({ name, level: now.level, block: now.block, threads: now.threads, multi: now.multi });
+    const preset = { name, level: now.level, block: now.block, threads: now.threads, multi: now.multi };
+    if (found.kind === "replace") presets[found.index] = preset;
+    else presets.push(preset);
     save("presets", presets);
     $("preset-name").value = "";
     render();
-    $("preset").value = String(builtinPresets().length + presets.length - 1);
+    $("preset").value = String(builtinPresets().length + (found.kind === "replace" ? found.index : presets.length - 1));
     render();
+    if (found.kind === "replace") showToast(t("presetReplaced")(name), () => { save("presets", before); render(); });
   };
   $("preset-delete").onclick = () => {
     const index = +$("preset").value - builtinPresets().length;
