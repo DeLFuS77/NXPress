@@ -51,11 +51,21 @@ func (a *App) CheckUpdate() Update {
 	return Update{}
 }
 
-// OpenURL opens a page in the browser of the system.
+// discordInvite is the invite to the Discord server NXPress shares with Switch Library Manager
+// Web (#86): it does not expire.
+const discordInvite = "https://discord.gg/acQVZSEBR"
+
+// OpenURL opens a page in the browser of the system: the ones of NXPress on GitHub, or its
+// Discord server, and no other.
 func (a *App) OpenURL(url string) {
-	if strings.HasPrefix(url, "https://github.com/DeLFuS77/NXPress") {
+	if pageOfNXPress(url) {
 		openURL(a.ctx, url)
 	}
+}
+
+// pageOfNXPress tells whether the page can open from the window.
+func pageOfNXPress(url string) bool {
+	return url == discordInvite || url == "https://github.com/DeLFuS77/NXPress" || strings.HasPrefix(url, "https://github.com/DeLFuS77/NXPress/")
 }
 
 // versionNumbers reads a version such as 1.2.3.

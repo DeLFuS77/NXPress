@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/DeLFuS77/NXPress/internal/cli"
@@ -15,18 +17,70 @@ var version = "dev"
 func main() {
 	cli.Version = version
 	titledb.UserAgent = "NXPress/" + version
-	// with no arguments it is the window, and with only files or folders too: the ones dropped
-	// on NXPress, or sent to it from the Explorer. Started from the Explorer, the console
-	// Windows opened for it is closed
-	if len(os.Args) == 1 || onlyPaths(os.Args[1:]) {
+	// the window, with the files it is given (see windowLaunch). Started from the Explorer, the
+	// console Windows opened for it is closed
+	if start, ok := windowLaunch(os.Args[1:]); ok {
 		system.HideConsole()
-		os.Exit(runWindow(os.Args[1:]))
-	}
-	if fromNotification(os.Args[1:]) {
-		system.HideConsole()
-		os.Exit(runWindow(nil))
+		os.Exit(runWindow(start))
 	}
 	os.Exit(run(os.Args[1:]))
+}
+
+// launch is what the window opens with: files, and how they came.
+type launch struct {
+	files []string
+	// the section the menu of the Explorer asked for (#88)
+	section string
+	// opened with a double click: NXPress is the program of the files (#87)
+	open bool
+}
+
+// sections are the ones the menu of the Explorer can ask for, by their names in the page.
+var sections = []string{"compress", "decompress", "recompress", "trim", "verify", "convert", "split", "pack", "info", "fat32", "rename"}
+
+// windowLaunch tells whether the arguments open the window, and with what: nothing; a notice
+// clicked; only files or folders, dropped on NXPress or sent to it from the Explorer; --open and
+// files, opened with NXPress as their program (#87); or --section, a section and files, from the
+// menu of the Explorer (#88). The files of the Explorer open the window even when one of them
+// is gone meanwhile; any other arguments are for the command line.
+func windowLaunch(args []string) (launch, bool) {
+	switch {
+	case len(args) == 0:
+		return launch{}, true
+	case onlyPaths(args):
+		return launch{files: args}, true
+	case args[0] == "--open" && len(args) > 1:
+		return launch{files: existing(args[1:]), open: true}, true
+	case args[0] == "--section" && len(args) > 2 && slices.Contains(sections, args[1]):
+		return launch{files: existing(args[2:]), section: args[1]}, true
+	case fromNotification(args):
+		return launch{}, true
+	}
+	return launch{}, false
+}
+
+// existing are the paths there, none an option.
+func existing(paths []string) []string {
+	there := []string{}
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil && !strings.HasPrefix(path, "-") {
+			there = append(there, path)
+		}
+	}
+	return there
+}
+
+// absolute makes the paths given to another NXPress whole, from the folder it was started in,
+// so the window that takes them finds them: not the options, nor the section after --section.
+func absolute(args []string, folder string) []string {
+	whole := slices.Clone(args)
+	for i, arg := range whole {
+		if strings.HasPrefix(arg, "-") || i == 1 && whole[0] == "--section" || filepath.IsAbs(arg) || folder == "" {
+			continue
+		}
+		whole[i] = filepath.Join(folder, arg)
+	}
+	return whole
 }
 
 // fromNotification tells whether Windows started NXPress for a notice of it clicked while it was

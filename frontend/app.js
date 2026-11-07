@@ -78,6 +78,10 @@ const state = {
   worklog: [], worklogFile: "", worklogOpen: new Set(), worklogProblems: false,
   // the works a search opens by itself stay closed after Collapse all, until the search changes
   worklogFindClosed: false,
+  // the places of NXPress in the Explorer (#87, #88), and the files it gave while the window was
+  // open: the ones waiting for the work to end, when the last came, how many make the list, and
+  // the list they took the place of, for Undo
+  explorer: { menu: "", files: "", others: [] }, openedWaiting: [], openedAt: 0, openedCount: 0, openedBefore: null,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -104,6 +108,12 @@ const isReport = value => isObject(value) && Array.isArray(value.rows) && value.
 const isPending = value => isObject(value) && modes.includes(value.mode) && isObject(value.request) && Array.isArray(value.request.files);
 // the settings saved with a name, the ones that can be read
 const savedPresets = () => load("presets", []).filter(preset => isObject(preset) && typeof preset.name === "string" && Number.isFinite(preset.level));
+// the list as rows or as a grid of covers: each section keeps its own (#84); one not chosen yet
+// shows the one chosen before for all of them
+function viewOf(mode) {
+  const view = load("views", {})[mode] || load("view", "list");
+  return view === "grid" ? "grid" : "list";
+}
 function save(name, value) {
   try { localStorage.setItem("nxpress." + name, JSON.stringify(value)); } catch { }
 }
@@ -658,12 +668,17 @@ function showRowMenu(row, remove, x, y) {
     /\.(nsp|nsz|xci|xcz)$/i.test(row.item.path) && ["menuVerify", () => start("verify", { files: [row.item.path], removeSource: false, output: "", watch: false }), true],
     ["menuRemove", remove, true],
   ].filter(Boolean);
+  openMenu(items.map(([key, action, needsIdle]) => [t(key), action, !!needsIdle && state.busy]), x, y);
+}
+// openMenu shows a menu of [text, action, off] at x, y, inside the window
+function openMenu(entries, x, y) {
+  const menu = $("row-menu");
   menu.innerHTML = "";
-  for (const [key, action, needsIdle] of items) {
+  for (const [text, action, off] of entries) {
     const button = document.createElement("button");
     button.setAttribute("role", "menuitem");
-    button.textContent = t(key);
-    button.disabled = !!needsIdle && state.busy;
+    button.textContent = text;
+    button.disabled = !!off;
     button.onclick = () => { hideRowMenu(); action(); };
     menu.append(button);
   }
@@ -676,6 +691,37 @@ function showRowMenu(row, remove, x, y) {
   menu.querySelector("button:not(:disabled)")?.focus();
 }
 let menuOpener = null;
+
+// the export of Details and of the log to a spreadsheet (#89): a menu of the two formats under
+// the button, then where to save it
+function exportMenu(button, run) {
+  const box = button.getBoundingClientRect();
+  openMenu([[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]], box.left, box.bottom + 4);
+}
+const today = () => { const now = new Date(); return [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-"); };
+async function exported(call) {
+  try {
+    const path = await call();
+    if (path) showToast(t("exported")(path.split(/[\\/]/).pop()));
+  } catch (error) { setStatus(String(error)); }
+}
+// Details: a row for each title of each file, in the order of the list
+function exportDetails(format) {
+  const byRow = new Map([...state.rows].map(([path, row]) => [row.tr, path]));
+  const paths = [...$("files").tBodies[0].rows].map(tr => byRow.get(tr)).filter(Boolean);
+  const header = [t("file"), t("colFormat"), t("colSize"), t("colTitleId"), t("colType"), t("colVersion"), t("colShown"), t("colName"), t("colPublisher"), t("colNewest"), t("colFolder"), t("colProblem")];
+  const kinds = Object.fromEntries(["BASE", "UPD", "DLC"].map(kind => [kind, t("gameKind")(kind)]));
+  exported(() => app().ExportDetails(paths, format, { sheet: t("info"), file: `NXPress ${t("info")} ${today()}`, header, kinds }));
+}
+// the log: a row for each file of the works shown, as they are shown
+function exportLog(format) {
+  const { workShown, rowShown } = worklogFilter();
+  const stamp = when => { const date = new Date(when); return [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(n => String(n).padStart(2, "0")).join("-") + " " + date.toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" }); };
+  const rows = state.worklog.slice().reverse().filter(workShown).flatMap(work => work.rows.filter(rowShown).map(row => [stamp(work.when), workName(work.mode), row.name, stateWord(row.status, work.mode, row.damaged), row.note || ""]));
+  const header = [t("colDate"), t("colSection"), t("file"), t("colResult"), t("colNote")];
+  exported(() => app().ExportLog(format, { sheet: t("worklog"), file: `NXPress ${t("worklog")} ${today()}`, header, kinds: {} }, rows));
+}
+
 function hideRowMenu() {
   const menu = $("row-menu");
   if (menu.hidden) return;
@@ -937,6 +983,90 @@ function warnSoon() {
   }, 100);
 }
 
+// the places of NXPress in the Explorer (#87, #88): each button adds what is not there, or there
+// for another copy of NXPress, and takes away what is there for this one; green when it is
+// there, orange when it needs a look
+function paintExplorer() {
+  const places = state.explorer;
+  for (const [button, status, place] of [["explorer-menu", "menu-status", places.menu], ["explorer-files", "files-status", places.files]]) {
+    $(button).textContent = place === "here" ? t("sendToOff") : place === "moved" ? t("explorerAgain") : t("sendToOn");
+    $(status).textContent = place === "here" ? t("explorerAdded") : place === "moved" ? t("explorerMoved") : "";
+    $(status).classList.toggle("ok", place === "here");
+    $(status).classList.toggle("warn", place === "moved");
+  }
+  // the types another program still opens, which Windows lets only the user give to NXPress
+  $("files-others").textContent = places.files === "here" && places.others.length ? t("explorerOthers")(places.others.join(", ")) : "";
+  $("open-start-row").hidden = places.files !== "here";
+  $("open-start").checked = load("openStart", false);
+}
+// the entries of the menu of the Explorer, by the names of the sections
+const menuTexts = () => ({ verify: t("verify"), info: t("info"), compress: t("compress"), decompress: t("decompress"), pack: t("pack") });
+async function setExplorer(call, after) {
+  try {
+    state.explorer = await call();
+    if (after) after();
+  } catch (error) {
+    setStatus(String(error));
+    state.explorer = await app().ExplorerPlaces().catch(() => state.explorer);
+  }
+  render();
+}
+
+// files from the Explorer while the window is open: dropped on NXPress or sent to it, opened with
+// a double click (#87) or from its menu (#88). They make a new list in their section, which Undo
+// takes back; the ones that come within a few seconds join it, as the Explorer starts an NXPress
+// for each file chosen. While a work goes on they wait for its end.
+async function takeOpened() {
+  let opened = [];
+  try { opened = await app().TakeOpened(); } catch { return; }
+  for (const files of opened) await receiveOpened(files);
+}
+async function receiveOpened(opened) {
+  if (!opened.files.length) return;
+  if (state.busy || state.starting) {
+    state.openedWaiting.push(opened);
+    showToast(t("openedLater")(state.openedWaiting.reduce((sum, waiting) => sum + waiting.files.length, 0)));
+    return;
+  }
+  const section = modes.includes(opened.section) ? opened.section : state.mode;
+  const now = Date.now();
+  const joins = now - state.openedAt < 3000 && state.mode === section;
+  state.openedAt = now;
+  state.view = "";
+  if (joins) {
+    await refill(opened.files, false);
+    state.openedCount += opened.files.length;
+  } else {
+    const before = { mode: state.mode, items: state.items.slice(), sources: state.sources.slice(), removed: [...state.removed] };
+    state.mode = section;
+    save("mode", section);
+    await refill(opened.files, true);
+    state.openedCount = opened.files.length;
+    state.openedBefore = before.items.length ? before : null;
+  }
+  if (state.openedBefore) showToast(t("openedNew")(state.openedCount), () => {
+    const before = state.openedBefore;
+    state.openedBefore = null;
+    clearList();
+    state.mode = before.mode;
+    save("mode", before.mode);
+    addOrigins(before.sources);
+    for (const path of before.removed) state.removed.add(path);
+    for (const item of before.items) add(item);
+    if (state.mode === "rename") previewNames();
+    previewPacks();
+    render();
+  });
+  render();
+  if (opened.open && load("openStart", false)) startSoon();
+}
+// a double click starts checking by itself when asked (#87), once the files stop coming
+let startTimer = 0;
+function startSoon() {
+  clearTimeout(startTimer);
+  startTimer = setTimeout(() => { if (!state.busy && !state.starting && state.mode === "verify" && state.items.length) start(); }, 1500);
+}
+
 function render() {
   warnSoon();
   document.documentElement.lang = state.language;
@@ -944,6 +1074,11 @@ function render() {
   if (state.closeLanguage !== state.language) {
     state.closeLanguage = state.language;
     app().CloseTexts(t("closeAsk"), t("closeYes"), t("closeNo")).catch(() => { });
+  }
+  // the menu of the Explorer speaks the language of the page (#88)
+  if (state.explorer.menu === "here" && load("menuLanguage", "") !== state.language) {
+    save("menuLanguage", state.language);
+    app().RelabelExplorerMenu(menuTexts()).catch(() => { });
   }
   paintStatus();
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
@@ -1032,8 +1167,8 @@ function render() {
   if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   paintPalettes();
-  // the list as rows, or as a grid of covers
-  const view = load("view", "list") === "grid" ? "grid" : "list";
+  // the list as rows, or as a grid of covers, as the section shown was left (#84)
+  const view = viewOf(state.mode);
   $("files").classList.toggle("grid", view === "grid");
   for (const button of document.querySelectorAll("[data-view]")) { button.classList.toggle("on", button.dataset.view === view); button.setAttribute("aria-checked", button.dataset.view === view); }
   // what Verify checks: the button chosen, and a sentence for it
@@ -1124,8 +1259,9 @@ function render() {
   if (!canHibernate && $("when-done").value === "hibernate") $("when-done").value = "";
   $("shutdown-force-option").hidden = $("shutdown-option").hidden || $("when-done").value !== "off";
   $("shutdown-force-option").title = t("shutdownForceHint");
-  $("send-to-row").hidden = !state.setup.sendTo;
+  $("explorer-group").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
+  paintExplorer();
   $("empty").hidden = state.items.length > 0;
   $("files").hidden = state.items.length === 0;
   document.body.classList.toggle("busy", state.busy);
@@ -1820,6 +1956,8 @@ function report() {
 
 function listen() {
   const events = window.runtime;
+  // files the Explorer gave to another NXPress, which sent them here
+  events.EventsOn("opened", takeOpened);
   events.EventsOn("progress", event => {
     const row = rowOf(event.file);
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
@@ -1910,6 +2048,11 @@ function listen() {
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
     if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
+    // the files the Explorer gave meanwhile come in now
+    if (state.openedWaiting.length) {
+      const waiting = state.openedWaiting.splice(0);
+      setTimeout(async () => { for (const opened of waiting) await receiveOpened(opened); }, 0);
+    }
   });
   // the computer did not turn off or hibernate: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
@@ -2006,9 +2149,16 @@ function workDay(when) {
   if (days === 1) return `${t("worklogYesterday")} · ${date}`;
   return day.toLocaleDateString(state.language, { weekday: "long", day: "numeric", month: "long", ...year });
 }
-function paintWorklog() {
+// the works and the files the log shows: the ones with problems only, when asked, and the ones
+// with what is looked for
+function worklogFilter() {
   const find = $("worklog-find").value.trim().toLowerCase();
   const problems = !!state.worklogProblems;
+  const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
+  return { find, problems, workShown: work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches), rowShown: row => (!problems || row.status !== "ok") && matches(row) };
+}
+function paintWorklog() {
+  const { find, problems, workShown, rowShown } = worklogFilter();
   for (const button of $("worklog-filter").querySelectorAll("button")) {
     const on = !!button.dataset.problems === problems;
     button.classList.toggle("on", on);
@@ -2024,8 +2174,8 @@ function paintWorklog() {
   $("worklog-show").hidden = !works.length;
   const list = $("worklog-list");
   list.innerHTML = "";
-  const matches = row => !find || row.name.toLowerCase().includes(find) || (row.note || "").toLowerCase().includes(find);
-  const shown = works.filter(work => (!problems || work.rows.some(row => row.status !== "ok")) && work.rows.some(matches));
+  const shown = works.filter(workShown);
+  $("worklog-export").disabled = !shown.length;
   // Expand all and Collapse all act on the works shown, each off when it has nothing to do
   $("worklog-expand").hidden = !shown.length;
   $("worklog-expand-all").onclick = () => {
@@ -2077,7 +2227,7 @@ function paintWorklog() {
     }
     item.querySelector(".worklog-saved").textContent = work.saved > 0 ? "−" + size(work.saved) : "";
     // its files, the problems first, and only the ones looked for
-    const rows = work.rows.filter(row => (!problems || row.status !== "ok") && matches(row)).sort((a, b) => order[a.status] - order[b.status]);
+    const rows = work.rows.filter(rowShown).sort((a, b) => order[a.status] - order[b.status]);
     for (const row of rows) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td><div class="report-name"></div><div class="report-note"></div></td><td class="state"><span class="badge"></span></td>`;
@@ -2320,7 +2470,7 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
-  for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("view", button.dataset.view); render(); };
+  for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("views", { ...load("views", {}), [state.mode]: button.dataset.view }); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
@@ -2355,6 +2505,10 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
+  $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
+  // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
+  $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
   $("space-cancel").onclick = () => $("space-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
   watchDrops(window, window.runtime, $("drop-overlay"), () => state.busy, (show, count) => {
@@ -2398,6 +2552,11 @@ async function main() {
   }
   $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); previewPacks(); };
   $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
+  // the menu of NXPress in the Explorer, in the language of the page (#88), and the program of
+  // its files (#87): added when not there or there for another copy, else taken away
+  $("explorer-menu").onclick = () => setExplorer(() => app().SetExplorerMenu(state.explorer.menu !== "here", menuTexts()), () => save("menuLanguage", state.language));
+  $("explorer-files").onclick = () => setExplorer(() => app().SetExplorerFiles(state.explorer.files !== "here"));
+  $("open-start").onchange = () => save("openStart", $("open-start").checked);
   $("send-to").onclick = async () => {
     try {
       await app().SetSendTo(!state.setup.sendToEnabled);
@@ -2437,7 +2596,6 @@ async function main() {
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
   $("measure-close").onclick = () => $("measure-dialog").close();
-  $("last-report").onclick = openWorklog;
   // the log: what is looked for, the works with problems only, the most kept, its text file, and
   // clearing it, which Undo takes back
   $("worklog-find").oninput = () => { state.worklogFindClosed = false; paintWorklog(); };
@@ -2516,12 +2674,20 @@ async function main() {
     };
     $("resume-drop").onclick = () => { save("pending", null); state.pendingCount = 0; $("resume-banner").hidden = true; };
   }
-  // the files NXPress was started with: dropped on it, or sent to it
+  // the places of NXPress in the Explorer, on Windows (#87, #88)
+  if (state.setup.sendTo) state.explorer = await app().ExplorerPlaces().catch(() => state.explorer);
+  // the files NXPress was started with: dropped on it, sent to it, or opened from the Explorer
+  // with a double click or its menu, in the section asked (#87, #88)
   if (state.setup.files && state.setup.files.length) {
     state.mode = state.setup.mode;
     await refill(state.setup.files, true);
+    state.openedAt = Date.now();
+    state.openedCount = state.setup.files.length;
+    if (state.setup.open && load("openStart", false)) startSoon();
   }
   render();
+  // the ones given to other NXPress while this one was opening
+  takeOpened();
   checkUpdate();
   loadVersions();
 }

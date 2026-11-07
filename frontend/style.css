@@ -527,6 +527,10 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 table.grid .dump-plan { display: none; }
 
 /* the switch of the list: rows or a grid of covers */
+/* Export, with the menu of its formats (#89) */
+.menu-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.menu-button .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.menu-button .caret { font-size: 10px; color: var(--muted); }
 .view-switch { margin: 0 0 0 auto; }
 .view-switch button { padding: 4px 8px; display: grid; place-items: center; }
 .view-switch .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -632,7 +636,14 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 /* what a setting found: the day of the list of versions published */
 .pref-text .pref-status { font-style: italic; opacity: .85; }
 .pref-text .pref-status:empty { display: none; }
+/* a place in the Explorer: green when it is there, orange when it needs a look (#87, #88) */
+.pref-text .pref-status.ok { color: var(--ok); font-style: normal; opacity: 1; }
+.pref-text .pref-status.warn { color: var(--warn); font-style: normal; opacity: 1; }
+.pref-text label.check.small-check { margin-top: 6px; white-space: normal; }
 .pref-item > select { min-width: 180px; }
+/* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
+.brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.brand-button .discord-logo { width: 16px; height: 16px; flex: none; fill: #5865f2; }
 .pref-item .segmented { margin: 0; }
 .pref-item .segmented button { padding: 3px 10px; }
 #preferences .pref-keys { word-break: break-all; }
