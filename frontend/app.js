@@ -19,7 +19,8 @@ const isNup = path => /\.nup$/i.test(path);
 const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
 // whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
 // dump folders only
-const needsKeys = mode => !["recompress", "fat32"].includes(mode) && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
+// Recompress needs them only with the extra compression, which goes through an NSP (#92)
+const needsKeys = mode => (mode === "recompress" ? $("extra").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
 const icons = {
@@ -1208,7 +1209,7 @@ function render() {
   $("watch-folders").hidden = !$("watch").checked;
   // the files that use the extra compression do not go with the installers above as they are; it
   // is for Compress only, where its box is
-  $("extra-target-warning").hidden = !$("extra").checked || state.mode !== "compress";
+  $("extra-target-warning").hidden = !$("extra").checked || !["compress", "recompress"].includes(state.mode);
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
@@ -1798,6 +1799,25 @@ function renderPresets() {
   $("preset-delete").hidden = !select.value || all[+select.value].builtin;
   $("preset-name").placeholder = t("presetName");
   save("preset", select.value === "" ? "" : presetKey(all, +select.value));
+  paintPresetName();
+}
+// the name typed for saved settings (#93): new, the name of saved settings, which Save replaces,
+// or one of the settings of NXPress, which is not taken; told without telling capitals apart
+function presetNameState() {
+  const name = $("preset-name").value.trim().toLowerCase();
+  if (!name) return { kind: "" };
+  if (builtinPresets().some(preset => preset.name.toLowerCase() === name)) return { kind: "builtin" };
+  const index = savedPresets().findIndex(preset => preset.name.toLowerCase() === name);
+  return index >= 0 ? { kind: "replace", index } : { kind: "new" };
+}
+// Save becomes Replace, in orange, while the name is in use, and a line under it tells why
+function paintPresetName() {
+  const { kind } = presetNameState();
+  $("preset-save").textContent = t(kind === "replace" ? "presetReplace" : "presetSave");
+  $("preset-save").classList.toggle("replace", kind === "replace");
+  $("preset-save").disabled = kind === "builtin";
+  $("preset-warning").textContent = kind === "replace" ? t("presetExists")($("preset-name").value.trim()) : kind === "builtin" ? t("presetBuiltin") : "";
+  $("preset-warning").hidden = !$("preset-warning").textContent;
 }
 function applyPreset() {
   const preset = [...builtinPresets(), ...savedPresets()][+$("preset").value];
@@ -2635,17 +2655,25 @@ async function main() {
   $("when-done").onchange = () => render();
   $("shutdown-cancel").onclick = keepOn;
   $("preset").onchange = applyPreset;
+  $("preset-name").oninput = paintPresetName;
+  // saved settings of the same name are replaced where they are, and Undo brings them back (#93)
   $("preset-save").onclick = () => {
     const name = $("preset-name").value.trim();
     if (!name) { $("preset-name").focus(); return; }
-    const presets = savedPresets().filter(preset => preset.name !== name);
+    const found = presetNameState();
+    if (found.kind === "builtin") return;
+    const before = savedPresets();
+    const presets = before.slice();
     const now = settings();
-    presets.push({ name, level: now.level, block: now.block, threads: now.threads, multi: now.multi });
+    const preset = { name, level: now.level, block: now.block, threads: now.threads, multi: now.multi };
+    if (found.kind === "replace") presets[found.index] = preset;
+    else presets.push(preset);
     save("presets", presets);
     $("preset-name").value = "";
     render();
-    $("preset").value = String(builtinPresets().length + presets.length - 1);
+    $("preset").value = String(builtinPresets().length + (found.kind === "replace" ? found.index : presets.length - 1));
     render();
+    if (found.kind === "replace") showToast(t("presetReplaced")(name), () => { save("presets", before); render(); });
   };
   $("preset-delete").onclick = () => {
     const index = +$("preset").value - builtinPresets().length;

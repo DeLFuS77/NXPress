@@ -126,9 +126,12 @@
           <button id="preset-delete" class="quiet icon" data-t-title="presetDelete" data-t-label="presetDelete">🗑</button>
         </div>
         <div class="presets-row" id="preset-new">
-          <input id="preset-name" type="text" maxlength="40">
-          <button id="preset-save" data-t="presetSave"></button>
+          <input id="preset-name" type="text" maxlength="40" aria-describedby="preset-warning">
+          <button id="preset-save"></button>
         </div>
+        <!-- a name in use: Save becomes Replace and says so, and the names of NXPress are not
+             taken (#93) -->
+        <p class="warning" id="preset-warning" hidden></p>
       </div>
       <div class="field">
         <div class="level-head"><span id="level-name" data-t="level"></span><b id="level-value"></b></div>
@@ -154,9 +157,11 @@
           <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
         </div>
         <!-- the extra compression goes with what the files are made for, as it changes what reads them (#76) -->
-        <div class="extra-field" data-for="compress">
+        <div class="extra-field" data-for="compress recompress">
           <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
           <p class="hint" data-t="extraHint"></p>
+          <!-- in Recompress both ways, through a decompressed copy when the format changes (#92) -->
+          <p class="hint always" data-for="recompress" data-t="extraRecompress"></p>
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
         <p class="hint" data-t="xczBlock"></p>
