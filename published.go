@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
 )
@@ -15,6 +16,8 @@ const versionsWait = 2 * time.Minute
 
 // LoadVersions reads the versions published of each game and DLC, downloading them again when the
 // copy kept is a day old (see titledb.Refresh): only from the window, when its settings allow it.
+// The names of the games of the Switch 2 come with them, for the dump folders without control
+// data Combine packs (see titledb.RefreshNames).
 // It gives the day of the list (2026-11-02), "" when there is none; with no connection it is
 // the copy kept, and nothing is said.
 func (a *App) LoadVersions() string {
@@ -28,6 +31,8 @@ func (a *App) LoadVersions() string {
 	defer cancel()
 	versions, _ := titledb.Refresh(ctx, folder, http.DefaultClient, time.Now())
 	a.versions.Store(versions)
+	names, _ := titledb.RefreshNames(ctx, folder, http.DefaultClient, time.Now())
+	jobs.UseNames(names)
 	if versions == nil {
 		return ""
 	}
@@ -40,8 +45,10 @@ func (a *App) ForgetVersions() {
 	a.versionsMutex.Lock()
 	defer a.versionsMutex.Unlock()
 	a.versions.Store(nil)
+	jobs.UseNames(nil)
 	if folder, err := portable.DataFolder(); err == nil {
 		_ = titledb.Forget(folder)
+		_ = titledb.ForgetNames(folder)
 	}
 }
 

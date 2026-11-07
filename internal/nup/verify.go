@@ -37,6 +37,9 @@ type Damaged struct {
 	// its path inside the package: romfs/Data/stage.bin
 	Path   string
 	Reason string
+	// a code module of an ExeFS whose data is as it was packed, but that its own header tells
+	// damaged: the dump the NUP was made of lacks bytes of it (nso.go)
+	Code bool
 }
 
 // Check is what the verification of a NUP found.
@@ -48,6 +51,8 @@ type Check struct {
 	// the bytes read from the NUP
 	Read    int64
 	Damaged []Damaged
+	// the code modules of the ExeFS of the packages read by their headers
+	Modules int
 	// files of the table that no folder of any package holds: checked all the same
 	Unplaced int
 	// what the metadata of the packages tells otherwise than their files, which the format
@@ -65,6 +70,11 @@ type extentJob struct {
 	// why the data is damaged, "" when it is whole; and its SHA-256, once read whole
 	reason string
 	sum    [32]byte
+	// the data of a code module, read by its header as it is hashed: whether it starts as one,
+	// and what its header tells wrong with it
+	code        bool
+	module      bool
+	codeProblem string
 }
 
 // feed is the data of one piece, handed by the reader to a worker chunk after chunk; failed is
@@ -81,7 +91,10 @@ type feed struct {
 // so, several for an SSD, and workers hash and decompress what they read; nothing is held in
 // memory but a few buffers. The header and the table of contents are checked first, by their hash: a NUP whose
 // table is damaged fails as a whole, a NUP whose files are damaged gives them in
-// Check.Damaged, with the metadata of a package that cannot be what it says (checkMeta).
+// Check.Damaged, with the metadata of a package that cannot be what it says (checkMeta). The
+// code modules of each ExeFS are read by their headers as they go by (nso.go): the hashes of a
+// NUP are of the files as they were packed, and a dump that lost bytes of its code gives a NUP
+// whose hashes match but whose game does not start.
 // progress is told the bytes read of the ones to read.
 func Verify(ctx context.Context, path string, workers int, readers int, progress func(done int64, total int64)) (*Container, Check, error) {
 	file, err := os.Open(path)
@@ -98,6 +111,17 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 		return nil, Check{}, err
 	}
 	check := Check{Files: len(container.Files)}
+
+	// the code modules of the ExeFS of each package
+	code := make([]bool, len(container.Files))
+	for i := range container.Packages {
+		if err := container.Walk(i, func(path string, index int) error {
+			code[index] = code[index] || IsCodeModule(path)
+			return nil
+		}); err != nil {
+			return container, check, err
+		}
+	}
 
 	// the pieces of data to read, each once, in the order they are stored
 	type key struct {
@@ -121,6 +145,7 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 			byKey[k] = job
 		}
 		job.files = append(job.files, i)
+		job.code = job.code || code[i]
 	}
 	jobs := make([]*extentJob, 0, len(byKey))
 	total := int64(0)
@@ -148,6 +173,8 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 	if err != nil {
 		return container, check, err
 	}
+	// a module whose data is not what was packed is damaged by its data, not by the dump
+	codeReasons := make([]string, len(container.Files))
 	for _, job := range jobs {
 		for _, index := range job.files {
 			switch {
@@ -155,6 +182,9 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 				reasons[index] = job.reason
 			case container.Files[index].Hash != job.sum:
 				reasons[index] = "its SHA-256 does not match"
+			case code[index] && job.module:
+				check.Modules++
+				codeReasons[index] = job.codeProblem
 			}
 		}
 	}
@@ -164,8 +194,12 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 	for i, pkg := range container.Packages {
 		label := Label(pkg)
 		err := container.Walk(i, func(path string, index int) error {
-			if !placed[index] && reasons[index] != "" {
+			switch {
+			case placed[index]:
+			case reasons[index] != "":
 				check.Damaged = append(check.Damaged, Damaged{Package: label, Path: path, Reason: reasons[index]})
+			case codeReasons[index] != "":
+				check.Damaged = append(check.Damaged, Damaged{Package: label, Path: path, Reason: codeReasons[index], Code: true})
 			}
 			placed[index] = true
 			return nil
@@ -389,6 +423,12 @@ func (h *hasher) check(f *feed) error {
 		}
 		into = &guardedWriter{w: io.MultiWriter(writers...)}
 	}
+	// a code module is read by its header as it is hashed
+	var module *nsoCheck
+	if job.code {
+		module = newNsoCheck(int64(job.size))
+		into = io.MultiWriter(into, module)
+	}
 	var (
 		n   int64
 		err error
@@ -423,6 +463,9 @@ func (h *hasher) check(f *feed) error {
 		job.reason = fmt.Sprintf("its data decompresses to %d bytes instead of %d", n, job.size)
 	default:
 		copy(job.sum[:], hash.Sum(nil))
+		if module != nil {
+			job.module, job.codeProblem = module.module(), module.result()
+		}
 	}
 	return nil
 }

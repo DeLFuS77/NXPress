@@ -448,7 +448,14 @@ type PackOptions struct {
 	// the name and the publisher of the game, when its folder has no control data to tell them
 	Name      string
 	Publisher string
+	// files bigger than this are stored as they are, 0 for none: Eglantine and Lichii decompress a
+	// file with zstd whole the first time it is read, into a temporary file past 256 MiB, and
+	// their packers store such files raw (RawBig)
+	RawOver int64
 }
+
+// RawBig is the size past which the packers of Eglantine and Lichii store a file as it is.
+const RawBig = 256 << 20
 
 // PackResult is what a NUP packed holds.
 type PackResult struct {
@@ -458,9 +465,11 @@ type PackResult struct {
 	// the files uncompressed, and the NUP written
 	Size     int64
 	FileSize int64
-	// the files whose data another file shares, and the ones stored with zstd
+	// the files whose data another file shares, the ones stored with zstd, and the ones stored
+	// as they are for their size (RawOver)
 	Shared int
 	Zstd   int
+	RawBig int
 }
 
 // fileOut is where the data of a file went in the NUP.
@@ -525,9 +534,12 @@ func Pack(ctx context.Context, src string, out string, o PackOptions, progress f
 	if err != nil {
 		return result, err
 	}
-	for _, f := range outs {
+	for i, f := range outs {
 		if f.codec == CodecZstd {
 			result.Zstd++
+		}
+		if o.RawOver > 0 && tree.files[i].size > o.RawOver && f.size > 0 {
+			result.RawBig++
 		}
 	}
 	seen := map[uint64]bool{}
@@ -676,7 +688,10 @@ func appPackage(sources []Source) int {
 }
 
 // metaBlock is the metadata of a package: its NPDM, its build ID and the dump it comes from; for
-// the game also its names, publisher, version and icon, from its control data or as given.
+// the game also its names, publisher, version and icon, from its control data or as given; for
+// an update also its version, from its own control data. Emulators show the version of the
+// newest update from its record, and without one make up a wrong one from its number (131072 is
+// not 2.0.0 for every game).
 func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 	records := map[uint16][]byte{}
 	if len(source.Npdm) > 0 {
@@ -686,7 +701,8 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		records[0x0007] = source.BuildID
 	}
 	records[0x0008] = []byte(label)
-	if app {
+	switch {
+	case app:
 		for kind, value := range controlRecords(source.Control) {
 			records[kind] = value
 		}
@@ -695,6 +711,10 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		}
 		if o.Publisher != "" {
 			records[tlvPublisher] = []byte(o.Publisher)
+		}
+	case source.Kind == KindUpdate:
+		if version := controlVersion(source.Control); version != "" {
+			records[tlvDisplayVersion] = []byte(version)
 		}
 	}
 	kinds := []int{}
@@ -766,6 +786,19 @@ func controlRecords(dir string) map[uint16][]byte {
 		result[tlvLocalizedIcons] = icons.Bytes()
 	}
 	return result
+}
+
+// controlVersion is the version shown (1.0.2) the control.nacp of a control folder gives, "" without
+// one.
+func controlVersion(dir string) string {
+	if dir == "" {
+		return ""
+	}
+	nacp, err := os.ReadFile(filepath.Join(dir, "control.nacp"))
+	if err != nil || len(nacp) < nacpVersionAt+nacpVersionSize {
+		return ""
+	}
+	return text(cString(nacp[nacpVersionAt:][:nacpVersionSize]), 0x0F)
 }
 
 // ControlName is the name of the game a control folder gives: American English, else the first
@@ -940,7 +973,8 @@ func writeExtents(ctx context.Context, w *blobWriter, out string, files []*packN
 				defer encoder.close()
 			}
 			for index := range jobs {
-				p := prepareFile(ctx, index, files[index], encoder, sizes[files[index].size] > 1, slots)
+				raw := o.RawOver > 0 && files[index].size > o.RawOver
+				p := prepareFile(ctx, index, files[index], encoder, raw, sizes[files[index].size] > 1, slots)
 				select {
 				case results <- p:
 				case <-ctx.Done():
@@ -1137,7 +1171,7 @@ take:
 // zstd does not make it smaller. Of a big file it tells whether zstd makes its start smaller, and
 // hashes it when another file has its size (it may hold the same data). A file is read only
 // while a slot of the drive is free.
-func prepareFile(ctx context.Context, index int, node *packNode, encoder wholeEncoder, shared bool, slots chan struct{}) prepared {
+func prepareFile(ctx context.Context, index int, node *packNode, encoder wholeEncoder, raw bool, shared bool, slots chan struct{}) prepared {
 	p := prepared{index: index}
 	if node.size == 0 || ctx.Err() != nil {
 		return p
@@ -1152,7 +1186,7 @@ func prepareFile(ctx context.Context, index int, node *packNode, encoder wholeEn
 			return p
 		}
 		defer file.Close()
-		if encoder != nil {
+		if encoder != nil && !raw {
 			sample := make([]byte, sampleSize)
 			if _, err := io.ReadFull(file, sample); err != nil {
 				p.err = fmt.Errorf("%s: %w", node.path, err)
@@ -1194,7 +1228,7 @@ func prepareFile(ctx context.Context, index int, node *packNode, encoder wholeEn
 	}
 	p.hash, p.hashed = sha256.Sum256(data), true
 	p.data, p.codec = data, CodecRaw
-	if encoder != nil && !compressedAlready(data) {
+	if encoder != nil && !raw && !compressedAlready(data) {
 		if compressed := encoder.encode(data); compressed != nil && len(compressed) < len(data) {
 			p.data, p.codec = compressed, CodecZstd
 		}

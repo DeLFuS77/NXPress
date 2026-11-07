@@ -59,6 +59,9 @@ type checkedFile struct {
 	fileStamp
 	Checked time.Time `json:"checked"`
 	Note    string    `json:"note,omitempty"`
+	// the version of the check, for the kinds of file whose check grew: a file checked by an
+	// older one is read again
+	Checker int `json:"checker,omitempty"`
 }
 
 var Checked = &CheckCache{}
@@ -202,6 +205,11 @@ func (c *CheckCache) Find(path string) (checkedFile, bool) {
 // Keep records a file as checked now. It looks at that file alone, whatever the number of files
 // in the cache, which is written a while later or at the end of the work.
 func (c *CheckCache) Keep(path string, note string) {
+	c.KeepChecked(path, note, 0)
+}
+
+// KeepChecked records a file as checked now by the version of its check given.
+func (c *CheckCache) KeepChecked(path string, note string, checker int) {
 	c.load()
 	stamp, err := stampOf(path)
 	if err != nil || stamp.Folder {
@@ -215,7 +223,7 @@ func (c *CheckCache) Keep(path string, note string) {
 			return
 		}
 	}
-	c.files[path] = checkedFile{fileStamp: stamp, Checked: time.Now(), Note: note}
+	c.files[path] = checkedFile{fileStamp: stamp, Checked: time.Now(), Note: note, Checker: checker}
 	c.changed()
 }
 

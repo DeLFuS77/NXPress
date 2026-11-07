@@ -51,6 +51,9 @@ type Options struct {
 	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
 	// a NUP, next to it or in -o
 	Nup bool
+	// --fix-nup-meta: the metadata of each NUP given whose types are counted from 0 written again
+	// with them where the format puts them, for Eglantine and Lichii
+	FixNupMeta bool
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string
@@ -66,14 +69,19 @@ type Options struct {
 	Output      string
 	Overwrite   bool
 	RmSource    bool
-	Keys        string
-	Dat         string
-	datFile     *dat.Dat
-	Minimal     bool
-	Machine     bool
-	Version     bool
-	Help        bool
-	Files       []string
+	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
+	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
+	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
+	// file whole into a temporary file each time a game starts to read it
+	NupZstdBig bool
+	Keys       string
+	Dat        string
+	datFile    *dat.Dat
+	Minimal    bool
+	Machine    bool
+	Version    bool
+	Help       bool
+	Files      []string
 	// the options of nsz accepted without effect, told once
 	Ignored []string
 	// what the options given do not do together, told once
@@ -107,14 +115,14 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false},
+	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
 	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
@@ -279,6 +287,10 @@ func (o *Options) flag(option optionName) {
 		o.Overwrite = true
 	case "--rm-source":
 		o.RmSource = true
+	case "--rm-dumps":
+		o.RmDumps = true
+	case "--nup-zstd-big":
+		o.NupZstdBig = true
 	case "--info":
 		o.Info = true
 	case "--convert":
@@ -311,6 +323,8 @@ func (o *Options) flag(option optionName) {
 		o.PackOne = true
 	case "--nup":
 		o.Nup = true
+	case "--fix-nup-meta":
+		o.FixNupMeta = true
 	case "--minimal-output":
 		o.Minimal = true
 	case "--machine-readable":
@@ -417,13 +431,13 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup} {
+	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games and --nup")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --nup and --fix-nup-meta")
 	}
 	// a watch would look for new files a pack does not take, without end
 	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup) {
@@ -455,6 +469,15 @@ func (o *Options) Check() error {
 	if o.PackName != "" && !o.PackGames && !o.PackOne {
 		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games or --pack-one")
 	}
+	if o.RmDumps && !o.RmSource {
+		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
+	}
+	if o.RmDumps && !o.Nup && o.Pack == "" && !o.PackGames && !o.PackOne {
+		o.Notes = append(o.Notes, "--rm-dumps has no effect without --nup")
+	}
+	if o.NupZstdBig && !o.Nup {
+		o.Notes = append(o.Notes, "--nup-zstd-big has no effect without --nup")
+	}
 	if (o.Sparse || o.Archive) && !o.Compress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C")
 	}
@@ -482,7 +505,9 @@ Usage: nxpress [options] file or folder...
                       folders
   -V, --verify        check files: with -C or -D it is always done, alone it checks the
                       files given (NSP, NSZ, XCI, XCZ, and NUP: the SHA-256 of each of its
-                      files, without keys)
+                      files, without keys) and the dump folders given; the code modules of
+                      a NUP or a dump folder are read by their headers, which tell a dump
+                      that lost bytes of its code
   -Q, --quick-verify  the same as -V
   --verify-level L    what -V checks: hash (every NCA by its hashes, the default; full is
                       the same), signature (the header of every NCA signed by Nintendo, in
@@ -517,14 +542,25 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
+  --rm-dumps          with --rm-source, delete each dump folder too once its NUP is read
+                      back and checked: the files the NUP holds, then the folders left
+                      empty; a file it does not hold, or one changed since, stays
   -i, --info          show the titles a file holds; of a NUP, each package (game, update,
                       DLC) with its files and their size, without keys
+  --fix-nup-meta      write again the metadata of each NUP given whose types are counted
+                      from 0, as a build of the packer of the format wrote them, with them
+                      where the format puts them, as Eglantine and Lichii read them: only
+                      those numbers change, in the NUP itself, checked after
   --nup               pack each dump folder given (base, updates and dlc, or exefs and
                       romfs, as OunceCake writes them) into a NUP, next to it or in -o:
                       each file with zstd (level 3, or -l) or as it is when zstd does not
                       make it smaller, files with the same data kept once, the NUP checked
                       whole before it gets its name; no keys needed. -D turns a NUP back
                       into a folder, each file checked by its SHA-256
+  --nup-zstd-big      with --nup, compress the files over 256 MiB too. Without it they are
+                      stored as they are, as the packers of Eglantine and Lichii store them:
+                      these emulators decompress such a file whole into a temporary file
+                      each time a game starts to read it
   --estimate          tell the size and the time a compression would give, with -l, -t
                       and -B, from samples of each NSP and XCI: nothing is written
   --levels            with --estimate, at the levels 3, 9, 12, 15, 18 and 19, to choose one
@@ -612,6 +648,8 @@ func (o Options) Action() string {
 		return "pack"
 	case o.Nup:
 		return "nup"
+	case o.FixNupMeta:
+		return "fixmeta"
 	}
 	return "verify"
 }

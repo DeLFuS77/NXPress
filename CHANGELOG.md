@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.7.3
+
+### Improvements
+
+- Extra compression sits under Made for in Compress, and its warning shows in Compress only (thanks @NikoMuffin, #76)
+- Watch the folders says which folders it watches (thanks @NikoMuffin, #77)
+- Combine can delete the dump folders once their NUP is read back whole and checked, with a box under Delete originals, off by default (`--rm-dumps`): a file the NUP does not hold, or one changed during the packing, stays (thanks @NikoMuffin, #79)
+- Shorter texts under each section of the side menu, in every language (thanks @NikoMuffin, #80)
+- Verify and Details tell whether Eglantine and Lichii, the emulators that open NUP files, open a NUP and can start its game, and why not
+- A NUP whose metadata types are counted from 0, as an early build of the packer of the format wrote them, is told, and Details fixes it in place (`--fix-nup-meta`), so the emulators show its name, version and icon right
+- NUP files made by Combine suit the emulators better: files over 256 MiB are stored as they are by default, since the emulators decompress them whole to the disk each time the game starts (`--nup-zstd-big` compresses them), each update carries its own version, and the NUP of a Switch 2 dump without control data takes the name of its game
+
+### Fixes
+
+- Verify reads the code of NUP files and dump folders, and tells a dump whose code lost bytes, a game that stops as it starts: it must be dumped again. Combine still makes its NUP, and the work fails with the warning
+- Rename and the list give a NUP that carries no name a readable one, from its dump
+
+### Next
+
+- NUP v2, the new version of the format, as its specification settles: reading and verifying first
+
 ## 1.7.2
 
 ### Improvements

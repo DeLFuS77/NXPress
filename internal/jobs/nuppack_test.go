@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/nup"
 )
@@ -56,6 +57,66 @@ func writeDump(t *testing.T, name string) string {
 		}
 	}
 	return dir
+}
+
+// With --rm-source and --rm-dumps a dump folder goes once its NUP is read back and checked; a
+// file the NUP does not hold, or one changed since the packing began, stays, with the folders
+// that hold it. With --rm-source alone the folder stays whole.
+func TestPackNupRemovesDump(t *testing.T) {
+	both := Options{RmSource: true, RmDumps: true}
+	dir := writeDump(t, "Moonlit Orchard")
+	name, note, err := packNup(t.Context(), dir, both, 1, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, check, err := nup.Verify(t.Context(), name, 1, 1, nil); err != nil || len(check.Damaged) > 0 {
+		t.Fatalf("the NUP left: %v, %v", check.Damaged, err)
+	}
+	if _, err := os.Lstat(dir); !os.IsNotExist(err) {
+		t.Errorf("the dump folder is still there: %v", err)
+	}
+	if !strings.HasSuffix(note, dumpDeleted) {
+		t.Errorf("the note: %s", note)
+	}
+
+	// a file beside the packages of the folder, and one written after the packing began
+	dir = writeDump(t, "Harbor Lights")
+	if err := os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("notes of the dump"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "base", "exefs", "main"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	_, note, err = packNup(t.Context(), dir, both, 1, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kept := range []string{"readme.txt", "base/exefs/main"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(kept))); err != nil {
+			t.Errorf("%s is gone: %v", kept, err)
+		}
+	}
+	for _, gone := range []string{"base/exefs/main.npdm", "base/romfs"} {
+		if _, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(gone))); !os.IsNotExist(err) {
+			t.Errorf("%s is still there: %v", gone, err)
+		}
+	}
+	if !strings.HasSuffix(note, "2 files stay in the dump folder, which the NUP does not hold as they are: the rest is deleted") {
+		t.Errorf("the note: %s", note)
+	}
+
+	dir = writeDump(t, "Copper Valley")
+	_, note, err = packNup(t.Context(), dir, Options{RmSource: true}, 1, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "base", "romfs", "Data", "game.bin")); err != nil {
+		t.Errorf("--rm-source alone took the dump folder: %v", err)
+	}
+	if !strings.HasSuffix(note, keptOriginal) {
+		t.Errorf("the note: %s", note)
+	}
 }
 
 // A dump folder without control data gives its NUP the name of the game its folder tells; the

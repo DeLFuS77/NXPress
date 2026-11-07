@@ -33,12 +33,13 @@ func TestNupTitleAndCard(t *testing.T) {
 		title.Container != "NUP" || !strings.HasPrefix(title.Icon, "data:image/jpeg;base64,") {
 		t.Errorf("%+v", title)
 	}
-	size, uncompressed, cards, err := NupCard(path)
+	details, err := NupCard(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if size <= 0 || uncompressed != 5000*3+4 || len(cards) != 3 {
-		t.Fatalf("%d %d %+v", size, uncompressed, cards)
+	size, uncompressed, cards := details.Size, details.Uncompressed, details.Packages
+	if size <= 0 || uncompressed != 5000*3+4 || len(cards) != 3 || details.Emulators == "" || details.ZeroBased {
+		t.Fatalf("%d %d %+v", size, uncompressed, details)
 	}
 	if cards[0].Name != "Made-up Book" || cards[0].Files != 2 || cards[0].Size != 5004 || cards[0].Stored >= cards[0].Size ||
 		cards[1].TitleID != "0400245021D2C800" || cards[1].Type != "UPD" || cards[1].Shown != "1.0.2" {
