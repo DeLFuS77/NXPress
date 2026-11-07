@@ -2361,6 +2361,8 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
+  $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
   $("space-cancel").onclick = () => $("space-dialog").close();
   // 2: a drop answers before it lands: the whole window says how many files it takes
   watchDrops(window, window.runtime, $("drop-overlay"), () => state.busy, (show, count) => {

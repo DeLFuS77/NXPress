@@ -633,6 +633,9 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 .pref-text .pref-status { font-style: italic; opacity: .85; }
 .pref-text .pref-status:empty { display: none; }
 .pref-item > select { min-width: 180px; }
+/* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
+.brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.brand-button .discord-logo { width: 16px; height: 16px; flex: none; fill: #5865f2; }
 .pref-item .segmented { margin: 0; }
 .pref-item .segmented button { padding: 3px 10px; }
 #preferences .pref-keys { word-break: break-all; }
