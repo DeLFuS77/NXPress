@@ -392,11 +392,19 @@ func (e cutShort) Unwrap() error {
 //
 // The packer of the format counted the types from 0 for a while (NPDM 0, NACP 1, the name 4,
 // the publisher 5), one below the ones the format gives them: type 0 is no type of the format,
-// so a block that has one is read with each of its types one up.
+// so a block that has one is read with each of its types one up. A block without an NPDM, as the
+// one of a DLC, has no type 0: there a record 0x0007 that is not the 32 bytes of a build ID tells
+// it, the name of the source dump one below its place. The reference packer reads them by the
+// same two rules (a55uka/nup#32).
 func parseTlvs(block []byte) (map[uint16][]byte, bool, error) {
 	result, err := splitTlvs(block)
-	if _, shifted := result[0]; err != nil || !shifted {
+	if err != nil {
 		return result, false, err
+	}
+	_, typeZero := result[0]
+	id, hasID := result[0x0007]
+	if !typeZero && (!hasID || len(id) == 32) {
+		return result, false, nil
 	}
 	moved := map[uint16][]byte{}
 	for kind, value := range result {

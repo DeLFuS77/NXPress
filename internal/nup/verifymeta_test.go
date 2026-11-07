@@ -17,13 +17,16 @@ func TestVerifyLooksAtTheMetadata(t *testing.T) {
 		main[i] = byte(i)
 	}
 	packages := []testnup.Package{
+		// counted from 0 with an NPDM (type 0): its build ID (6) is read as 0x0007, 31 bytes, its
+		// name (4) and the rest one up too. A record 0x0007 that is not 32 bytes would make a block
+		// counted from 1 read as counted from 0, so a damaged build ID shows in such a block
 		{TitleId: 0x0400486024DEC000, Kind: testnup.Base, Version: 0,
 			Meta: []testnup.Record{
-				{Type: 0x0001, Payload: otherNpdm},
-				{Type: 0x0007, Payload: make([]byte, 31)},
-				{Type: 0x0005, Payload: []byte{0xFF, 0xFE, 'x'}},
-				{Type: 0x0003, Payload: []byte("GIF89a")},
-				{Type: 0x0009, Payload: []byte{2, 'j', 'a', 9, 0, 0, 0, 'x'}},
+				{Type: 0x0000, Payload: otherNpdm},
+				{Type: 0x0006, Payload: make([]byte, 31)},
+				{Type: 0x0004, Payload: []byte{0xFF, 0xFE, 'x'}},
+				{Type: 0x0002, Payload: []byte("GIF89a")},
+				{Type: 0x0008, Payload: []byte{2, 'j', 'a', 9, 0, 0, 0, 'x'}},
 			},
 			Files: []testnup.File{
 				{Path: "exefs/main", Data: main, Zstd: true},

@@ -131,3 +131,39 @@ func appendUint32(b []byte, v uint32) []byte {
 	}
 	return b
 }
+
+// A block without an NPDM, as the one of a DLC, has no type 0: its source dump at 0x0007, not the
+// 32 bytes of a build ID, tells it is counted from 0 (the rule of the reference packer,
+// a55uka/nup#32). A block counted from 1 with a build ID of 32 bytes is left as it is.
+func TestFixZeroBasedWithoutNpdm(t *testing.T) {
+	packages := playable()
+	dlc := len(packages) - 1
+	packages[dlc].Meta = []testnup.Record{{Type: 0x0007, Payload: []byte("Made-up DLC dump")}}
+	path := write(t, testnup.Build(packages))
+	before, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !before.Packages[dlc].ZeroBased || string(before.Packages[dlc].Meta[0x0008]) != "Made-up DLC dump" {
+		t.Fatalf("the DLC is read counted from 0: %+v", before.Packages[dlc])
+	}
+	for i := 0; i < dlc; i++ {
+		if before.Packages[i].ZeroBased {
+			t.Fatalf("package %d is counted from 1", i)
+		}
+	}
+	fixed, err := FixZeroBased(path)
+	if err != nil || fixed != 1 {
+		t.Fatalf("%d %v", fixed, err)
+	}
+	after, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Packages[dlc].ZeroBased || string(after.Packages[dlc].Meta[0x0008]) != "Made-up DLC dump" {
+		t.Fatalf("%+v", after.Packages[dlc])
+	}
+	if fixed, err := FixZeroBased(path); err != nil || fixed != 0 {
+		t.Fatalf("fixed again: %d %v", fixed, err)
+	}
+}
