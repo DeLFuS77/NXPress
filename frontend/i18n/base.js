@@ -52,6 +52,10 @@ const noteRules = [
   [/(\d+) NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it/g, "sparseNote"],
   [/works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "worksArchive"],
   [/(\d+) LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "archiveNote"],
+  // Recompress with the extra compression or back from it (#92)
+  [/it holds a game in sparse storage, which only the extra compression \(NCZSECT2\) compresses: there is no NSZ of it that installers read, so it stays as it is; Decompress makes an NSP of it/g, "sparseNoPlain"],
+  [/it changes format through a decompressed copy, which needs prod\.keys/g, "throughKeys"],
+  [/a plain NSZ again, which installers read/g, "plainAgain"],
   [/(\d+) NCA with their LZ4 blocks left as they are: their compressed storage could not be read/g, "lz4Unread"],
   [/padding: (.+?) that trimming takes away/g, "paddingInfo"],
   [/delta fragments: (.+?) that trimming takes away/g, "deltasInfo"],

@@ -478,8 +478,8 @@ func (o *Options) Check() error {
 	if o.NupZstdBig && !o.Nup {
 		o.Notes = append(o.Notes, "--nup-zstd-big has no effect without --nup")
 	}
-	if (o.Sparse || o.Archive) && !o.Compress && !o.Estimate {
-		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C")
+	if (o.Sparse || o.Archive) && !o.Compress && !o.Recompress && !o.Estimate {
+		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C or --recompress")
 	}
 	// these write no file
 	for _, action := range []struct {
@@ -577,7 +577,11 @@ Usage: nxpress [options] file or folder...
   --convert           turn XCI and XCZ files into NSP and NSZ
   --recompress        write NSZ and XCZ files again, solid (-S) or in blocks (-B), at the
                       level of -l: no NSP in between and no keys needed; a file is replaced
-                      once its new copy is checked, unless -o gives another folder
+                      once its new copy is checked, unless -o gives another folder. With
+                      --extra it gets the extra compression, and without it a file with the
+                      one of NCZSECT3 becomes a plain NSZ again: such a file goes through an
+                      NSP checked by its hashes, which needs the keys and room for it; a game
+                      in sparse storage (NCZSECT2) has no plain NSZ and stays as it is
   --trim              take away what installers do not use: the padding after the data
                       of XCI files, as game cards are dumped, and the delta fragments of
                       updates in NSP and NSZ files; in place, or into the folder of -o
