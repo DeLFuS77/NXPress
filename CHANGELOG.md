@@ -11,6 +11,8 @@
 - Windows: an NXPress menu on a right click of those files, with Verify, Details, Compress or Decompress, and Combine, and of folders, with Compress, Verify and Combine; on Windows 11 it is under Show more options. Send to stays. Both are for the user only, need no administrator, and Settings tells when they are for another copy of NXPress, as after moving it (thanks @NikoMuffin, #88)
 - Windows: files sent from the Explorer while NXPress is open go to its window, which comes to the front, as a new list that Undo takes back; during a work they come in when it ends. Several files opened at once come together in one window
 - Export, in Details and in the Log, saves the list to Excel (XLSX) or CSV: in Details a row for each title of each file, with its title ID, kind, versions, name, publisher and the newest version published; in the Log a row for each file of the works shown (thanks @NikoMuffin, #89)
+- Recompress has the extra compression too, both ways: ticked, a file gets it; unticked, a file with the archive format NCZSECT3 becomes a plain NSZ that installers read. A file that changes format goes through an NSP checked by its hashes, so the round trip stays byte for byte; it needs the keys and room for the NSP. A game in sparse storage (NCZSECT2) has no plain NSZ, so without the box it stays as it is (thanks @NikoMuffin, #92)
+- Saving settings with a name in use asks first: Save becomes Replace, in orange, with a line that says so, and Undo brings the old ones back; the names of the settings of NXPress are not taken (thanks @NikoMuffin, #93)
 
 ## 1.7.3
 
