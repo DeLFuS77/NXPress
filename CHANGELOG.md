@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Each section keeps its own view, list or covers; one not switched yet shows the view chosen before (thanks @NikoMuffin, #84)
+- The Log is no longer in Settings › Help: it is in the side menu, under Check, with its settings on its page (thanks @NikoMuffin, #85)
+- Settings › Help opens the Discord server NXPress shares with Switch Library Manager Web (thanks @NikoMuffin, #86)
+- Windows: NXPress can be the program of NSP, NSZ, XCI, XCZ and NUP files, from Settings › Windows Explorer: a double click opens them in Verify, and checks them at once when its box is ticked. Where another program opens them already, NXPress is chosen once with Open with › Choose another app › Always (thanks @NikoMuffin, #87)
+- Windows: an NXPress menu on a right click of those files, with Verify, Details, Compress or Decompress, and Combine, and of folders, with Compress, Verify and Combine; on Windows 11 it is under Show more options. Send to stays. Both are for the user only, need no administrator, and Settings tells when they are for another copy of NXPress, as after moving it (thanks @NikoMuffin, #88)
+- Windows: files sent from the Explorer while NXPress is open go to its window, which comes to the front, as a new list that Undo takes back; during a work they come in when it ends. Several files opened at once come together in one window
+- Export, in Details and in the Log, saves the list to Excel (XLSX) or CSV: in Details a row for each title of each file, with its title ID, kind, versions, name, publisher and the newest version published; in the Log a row for each file of the works shown (thanks @NikoMuffin, #89)
+
 ## 1.7.3
 
 ### Improvements
