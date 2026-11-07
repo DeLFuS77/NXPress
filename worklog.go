@@ -27,6 +27,9 @@ func (a *App) Log() []worklog.Work {
 // AddToLog keeps a work that ended, with keep works at most (no limit when 0), and gives the
 // works kept.
 func (a *App) AddToLog(work worklog.Work, keep int) ([]worklog.Work, error) {
+	// the log of a work that just ended is written even as NXPress restarts: the restart waits
+	done, _ := a.chore(false)
+	defer done()
 	a.logMutex.Lock()
 	defer a.logMutex.Unlock()
 	folder, err := portable.DataFolder()
@@ -39,6 +42,8 @@ func (a *App) AddToLog(work worklog.Work, keep int) ([]worklog.Work, error) {
 // KeepLog leaves out the oldest works past keep, as its setting goes down, and gives the works
 // kept.
 func (a *App) KeepLog(keep int) ([]worklog.Work, error) {
+	done, _ := a.chore(false)
+	defer done()
 	a.logMutex.Lock()
 	defer a.logMutex.Unlock()
 	folder, err := portable.DataFolder()
@@ -55,6 +60,8 @@ func (a *App) KeepLog(keep int) ([]worklog.Work, error) {
 
 // ClearLog removes the log, both its files.
 func (a *App) ClearLog() error {
+	done, _ := a.chore(false)
+	defer done()
 	a.logMutex.Lock()
 	defer a.logMutex.Unlock()
 	folder, err := portable.DataFolder()
@@ -66,6 +73,8 @@ func (a *App) ClearLog() error {
 
 // WriteLog puts back the works given, as Undo does once the log was cleared.
 func (a *App) WriteLog(works []worklog.Work) error {
+	done, _ := a.chore(false)
+	defer done()
 	a.logMutex.Lock()
 	defer a.logMutex.Unlock()
 	folder, err := portable.DataFolder()

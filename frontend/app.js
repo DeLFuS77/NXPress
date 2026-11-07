@@ -1068,7 +1068,12 @@ async function receiveOpened(opened) {
 let startTimer = 0;
 function startSoon() {
   clearTimeout(startTimer);
-  startTimer = setTimeout(() => { if (!state.busy && !state.starting && state.mode === "verify" && state.items.length) start(); }, 1500);
+  startTimer = setTimeout(() => {
+    startTimer = 0;
+    if (!state.busy && !state.starting && state.mode === "verify" && state.items.length) start();
+    // a restart waited for this check: with none to do, it restarts now
+    else if (state.restartAfterWork) restartUpdated();
+  }, 1500);
 }
 
 function render() {
@@ -2055,7 +2060,7 @@ function listen() {
     const status = event.cancelled ? t("stopped") : t("finished")(total, event.failed, event.seconds, skippedRows);
     setStatus(event.cancelled ? { key: "stopped" } : { key: "finished", args: [total, event.failed, event.seconds, skippedRows] });
     if (state.lastRun) state.lastRun.status = status;
-    keepWork(event, status);
+    const logged = keepWork(event, status);
     if (event.cancelled || !event.failed) save("pending", null);
     // long work tells it is done, and turns the computer off when asked
     if (!event.cancelled && event.seconds >= 20) app().Notify("NXPress", status);
@@ -2073,13 +2078,14 @@ function listen() {
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
     if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
-    // the new version installed opens once the work is over (#91)
-    if (state.restartAfterWork) setTimeout(restartUpdated, 0);
-    // the files the Explorer gave meanwhile come in now
-    if (state.openedWaiting.length) {
-      const waiting = state.openedWaiting.splice(0);
-      setTimeout(async () => { for (const opened of waiting) await receiveOpened(opened); }, 0);
-    }
+    // the files the Explorer gave meanwhile come in now; the new version installed opens once
+    // they did, the work they start is over too and its log is written (#91)
+    const waiting = state.openedWaiting.splice(0);
+    setTimeout(async () => {
+      for (const opened of waiting) await receiveOpened(opened);
+      await logged;
+      if (state.restartAfterWork) restartUpdated();
+    }, 0);
   });
   // the computer did not turn off or hibernate: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
@@ -2128,7 +2134,7 @@ function keepWork(event, status) {
   // whole numbers: NXPress keeps them as such
   const work = { when: Date.now(), mode, cancelled: !!event.cancelled, status, detail, seconds: Math.round(event.seconds || 0), saved: Math.round(saved), rows, text: "" };
   work.text = workText(work);
-  app().AddToLog(work, worklogKeep()).then(works => { state.worklog = (works || []).filter(isWork); if (state.view === "worklog") render(); }).catch(() => { });
+  return app().AddToLog(work, worklogKeep()).then(works => { state.worklog = (works || []).filter(isWork); if (state.view === "worklog") render(); }).catch(() => { });
 }
 // how a work reads in the text file of the log: as the window shows it, in its language
 function workText(work) {
@@ -2348,6 +2354,8 @@ function hideShutdown() {
   clearTimeout(shutdownTimer);
   state.shutdownAt = 0;
   $("shutdown-banner").hidden = true;
+  // the computer stays on: a restart that waited for the count happens now (#91)
+  if (state.restartAfterWork) setTimeout(restartUpdated, 0);
 }
 // the computer stays on: with the button, or with a new work started during the count
 function keepOn() {
@@ -2411,7 +2419,7 @@ function paintUpdateDialog() {
   $("update-later").hidden = !ready;
   $("update-restart").hidden = !ready;
   $("update-restart").disabled = state.restartAfterWork;
-  $("update-restart").textContent = t(state.restartAfterWork ? "updateRestartWaiting" : state.busy || state.starting ? "updateRestartLater" : "updateRestart");
+  $("update-restart").textContent = t(state.restartAfterWork ? "updateRestartWaiting" : restartWaits(state, !!startTimer) ? "updateRestartLater" : "updateRestart");
 }
 
 // the notes of a version, as GitHub keeps them (the section of the CHANGELOG): its headings, its
@@ -2468,9 +2476,18 @@ async function installUpdate() {
   paintUpdate();
 }
 
-// opens the version installed with the list as it is; during a work, once it is over
+// what the restart into the new version waits for (#91): the work going on (a watch of folders
+// too), one about to start, the files of the Explorer still to come in, and a count to turn the
+// computer off (which, when it happens, opens the new version the next time)
+function restartWaits(state, startPending) {
+  return !!(state.busy || state.starting || startPending || state.openedWaiting.length || state.shutdownAt);
+}
+
+// opens the version installed with the list as it is; while anything goes on, once it is over
+let restartRetry = 0;
 async function restartUpdated() {
-  if (state.busy || state.starting) { state.restartAfterWork = true; paintUpdate(); return; }
+  clearTimeout(restartRetry);
+  if (restartWaits(state, !!startTimer)) { state.restartAfterWork = true; paintUpdate(); return; }
   state.restartAfterWork = false;
   state.installing = { step: "restart", done: 0, total: 0 };
   paintUpdate();
@@ -2478,7 +2495,15 @@ async function restartUpdated() {
     await app().RestartUpdated(state.mode, state.sources.length ? state.sources : state.items.map(item => item.path));
   } catch (error) {
     state.installing = null;
-    state.installError = String(error).split(":")[0].trim();
+    const code = String(error).split(":")[0].trim();
+    // NXPress still had something going on: the restart waits for it, and asks again
+    if (code === "work") {
+      state.restartAfterWork = true;
+      paintUpdate();
+      if (!restartWaits(state, !!startTimer)) restartRetry = setTimeout(restartUpdated, 2000);
+      return;
+    }
+    state.installError = code;
     paintUpdate();
     if (!$("update-dialog").open) openDialog($("update-dialog"));
   }

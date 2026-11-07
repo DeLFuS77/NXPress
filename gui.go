@@ -124,6 +124,10 @@ type App struct {
 	release      selfupdate.Release
 	updateCancel context.CancelFunc
 	installed    string
+	// NXPress restarts into the version installed: no work starts any more (with mutex); and
+	// the chores going on, which the restart and the close wait for (see chore)
+	restarting bool
+	chores     int
 	// the work waits while paused
 	paused atomic.Bool
 	// the turning off asked for once the files are done, until it is cancelled, and which time
@@ -472,8 +476,16 @@ func (a *App) FixNupMeta(path string) (string, error) {
 	if a.working() {
 		return "", errors.New("wait for the work to end")
 	}
-	return jobs.FixNupMeta(path)
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
+	return fixNupMeta(path)
 }
+
+// fixNupMeta is jobs.FixNupMeta, which the tests stand in for
+var fixNupMeta = jobs.FixNupMeta
 
 // NewNames gives the names the files would get by a template, "" for a file that cannot be read;
 // with keepNamed, a file whose name has its title ID keeps it.
@@ -696,6 +708,9 @@ func (a *App) Start(request Request) error {
 	if a.cancel != nil {
 		return errors.New("the files are still at work")
 	}
+	if a.restarting {
+		return errRestarting
+	}
 	ctx, cancel := context.WithCancel(a.ctx)
 	finished := make(chan struct{})
 	a.cancel, a.finished = cancel, finished
@@ -852,13 +867,14 @@ func (a *App) closed(context.Context) {
 	finished := a.finished
 	a.mutex.Unlock()
 	a.Cancel()
-	if finished == nil {
-		return
+	if finished != nil {
+		select {
+		case <-finished:
+		case <-time.After(closeWait):
+		}
 	}
-	select {
-	case <-finished:
-	case <-time.After(closeWait):
-	}
+	// a chore going on ends whole: the log of the work that just ended, the metadata of a NUP
+	a.choresOver(closeWait)
 }
 
 // working tells whether files are at work, paused or not.
@@ -867,6 +883,50 @@ func (a *App) working() bool {
 	defer a.mutex.Unlock()
 	return a.cancel != nil
 }
+
+// errRestarting answers what is asked while NXPress restarts into its new version (#91).
+var errRestarting = errors.New("restarting: NXPress is restarting into its new version")
+
+// chore marks a short work done outside Start that writes a file (the metadata of a NUP, an
+// export, the log of the works, the versions published): the restart into a new version and the
+// close wait for it to end. One the user asks for (refuse) is not done while NXPress restarts;
+// the log of a work that just ended is still written. The function given ends it.
+func (a *App) chore(refuse bool) (func(), error) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if refuse && a.restarting {
+		return nil, errRestarting
+	}
+	a.chores++
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			a.mutex.Lock()
+			a.chores--
+			a.mutex.Unlock()
+		})
+	}, nil
+}
+
+// choresOver waits for the chores going on to end, for wait at most, and tells whether they did.
+func (a *App) choresOver(wait time.Duration) bool {
+	deadline := time.Now().Add(wait)
+	for {
+		a.mutex.Lock()
+		left := a.chores
+		a.mutex.Unlock()
+		if left == 0 {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(choreTick)
+	}
+}
+
+// how often choresOver looks whether the chores ended
+const choreTick = 20 * time.Millisecond
 
 // Cancel stops the files at work; their half written files are removed.
 func (a *App) Cancel() {
