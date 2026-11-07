@@ -35,6 +35,33 @@ func main() {
 	}
 }
 
+// checkBackup tells whether the backup can be written where it is asked, before anything is
+// made: outside the repository, in a folder that is there and takes files, and not over a file.
+// Checked before the secret is set, so nothing changes when it cannot be written.
+func checkBackup(backup string, repository string) error {
+	whole, err := filepath.Abs(backup)
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(strings.ToLower(whole), strings.ToLower(repository)+string(filepath.Separator)) {
+		return fmt.Errorf("keep the backup outside the repository, not in %s", backup)
+	}
+	folder := filepath.Dir(whole)
+	if info, err := os.Stat(folder); err != nil || !info.IsDir() {
+		return fmt.Errorf("the folder of the backup is not there: %s", folder)
+	}
+	if _, err := os.Lstat(whole); err == nil {
+		return fmt.Errorf("%s is there already: give another name", backup)
+	}
+	probe, err := os.CreateTemp(folder, ".releasekey-*")
+	if err != nil {
+		return fmt.Errorf("the backup cannot be written in %s: %w", folder, err)
+	}
+	probe.Close()
+	os.Remove(probe.Name())
+	return nil
+}
+
 func run(repo, backup string, force bool) error {
 	keysFile := filepath.Join("internal", "selfupdate", "release.pub")
 	current, err := os.ReadFile(keysFile)
@@ -45,10 +72,9 @@ func run(repo, backup string, force bool) error {
 		return fmt.Errorf("NXPress has a key already (%s): a new one leaves the copies built with it telling of new versions only; give -force to make one all the same", keysFile)
 	}
 	if backup != "" {
-		whole, _ := filepath.Abs(backup)
 		here, _ := filepath.Abs(".")
-		if strings.HasPrefix(strings.ToLower(whole), strings.ToLower(here)+string(filepath.Separator)) {
-			return fmt.Errorf("keep the backup outside the repository, not in %s", backup)
+		if err := checkBackup(backup, here); err != nil {
+			return err
 		}
 	}
 	if _, err := exec.LookPath("gh"); err != nil {
