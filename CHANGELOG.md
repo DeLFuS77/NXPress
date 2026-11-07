@@ -17,6 +17,7 @@
 
 ### Fixes
 
+- Windows: many files sent from the Explorer at once while NXPress is minimized no longer leave its window not responding: it comes back to the front and takes them all
 - A NUP made to harm, such as one from the Internet, no longer makes NXPress take gigabytes of memory or hours, or close, when it is added, checked or unpacked: names and paths longer than the ones of the console, folders that share their children, packages that share their folders and a file at more than one place are refused, and the check of the code decompresses as it reads
 - A NUP whose metadata types are counted from 0 is told, and fixed, also when a package has no NPDM, such as a DLC: a record 0x0007 that is not the 32 bytes of a build ID marks it, the same rule as the fix of the reference packer (a55uka/nup#32)
 
