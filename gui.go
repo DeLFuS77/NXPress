@@ -16,6 +16,7 @@ import (
 
 	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/portable"
+	"github.com/DeLFuS77/NXPress/internal/selfupdate"
 	"github.com/DeLFuS77/NXPress/internal/system"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
 	"github.com/DeLFuS77/NXPress/internal/windowplace"
@@ -117,6 +118,10 @@ type App struct {
 	openedCtx   context.Context
 	// lets the next NXPress start, once this window takes files
 	started func()
+	// the new version CheckUpdate found, and the cancel of its installation going on (#91)
+	updateMutex  sync.Mutex
+	release      selfupdate.Release
+	updateCancel context.CancelFunc
 	// the work waits while paused
 	paused atomic.Bool
 	// the turning off asked for once the files are done, until it is cancelled, and which time
@@ -176,6 +181,8 @@ type Setup struct {
 	Mica bool `json:"mica"`
 	// the computer can hibernate when the work is done (#62)
 	Hibernate bool `json:"hibernate"`
+	// NXPress can install its new versions by itself here (#91)
+	SelfUpdate bool `json:"selfUpdate"`
 }
 
 func (a *App) Setup() Setup {
@@ -184,7 +191,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
-		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(),
+		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), SelfUpdate: SelfUpdate(),
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {

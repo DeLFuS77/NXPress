@@ -11,7 +11,12 @@
 <!-- the name and the version are in the title of the window: no bar of its own above (#44) -->
 <div id="update-banner" class="topbar" hidden>
   <span id="update-text"></span>
-  <button id="update-get" class="primary small" data-t="updateGet"></button>
+  <!-- installing it from NXPress (#91): its progress in the blue of work, and Cancel -->
+  <span class="update-bar" id="update-bar" hidden><span></span></span>
+  <button id="update-install" class="primary small" hidden></button>
+  <button id="update-get" class="primary small"></button>
+  <button id="update-notes" class="link small-link" data-t="updateNotes" hidden></button>
+  <button id="update-cancel" class="quiet small" data-t="cancel" hidden></button>
   <button id="update-close" class="quiet icon" data-t-title="dismiss" data-t-label="dismiss">✕</button>
 </div>
 
@@ -347,6 +352,11 @@
         <div class="pref-item">
           <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
           <input id="updates" type="checkbox" class="switch" role="switch">
+        </div>
+        <!-- the new versions installed from NXPress, when asked, where it can (#91) -->
+        <div class="pref-item pref-sub" id="install-updates-row">
+          <div class="pref-text"><b data-t="installUpdates"></b><small data-t="installUpdatesHint"></small></div>
+          <input id="install-updates" type="checkbox" class="switch" role="switch">
         </div>
         <div class="pref-item">
           <div class="pref-text"><b data-t="published"></b><small data-t="publishedHint"></small><small class="pref-status" id="published-status"></small></div>

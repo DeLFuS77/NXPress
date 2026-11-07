@@ -1,0 +1,2 @@
+# The public keys the releases of NXPress are signed with (minisign), written by
+# tools/releasekey. With none, NXPress only tells of a new version.
