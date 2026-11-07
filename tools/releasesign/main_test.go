@@ -263,3 +263,14 @@ func TestCheckKey(t *testing.T) {
 		t.Error("an NXPress without keys")
 	}
 }
+
+// The ID -check tells is the one release.pub shows: the first key and a spare one are told apart.
+func TestKeyName(t *testing.T) {
+	keys, err := selfupdate.ParsePublicKeys("untrusted comment: minisign public key 64300306F44900F2\nRWTyAEn0BgMwZEHfYfKbB2GIONHfe8HIu2rAcGUFe2fss7QzuqAIx0JO\n")
+	if err != nil || len(keys) != 1 {
+		t.Fatal(err)
+	}
+	if name := keyName(keys[0].ID); name != "64300306F44900F2" {
+		t.Errorf("name %s", name)
+	}
+}

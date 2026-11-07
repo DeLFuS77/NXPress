@@ -254,11 +254,20 @@ func checkKey(t tools, keys []selfupdate.PublicKey) error {
 	clear(private)
 	for _, key := range keys {
 		if key.ID == id && key.Key.Equal(public) {
-			fmt.Fprintln(t.out, "That is the key the releases are signed with: NXPress is built with its public key (internal/selfupdate/release.pub).")
+			fmt.Fprintf(t.out, "That is the key %s, one the releases are signed with: NXPress is built with its public key (internal/selfupdate/release.pub).\n", keyName(id))
 			return nil
 		}
 	}
-	return errors.New("that key is not the one NXPress is built with (internal/selfupdate/release.pub)")
+	return errors.New("that key is not one NXPress is built with (internal/selfupdate/release.pub)")
+}
+
+// keyName is the ID of a key as minisign shows it, and release.pub after "public key".
+func keyName(id [8]byte) string {
+	name := ""
+	for i := len(id) - 1; i >= 0; i-- {
+		name += fmt.Sprintf("%02X", id[i])
+	}
+	return name
 }
 
 // peeled is the commit a tag of git ls-remote points to: the line of the tag with ^{} for an
