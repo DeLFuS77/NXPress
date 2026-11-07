@@ -167,11 +167,11 @@ func (a *App) InstallUpdate() error {
 }
 
 // RestartUpdated opens the version installed, with the files of the list in their section, and
-// closes this NXPress; not during a work.
+// closes this NXPress. Every work must have ended first: not during a work of the files (a watch
+// of folders included) nor with a turning off of the computer still to come ("work": the page
+// waits for its end); from here on no work starts, and the chores going on (the log of the work
+// that just ended, the metadata of a NUP being written) end before it restarts.
 func (a *App) RestartUpdated(mode string, files []string) error {
-	if a.working() {
-		return errors.New("work: a work is going on")
-	}
 	a.updateMutex.Lock()
 	installed := a.installed
 	a.updateMutex.Unlock()
@@ -182,17 +182,46 @@ func (a *App) RestartUpdated(mode string, files []string) error {
 	if err != nil {
 		return errors.New("restart: " + err.Error())
 	}
+	a.mutex.Lock()
+	if a.cancel != nil || a.shutdown != nil {
+		a.mutex.Unlock()
+		return errors.New("work: a work is going on")
+	}
+	a.restarting = true
+	a.mutex.Unlock()
+	if !a.choresOver(choresWait) {
+		a.endRestart()
+		return errors.New("work: a work is going on")
+	}
 	// the new one waits for this one to stop, then opens with the list
 	args := []string{"--after-update", strconv.Itoa(os.Getpid())}
 	if len(files) > 0 && slices.Contains(sections, mode) {
 		args = append(append(args, "--section", mode), files...)
 	}
-	if err := system.StartDetached(program, args...); err != nil {
+	if err := startDetached(program, args...); err != nil {
+		a.endRestart()
 		return errors.New("restart: " + err.Error())
 	}
-	wailsruntime.Quit(a.ctx)
+	quitWindow(a.ctx)
 	return nil
 }
+
+// endRestart lets the works start again: the restart did not happen.
+func (a *App) endRestart() {
+	a.mutex.Lock()
+	a.restarting = false
+	a.mutex.Unlock()
+}
+
+// how long the restart waits for the chores going on: the longest is the download of the
+// versions published, which gives up after versionsWait
+const choresWait = versionsWait + 30*time.Second
+
+// how the new version is started and this window closed; variables for the tests
+var (
+	startDetached = system.StartDetached
+	quitWindow    = wailsruntime.Quit
+)
 
 // CancelUpdate stops the download of a new version: nothing is replaced.
 func (a *App) CancelUpdate() {

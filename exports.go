@@ -35,6 +35,11 @@ func (a *App) ExportDetails(paths []string, format string, texts ExportTexts) (s
 	if err != nil || path == "" {
 		return "", err
 	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
 	table := export.Table{Sheet: texts.Sheet, Header: texts.Header, Rows: detailsRows(paths, a.versions.Load(), texts.Kinds)}
 	return path, export.Write(path, table)
 }
@@ -46,6 +51,11 @@ func (a *App) ExportLog(format string, texts ExportTexts, rows [][]any) (string,
 	if err != nil || path == "" {
 		return "", err
 	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
 	return path, export.Write(path, export.Table{Sheet: texts.Sheet, Header: texts.Header, Rows: rows})
 }
 
