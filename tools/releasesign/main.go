@@ -14,11 +14,15 @@
 // signature with the public keys NXPress is built with, adds it to the draft and, once told so,
 // publishes the release. The key is never printed, written nor kept. The library app signs its
 // releases the same way.
+//
+// go run ./tools/releasesign -check only asks for a private key and tells whether it is the one
+// NXPress is built with, to check the one kept in a password manager before a release needs it.
 package main
 
 import (
 	"bufio"
 	"bytes"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -71,13 +75,21 @@ func main() {
 	flag.BoolVar(&o.publish, "publish", false, "publish the release once it is signed, without asking")
 	flag.BoolVar(&o.published, "published", false, "sign a release that is published already")
 	flag.BoolVar(&o.replace, "replace", false, "replace the signature the release has")
+	check := flag.Bool("check", false, "only tell whether a private key is the one NXPress is built with")
 	flag.Parse()
+	t := tools{gh: command("gh"), git: command("git"), readKey: readHidden, confirm: confirm, out: os.Stdout}
+	if *check && flag.NArg() == 0 {
+		if err := checkKey(t, selfupdate.Keys()); err != nil {
+			fmt.Fprintln(os.Stderr, "releasesign:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: releasesign [-publish] 1.2.3")
+		fmt.Fprintln(os.Stderr, "usage: releasesign [-publish] 1.2.3, or releasesign -check")
 		os.Exit(2)
 	}
 	o.version = flag.Arg(0)
-	t := tools{gh: command("gh"), git: command("git"), readKey: readHidden, confirm: confirm, out: os.Stdout}
 	if err := run(t, o, selfupdate.Keys()); err != nil {
 		fmt.Fprintln(os.Stderr, "releasesign:", err)
 		os.Exit(1)
@@ -221,6 +233,32 @@ func run(t tools, o options, keys []selfupdate.PublicKey) error {
 	}
 	fmt.Fprintf(t.out, "The release %s is published: https://github.com/%s/releases/tag/%s\n", o.version, o.repo, o.version)
 	return nil
+}
+
+// checkKey asks for a private key, not shown, and tells whether it is the one of the public keys
+// NXPress is built with, the key that signs its releases: a key kept in a password manager is
+// checked so, before a release needs it. Nothing is signed nor sent.
+func checkKey(t tools, keys []selfupdate.PublicKey) error {
+	if len(keys) == 0 {
+		return errors.New("NXPress has no public key (internal/selfupdate/release.pub): make one with tools/releasekey")
+	}
+	text, err := t.readKey("The private key of the releases (it is not shown): ")
+	if err != nil {
+		return err
+	}
+	private, id, err := selfupdate.ParsePrivateKey(text)
+	if err != nil {
+		return errors.New("that is not a private key of NXPress")
+	}
+	public := private.Public().(ed25519.PublicKey)
+	clear(private)
+	for _, key := range keys {
+		if key.ID == id && key.Key.Equal(public) {
+			fmt.Fprintln(t.out, "That is the key the releases are signed with: NXPress is built with its public key (internal/selfupdate/release.pub).")
+			return nil
+		}
+	}
+	return errors.New("that key is not the one NXPress is built with (internal/selfupdate/release.pub)")
 }
 
 // peeled is the commit a tag of git ls-remote points to: the line of the tag with ^{} for an
