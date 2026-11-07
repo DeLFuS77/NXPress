@@ -1,2 +1,4 @@
 # The public keys the releases of NXPress are signed with (minisign), written by
 # tools/releasekey. With none, NXPress only tells of a new version.
+untrusted comment: minisign public key 64300306F44900F2
+RWTyAEn0BgMwZEHfYfKbB2GIONHfe8HIu2rAcGUFe2fss7QzuqAIx0JO
