@@ -632,6 +632,10 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 /* what a setting found: the day of the list of versions published */
 .pref-text .pref-status { font-style: italic; opacity: .85; }
 .pref-text .pref-status:empty { display: none; }
+/* a place in the Explorer: green when it is there, orange when it needs a look (#87, #88) */
+.pref-text .pref-status.ok { color: var(--ok); font-style: normal; opacity: 1; }
+.pref-text .pref-status.warn { color: var(--warn); font-style: normal; opacity: 1; }
+.pref-text label.check.small-check { margin-top: 6px; white-space: normal; }
 .pref-item > select { min-width: 180px; }
 /* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
 .brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

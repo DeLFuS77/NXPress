@@ -38,9 +38,25 @@ var frontend embed.FS
 //go:embed build/appicon.png
 var appIcon []byte
 
+// singleWindow is the lock that keeps NXPress to one window on Windows: the files the Explorer
+// gives to another NXPress go to the one open (#87, #88).
+const singleWindow = "nxpress-window-1"
+
 // runWindow opens the window with the files given, and gives the exit code once it is closed.
-func runWindow(files []string) int {
-	app := &App{files: files}
+func runWindow(start launch) int {
+	app := &App{files: start.files, section: start.section, open: start.open}
+	var single *wailsoptions.SingleInstanceLock
+	if runtime.GOOS == "windows" {
+		// the files go to the NXPress open, which comes to the front; one starting meanwhile
+		// is waited for, until its window takes files (see startup)
+		var another bool
+		app.started, another = system.StartWindow(singleWindow)
+		defer app.started()
+		if another {
+			system.AllowForeground()
+		}
+		single = &wailsoptions.SingleInstanceLock{UniqueId: singleWindow, OnSecondInstanceLaunch: app.secondInstance}
+	}
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := windowplace.LoadWindowPlace()
 	// on Windows 11 the menu shows the Mica of the system through a window left clear
@@ -52,21 +68,22 @@ func runWindow(files []string) int {
 		backdrop = windows.Mica
 	}
 	err := wails.Run(&wailsoptions.App{
-		Title:            "NXPress " + version,
-		Width:            place.Width,
-		Height:           place.Height,
-		MinWidth:         windowplace.WindowMinWidth,
-		MinHeight:        windowplace.WindowMinHeight,
-		StartHidden:      true,
-		BackgroundColour: background,
-		AssetServer:      &assetserver.Options{Assets: frontend},
-		OnStartup:        app.startup,
-		OnDomReady:       windowplace.PlaceWindow,
-		OnBeforeClose:    app.beforeClose,
-		OnShutdown:       app.closed,
-		DragAndDrop:      &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
-		Bind:             []any{app},
-		Linux:            &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
+		Title:              "NXPress " + version,
+		Width:              place.Width,
+		Height:             place.Height,
+		MinWidth:           windowplace.WindowMinWidth,
+		MinHeight:          windowplace.WindowMinHeight,
+		StartHidden:        true,
+		BackgroundColour:   background,
+		AssetServer:        &assetserver.Options{Assets: frontend},
+		OnStartup:          app.startup,
+		OnDomReady:         windowplace.PlaceWindow,
+		OnBeforeClose:      app.beforeClose,
+		OnShutdown:         app.closed,
+		DragAndDrop:        &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
+		SingleInstanceLock: single,
+		Bind:               []any{app},
+		Linux:              &linux.Options{Icon: appIcon, ProgramName: "nxpress"},
 		// portable (see portable.go): the page keeps its settings next to the program too
 		Windows: &windows.Options{
 			WebviewUserDataPath:  portable.WebviewFolder(),
@@ -88,8 +105,18 @@ type App struct {
 	cancel context.CancelFunc
 	// closed once the work stopped, its half written files removed
 	finished chan struct{}
-	// the files NXPress was started with
-	files []string
+	// the files NXPress was started with, the section the Explorer asked for (#88), and whether
+	// they were opened with a double click (#87)
+	files   []string
+	section string
+	open    bool
+	// the files the Explorer gave to another NXPress meanwhile, until the page takes them, and
+	// the context of the window, once it has one
+	openedMutex sync.Mutex
+	opened      []Opened
+	openedCtx   context.Context
+	// lets the next NXPress start, once this window takes files
+	started func()
 	// the work waits while paused
 	paused atomic.Bool
 	// the turning off asked for once the files are done, until it is cancelled, and which time
@@ -115,6 +142,12 @@ type App struct {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.openedMutex.Lock()
+	a.openedCtx = ctx
+	a.openedMutex.Unlock()
+	if a.started != nil {
+		a.started()
+	}
 	// the keys of the usual places are read at once, as the command line does
 	if path, err := jobs.LoadKeys(""); err == nil {
 		a.keys = path
@@ -131,9 +164,11 @@ type Setup struct {
 	MaxLevel int    `json:"maxLevel"`
 	// the system and its processor, for reports
 	Platform string `json:"platform"`
-	// the files NXPress was started with, and the mode they suit
+	// the files NXPress was started with, the mode they open in, and whether they were opened
+	// with a double click (#87)
 	Files []string `json:"files"`
 	Mode  string   `json:"mode"`
+	Open  bool     `json:"open"`
 	// whether "Send to" can hold NXPress, and holds it
 	SendTo        bool `json:"sendTo"`
 	SendToEnabled bool `json:"sendToEnabled"`
@@ -153,12 +188,122 @@ func (a *App) Setup() Setup {
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {
-		setup.Mode = "decompress"
-		if files, _ := jobs.Inputs(a.files, []string{".nsp", ".xci"}); len(files) > 0 {
-			setup.Mode = "compress"
-		}
+		setup.Mode = openedSection(launch{files: a.files, section: a.section, open: a.open})
+		setup.Open = a.open
 	}
 	return setup
+}
+
+// Opened are files the Explorer gave to another NXPress while this one was open: dropped on it,
+// sent to it, opened with a double click (#87) or from its menu (#88).
+type Opened struct {
+	Files   []string `json:"files"`
+	Section string   `json:"section"`
+	Open    bool     `json:"open"`
+}
+
+// openedSection is the section files open in: the one the menu asked for, Verify for a double
+// click (#87), else Compress when they hold files to compress, else Decompress.
+func openedSection(start launch) string {
+	switch {
+	case start.section != "":
+		return start.section
+	case start.open:
+		return "verify"
+	}
+	if files, _ := jobs.Inputs(start.files, []string{".nsp", ".xci"}); len(files) > 0 {
+		return "compress"
+	}
+	return "decompress"
+}
+
+// secondInstance takes what another NXPress was started with: this window comes to the front,
+// and the page is told of the files, which it takes with TakeOpened.
+func (a *App) secondInstance(data wailsoptions.SecondInstanceData) {
+	system.BringToFront()
+	start, ok := windowLaunch(absolute(data.Args, data.WorkingDirectory))
+	if !ok || len(start.files) == 0 {
+		return
+	}
+	a.openedMutex.Lock()
+	a.opened = append(a.opened, Opened{Files: start.files, Section: openedSection(start), Open: start.open})
+	ctx := a.openedCtx
+	a.openedMutex.Unlock()
+	if ctx != nil {
+		wailsruntime.EventsEmit(ctx, "opened")
+	}
+}
+
+// TakeOpened gives the files other NXPress were given since the last time, and forgets them.
+func (a *App) TakeOpened() []Opened {
+	a.openedMutex.Lock()
+	defer a.openedMutex.Unlock()
+	taken := a.opened
+	a.opened = nil
+	if taken == nil {
+		return []Opened{}
+	}
+	return taken
+}
+
+// ExplorerPlaces are the places of NXPress in the Explorer of Windows, for the settings: its
+// menu (#88), and whether it opens its files (#87), for this copy of NXPress or another one
+// ("here", "moved", or "" when not there), with the types another program still opens.
+type ExplorerPlaces struct {
+	Menu   string   `json:"menu"`
+	Files  string   `json:"files"`
+	Others []string `json:"others"`
+}
+
+func (a *App) ExplorerPlaces() ExplorerPlaces {
+	places := ExplorerPlaces{Others: []string{}}
+	executable, err := system.Executable()
+	if err != nil || !system.ExplorerPlaces() {
+		return places
+	}
+	places.Menu = system.MenuPlace(executable)
+	var others []string
+	places.Files, others = system.FilesPlace(executable)
+	for _, extension := range others {
+		places.Others = append(places.Others, strings.ToUpper(strings.TrimPrefix(extension, ".")))
+	}
+	return places
+}
+
+// SetExplorerMenu puts the menu of NXPress in the Explorer, with the texts of the page, or takes
+// it away (#88).
+func (a *App) SetExplorerMenu(on bool, texts system.ExplorerMenu) (ExplorerPlaces, error) {
+	executable, err := system.Executable()
+	if err != nil {
+		return a.ExplorerPlaces(), err
+	}
+	if on {
+		err = system.AddMenu(executable, texts)
+	} else {
+		err = system.RemoveMenu()
+	}
+	return a.ExplorerPlaces(), err
+}
+
+// RelabelExplorerMenu writes the menu again in the language of the page, when it is there.
+func (a *App) RelabelExplorerMenu(texts system.ExplorerMenu) {
+	if executable, err := system.Executable(); err == nil {
+		system.RelabelMenu(executable, texts)
+	}
+}
+
+// SetExplorerFiles makes NXPress the program of its files, or takes it away (#87).
+func (a *App) SetExplorerFiles(on bool) (ExplorerPlaces, error) {
+	executable, err := system.Executable()
+	if err != nil {
+		return a.ExplorerPlaces(), err
+	}
+	if on {
+		err = system.AddFiles(executable)
+	} else {
+		err = system.RemoveFiles()
+	}
+	return a.ExplorerPlaces(), err
 }
 
 // SetSendTo puts NXPress in the "Send to" menu of the Explorer, or takes it away.

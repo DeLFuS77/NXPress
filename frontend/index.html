@@ -315,12 +315,26 @@
       </section>
       </div>
       <div class="pref-column">
-      <section class="pref-group">
-        <h2 data-t="prefSystem"></h2>
+      <!-- the places of NXPress in the Explorer, on Windows only: Send to, its menu (#88), and
+           the program of its files (#87); each says when it is there, or there for another copy -->
+      <section class="pref-group" id="explorer-group">
+        <h2 data-t="prefExplorer"></h2>
         <div class="pref-item" id="send-to-row">
           <div class="pref-text"><b data-t="sendToTitle"></b><small data-t="sendToHint"></small></div>
           <button id="send-to"></button>
         </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="menuTitle"></b><small data-t="menuHint"></small><small class="pref-status" id="menu-status"></small></div>
+          <button id="explorer-menu"></button>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="filesTitle"></b><small data-t="filesHint"></small><small class="pref-status" id="files-status"></small><small class="pref-status warn" id="files-others"></small>
+            <label class="check small-check" id="open-start-row"><input id="open-start" type="checkbox"><span data-t="openStart"></span></label></div>
+          <button id="explorer-files"></button>
+        </div>
+      </section>
+      <section class="pref-group">
+        <h2 data-t="prefSystem"></h2>
         <div class="pref-item">
           <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
           <input id="updates" type="checkbox" class="switch" role="switch">

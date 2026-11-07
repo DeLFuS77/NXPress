@@ -78,6 +78,10 @@ const state = {
   worklog: [], worklogFile: "", worklogOpen: new Set(), worklogProblems: false,
   // the works a search opens by itself stay closed after Collapse all, until the search changes
   worklogFindClosed: false,
+  // the places of NXPress in the Explorer (#87, #88), and the files it gave while the window was
+  // open: the ones waiting for the work to end, when the last came, how many make the list, and
+  // the list they took the place of, for Undo
+  explorer: { menu: "", files: "", others: [] }, openedWaiting: [], openedAt: 0, openedCount: 0, openedBefore: null,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -943,6 +947,90 @@ function warnSoon() {
   }, 100);
 }
 
+// the places of NXPress in the Explorer (#87, #88): each button adds what is not there, or there
+// for another copy of NXPress, and takes away what is there for this one; green when it is
+// there, orange when it needs a look
+function paintExplorer() {
+  const places = state.explorer;
+  for (const [button, status, place] of [["explorer-menu", "menu-status", places.menu], ["explorer-files", "files-status", places.files]]) {
+    $(button).textContent = place === "here" ? t("sendToOff") : place === "moved" ? t("explorerAgain") : t("sendToOn");
+    $(status).textContent = place === "here" ? t("explorerAdded") : place === "moved" ? t("explorerMoved") : "";
+    $(status).classList.toggle("ok", place === "here");
+    $(status).classList.toggle("warn", place === "moved");
+  }
+  // the types another program still opens, which Windows lets only the user give to NXPress
+  $("files-others").textContent = places.files === "here" && places.others.length ? t("explorerOthers")(places.others.join(", ")) : "";
+  $("open-start-row").hidden = places.files !== "here";
+  $("open-start").checked = load("openStart", false);
+}
+// the entries of the menu of the Explorer, by the names of the sections
+const menuTexts = () => ({ verify: t("verify"), info: t("info"), compress: t("compress"), decompress: t("decompress"), pack: t("pack") });
+async function setExplorer(call, after) {
+  try {
+    state.explorer = await call();
+    if (after) after();
+  } catch (error) {
+    setStatus(String(error));
+    state.explorer = await app().ExplorerPlaces().catch(() => state.explorer);
+  }
+  render();
+}
+
+// files from the Explorer while the window is open: dropped on NXPress or sent to it, opened with
+// a double click (#87) or from its menu (#88). They make a new list in their section, which Undo
+// takes back; the ones that come within a few seconds join it, as the Explorer starts an NXPress
+// for each file chosen. While a work goes on they wait for its end.
+async function takeOpened() {
+  let opened = [];
+  try { opened = await app().TakeOpened(); } catch { return; }
+  for (const files of opened) await receiveOpened(files);
+}
+async function receiveOpened(opened) {
+  if (!opened.files.length) return;
+  if (state.busy || state.starting) {
+    state.openedWaiting.push(opened);
+    showToast(t("openedLater")(state.openedWaiting.reduce((sum, waiting) => sum + waiting.files.length, 0)));
+    return;
+  }
+  const section = modes.includes(opened.section) ? opened.section : state.mode;
+  const now = Date.now();
+  const joins = now - state.openedAt < 3000 && state.mode === section;
+  state.openedAt = now;
+  state.view = "";
+  if (joins) {
+    await refill(opened.files, false);
+    state.openedCount += opened.files.length;
+  } else {
+    const before = { mode: state.mode, items: state.items.slice(), sources: state.sources.slice(), removed: [...state.removed] };
+    state.mode = section;
+    save("mode", section);
+    await refill(opened.files, true);
+    state.openedCount = opened.files.length;
+    state.openedBefore = before.items.length ? before : null;
+  }
+  if (state.openedBefore) showToast(t("openedNew")(state.openedCount), () => {
+    const before = state.openedBefore;
+    state.openedBefore = null;
+    clearList();
+    state.mode = before.mode;
+    save("mode", before.mode);
+    addOrigins(before.sources);
+    for (const path of before.removed) state.removed.add(path);
+    for (const item of before.items) add(item);
+    if (state.mode === "rename") previewNames();
+    previewPacks();
+    render();
+  });
+  render();
+  if (opened.open && load("openStart", false)) startSoon();
+}
+// a double click starts checking by itself when asked (#87), once the files stop coming
+let startTimer = 0;
+function startSoon() {
+  clearTimeout(startTimer);
+  startTimer = setTimeout(() => { if (!state.busy && !state.starting && state.mode === "verify" && state.items.length) start(); }, 1500);
+}
+
 function render() {
   warnSoon();
   document.documentElement.lang = state.language;
@@ -950,6 +1038,11 @@ function render() {
   if (state.closeLanguage !== state.language) {
     state.closeLanguage = state.language;
     app().CloseTexts(t("closeAsk"), t("closeYes"), t("closeNo")).catch(() => { });
+  }
+  // the menu of the Explorer speaks the language of the page (#88)
+  if (state.explorer.menu === "here" && load("menuLanguage", "") !== state.language) {
+    save("menuLanguage", state.language);
+    app().RelabelExplorerMenu(menuTexts()).catch(() => { });
   }
   paintStatus();
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
@@ -1130,8 +1223,9 @@ function render() {
   if (!canHibernate && $("when-done").value === "hibernate") $("when-done").value = "";
   $("shutdown-force-option").hidden = $("shutdown-option").hidden || $("when-done").value !== "off";
   $("shutdown-force-option").title = t("shutdownForceHint");
-  $("send-to-row").hidden = !state.setup.sendTo;
+  $("explorer-group").hidden = !state.setup.sendTo;
   $("send-to").textContent = state.setup.sendToEnabled ? t("sendToOff") : t("sendToOn");
+  paintExplorer();
   $("empty").hidden = state.items.length > 0;
   $("files").hidden = state.items.length === 0;
   document.body.classList.toggle("busy", state.busy);
@@ -1826,6 +1920,8 @@ function report() {
 
 function listen() {
   const events = window.runtime;
+  // files the Explorer gave to another NXPress, which sent them here
+  events.EventsOn("opened", takeOpened);
   events.EventsOn("progress", event => {
     const row = rowOf(event.file);
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
@@ -1916,6 +2012,11 @@ function listen() {
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
     if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
+    // the files the Explorer gave meanwhile come in now
+    if (state.openedWaiting.length) {
+      const waiting = state.openedWaiting.splice(0);
+      setTimeout(async () => { for (const opened of waiting) await receiveOpened(opened); }, 0);
+    }
   });
   // the computer did not turn off or hibernate: told in the window and by a notice, with what can help
   events.EventsOn("shutdownFailed", reason => {
@@ -2406,6 +2507,11 @@ async function main() {
   }
   $("pack-template").oninput = () => { state.packTemplate = $("pack-template").value; save("settings", settings()); previewPacks(); };
   $("pack-template-reset").onclick = async () => { state.packTemplate = await app().DefaultPackTemplate(); $("pack-template").value = state.packTemplate; save("settings", settings()); };
+  // the menu of NXPress in the Explorer, in the language of the page (#88), and the program of
+  // its files (#87): added when not there or there for another copy, else taken away
+  $("explorer-menu").onclick = () => setExplorer(() => app().SetExplorerMenu(state.explorer.menu !== "here", menuTexts()), () => save("menuLanguage", state.language));
+  $("explorer-files").onclick = () => setExplorer(() => app().SetExplorerFiles(state.explorer.files !== "here"));
+  $("open-start").onchange = () => save("openStart", $("open-start").checked);
   $("send-to").onclick = async () => {
     try {
       await app().SetSendTo(!state.setup.sendToEnabled);
@@ -2523,12 +2629,20 @@ async function main() {
     };
     $("resume-drop").onclick = () => { save("pending", null); state.pendingCount = 0; $("resume-banner").hidden = true; };
   }
-  // the files NXPress was started with: dropped on it, or sent to it
+  // the places of NXPress in the Explorer, on Windows (#87, #88)
+  if (state.setup.sendTo) state.explorer = await app().ExplorerPlaces().catch(() => state.explorer);
+  // the files NXPress was started with: dropped on it, sent to it, or opened from the Explorer
+  // with a double click or its menu, in the section asked (#87, #88)
   if (state.setup.files && state.setup.files.length) {
     state.mode = state.setup.mode;
     await refill(state.setup.files, true);
+    state.openedAt = Date.now();
+    state.openedCount = state.setup.files.length;
+    if (state.setup.open && load("openStart", false)) startSoon();
   }
   render();
+  // the ones given to other NXPress while this one was opening
+  takeOpened();
   checkUpdate();
   loadVersions();
 }
