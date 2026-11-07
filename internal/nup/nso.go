@@ -45,7 +45,9 @@ var nsoModuleName = regexp.MustCompile(`(?i)^(main|rtld|sdk|subsdk[0-9])$`)
 // IsCodeModule tells, by its path in a package or a dump ("exefs/main"), an NSO module of an
 // ExeFS: a file named as a module, in a folder named exefs.
 func IsCodeModule(filePath string) bool {
-	dir, name := path.Split(filepath.ToSlash(filePath))
+	// a backslash parts folders too, on every system: a path written on Windows reads the same
+	// everywhere
+	dir, name := path.Split(strings.ReplaceAll(filePath, `\`, "/"))
 	return nsoModuleName.MatchString(name) && strings.EqualFold(path.Base(path.Clean("/"+dir)), "exefs")
 }
 
