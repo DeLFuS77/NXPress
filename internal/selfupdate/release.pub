@@ -2,3 +2,6 @@
 # tools/releasekey. With none, NXPress only tells of a new version.
 untrusted comment: minisign public key 64300306F44900F2
 RWTyAEn0BgMwZEHfYfKbB2GIONHfe8HIu2rAcGUFe2fss7QzuqAIx0JO
+# a spare key, kept apart from the first: it signs the releases if the first is lost
+untrusted comment: minisign public key 7090921881F567B0
+RWSwZ/WBGJKQcKPQwd4YxKTuNHbKzkUcqCgpbTKm5MYhUqhdxbbv6UZj
