@@ -104,6 +104,12 @@ const isReport = value => isObject(value) && Array.isArray(value.rows) && value.
 const isPending = value => isObject(value) && modes.includes(value.mode) && isObject(value.request) && Array.isArray(value.request.files);
 // the settings saved with a name, the ones that can be read
 const savedPresets = () => load("presets", []).filter(preset => isObject(preset) && typeof preset.name === "string" && Number.isFinite(preset.level));
+// the list as rows or as a grid of covers: each section keeps its own (#84); one not chosen yet
+// shows the one chosen before for all of them
+function viewOf(mode) {
+  const view = load("views", {})[mode] || load("view", "list");
+  return view === "grid" ? "grid" : "list";
+}
 function save(name, value) {
   try { localStorage.setItem("nxpress." + name, JSON.stringify(value)); } catch { }
 }
@@ -1032,8 +1038,8 @@ function render() {
   if (state.update) $("update-text").textContent = t("updateFound")(state.update.version);
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   paintPalettes();
-  // the list as rows, or as a grid of covers
-  const view = load("view", "list") === "grid" ? "grid" : "list";
+  // the list as rows, or as a grid of covers, as the section shown was left (#84)
+  const view = viewOf(state.mode);
   $("files").classList.toggle("grid", view === "grid");
   for (const button of document.querySelectorAll("[data-view]")) { button.classList.toggle("on", button.dataset.view === view); button.setAttribute("aria-checked", button.dataset.view === view); }
   // what Verify checks: the button chosen, and a sentence for it
@@ -2320,7 +2326,7 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
-  for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("view", button.dataset.view); render(); };
+  for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("views", { ...load("views", {}), [state.mode]: button.dataset.view }); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
