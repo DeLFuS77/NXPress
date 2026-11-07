@@ -15,6 +15,10 @@
 - Saving settings with a name in use asks first: Save becomes Replace, in orange, with a line that says so, and Undo brings the old ones back; the names of the settings of NXPress are not taken (thanks @NikoMuffin, #93)
 - NXPress can install its new versions itself: the notice of a new version offers Install and restart, which opens a window with what is new while the version is downloaded and checked, then Restart now or Later. Each release now signs its checksums with the key of the project (SHA256SUMS.txt.minisig, minisign), and NXPress checks that signature, made for that version, and the checksum of the file it downloads before it replaces itself; a version without its signature is only offered to download, as before. Nothing is installed without a click, a beta only by a beta, and the restart waits for the work going on. Windows and Linux; on macOS it still only tells (thanks @NikoMuffin, #91)
 
+### Fixes
+
+- A NUP whose metadata types are counted from 0 is told, and fixed, also when a package has no NPDM, such as a DLC: a record 0x0007 that is not the 32 bytes of a build ID marks it, the same rule as the fix of the reference packer (a55uka/nup#32)
+
 ## 1.7.3
 
 ### Improvements
