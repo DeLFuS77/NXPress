@@ -23,8 +23,9 @@ import (
 )
 
 // releaseKeys are the public keys of the project the releases are signed with: written by the
-// tool that makes the key (tools/releasekey), which puts the private one in the secret of the
-// releases. With none, NXPress only tells of a new version, as before.
+// tool that makes the key (tools/releasekey); the maintainer keeps the private one and signs each
+// release on their own computer (tools/releasesign). With none, NXPress only tells of a new
+// version, as before.
 //
 //go:embed release.pub
 var releaseKeys string

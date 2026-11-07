@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The backup is checked before the secret is set: a folder that is not there, a file that is
+// The backup is checked before the key is made: a folder that is not there, a file that is
 // there already or a place inside the repository stop everything first.
 func TestCheckBackup(t *testing.T) {
 	repository := t.TempDir()

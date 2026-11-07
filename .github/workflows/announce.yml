@@ -1,0 +1,52 @@
+# Sends the notes of a version to #releases of the Discord server once its release is published.
+# The release workflow makes the release as a draft, which the maintainer signs and publishes
+# (tools/releasesign, #91): the announcement waits for it. Through the webhook kept in the secret
+# DISCORD_WEBHOOK; without it (a fork) nothing is sent, and if Discord fails the release stays as
+# it is.
+name: Announce
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  discord:
+    # a version, not a prerelease such as a beta
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Announce on Discord
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ! [[ "${TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "${TAG} is not the tag of a version: nothing sent to Discord"
+            exit 0
+          fi
+          if [ -z "${DISCORD_WEBHOOK}" ]; then
+            echo "No DISCORD_WEBHOOK secret: nothing sent to Discord"
+            exit 0
+          fi
+          # the section between "## <tag>" and the next "## " heading, without how to download
+          awk -v version="${TAG}" '
+            $0 == "## " version { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > discord-notes.md
+          python3 .github/scripts/discord_release.py \
+            "NXPress ${TAG}" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}" \
+            discord-notes.md > discord-message.json
+          curl -fsS --retry 3 -H "Content-Type: application/json" \
+            --data @discord-message.json "${DISCORD_WEBHOOK}"

@@ -63,7 +63,7 @@ func TestVerify(t *testing.T) {
 	if err != nil || len(keys) != 1 || keys[0].ID != public.ID || !keys[0].Key.Equal(public.Key) {
 		t.Fatalf("public key read back: %v %v", keys, err)
 	}
-	// and the private one of the secret
+	// and the private one the maintainer keeps
 	again, id, err := ParsePrivateKey(PrivateKeyText(private, public.ID))
 	if err != nil || id != public.ID || !again.Equal(private) {
 		t.Fatalf("private key read back: %v", err)

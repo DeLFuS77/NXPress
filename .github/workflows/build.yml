@@ -4,7 +4,9 @@ name: Build
 # webview of each one (WebView2, WebKitGTK, WebKit), and cgo its C compiler for zstd. Each
 # program opens its window once, to show it starts there, with a screenshot kept. The
 # programs are kept as artifacts of the run; for a version tag (1.2.3), the release is made
-# with them and the matching section of CHANGELOG.md.
+# with them and the matching section of CHANGELOG.md, as a draft: the maintainer signs it on
+# their own computer and publishes it (go run ./tools/releasesign <tag>), so the key NXPress
+# trusts is never on GitHub (#91). Once published, announce.yml sends the notes to Discord.
 
 on:
   push:
@@ -193,8 +195,6 @@ jobs:
             echo "No section for ${GITHUB_REF_NAME} in CHANGELOG.md" >&2
             exit 1
           fi
-          # the notes alone, without how to download, for the Discord server
-          cp release-notes.md discord-notes.md
 
       - name: Get the programs
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -216,21 +216,8 @@ jobs:
           sha256sum nxpress.exe nxpress-* > SHA256SUMS.txt
           ls -l
 
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-
-      # the checksums signed with the key of the project, which NXPress checks before it installs
-      # a new version by itself (#91); without the secret NXPRESS_SIGNING_KEY, or with a key that
-      # is not the one NXPress is built with, the release goes out unsigned, and NXPress only
-      # offers to download it
-      - name: Sign the checksums
-        env:
-          NXPRESS_SIGNING_KEY: ${{ secrets.NXPRESS_SIGNING_KEY }}
-        run: go run ./tools/releasesign -version "${GITHUB_REF_NAME}" dist/SHA256SUMS.txt
-
-      # proof that each file was built by this workflow from this tag
+      # proof that each file was built by this workflow from this tag, which releasesign checks
+      # before the maintainer signs the checksums
       - name: Attest the programs
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -264,36 +251,18 @@ jobs:
           unpack it and run \`install.sh\` to put NXPress in the menu of applications with its icon.
           \`SHA256SUMS.txt\` has the checksums of the files, and
           \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here.
+          \`SHA256SUMS.txt.minisig\` is their signature with the key of NXPress (minisign), which NXPress checks before it installs a new version.
           EOF
-          if [ -f dist/SHA256SUMS.txt.minisig ]; then
-            echo "\`SHA256SUMS.txt.minisig\` is their signature with the key of NXPress (minisign), which NXPress checks before it installs a new version." >> release-notes.md
-          fi
 
-      - name: Create release
+      # a draft: nobody sees it, nor NXPress, until the maintainer signs and publishes it
+      - name: Create the draft of the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
+            --draft \
             --title "NXPress ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             --verify-tag \
-            dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt*
-
-      # the notes in #releases of the Discord server, through the webhook kept in the secret
-      # DISCORD_WEBHOOK; without it (a fork) nothing is sent, and if Discord fails the release
-      # stays as it is
-      - name: Announce on Discord
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: |
-          if [ -z "${DISCORD_WEBHOOK}" ]; then
-            echo "No DISCORD_WEBHOOK secret: nothing sent to Discord"
-            exit 0
-          fi
-          python3 .github/scripts/discord_release.py \
-            "NXPress ${GITHUB_REF_NAME}" \
-            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" \
-            discord-notes.md > discord-message.json
-          curl -fsS --retry 3 -H "Content-Type: application/json" \
-            --data @discord-message.json "${DISCORD_WEBHOOK}"
+            dist/nxpress.exe dist/nxpress-* dist/SHA256SUMS.txt
+          echo "Sign and publish it on your computer: go run ./tools/releasesign ${GITHUB_REF_NAME}"

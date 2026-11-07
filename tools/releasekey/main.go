@@ -1,23 +1,23 @@
 // Command releasekey makes the key the releases of NXPress are signed with (#91). The maintainer
-// runs it once, on their own computer, with gh signed in:
+// runs it once, on their own computer:
 //
-//	go run ./tools/releasekey
+//	go run ./tools/releasekey -backup FILE
 //
-// The private key goes straight into the secret NXPRESS_SIGNING_KEY of the repository, through
-// gh, and is never shown nor kept; only the public key is written, to
-// internal/selfupdate/release.pub, which NXPress is built with (commit it). With -backup FILE the
-// private key is written to FILE too, outside the repository, for the maintainer to keep somewhere
-// safe: with it a lost secret can be set again; without it, a new key is made, and the copies of
-// NXPress built with the old public key only tell of the next versions.
+// The private key is written to FILE only, outside the repository, for the maintainer to keep in
+// a password manager and then delete FILE: tools/releasesign asks for it to sign each release on
+// that computer, and it is never on GitHub nor on the screen. The public key is written to
+// internal/selfupdate/release.pub, which NXPress is built with (commit it). Once the private key
+// is lost, a new one is made, and the copies of NXPress built with the old public key only tell
+// of the next versions.
 package main
 
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -25,11 +25,10 @@ import (
 )
 
 func main() {
-	repo := flag.String("repo", "DeLFuS77/NXPress", "the repository whose secret takes the key")
-	backup := flag.String("backup", "", "also write the private key to this file, outside the repository")
+	backup := flag.String("backup", "", "the file the private key is written to, outside the repository")
 	force := flag.Bool("force", false, "make a new key though NXPress has one")
 	flag.Parse()
-	if err := run(*repo, *backup, *force); err != nil {
+	if err := run(*backup, *force); err != nil {
 		fmt.Fprintln(os.Stderr, "releasekey:", err)
 		os.Exit(1)
 	}
@@ -37,7 +36,6 @@ func main() {
 
 // checkBackup tells whether the backup can be written where it is asked, before anything is
 // made: outside the repository, in a folder that is there and takes files, and not over a file.
-// Checked before the secret is set, so nothing changes when it cannot be written.
 func checkBackup(backup string, repository string) error {
 	whole, err := filepath.Abs(backup)
 	if err != nil {
@@ -62,7 +60,7 @@ func checkBackup(backup string, repository string) error {
 	return nil
 }
 
-func run(repo, backup string, force bool) error {
+func run(backup string, force bool) error {
 	keysFile := filepath.Join("internal", "selfupdate", "release.pub")
 	current, err := os.ReadFile(keysFile)
 	if err != nil {
@@ -71,14 +69,12 @@ func run(repo, backup string, force bool) error {
 	if keys, _ := selfupdate.ParsePublicKeys(string(current)); len(keys) > 0 && !force {
 		return fmt.Errorf("NXPress has a key already (%s): a new one leaves the copies built with it telling of new versions only; give -force to make one all the same", keysFile)
 	}
-	if backup != "" {
-		here, _ := filepath.Abs(".")
-		if err := checkBackup(backup, here); err != nil {
-			return err
-		}
+	if backup == "" {
+		return errors.New("give -backup FILE: the private key is written there, and nowhere else")
 	}
-	if _, err := exec.LookPath("gh"); err != nil {
-		return fmt.Errorf("gh is needed to put the key in the secret: %w", err)
+	here, _ := filepath.Abs(".")
+	if err := checkBackup(backup, here); err != nil {
+		return err
 	}
 
 	public, private, err := ed25519.GenerateKey(rand.Reader)
@@ -89,29 +85,18 @@ func run(repo, backup string, force bool) error {
 	if _, err := rand.Read(id[:]); err != nil {
 		return err
 	}
-	secret := selfupdate.PrivateKeyText(private, id)
-
-	// the private key goes to gh by its input, never on the command line nor on the screen
-	command := exec.Command("gh", "secret", "set", "NXPRESS_SIGNING_KEY", "--repo", repo)
-	command.Stdin = strings.NewReader(secret)
-	command.Stdout, command.Stderr = os.Stdout, os.Stderr
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("the secret could not be set, nothing was changed: %w", err)
+	if err := os.WriteFile(backup, []byte(selfupdate.PrivateKeyText(private, id)+"\n"), 0o600); err != nil {
+		return fmt.Errorf("the private key could not be written, nothing was changed: %w", err)
 	}
-	if backup != "" {
-		if err := os.WriteFile(backup, []byte(secret+"\n"), 0o600); err != nil {
-			return fmt.Errorf("the secret is set, but the backup could not be written: %w", err)
-		}
-	}
+	clear(private)
 	key := selfupdate.PublicKey{ID: id, Key: public}
 	header := "# The public keys the releases of NXPress are signed with (minisign), written by\n# tools/releasekey. With none, NXPress only tells of a new version.\n"
 	if err := os.WriteFile(keysFile, []byte(header+key.Text()), 0o644); err != nil {
-		return fmt.Errorf("the secret is set, but %s could not be written: %w", keysFile, err)
+		os.Remove(backup)
+		return fmt.Errorf("%s could not be written, nothing was changed: %w", keysFile, err)
 	}
-	fmt.Printf("The private key is in the secret NXPRESS_SIGNING_KEY of %s.\n", repo)
-	if backup != "" {
-		fmt.Printf("Its backup is %s: keep it somewhere safe, and never in the repository.\n", backup)
-	}
-	fmt.Printf("The public key is in %s: commit it, and the next release is signed.\n", keysFile)
+	fmt.Printf("The private key is in %s: keep it in your password manager, then delete the file.\n", backup)
+	fmt.Println("tools/releasesign asks for it to sign each release; it is never put on GitHub.")
+	fmt.Printf("The public key is in %s: commit it.\n", keysFile)
 	return nil
 }

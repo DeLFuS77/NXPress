@@ -131,10 +131,11 @@ func Sign(private ed25519.PrivateKey, keyID [8]byte, data []byte, comment string
 	return out.Bytes()
 }
 
-// The private key kept in the secret of the releases: its ID and the seed of its Ed25519 key, in
-// base64. It never goes in a file of NXPress, nor in its log.
+// The private key the releases are signed with, which the maintainer keeps in a password manager
+// and gives to tools/releasesign on their own computer: its ID and the seed of its Ed25519 key,
+// in base64. It never goes on GitHub, in a file of NXPress, nor in its log.
 
-// ParsePrivateKey reads the private key of the secret.
+// ParsePrivateKey reads the private key of the releases.
 func ParsePrivateKey(text string) (ed25519.PrivateKey, [8]byte, error) {
 	var id [8]byte
 	data, err := base64.StdEncoding.DecodeString(strings.TrimSpace(text))
@@ -145,7 +146,7 @@ func ParsePrivateKey(text string) (ed25519.PrivateKey, [8]byte, error) {
 	return ed25519.NewKeyFromSeed(data[8:]), id, nil
 }
 
-// PrivateKeyText is the private key as the secret keeps it.
+// PrivateKeyText is the private key as the maintainer keeps it.
 func PrivateKeyText(private ed25519.PrivateKey, id [8]byte) string {
 	return base64.StdEncoding.EncodeToString(append(append([]byte{}, id[:]...), private.Seed()...))
 }
