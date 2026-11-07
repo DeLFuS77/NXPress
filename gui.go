@@ -116,6 +116,8 @@ type App struct {
 	openedMutex sync.Mutex
 	opened      []Opened
 	openedCtx   context.Context
+	// a call that brings this window to the front is going on
+	fronting atomic.Bool
 	// lets the next NXPress start, once this window takes files
 	started func()
 	// the new version CheckUpdate found, the cancel of its installation going on, and the
@@ -228,10 +230,21 @@ func openedSection(start launch) string {
 	return "decompress"
 }
 
+// bringToFront puts this window in front of the others (a variable, for the tests).
+var bringToFront = system.BringToFront
+
 // secondInstance takes what another NXPress was started with: this window comes to the front,
-// and the page is told of the files, which it takes with TakeOpened.
+// and the page is told of the files, which it takes with TakeOpened. It returns at once: Wails
+// calls it from the one goroutine that takes, one by one, what the window hands it through a
+// queue of one, and the window that comes to the front answers that goroutine, so the two would
+// wait for each other for ever when many files came at once, the window minimized.
 func (a *App) secondInstance(data wailsoptions.SecondInstanceData) {
-	system.BringToFront()
+	if a.fronting.CompareAndSwap(false, true) {
+		go func() {
+			defer a.fronting.Store(false)
+			bringToFront()
+		}()
+	}
 	start, ok := windowLaunch(absolute(data.Args, data.WorkingDirectory))
 	if !ok || len(start.files) == 0 {
 		return

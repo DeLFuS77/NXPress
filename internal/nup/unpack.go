@@ -85,6 +85,12 @@ func Unpack(ctx context.Context, path string, dest string, workers int, readers 
 			if err := safePath(name); err != nil {
 				return err
 			}
+			// packers give each file of each package a record of its own: a record a crafted NUP
+			// puts under many paths would be written again for each of them, past what the card
+			// and the check of the free space tell
+			if len(paths[index]) > 0 {
+				return fmt.Errorf("NUP holds the file %q at more than one place", name)
+			}
 			paths[index] = append(paths[index], filepath.Join(root, filepath.FromSlash(name)))
 			result.Files++
 			result.Size += int64(container.Files[index].Size)
@@ -194,7 +200,8 @@ func (c *Container) walkFolders(pkg int, fn func(path string) error) error {
 		prefix string
 		depth  int
 	}
-	seen := make([]bool, len(c.Dirs))
+	// only the folders met: a NUP of many packages is walked once for each of them
+	seen := map[uint32]bool{}
 	stack := []frame{{dir: c.Packages[pkg].RootDir}}
 	seen[c.Packages[pkg].RootDir] = true
 	dirCount := uint32(len(c.Dirs))
@@ -212,6 +219,9 @@ func (c *Container) walkFolders(pkg int, fn func(path string) error) error {
 			}
 			seen[node] = true
 			path := top.prefix + c.Dirs[node].Name
+			if len(path) >= maxPath {
+				return errors.New("NUP path is too long")
+			}
 			if err := fn(path); err != nil {
 				return err
 			}

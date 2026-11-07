@@ -24,7 +24,7 @@ var (
 	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
 	procAllowSetForegroundWindow = user32.NewProc("AllowSetForegroundWindow")
 	procIsIconic                 = user32.NewProc("IsIconic")
-	procShowWindow               = user32.NewProc("ShowWindow")
+	procShowWindowAsync          = user32.NewProc("ShowWindowAsync")
 	procCreateSemaphoreW         = windows.NewLazySystemDLL("kernel32.dll").NewProc("CreateSemaphoreW")
 	procReleaseSemaphore         = windows.NewLazySystemDLL("kernel32.dll").NewProc("ReleaseSemaphore")
 )
@@ -83,7 +83,8 @@ func AllowForeground() {
 }
 
 // BringToFront puts the window of NXPress in front of the others, restored when it was
-// minimized; not one not shown yet, which comes in front as it shows.
+// minimized; not one not shown yet, which comes in front as it shows. The window is restored
+// without waiting for its thread, which may be busy with what brings it to the front.
 func BringToFront() {
 	window := FindOwnWindow(false)
 	if window == 0 {
@@ -91,7 +92,7 @@ func BringToFront() {
 	}
 	if iconic, _, _ := procIsIconic.Call(uintptr(window)); iconic != 0 {
 		const restore = 9
-		procShowWindow.Call(uintptr(window), restore)
+		procShowWindowAsync.Call(uintptr(window), restore)
 	}
 	procSetForegroundWindow.Call(uintptr(window))
 }
