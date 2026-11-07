@@ -2443,7 +2443,6 @@ async function main() {
   $("compare-levels").onclick = () => start("estimate", { levels: true });
   $("measure").onclick = () => start("measure");
   $("measure-close").onclick = () => $("measure-dialog").close();
-  $("last-report").onclick = openWorklog;
   // the log: what is looked for, the works with problems only, the most kept, its text file, and
   // clearing it, which Undo takes back
   $("worklog-find").oninput = () => { state.worklogFindClosed = false; paintWorklog(); };
