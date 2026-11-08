@@ -28,6 +28,8 @@ It is one program with no Python or other dependencies. Opened with no arguments
 
 The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI.
 
+Each release has `SHA256SUMS.txt` and its signature, `SHA256SUMS.txt.minisig`, made with the key of the project. NXPress checks it before it installs a new version by itself.
+
 On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have; once unpacked, `install.sh` puts NXPress in the menu of applications with its icon.
 
 For Windows there is also a portable download (`…-windows-x64-portable.zip`): a folder with the program and its `settings` folder, ready to unpack anywhere. Any copy becomes portable with a folder named `settings` next to the program: NXPress then keeps its settings, its window and the files already checked in it, and nothing in your user folders. With `prod.keys` next to the program as well, the whole folder can go on a USB stick.
@@ -41,7 +43,7 @@ For Windows there is also a portable download (`…-windows-x64-portable.zip`): 
 
 Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to", to the right-click menu, and open Switch files with a double click (Settings › Windows Explorer). Each game shows with its cover, name, title ID and version, in a list or as a grid of covers; the list sorts by name, size or state, and each file has a menu on a right click. The menu on the left groups the sections by what they are for:
 
-- **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
+- **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between, or to the extra compression and back) and trim (the padding of XCI files and the delta fragments of updates)
 - **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game, named by a template; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
 - **Check**: verify files by their hashes, by the signature of Nintendo or both, also against a DAT of No-Intro and others, and see the details of a file: its titles, how it is stored and what it works with. NUP files are verified and shown too, made of dump folders and turned back into folders, without keys (see [NUP files](#nup-files))
 
