@@ -11,6 +11,8 @@
 <!-- the name and the version are in the title of the window: no bar of its own above (#44) -->
 <div id="update-banner" class="topbar" hidden>
   <span id="update-text"></span>
+  <!-- a signed version NXPress can install opens the window of the update (#91); else Download -->
+  <button id="update-install" class="primary small" hidden></button>
   <button id="update-get" class="primary small" data-t="updateGet"></button>
   <button id="update-close" class="quiet icon" data-t-title="dismiss" data-t-label="dismiss">✕</button>
 </div>
@@ -52,6 +54,8 @@
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
+      <!-- what Details tells, to a spreadsheet (#89) -->
+      <button id="export" class="menu-button" data-for="info" aria-haspopup="menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><span data-t="export"></span><span class="caret" aria-hidden="true">▾</span></button>
       <div class="view-switch segmented" role="radiogroup">
         <button data-view="list" role="radio" data-t-title="viewList"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
         <button data-view="grid" role="radio" data-t-title="viewGrid"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
@@ -91,6 +95,8 @@
         <button class="quiet" id="worklog-collapse-all"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5-5 5 5"/><path d="m7 9 5-5 5 5" opacity=".5"/></svg><span data-t="worklogCollapseAll"></span></button>
       </div>
       <span class="worklog-count" id="worklog-count"></span>
+      <!-- the works shown, to a spreadsheet (#89) -->
+      <button id="worklog-export" class="menu-button" aria-haspopup="menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg><span data-t="export"></span><span class="caret" aria-hidden="true">▾</span></button>
     </div>
     <div id="worklog-list" class="worklog-list"></div>
 
@@ -122,9 +128,12 @@
           <button id="preset-delete" class="quiet icon" data-t-title="presetDelete" data-t-label="presetDelete">🗑</button>
         </div>
         <div class="presets-row" id="preset-new">
-          <input id="preset-name" type="text" maxlength="40">
-          <button id="preset-save" data-t="presetSave"></button>
+          <input id="preset-name" type="text" maxlength="40" aria-describedby="preset-warning">
+          <button id="preset-save"></button>
         </div>
+        <!-- a name in use: Save becomes Replace and says so, and the names of NXPress are not
+             taken (#93) -->
+        <p class="warning" id="preset-warning" hidden></p>
       </div>
       <div class="field">
         <div class="level-head"><span id="level-name" data-t="level"></span><b id="level-value"></b></div>
@@ -150,9 +159,11 @@
           <span class="tags"><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
         </div>
         <!-- the extra compression goes with what the files are made for, as it changes what reads them (#76) -->
-        <div class="extra-field" data-for="compress">
+        <div class="extra-field" data-for="compress recompress">
           <label class="check"><input id="extra" type="checkbox"><span data-t="extra"></span></label>
           <p class="hint" data-t="extraHint"></p>
+          <!-- in Recompress both ways, through a decompressed copy when the format changes (#92) -->
+          <p class="hint always" data-for="recompress" data-t="extraRecompress"></p>
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
         <p class="hint" data-t="xczBlock"></p>
@@ -315,12 +326,26 @@
       </section>
       </div>
       <div class="pref-column">
-      <section class="pref-group">
-        <h2 data-t="prefSystem"></h2>
+      <!-- the places of NXPress in the Explorer, on Windows only: Send to, its menu (#88), and
+           the program of its files (#87); each says when it is there, or there for another copy -->
+      <section class="pref-group" id="explorer-group">
+        <h2 data-t="prefExplorer"></h2>
         <div class="pref-item" id="send-to-row">
           <div class="pref-text"><b data-t="sendToTitle"></b><small data-t="sendToHint"></small></div>
           <button id="send-to"></button>
         </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="menuTitle"></b><small data-t="menuHint"></small><small class="pref-status" id="menu-status"></small></div>
+          <button id="explorer-menu"></button>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="filesTitle"></b><small data-t="filesHint"></small><small class="pref-status" id="files-status"></small><small class="pref-status warn" id="files-others"></small>
+            <label class="check small-check" id="open-start-row"><input id="open-start" type="checkbox"><span data-t="openStart"></span></label></div>
+          <button id="explorer-files"></button>
+        </div>
+      </section>
+      <section class="pref-group">
+        <h2 data-t="prefSystem"></h2>
         <div class="pref-item">
           <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
           <input id="updates" type="checkbox" class="switch" role="switch">
@@ -332,9 +357,11 @@
       </section>
       <section class="pref-group">
         <h2 data-t="prefHelp"></h2>
+        <!-- the log is in the side menu, with Check, and its settings on its page (#85); in its
+             place, the Discord server (#86), its button with the logo of Discord -->
         <div class="pref-item">
-          <div class="pref-text"><b data-t="worklog"></b><small data-t="worklogPrefHint"></small></div>
-          <button id="last-report" data-t="prefShow"></button>
+          <div class="pref-text"><b data-t="discordLink"></b><small data-t="discordHint"></small></div>
+          <button id="discord-link" class="brand-button"><svg class="discord-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span data-t="prefOpen"></span></button>
         </div>
         <div class="pref-item">
           <div class="pref-text"><b data-t="starLink"></b><small data-t="starHint"></small></div>
@@ -389,6 +416,26 @@
     <li data-t="extraWarnFormat"></li>
   </ul>
   <div class="dialog-actions"><button id="extra-cancel" data-t="cancel"></button><button id="extra-on" class="primary" data-t="extraWarnOn"></button></div>
+</dialog>
+<!-- a new version installed from NXPress (#91): what is new in it while it is downloaded and
+     checked, its progress in the blue of work, what kept it from it in red, and at the end
+     Restart now or Later -->
+<dialog id="update-dialog" class="update-dialog" aria-labelledby="update-title">
+  <h2 id="update-title"><span data-t="updateWhatsNew"></span> <span class="update-version" id="update-version"></span></h2>
+  <div class="update-notes" id="update-notes"></div>
+  <div class="update-progress" id="update-progress">
+    <div class="update-step"><span id="update-step"></span><span id="update-percent"></span></div>
+    <div class="update-bar" id="update-bar"><span></span></div>
+  </div>
+  <p class="update-error" id="update-error" role="alert" hidden></p>
+  <div class="dialog-actions">
+    <span class="update-hint" id="update-hint"></span>
+    <button id="update-cancel" data-t="cancel"></button>
+    <button id="update-dialog-close" data-t="close" hidden></button>
+    <button id="update-page" class="primary" data-t="updateOpenPage" hidden></button>
+    <button id="update-later" data-t="updateLater" hidden></button>
+    <button id="update-restart" class="primary" hidden></button>
+  </div>
 </dialog>
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>

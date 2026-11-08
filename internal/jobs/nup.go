@@ -50,7 +50,11 @@ func NupFiles(paths []string) []string {
 // given NUP files or dump folders only needs none: it packs them, unpacks, verifies or shows
 // them, or tells it leaves them as they are.
 func NeedsKeys(o Options) bool {
-	if o.Recompress || o.Fat32 || o.Nup {
+	// with the extra compression, a file is recompressed through a decompressed copy (#92)
+	if o.Recompress {
+		return o.Sparse || o.Archive
+	}
+	if o.Fat32 || o.Nup {
 		return false
 	}
 	if o.Watch {

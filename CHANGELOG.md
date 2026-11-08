@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.7.4
+
+### Improvements
+
+- Each section keeps its own view, list or covers; one not switched yet shows the view chosen before (thanks @NikoMuffin, #84)
+- The Log is no longer in Settings › Help: it is in the side menu, under Check, with its settings on its page (thanks @NikoMuffin, #85)
+- Settings › Help opens the Discord server NXPress shares with Switch Library Manager Web (thanks @NikoMuffin, #86)
+- Windows: NXPress can be the program of NSP, NSZ, XCI, XCZ and NUP files, from Settings › Windows Explorer: a double click opens them in Verify, and checks them at once when its box is ticked. Where another program opens them already, NXPress is chosen once with Open with › Choose another app › Always (thanks @NikoMuffin, #87)
+- Windows: an NXPress menu on a right click of those files, with Verify, Details, Compress or Decompress, and Combine, and of folders, with Compress, Verify and Combine; on Windows 11 it is under Show more options. Send to stays. Both are for the user only, need no administrator, and Settings tells when they are for another copy of NXPress, as after moving it (thanks @NikoMuffin, #88)
+- Windows: files sent from the Explorer while NXPress is open go to its window, which comes to the front, as a new list that Undo takes back; during a work they come in when it ends. Several files opened at once come together in one window
+- Export, in Details and in the Log, saves the list to Excel (XLSX) or CSV: in Details a row for each title of each file, with its title ID, kind, versions, name, publisher and the newest version published; in the Log a row for each file of the works shown (thanks @NikoMuffin, #89)
+- Recompress has the extra compression too, both ways: ticked, a file gets it; unticked, a file with the archive format NCZSECT3 becomes a plain NSZ that installers read. A file that changes format goes through an NSP checked by its hashes, so the round trip stays byte for byte; it needs the keys and room for the NSP. A game in sparse storage (NCZSECT2) has no plain NSZ, so without the box it stays as it is (thanks @NikoMuffin, #92)
+- Saving settings with a name in use asks first: Save becomes Replace, in orange, with a line that says so, and Undo brings the old ones back; the names of the settings of NXPress are not taken (thanks @NikoMuffin, #93)
+- NXPress can install its new versions itself: the notice of a new version offers Install and restart, which opens a window with what is new while the version is downloaded and checked, then Restart now or Later. Each release now signs its checksums with the key of the project (SHA256SUMS.txt.minisig, minisign), and NXPress checks that signature, made for that version, and the checksum of the file it downloads before it replaces itself; a version without its signature is only offered to download, as before. Nothing is installed without a click, a beta only by a beta, and the restart waits for every work to end: the work of the files (a watch of folders too), the files sent from the Explorer meanwhile and the check they start, the log of the work, and a count to turn the computer off; no work starts while it restarts. Windows and Linux; on macOS it still only tells (thanks @NikoMuffin, #91)
+
+### Fixes
+
+- Windows: many files sent from the Explorer at once while NXPress is minimized no longer leave its window not responding: it comes back to the front and takes them all
+- A NUP made to harm, such as one from the Internet, no longer makes NXPress take gigabytes of memory or hours, or close, when it is added, checked or unpacked: names and paths longer than the ones of the console, folders that share their children, packages that share their folders and a file at more than one place are refused, and the check of the code decompresses as it reads
+- A NUP whose metadata types are counted from 0 is told, and fixed, also when a package has no NPDM, such as a DLC: a record 0x0007 that is not the 32 bytes of a build ID marks it, the same rule as the fix of the reference packer (a55uka/nup#32)
+
+### Next
+
+- NUP v2, the new version of the format, as its specification settles: reading and verifying first
+
 ## 1.7.3
 
 ### Improvements

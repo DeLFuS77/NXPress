@@ -21,6 +21,12 @@ const versionsWait = 2 * time.Minute
 // It gives the day of the list (2026-11-02), "" when there is none; with no connection it is
 // the copy kept, and nothing is said.
 func (a *App) LoadVersions() string {
+	// the restart into a new version waits for the download going on; none starts meanwhile
+	done, err := a.chore(true)
+	if err != nil {
+		return ""
+	}
+	defer done()
 	a.versionsMutex.Lock()
 	defer a.versionsMutex.Unlock()
 	folder, err := portable.DataFolder()
@@ -42,6 +48,8 @@ func (a *App) LoadVersions() string {
 // ForgetVersions leaves the versions published, and removes the copy kept, as their setting is
 // turned off: the command line then tells them no more either.
 func (a *App) ForgetVersions() {
+	done, _ := a.chore(false)
+	defer done()
 	a.versionsMutex.Lock()
 	defer a.versionsMutex.Unlock()
 	a.versions.Store(nil)

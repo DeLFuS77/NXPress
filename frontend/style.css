@@ -118,6 +118,26 @@ nav button.on b { color: var(--text); }
 .banner.warn { background: color-mix(in srgb, var(--warn) 12%, transparent); border-color: var(--warn); }
 .banner-buttons { display: flex; gap: 6px; flex: none; }
 .topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; background: var(--ok-soft); border-bottom: 1px solid var(--line); font-weight: 600; }
+/* the window of a new version (#91): what is new in it, its progress in the blue of work, green
+   once it is in place, and what kept it from it in red */
+dialog.update-dialog { max-width: 560px; }
+.update-dialog h2 { display: flex; align-items: center; gap: 8px; }
+.update-version { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; }
+.update-notes { max-height: 240px; overflow: auto; margin-top: 10px; padding: 6px 14px 8px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--bg); font-size: 13px; user-select: text; -webkit-user-select: text; }
+.update-notes:empty { display: none; }
+.update-notes h3 { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.update-notes ul { margin: 0; padding-left: 18px; }
+.update-notes li { margin: 3px 0; }
+.update-notes p { margin: 6px 0; }
+.update-notes code { font: 12px "Cascadia Mono", Consolas, monospace; }
+.update-progress { margin-top: 14px; }
+.update-step { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; margin-bottom: 6px; }
+.update-bar { height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
+.update-bar span { display: block; height: 100%; width: 0; background-color: var(--accent); background-image: linear-gradient(135deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%); background-size: 24px 24px; animation: stripes .8s linear infinite; transition: width .2s; }
+.update-bar.done span { width: 100%; background-color: var(--ok); background-image: none; animation: none; }
+.update-error { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--radius-small); background: var(--bad-soft); border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.update-dialog .dialog-actions { align-items: center; }
+.update-hint { flex: 1; font-size: 12px; color: var(--muted); }
 .toolbar { display: flex; gap: 8px; align-items: center; padding: 12px 24px 0; }
 #drop { flex: 1; overflow: auto; margin: 12px 24px; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--panel); --wails-drop-target: drop; transition: border-color .15s, background .15s; }
 /* with files in it, the list is a plain surface: the dashes only invite a drop */
@@ -329,6 +349,8 @@ label.choice small { display: block; font-size: 12px; color: var(--muted); margi
 .tags i.warn::before { content: "⚠ "; }
 .path { display: flex; gap: 6px; align-items: center; }
 .presets-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+/* Save over saved settings of that name: in the orange of a warning, never red (#93) */
+#preset-save.replace, #preset-save.replace:hover:not(:disabled) { border-color: var(--warn); color: var(--warn); font-weight: 600; background: color-mix(in srgb, var(--warn) 14%, var(--raised)); }
 /* a template is longer than the panel is wide: it wraps, whole, with its button under it */
 textarea.template { display: block; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .template-row { display: flex; justify-content: flex-end; margin-top: 4px; }
@@ -527,6 +549,10 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 table.grid .dump-plan { display: none; }
 
 /* the switch of the list: rows or a grid of covers */
+/* Export, with the menu of its formats (#89) */
+.menu-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.menu-button .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.menu-button .caret { font-size: 10px; color: var(--muted); }
 .view-switch { margin: 0 0 0 auto; }
 .view-switch button { padding: 4px 8px; display: grid; place-items: center; }
 .view-switch .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -632,7 +658,14 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 /* what a setting found: the day of the list of versions published */
 .pref-text .pref-status { font-style: italic; opacity: .85; }
 .pref-text .pref-status:empty { display: none; }
+/* a place in the Explorer: green when it is there, orange when it needs a look (#87, #88) */
+.pref-text .pref-status.ok { color: var(--ok); font-style: normal; opacity: 1; }
+.pref-text .pref-status.warn { color: var(--warn); font-style: normal; opacity: 1; }
+.pref-text label.check.small-check { margin-top: 6px; white-space: normal; }
 .pref-item > select { min-width: 180px; }
+/* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
+.brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.brand-button .discord-logo { width: 16px; height: 16px; flex: none; fill: #5865f2; }
 .pref-item .segmented { margin: 0; }
 .pref-item .segmented button { padding: 3px 10px; }
 #preferences .pref-keys { word-break: break-all; }

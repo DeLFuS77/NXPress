@@ -39,7 +39,7 @@ For Windows there is also a portable download (`…-windows-x64-portable.zip`): 
   <img src="docs/screenshots/compress-light.png" alt="Compress at work: the list of games with their covers, the bar of each file in its steps, the speed and the time left">
 </picture>
 
-Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to" in the Explorer, so the files chosen there open in it. Each game shows with its cover, name, title ID and version, in a list or as a grid of covers; the list sorts by name, size or state, and each file has a menu on a right click. The menu on the left groups the sections by what they are for:
+Drop files or folders on the window, or on NXPress itself; on Windows it can add itself to "Send to", to the right-click menu, and open Switch files with a double click (Settings › Windows Explorer). Each game shows with its cover, name, title ID and version, in a list or as a grid of covers; the list sorts by name, size or state, and each file has a menu on a right click. The menu on the left groups the sections by what they are for:
 
 - **Space**: compress, decompress, recompress (solid or in blocks, at another level, without the NSP in between) and trim (the padding of XCI files and the delta fragments of updates)
 - **Organize**: combine a game, its updates and DLC into one SuperNSP or into its XCI, or a whole collection into a SuperNSP per game, named by a template; split them back, byte for byte; FAT32 parts for microSD cards; convert XCI to NSP; rename files by what they hold
