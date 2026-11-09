@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"sort"
 	"strings"
 
@@ -93,6 +94,9 @@ func Localized(entries ...string) []byte {
 
 // Jpeg is a made-up icon that starts as a JPEG image does.
 var Jpeg = append([]byte{0xFF, 0xD8, 0xFF, 0xE0}, bytes.Repeat([]byte{7}, 60)...)
+
+// Webp is a real WEBP of 60×30: red at the sides, blue in the middle 30 pixels.
+var Webp, _ = hex.DecodeString("524946462a000000574542505650384c1e0000002f3b4007000f10f3bffff31f0ec8024c661072aa990ca137a2ff6181999f")
 
 // Build writes a NUP with packages, files of the same data stored once.
 func Build(packages []Package) []byte {

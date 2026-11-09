@@ -41,6 +41,8 @@ var Takes = map[string][]string{
 	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	// the NUP files whose metadata is counted from 0
 	"fixmeta": {".nup"},
+	// the NUP files without an icon
+	"fixicon": {".nup"},
 	// the dump folders packed into NUP files
 	"nup": {dumpFolders},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
@@ -59,6 +61,7 @@ var checksOutput = map[string]bool{
 	"fat32":      false,
 	"rename":     false,
 	"fixmeta":    false,
+	"fixicon":    false,
 	"split":      false,
 	"estimate":   false,
 	"measure":    false,
@@ -513,6 +516,9 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 			return rename(ctx, path, o, out)
 		case "fixmeta":
 			note, err := FixNupMeta(path)
+			return "", note, err
+		case "fixicon":
+			note, err := FixNupIcon(ctx, path, o)
 			return "", note, err
 		}
 		return "", "", Skipped(NupNotDone)

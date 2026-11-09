@@ -54,6 +54,13 @@ type Options struct {
 	// --fix-nup-meta: the metadata of each NUP given whose types are counted from 0 written again
 	// with them where the format puts them, for Eglantine and Lichii
 	FixNupMeta bool
+	// --fix-nup-icon: each NUP given without an icon given the one of its game in titledb, or the
+	// image of --nup-icon
+	FixNupIcon bool
+	// --nup-icon: the image (PNG, JPEG, WEBP or BMP) a NUP without an icon takes, made 256×256, instead
+	// of the one of titledb; --no-nup-icon: titledb not looked up, the NUP left without one
+	NupIcon   string
+	NoNupIcon bool
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string
@@ -123,6 +130,7 @@ var optionNames = []optionName{
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
 	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
+	{"--fix-nup-icon", 0, false, false}, {"--nup-icon", 0, true, false}, {"--no-nup-icon", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
 	{"--alwaysParseCnmt", 'P', false, true}, {"--rm-old-version", 'r', false, true},
@@ -325,6 +333,10 @@ func (o *Options) flag(option optionName) {
 		o.Nup = true
 	case "--fix-nup-meta":
 		o.FixNupMeta = true
+	case "--fix-nup-icon":
+		o.FixNupIcon = true
+	case "--no-nup-icon":
+		o.NoNupIcon = true
 	case "--minimal-output":
 		o.Minimal = true
 	case "--machine-readable":
@@ -383,6 +395,8 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Pack = value
 	case "--pack-name":
 		o.PackName = value
+	case "--nup-icon":
+		o.NupIcon = value
 	case "--verify-level":
 		// hash was named full before 1.4.0, which scripts may still give (#42)
 		if value == "hash" {
@@ -431,13 +445,13 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta} {
+	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --nup and --fix-nup-meta")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --nup, --fix-nup-meta and --fix-nup-icon")
 	}
 	// a watch would look for new files a pack does not take, without end
 	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup) {
@@ -477,6 +491,12 @@ func (o *Options) Check() error {
 	}
 	if o.NupZstdBig && !o.Nup {
 		o.Notes = append(o.Notes, "--nup-zstd-big has no effect without --nup")
+	}
+	if (o.NupIcon != "" || o.NoNupIcon) && !o.Nup && !o.FixNupIcon {
+		o.Notes = append(o.Notes, "--nup-icon and --no-nup-icon have no effect without --nup or --fix-nup-icon")
+	}
+	if o.NupIcon != "" && o.NoNupIcon {
+		return errors.New("--nup-icon and --no-nup-icon cannot be used together")
 	}
 	if (o.Sparse || o.Archive) && !o.Compress && !o.Recompress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C or --recompress")
@@ -557,6 +577,20 @@ Usage: nxpress [options] file or folder...
                       make it smaller, files with the same data kept once, the NUP checked
                       whole before it gets its name; no keys needed. -D turns a NUP back
                       into a folder, each file checked by its SHA-256
+  --fix-nup-icon      give each NUP given that carries no icon the one of its game in
+                      titledb, found by its title ID (the one of the game for an update or
+                      a DLC), or the image of --nup-icon, made a JPEG of 256×256: the
+                      metadata of the game is written again after the end of the NUP, the
+                      files and what it carried as they were, checked after
+  --nup-icon FILE     with --nup or --fix-nup-icon, the image (PNG, JPEG, WEBP or BMP) a NUP
+                      without an icon takes, cut square at its middle and made 256×256,
+                      instead of the one of titledb. Without it, a dump folder without
+                      control data gives its NUP the icon of titledb, when “Warn of updates
+                      you do not have” is on in the settings of the window; with no
+                      connection, or a game titledb does not know, the NUP is made without
+                      one, and the note tells why
+  --no-nup-icon       with --nup, do not look up titledb: a dump folder without control data
+                      gives a NUP without an icon
   --nup-zstd-big      with --nup, compress the files over 256 MiB too. Without it they are
                       stored as they are, as the packers of Eglantine and Lichii store them:
                       these emulators decompress such a file whole into a temporary file
@@ -654,6 +688,8 @@ func (o Options) Action() string {
 		return "nup"
 	case o.FixNupMeta:
 		return "fixmeta"
+	case o.FixNupIcon:
+		return "fixicon"
 	}
 	return "verify"
 }

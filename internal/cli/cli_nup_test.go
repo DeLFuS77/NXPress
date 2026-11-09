@@ -210,3 +210,28 @@ func TestNupWithoutKeys(t *testing.T) {
 		t.Errorf("folder: %d\n%s", code, out)
 	}
 }
+
+// --fix-nup-icon gives a NUP without an icon the image of --nup-icon, and leaves one that has an
+// icon; without the versions published turned on in the window, titledb is not looked up.
+func TestNupFixIcon(t *testing.T) {
+	withoutKeys(t)
+	path := filepath.Join(t.TempDir(), "game.nup")
+	os.WriteFile(path, testnup.Build(nupGame()), 0o644)
+	if code, out := run("--fix-nup-icon", path); code == 0 || !strings.Contains(out, "titledb is not looked up for its icon") {
+		t.Errorf("without the setting: %d\n%s", code, out)
+	}
+	image := filepath.Join(t.TempDir(), "own.webp")
+	os.WriteFile(image, testnup.Webp, 0o644)
+	if code, out := run("--fix-nup-icon", "--nup-icon", image, path); code != 0 || !strings.Contains(out, "OK game.nup (it carries the image given (60×30, its square of 30×30 at its middle) now, 256×256: the files of the game as they were; it is smaller than 256×256") {
+		t.Fatalf("fix: %d\n%s", code, out)
+	}
+	if code, out := run("-V", path); code != 0 || !strings.Contains(out, "3 files checked") {
+		t.Errorf("verify after: %d\n%s", code, out)
+	}
+	if code, out := run("--fix-nup-icon", "--nup-icon", image, path); code != 0 || !strings.Contains(out, "SKIPPED game.nup (it carries an icon already") {
+		t.Errorf("again: %d\n%s", code, out)
+	}
+	if code, out := run("--fix-nup-icon", "--nup-icon", image, "--no-nup-icon", path); code != 2 || !strings.Contains(out, "cannot be used together") {
+		t.Errorf("both: %d\n%s", code, out)
+	}
+}
