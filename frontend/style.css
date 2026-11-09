@@ -539,6 +539,12 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 /* the warning of a NUP the emulators do not read well, and the button that writes it again */
 .card-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .card-fix .warning { flex: 1 1 260px; margin: 0; }
+/* the icon of a NUP at the left of its card, and the line of one without an icon (#97) */
+.file-card.has-icon { display: grid; grid-template-columns: 64px 1fr; column-gap: 12px; }
+.file-card.has-icon > :not(.nup-icon) { grid-column: 2; }
+.file-card .nup-icon { grid-row: 1 / span 9; width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: var(--bar); }
+.nup-no-icon .say { flex: 1 1 220px; margin: 0; font-size: 12px; color: var(--muted); }
+.nup-no-icon button { padding: 3px 10px; font-size: 12px; }
 /* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
 .game .cover .cover-folder { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
 .dump-plan { margin-top: 4px; }

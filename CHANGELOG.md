@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- A NUP made of a dump folder without control data gets the icon of its game: NXPress finds the game in titledb by its title ID (the one of the game for an update or a DLC), downloads its icon and writes it into the NUP as a JPEG of 256×256, as the icons of the console are. A NUP made already without one gets it from its card (Icon from titledb), and an image of one's own (PNG, JPEG or WEBP, cut square at its middle) with Choose image, for a game titledb does not know; on the command line, `--fix-nup-icon`, `--nup-icon FILE` and `--no-nup-icon`. Nothing the NUP has changes: the metadata of the game is written again after its end with the icon, the files stay as they were, and a NUP with an icon keeps it. It goes on the internet only with “Warn of updates you do not have” on, which now also downloads the list of the icons of titledb when a NUP needs one, once a week at most; with no connection, or a game titledb does not know, the NUP is made all the same and the note tells why (thanks @NikoMuffin, #97)
+
 ## 1.7.4
 
 ### Improvements

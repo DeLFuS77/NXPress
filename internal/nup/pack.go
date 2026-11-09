@@ -448,6 +448,8 @@ type PackOptions struct {
 	// the name and the publisher of the game, when its folder has no control data to tell them
 	Name      string
 	Publisher string
+	// the icon of the game (a JPEG made by MakeIcon), when its folder has no control data with one
+	Icon []byte
 	// files bigger than this are stored as they are, 0 for none: Eglantine and Lichii decompress a
 	// file with zstd whole the first time it is read, into a temporary file past 256 MiB, and
 	// their packers store such files raw (RawBig)
@@ -711,6 +713,9 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		}
 		if o.Publisher != "" {
 			records[tlvPublisher] = []byte(o.Publisher)
+		}
+		if _, ok := records[tlvIcon]; !ok && len(o.Icon) > 0 {
+			records[tlvIcon] = o.Icon
 		}
 	case source.Kind == KindUpdate:
 		if version := controlVersion(source.Control); version != "" {

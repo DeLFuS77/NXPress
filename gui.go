@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -464,6 +465,9 @@ type FileCard struct {
 	Emulators   string            `json:"emulators,omitempty"`
 	EmulatorsOK bool              `json:"emulatorsOk,omitempty"`
 	ZeroBased   bool              `json:"zeroBased,omitempty"`
+	// the icon a NUP carries, as an address of data for the card; noIcon when it carries none
+	Icon   string `json:"icon,omitempty"`
+	NoIcon bool   `json:"noIcon,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
@@ -473,8 +477,12 @@ func (a *App) Card(path string) (FileCard, error) {
 		if err != nil {
 			return FileCard{}, err
 		}
-		return FileCard{Kind: "NUP", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
-			Emulators: details.Emulators, EmulatorsOK: details.EmulatorsOK, ZeroBased: details.ZeroBased}, nil
+		card := FileCard{Kind: "NUP", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
+			Emulators: details.Emulators, EmulatorsOK: details.EmulatorsOK, ZeroBased: details.ZeroBased, NoIcon: details.Icon == nil}
+		if details.Icon != nil {
+			card.Icon = "data:" + http.DetectContentType(details.Icon) + ";base64," + base64.StdEncoding.EncodeToString(details.Icon)
+		}
+		return card, nil
 	}
 	facts, err := switchfs.DescribeFile(path)
 	if err != nil {
@@ -499,6 +507,43 @@ func (a *App) FixNupMeta(path string) (string, error) {
 
 // fixNupMeta is jobs.FixNupMeta, which the tests stand in for
 var fixNupMeta = jobs.FixNupMeta
+
+// FixNupIcon gives a NUP without an icon the one of its game in titledb, from the button of its
+// card, and tells what it did; not while a work is going on.
+func (a *App) FixNupIcon(path string) (string, error) {
+	if a.working() {
+		return "", errors.New("wait for the work to end")
+	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
+	return fixNupIcon(a.ctx, path, jobs.Options{})
+}
+
+// ChooseNupIcon asks for an image (PNG, JPEG or WEBP) and gives it to a NUP without an icon, cut
+// square at its middle and made 256×256, from the button of its card; "" when none is chosen.
+func (a *App) ChooseNupIcon(path string) (string, error) {
+	if a.working() {
+		return "", errors.New("wait for the work to end")
+	}
+	image, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp"}},
+	})
+	if err != nil || image == "" {
+		return "", err
+	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
+	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image})
+}
+
+// fixNupIcon is jobs.FixNupIcon, which the tests stand in for
+var fixNupIcon = jobs.FixNupIcon
 
 // NewNames gives the names the files would get by a template, "" for a file that cannot be read;
 // with keepNamed, a file whose name has its title ID keeps it.

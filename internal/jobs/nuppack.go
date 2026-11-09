@@ -244,6 +244,8 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
 	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
+	icon, iconNote := packIcon(ctx, dir, o)
+	packing.Icon = icon
 	if !o.NupZstdBig {
 		packing.RawOver = nup.RawBig
 	}
@@ -288,6 +290,9 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 		notes = append(notes, modulesNote(check.Modules))
 	}
 	notes = append(notes, result.Notes...)
+	if iconNote != "" {
+		notes = append(notes, iconNote)
+	}
 	switch {
 	case o.RmSource && o.RmDumps:
 		notes = append(notes, removeDump(dir, name, result.Packages, started))

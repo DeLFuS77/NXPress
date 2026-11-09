@@ -354,6 +354,59 @@ function renderNupCard(element, card, row) {
     element.querySelector(".nup-packages").append(line);
   }
   element.querySelector(".card-only").textContent = t("nupOnly");
+  renderNupIcon(element, card, row);
+}
+
+// the icon of a NUP in its card, at its left; a NUP without one (made of a dump folder without
+// control data) tells it, with a button for the icon of its game in titledb and one for an image
+// of one's own (#97)
+let nupIconHelps = 0;
+function renderNupIcon(element, card, row) {
+  if (card.icon) {
+    const icon = document.createElement("img");
+    icon.className = "nup-icon";
+    icon.alt = "";
+    icon.src = card.icon;
+    element.classList.add("has-icon");
+    element.prepend(icon);
+    return;
+  }
+  if (!card.noIcon) return;
+  const line = document.createElement("div");
+  line.className = "card-fix nup-no-icon";
+  line.innerHTML = `<p class="say"></p><button class="outline"></button><span class="help-text"></span><button></button>`;
+  const [fromTitledb, choose] = line.querySelectorAll("button");
+  const help = line.querySelector(".help-text");
+  line.querySelector(".say").textContent = t("nupNoIcon");
+  fromTitledb.textContent = t("iconFromTitledb");
+  help.id = "nup-icon-help-" + ++nupIconHelps;
+  help.textContent = t("iconFromTitledbHelp");
+  fromTitledb.classList.add("has-help");
+  fromTitledb.dataset.help = help.id;
+  fromTitledb.setAttribute("aria-describedby", help.id);
+  choose.textContent = t("chooseImage");
+  for (const button of [fromTitledb, choose]) button.disabled = state.busy;
+  fromTitledb.onclick = () => giveNupIcon(row, [fromTitledb, choose], () => app().FixNupIcon(row.item.path));
+  choose.onclick = () => giveNupIcon(row, [fromTitledb, choose], () => app().ChooseNupIcon(row.item.path));
+  element.querySelector(".tags").after(line);
+}
+
+// gives a NUP its icon, from its card, then reads the NUP again; with no image chosen, nothing
+async function giveNupIcon(row, buttons, give) {
+  for (const button of buttons) button.disabled = true;
+  try {
+    const note = await give();
+    if (!note) {
+      for (const button of buttons) button.disabled = state.busy;
+      return;
+    }
+    showToast(noteText(note));
+    row.card = await app().Card(row.item.path);
+    renderCard(row);
+  } catch (error) {
+    for (const button of buttons) button.disabled = state.busy;
+    showToast(noteText(String(error)));
+  }
 }
 
 // writes again the metadata of a NUP counted from 0, from its card, then reads the NUP again

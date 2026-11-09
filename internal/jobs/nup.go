@@ -27,7 +27,7 @@ import (
 const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true, "fixmeta": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true, "fixmeta": true, "fixicon": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
@@ -478,6 +478,8 @@ type NupDetails struct {
 	// from 0, which --fix-nup-meta writes again
 	EmulatorsOK bool
 	ZeroBased   bool
+	// the icon it carries for its game, nil when it carries none (--fix-nup-icon gives it one)
+	Icon []byte
 }
 
 // NupCard tells what a NUP holds, for its card in Details.
@@ -488,7 +490,8 @@ func NupCard(path string) (NupDetails, error) {
 	}
 	emulators := container.Emulators()
 	result := NupDetails{Size: container.FileSize, Uncompressed: int64(container.Totals().Size), Emulators: emulatorsNote(container),
-		EmulatorsOK: len(emulators.Refused) == 0 && emulators.NoStart == "" && !emulators.ZeroBased, ZeroBased: emulators.ZeroBased}
+		EmulatorsOK: len(emulators.Refused) == 0 && emulators.NoStart == "" && !emulators.ZeroBased, ZeroBased: emulators.ZeroBased,
+		Icon: container.Icon()}
 	for i, pkg := range container.Packages {
 		summary, err := container.Summarize(i)
 		if err != nil {

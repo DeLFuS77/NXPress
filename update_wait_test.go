@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/DeLFuS77/NXPress/internal/jobs"
 )
 
 // restartCalls stands in for the start of the new version and the close of the window, and
@@ -153,6 +155,13 @@ func TestRestartWaitsForTheChores(t *testing.T) {
 	defer func() { fixNupMeta = fix }()
 	if _, err := a.FixNupMeta("game.nup"); !errors.Is(err, errRestarting) || fixed {
 		t.Fatalf("a NUP is written while NXPress restarts: %v", err)
+	}
+	given := false
+	give := fixNupIcon
+	fixNupIcon = func(context.Context, string, jobs.Options) (string, error) { given = true; return "", nil }
+	defer func() { fixNupIcon = give }()
+	if _, err := a.FixNupIcon("game.nup"); !errors.Is(err, errRestarting) || given {
+		t.Fatalf("a NUP is given its icon while NXPress restarts: %v", err)
 	}
 	// the log of the work that ended is still written, and waited for
 	logged, err := a.chore(false)

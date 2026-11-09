@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,6 +45,19 @@ var keptNames = func() *titledb.Names {
 	}
 	names, _ := titledb.LoadNames(folder)
 	return names
+}
+
+// iconLookup finds the icons of titledb when the window keeps the versions published, nil when it
+// keeps none (its setting is off)
+var iconLookup = func() jobs.IconLookup {
+	if keptVersions() == nil {
+		return nil
+	}
+	folder, err := portable.DataFolder()
+	if err != nil {
+		return nil
+	}
+	return jobs.OnlineIcons(folder, http.DefaultClient)
 }
 
 // RunCommand does what the command line asks, printing to stdout and stderr, and gives the
@@ -92,6 +106,12 @@ func RunCommand(args []string, stdout io.Writer, stderr io.Writer) int {
 	// the window keeps, the same way
 	if o.Nup {
 		jobs.UseNames(keptNames())
+	}
+	// --nup and --fix-nup-icon give a NUP without an icon the one of titledb, which is looked up
+	// and downloaded only when the versions published are turned on in the window, as these are
+	// downloaded then
+	if o.Nup || o.FixNupIcon {
+		jobs.UseIconLookup(iconLookup())
 	}
 
 	if o.LowPriority {
