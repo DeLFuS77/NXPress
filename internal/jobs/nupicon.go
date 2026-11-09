@@ -81,10 +81,11 @@ func OnlineIcons(folder string, client *http.Client) IconLookup {
 }
 
 // iconOf is the icon a NUP without one takes: the image given (--nup-icon), else the one of its
-// game in titledb; made 256×256. It tells where it comes from.
-func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, error) {
+// game in titledb; made 256×256. It tells where it comes from, and of an image given, its size and
+// what was done with it.
+func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, string, error) {
 	if o.NoNupIcon {
-		return nil, "", errors.New("--no-nup-icon was given")
+		return nil, "", "", errors.New("--no-nup-icon was given")
 	}
 	from := "the icon of its game in titledb"
 	var data []byte
@@ -96,14 +97,41 @@ func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, error) {
 		data, err = lookupIcon(ctx, id)
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	icon, err := nup.MakeIcon(data)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
-	return icon, from, nil
+	blurry := ""
+	if o.NupIcon != "" {
+		var size string
+		size, blurry = imageSizeNote(data)
+		from += size
+	}
+	return icon, from, blurry, nil
 }
+
+// imageSizeNote tells the size of an image given and what was done with it: its square at its
+// middle taken, and made bigger when it is smaller than an icon.
+func imageSizeNote(data []byte) (string, string) {
+	width, height, err := nup.ImageSize(data)
+	if err != nil {
+		return "", ""
+	}
+	side := min(width, height)
+	size := fmt.Sprintf(" (%d×%d, square already)", width, height)
+	if width != height {
+		size = fmt.Sprintf(" (%d×%d, its square of %d×%d at its middle)", width, height, side, side)
+	}
+	if side < nup.IconSize {
+		return size, "; " + imageSmall
+	}
+	return size, ""
+}
+
+// imageSmall is said of an image given smaller than an icon.
+const imageSmall = "it is smaller than 256×256, so it was made bigger and may look blurry"
 
 // readIconFile reads an image of one's own, of the size an icon can be made from.
 func readIconFile(path string) ([]byte, error) {
@@ -130,11 +158,11 @@ func packIcon(ctx context.Context, dir string, o Options) ([]byte, string) {
 	if o.NoNupIcon {
 		return nil, ""
 	}
-	icon, from, err := iconOf(ctx, o, main.TitleID)
+	icon, from, blurry, err := iconOf(ctx, o, main.TitleID)
 	if err != nil {
 		return nil, noIconNote(err)
 	}
-	return icon, "its folder has no icon: it carries " + from + ", 256×256"
+	return icon, "its folder has no icon: it carries " + from + ", 256×256" + blurry
 }
 
 // appSource is the package of a dump folder that carries the icon of the game, as nup.Pack picks
@@ -164,7 +192,7 @@ func FixNupIcon(ctx context.Context, path string, o Options) (string, error) {
 		return "", Skipped(hasIcon)
 	}
 	pkg := container.Packages[container.IconPackage()]
-	icon, from, err := iconOf(ctx, o, pkg.TitleID)
+	icon, from, blurry, err := iconOf(ctx, o, pkg.TitleID)
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +203,7 @@ func FixNupIcon(ctx context.Context, path string, o Options) (string, error) {
 	case !set:
 		return "", Skipped(hasIcon)
 	}
-	return "it carries " + from + " now, 256×256: the files of the game as they were", nil
+	return "it carries " + from + " now, 256×256: the files of the game as they were" + blurry, nil
 }
 
 // hasIcon is why --fix-nup-icon leaves a NUP as it is.

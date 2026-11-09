@@ -64,6 +64,15 @@ func MakeIcon(data []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// ImageSize is the size of an image (PNG, JPEG, WEBP or BMP), without decoding it.
+func ImageSize(data []byte) (int, int, error) {
+	config, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return 0, 0, err
+	}
+	return config.Width, config.Height, nil
+}
+
 // ControlIcon is the icon a control folder gives, nil without one.
 func ControlIcon(dir string) []byte {
 	return controlRecords(dir)[tlvIcon]

@@ -222,7 +222,7 @@ func TestNupFixIcon(t *testing.T) {
 	}
 	image := filepath.Join(t.TempDir(), "own.webp")
 	os.WriteFile(image, testnup.Webp, 0o644)
-	if code, out := run("--fix-nup-icon", "--nup-icon", image, path); code != 0 || !strings.Contains(out, "OK game.nup (it carries the image given now, 256×256") {
+	if code, out := run("--fix-nup-icon", "--nup-icon", image, path); code != 0 || !strings.Contains(out, "OK game.nup (it carries the image given (60×30, its square of 30×30 at its middle) now, 256×256: the files of the game as they were; it is smaller than 256×256") {
 		t.Fatalf("fix: %d\n%s", code, out)
 	}
 	if code, out := run("-V", path); code != 0 || !strings.Contains(out, "3 files checked") {

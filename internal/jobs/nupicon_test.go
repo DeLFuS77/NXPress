@@ -99,7 +99,7 @@ func TestPackNupTakesTheIconOfTitledb(t *testing.T) {
 	own := filepath.Join(t.TempDir(), "own.png")
 	os.WriteFile(own, pngOf(t, 100, 100, color.White), 0o644)
 	name, note, err = packNup(t.Context(), writeDump(t, "MR2 ROM"), Options{NupIcon: own}, 1, &recording{})
-	if err != nil || !strings.Contains(note, "it carries the image given, 256×256") {
+	if err != nil || !strings.Contains(note, "it carries the image given (100×100, square already), 256×256; it is smaller than 256×256, so it was made bigger and may look blurry") {
 		t.Errorf("%q %v", note, err)
 	}
 	if container, _ := nup.Open(name); container == nil || container.Icon() == nil {
@@ -221,5 +221,22 @@ func TestOnlineIcons(t *testing.T) {
 	server.Close()
 	if _, err := OnlineIcons(t.TempDir(), http.DefaultClient)(t.Context(), 0x0400486024DEC000); err == nil || !strings.Contains(err.Error(), "titledb cannot be read") {
 		t.Errorf("%v", err)
+	}
+}
+
+// The note of an image given tells its size, the square taken of it, and when it was made bigger.
+func TestImageSizeNote(t *testing.T) {
+	for _, c := range []struct {
+		width, height int
+		size, blurry  string
+	}{
+		{900, 500, " (900×500, its square of 500×500 at its middle)", ""},
+		{512, 512, " (512×512, square already)", ""},
+		{300, 120, " (300×120, its square of 120×120 at its middle)", "; " + imageSmall},
+	} {
+		size, blurry := imageSizeNote(pngOf(t, c.width, c.height, color.White))
+		if size != c.size || blurry != c.blurry {
+			t.Errorf("%d×%d: %q %q", c.width, c.height, size, blurry)
+		}
 	}
 }

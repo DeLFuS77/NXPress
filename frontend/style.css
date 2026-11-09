@@ -545,6 +545,8 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .file-card .nup-icon { grid-row: 1 / span 9; width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: var(--bar); }
 .nup-no-icon .say { flex: 1 1 220px; margin: 0; font-size: 12px; color: var(--muted); }
 .nup-no-icon button { padding: 3px 10px; font-size: 12px; }
+.nup-no-icon .say.warning { color: var(--warn); }
+.file-card .nup-icon-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 /* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
 .game .cover .cover-folder { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
 .dump-plan { margin-top: 4px; }
