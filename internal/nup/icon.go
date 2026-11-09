@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	_ "golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
 )
@@ -32,7 +33,7 @@ const (
 	MaxIconFile = 32 << 20
 )
 
-// MakeIcon makes an image (PNG, JPEG or WEBP) the icon of a game: cut square at its middle, made
+// MakeIcon makes an image (PNG, JPEG, WEBP or BMP) the icon of a game: cut square at its middle, made
 // 256×256 and written as a JPEG, as the icons of the console are.
 func MakeIcon(data []byte) ([]byte, error) {
 	if len(data) > MaxIconFile {
@@ -40,14 +41,14 @@ func MakeIcon(data []byte) ([]byte, error) {
 	}
 	config, _, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("the image cannot be read (PNG, JPEG or WEBP): %w", err)
+		return nil, fmt.Errorf("the image cannot be read (PNG, JPEG, WEBP or BMP): %w", err)
 	}
 	if config.Width <= 0 || config.Height <= 0 || int64(config.Width)*int64(config.Height) > maxIconPixels {
 		return nil, fmt.Errorf("the image is %d×%d pixels, too many for an icon", config.Width, config.Height)
 	}
 	picture, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("the image cannot be read (PNG, JPEG or WEBP): %w", err)
+		return nil, fmt.Errorf("the image cannot be read (PNG, JPEG, WEBP or BMP): %w", err)
 	}
 	bounds := picture.Bounds()
 	side := min(bounds.Dx(), bounds.Dy())

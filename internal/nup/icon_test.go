@@ -9,6 +9,8 @@ import (
 	"image/color"
 	"image/jpeg"
 	"image/png"
+
+	"golang.org/x/image/bmp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,6 +81,7 @@ func TestMakeIconCutsTheMiddleSquare(t *testing.T) {
 	for name, data := range map[string][]byte{
 		"wide png":  encodePng(t, sided(900, 300, green)),
 		"tall jpeg": encodeJpeg(t, sided(120, 500, green)),
+		"wide bmp":  encodeBmp(t, sided(300, 120, green)),
 		"small png": encodePng(t, sided(40, 64, green)),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -327,4 +330,13 @@ func TestPackGivesTheIconGiven(t *testing.T) {
 	if !bytes.Equal(ControlIcon(control), testnup.Jpeg) {
 		t.Fatal("ControlIcon")
 	}
+}
+
+func encodeBmp(t *testing.T, picture image.Image) []byte {
+	t.Helper()
+	var out bytes.Buffer
+	if err := bmp.Encode(&out, picture); err != nil {
+		t.Fatal(err)
+	}
+	return out.Bytes()
 }

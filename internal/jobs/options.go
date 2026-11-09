@@ -57,7 +57,7 @@ type Options struct {
 	// --fix-nup-icon: each NUP given without an icon given the one of its game in titledb, or the
 	// image of --nup-icon
 	FixNupIcon bool
-	// --nup-icon: the image (PNG, JPEG or WEBP) a NUP without an icon takes, made 256×256, instead
+	// --nup-icon: the image (PNG, JPEG, WEBP or BMP) a NUP without an icon takes, made 256×256, instead
 	// of the one of titledb; --no-nup-icon: titledb not looked up, the NUP left without one
 	NupIcon   string
 	NoNupIcon bool
@@ -582,7 +582,7 @@ Usage: nxpress [options] file or folder...
                       a DLC), or the image of --nup-icon, made a JPEG of 256×256: the
                       metadata of the game is written again after the end of the NUP, the
                       files and what it carried as they were, checked after
-  --nup-icon FILE     with --nup or --fix-nup-icon, the image (PNG, JPEG or WEBP) a NUP
+  --nup-icon FILE     with --nup or --fix-nup-icon, the image (PNG, JPEG, WEBP or BMP) a NUP
                       without an icon takes, cut square at its middle and made 256×256,
                       instead of the one of titledb. Without it, a dump folder without
                       control data gives its NUP the icon of titledb, when “Warn of updates

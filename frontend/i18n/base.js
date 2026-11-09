@@ -198,7 +198,7 @@ const noteRules = [
   [/titledb is not looked up for its icon: turn on “Warn of updates you do not have” in the settings of the window/g, "iconNoLookup"],
   [/titledb cannot be read: /g, "titledbUnreadable"],
   [/its icon cannot be downloaded from titledb: /g, "iconNoDownload"],
-  [/the image cannot be read \(PNG, JPEG or WEBP\): /g, "imageUnreadable"],
+  [/the image cannot be read \(PNG, JPEG, WEBP or BMP\): /g, "imageUnreadable"],
   [/^(.+) is a copy of the table of contents of another NUP: remove it to go on$/, "iconOther"],
   [/the NUP does not read the same with the icon, so it is put back as it was: /g, "iconBack"],
   [/^wait for the work to end$/, "waitWork"],

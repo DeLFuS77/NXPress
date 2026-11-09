@@ -522,14 +522,14 @@ func (a *App) FixNupIcon(path string) (string, error) {
 	return fixNupIcon(a.ctx, path, jobs.Options{})
 }
 
-// ChooseNupIcon asks for an image (PNG, JPEG or WEBP) and gives it to a NUP without an icon, cut
+// ChooseNupIcon asks for an image (PNG, JPEG, WEBP or BMP) and gives it to a NUP without an icon, cut
 // square at its middle and made 256×256, from the button of its card; "" when none is chosen.
 func (a *App) ChooseNupIcon(path string) (string, error) {
 	if a.working() {
 		return "", errors.New("wait for the work to end")
 	}
 	image, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp"}},
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
 	})
 	if err != nil || image == "" {
 		return "", err
