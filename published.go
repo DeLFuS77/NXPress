@@ -39,6 +39,9 @@ func (a *App) LoadVersions() string {
 	a.versions.Store(versions)
 	names, _ := titledb.RefreshNames(ctx, folder, http.DefaultClient, time.Now())
 	jobs.UseNames(names)
+	// the NUP without an icon take the one of titledb, whose list is downloaded only when one
+	// needs it (see titledb.RefreshIcons)
+	jobs.UseIconLookup(jobs.OnlineIcons(folder, http.DefaultClient))
 	if versions == nil {
 		return ""
 	}
@@ -54,9 +57,11 @@ func (a *App) ForgetVersions() {
 	defer a.versionsMutex.Unlock()
 	a.versions.Store(nil)
 	jobs.UseNames(nil)
+	jobs.UseIconLookup(nil)
 	if folder, err := portable.DataFolder(); err == nil {
 		_ = titledb.Forget(folder)
 		_ = titledb.ForgetNames(folder)
+		_ = titledb.ForgetIcons(folder)
 	}
 }
 

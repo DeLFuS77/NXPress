@@ -354,9 +354,79 @@ function renderNupCard(element, card, row) {
     element.querySelector(".nup-packages").append(line);
   }
   element.querySelector(".card-only").textContent = t("nupOnly");
+  renderNupIcon(element, card, row);
 }
 
-// writes again the metadata of a NUP counted from 0, from its card, then reads the NUP again
+// the icon of a NUP in its card, at its left; a NUP without one (made of a dump folder without
+// control data) tells it, with a button for the icon of its game in titledb and one for an image
+// of one's own (#97)
+let nupIconHelps = 0;
+function renderNupIcon(element, card, row) {
+  if (card.icon) {
+    const icon = document.createElement("img");
+    icon.className = "nup-icon";
+    icon.alt = "";
+    icon.src = card.icon;
+    element.classList.add("has-icon");
+    element.prepend(icon);
+    // what was just done to give it: where the icon comes from, and the size of an image chosen
+    if (row.iconNote) {
+      const said = document.createElement("p");
+      said.className = "nup-icon-note";
+      said.textContent = row.iconNote;
+      element.querySelector(".tags").after(said);
+    }
+    return;
+  }
+  if (!card.noIcon) return;
+  const line = document.createElement("div");
+  line.className = "card-fix nup-no-icon";
+  line.innerHTML = `<p class="say"></p><button class="outline"></button><span class="help-text"></span><button></button>`;
+  const [fromTitledb, choose] = line.querySelectorAll("button");
+  const help = line.querySelector(".help-text");
+  const say = line.querySelector(".say");
+  // why the last try gave it none stays in the line, in orange, until another try
+  say.textContent = row.iconFailed || t("nupNoIcon");
+  say.classList.toggle("warning", !!row.iconFailed);
+  fromTitledb.textContent = t("iconFromTitledb");
+  help.id = "nup-icon-help-" + ++nupIconHelps;
+  help.textContent = t("iconFromTitledbHelp");
+  fromTitledb.classList.add("has-help");
+  fromTitledb.dataset.help = help.id;
+  fromTitledb.setAttribute("aria-describedby", help.id);
+  choose.textContent = t("chooseImage");
+  for (const button of [fromTitledb, choose]) button.disabled = state.busy;
+  fromTitledb.onclick = () => giveNupIcon(row, () => app().FixNupIcon(row.item.path));
+  choose.onclick = () => giveNupIcon(row, () => app().ChooseNupIcon(row.item.path, t("chooseImageTitle")));
+  element.querySelector(".tags").after(line);
+}
+
+// a note of NXPress begun with a capital, as a line of its own
+function capitalize(text) {
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+// gives a NUP its icon, from its card, then reads the NUP again and tells what was done under the
+// icon; with no image chosen, nothing. Why it got none stays in the card, not in a notice that goes
+async function giveNupIcon(row, give) {
+  const buttons = row.tr.querySelectorAll(".nup-no-icon button");
+  for (const button of buttons) button.disabled = true;
+  try {
+    const note = await give();
+    if (!note) {
+      for (const button of buttons) button.disabled = state.busy;
+      return;
+    }
+    row.iconFailed = "";
+    row.iconNote = capitalize(noteText(note));
+    row.card = await app().Card(row.item.path);
+    renderCard(row);
+  } catch (error) {
+    row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+    renderCard(row);
+  }
+}
+
 async function fixNupMeta(row, button) {
   button.disabled = true;
   try {
