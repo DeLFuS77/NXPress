@@ -69,6 +69,7 @@ texts.ru = {
   report: "Копировать отчёт", reportCopied: "Отчёт скопирован: вставьте его в issue на GitHub или в тему.",
   worklog: "Журнал", hintWorklog: "список действий", aboutWorklog: "Каждая работа NXPress, начиная с последней: каждый файл, чем он закончился и сколько места сэкономлено. Журнал хранится и в текстовом файле.",
   worklogFind: "Найти игру или файл", worklogAll: "Все", worklogProblems: "С проблемами", worklogExpandAll: "Развернуть все", worklogCollapseAll: "Свернуть все", worklogCount: (w, f) => `${w} ${ruPlural(w, "работа", "работы", "работ")} · ${ruFiles(f)}`,
+  listFind: "Найти игру или файл", listFound: (s, n) => "Показано " + s + " из " + n, checkNow: "Проверить сейчас", checkNowChecking: "Проверка…", checkNowLatest: (v) => v + " — самая новая версия.", checkNowFailed: "Не удалось связаться с GitHub.",
   worklogKeep: "Хранить не больше", worklogKeepN: n => `${n} ${ruPlural(n, "работы", "работ", "работ")}`, worklogNoLimit: "Без ограничения", worklogKeepHint: "Сверх этого самые старые работы удаляются, и из текстового файла тоже.",
   worklogFile: "Текстовый файл", worklogFileHint: "Тот же журнал простым текстом, в папке настроек NXPress: открой его в любом редакторе или вставь в issue.",
   worklogClear: "Очистить журнал", worklogClearHint: "Удаляет список и текстовый файл; «Отменить» вернёт их в течение нескольких секунд.", worklogCleared: "Журнал очищен",

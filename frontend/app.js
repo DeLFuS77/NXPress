@@ -578,6 +578,9 @@ async function giveNupIcon(row, give) {
     row.iconNote = capitalize(noteText(note));
     row.card = await app().Card(row.item.path);
     renderCard(row);
+    // the cover of its row, in the list and in the grid, is the new icon at once (#107)
+    row.game = await app().Describe(row.item.path);
+    paint(row);
   } catch (error) {
     row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
     renderCard(row);
@@ -1418,6 +1421,7 @@ function render() {
   // in the sections that take NUP files, the banner says they need no keys
   $("keys-nup").hidden = !["verify", "info", "rename"].includes(state.mode);
   $("toolbar").hidden = state.items.length === 0;
+  applyListFind();
   // the list stays as it is while its files are at work, also from the keyboard
   for (const id of ["clear", "add-files", "add-folder", "empty-files", "empty-folder"]) $(id).disabled = state.busy;
   $("drop").classList.toggle("filled", state.items.length > 0);
@@ -2591,9 +2595,30 @@ function keepOn() {
   hideShutdown();
 }
 
-async function checkUpdate() {
-  if (!$("updates").checked) return;
+// the files of the list that have what is looked for in their name, the name of their game, their
+// title ID, their folder or their note (#105); the others are left out of sight, not of the work
+function applyListFind() {
+  const find = $("list-find").value.trim().toLowerCase();
+  let shown = 0;
+  for (const row of state.rows.values()) {
+    const game = row.game || {};
+    const text = [shownName(row), row.item.name, row.item.path, game.titleId || "", game.gameId || "", row.tr.querySelector(".note")?.textContent || ""].join(" ").toLowerCase();
+    const found = !find || text.includes(find);
+    row.tr.classList.toggle("find-out", !found);
+    if (found) shown++;
+  }
+  $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
+}
+
+async function checkUpdate(asked = false) {
+  if (!$("updates").checked && !asked) return;
   const update = await app().CheckUpdate();
+  if (asked) {
+    // Check now (#106): the new version again, though it was closed, or that this is the newest
+    if (update && update.version) save("dismissedUpdate", "");
+    $("check-now-status").textContent = !update || !update.checked ? t("checkNowFailed") : update.version ? "" : t("checkNowLatest")(state.setup.version);
+    $("check-now-status").classList.toggle("ok", !!(update && update.checked && !update.version));
+  }
   if (!update || !update.version || load("dismissedUpdate", "") === update.version) return;
   // kept, to tell it again in another language
   state.update = update;
@@ -2968,6 +2993,17 @@ async function main() {
     } catch (error) { setStatus(String(error)); }
     render();
   };
+  $("check-now").onclick = async () => {
+    $("check-now").disabled = true;
+    $("check-now-status").classList.remove("ok");
+    $("check-now-status").textContent = t("checkNowChecking");
+    try {
+      await checkUpdate(true);
+    } finally {
+      $("check-now").disabled = false;
+    }
+  };
+  $("list-find").oninput = applyListFind;
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); render(); };
   // a new version (#91): its window, which installs it, and what it offers then
   $("update-install").onclick = installUpdate;

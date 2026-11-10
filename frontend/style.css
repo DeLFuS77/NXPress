@@ -224,6 +224,16 @@ dialog p { margin: 8px 0; }
 #worklog-tools { flex-wrap: wrap; }
 #worklog-tools .segmented { margin-top: 0; }
 #worklog-tools .segmented button { flex: none; padding: 5px 10px; }
+/* the files the search of the list leaves out (#105), and how many it shows */
+#files tr.find-out { display: none; }
+.list-found { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.list-found:empty { display: none; }
+#toolbar { flex-wrap: wrap; row-gap: 8px; }
+#toolbar > button { white-space: nowrap; }
+#toolbar #list-find { flex: 1 1 150px; max-width: 240px; min-width: 120px; }
+/* Check now, under the setting of the new versions (#106) */
+.pref-text .check-now { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.pref-text .check-now .pref-status { font-style: normal; }
 input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .worklog-expand { display: flex; gap: 2px; }
 .worklog-expand button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-size: 12px; }

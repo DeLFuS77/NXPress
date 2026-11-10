@@ -62,6 +62,7 @@ texts.pt = {
   report: "Copiar relatório", reportCopied: "Relatório copiado: cole-o numa issue do GitHub ou no tópico.",
   worklog: "Registro", hintWorklog: "lista de atividades", aboutWorklog: "Cada trabalho do NXPress, do mais recente ao mais antigo: cada arquivo, como terminou e quanto poupou. Fica guardado também num arquivo de texto.",
   worklogFind: "Procurar um jogo ou um arquivo", worklogAll: "Tudo", worklogProblems: "Com problemas", worklogExpandAll: "Expandir tudo", worklogCollapseAll: "Recolher tudo", worklogCount: (w, f) => `${w} ${w === 1 ? "trabalho" : "trabalhos"} · ${f} ${f === 1 ? "arquivo" : "arquivos"}`,
+  listFind: "Procurar um jogo ou um ficheiro", listFound: (s, n) => s + " de " + n + " visíveis", checkNow: "Verificar agora", checkNowChecking: "A verificar…", checkNowLatest: (v) => "A " + v + " é a versão mais recente.", checkNowFailed: "Não foi possível chegar ao GitHub.",
   worklogKeep: "Guardar no máximo", worklogKeepN: n => `${n} trabalhos`, worklogNoLimit: "Sem limite", worklogKeepHint: "Acima disso, os trabalhos mais antigos são retirados, também do arquivo de texto.",
   worklogFile: "Arquivo de texto", worklogFileHint: "O mesmo registro em texto simples, na pasta de configurações do NXPress: abre-o em qualquer editor ou cola-o numa issue.",
   worklogClear: "Limpar o registro", worklogClearHint: "Apaga a lista e o arquivo de texto; Desfazer traz tudo de volta durante alguns segundos.", worklogCleared: "Registro limpo",

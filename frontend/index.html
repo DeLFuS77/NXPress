@@ -51,6 +51,8 @@
     </div>
 
     <div class="toolbar" id="toolbar" hidden>
+      <!-- the files of the list looked for as one types, as in the log (#105) -->
+      <input id="list-find" type="search" data-t-placeholder="listFind" data-t-label="listFind"><span class="list-found" id="list-found" aria-live="polite"></span>
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
@@ -347,7 +349,7 @@
       <section class="pref-group">
         <h2 data-t="prefSystem"></h2>
         <div class="pref-item">
-          <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small></div>
+          <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small><div class="check-now"><button class="link small-link" id="check-now" data-t="checkNow"></button><span class="pref-status" id="check-now-status" aria-live="polite"></span></div></div>
           <input id="updates" type="checkbox" class="switch" role="switch">
         </div>
         <div class="pref-item">

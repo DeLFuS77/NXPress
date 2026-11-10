@@ -63,6 +63,7 @@ texts.en = {
   // the log of the works (#69)
   worklog: "Log", hintWorklog: "list of activity", aboutWorklog: "Every work NXPress did, the newest first: each file, how it ended and what it saved. It is kept in a text file too.",
   worklogFind: "Look for a game or a file", worklogAll: "All", worklogProblems: "With problems", worklogExpandAll: "Expand all", worklogCollapseAll: "Collapse all", worklogCount: (w, f) => `${w} ${w === 1 ? "work" : "works"} · ${f} ${f === 1 ? "file" : "files"}`,
+  listFind: "Look for a game or a file", listFound: (s, n) => s + " of " + n + " shown", checkNow: "Check now", checkNowChecking: "Checking…", checkNowLatest: (v) => v + " is the newest version.", checkNowFailed: "GitHub could not be reached.",
   worklogKeep: "Keep at most", worklogKeepN: n => `${n} works`, worklogNoLimit: "No limit", worklogKeepHint: "Past it, the oldest works are left out, from the text file too.",
   worklogFile: "Text file", worklogFileHint: "The same log as plain text, in the settings folder of NXPress: open it in any editor, or paste it in an issue.",
   worklogClear: "Clear the log", worklogClearHint: "Removes the list and the text file; Undo brings them back for a few seconds.", worklogCleared: "Log cleared",
