@@ -62,6 +62,7 @@ texts.ja = {
   report: "レポートをコピー", reportCopied: "レポートをコピーしました。GitHub の issue かスレッドに貼り付けてください。",
   worklog: "履歴", hintWorklog: "作業の一覧", aboutWorklog: "NXPress の作業を新しい順に表示します。ファイルごとの結果と節約できた容量もわかります。テキストファイルにも保存されます。",
   worklogFind: "ゲームやファイルを検索", worklogAll: "すべて", worklogProblems: "問題あり", worklogExpandAll: "すべて開く", worklogCollapseAll: "すべて閉じる", worklogCount: (w, f) => `${w} 件の作業 · ${f} ファイル`,
+  listFind: "ゲームやファイルを検索", listFound: (s, n) => n + " 件中 " + s + " 件を表示", checkNow: "今すぐ確認", checkNowChecking: "確認中…", checkNowLatest: (v) => v + " が最新バージョンです。", checkNowFailed: "GitHub に接続できません。",
   worklogKeep: "保存する上限", worklogKeepN: n => `${n} 件`, worklogNoLimit: "上限なし", worklogKeepHint: "上限を超えると、古い作業から削除されます(テキストファイルからも)。",
   worklogFile: "テキストファイル", worklogFileHint: "同じ履歴をプレーンテキストで NXPress の設定フォルダーに保存します。どのエディターでも開けて、issue にも貼り付けられます。",
   worklogClear: "履歴を消去", worklogClearHint: "一覧とテキストファイルを削除します。数秒間は「元に戻す」で戻せます。", worklogCleared: "履歴を消去しました",
