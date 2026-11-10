@@ -358,8 +358,9 @@ function renderNupCard(element, card, row) {
 }
 
 // the icon of a NUP in its card, at its left; a NUP without one (made of a dump folder without
-// control data) tells it, with a button for the icon of its game in titledb and one for an image
-// of one's own (#97)
+// control data) tells it, with a button for the icon of its game in titledb, one to search an
+// image in the eShop (#102) and one for an image of one's own (#97), or one pasted. One given an
+// icon already can have it changed (#103), unless it carries the icons of the game itself
 let nupIconHelps = 0;
 function renderNupIcon(element, card, row) {
   if (card.icon) {
@@ -370,23 +371,46 @@ function renderNupIcon(element, card, row) {
     element.classList.add("has-icon");
     element.prepend(icon);
     // what was just done to give it: where the icon comes from, and the size of an image chosen
+    let last = element.querySelector(".tags");
     if (row.iconNote) {
       const said = document.createElement("p");
       said.className = "nup-icon-note";
       said.textContent = row.iconNote;
-      element.querySelector(".tags").after(said);
+      last.after(said);
+      last = said;
     }
+    if (card.gameIcons) return;
+    if (!row.iconChanging) {
+      const change = document.createElement("button");
+      change.className = "nup-icon-change";
+      change.textContent = t("changeImage");
+      change.disabled = state.busy;
+      change.onclick = () => {
+        row.iconChanging = true;
+        renderCard(row);
+        row.tr.querySelector(".nup-no-icon button")?.focus();
+      };
+      last.after(change);
+      return;
+    }
+    last.after(iconLine(row, true));
     return;
   }
   if (!card.noIcon) return;
+  element.querySelector(".tags").after(iconLine(row, false));
+}
+
+// the line of the ways a NUP gets an icon: titledb, a search in the eShop, an image of one's own,
+// or one pasted; with replace, the icon it carries is changed, and the line can be closed
+function iconLine(row, replace) {
   const line = document.createElement("div");
   line.className = "card-fix nup-no-icon";
-  line.innerHTML = `<p class="say"></p><button class="outline"></button><span class="help-text"></span><button></button>`;
-  const [fromTitledb, choose] = line.querySelectorAll("button");
+  line.innerHTML = `<p class="say"></p><button class="outline"></button><span class="help-text"></span><button class="outline"></button><button></button><span class="paste-hint"></span>`;
+  const [fromTitledb, search, choose] = line.querySelectorAll("button");
   const help = line.querySelector(".help-text");
   const say = line.querySelector(".say");
   // why the last try gave it none stays in the line, in orange, until another try
-  say.textContent = row.iconFailed || t("nupNoIcon");
+  say.textContent = row.iconFailed || t(replace ? "changeImageSay" : "nupNoIcon");
   say.classList.toggle("warning", !!row.iconFailed);
   fromTitledb.textContent = t("iconFromTitledb");
   help.id = "nup-icon-help-" + ++nupIconHelps;
@@ -394,11 +418,143 @@ function renderNupIcon(element, card, row) {
   fromTitledb.classList.add("has-help");
   fromTitledb.dataset.help = help.id;
   fromTitledb.setAttribute("aria-describedby", help.id);
+  search.textContent = t("searchImage");
   choose.textContent = t("chooseImage");
-  for (const button of [fromTitledb, choose]) button.disabled = state.busy;
-  fromTitledb.onclick = () => giveNupIcon(row, () => app().FixNupIcon(row.item.path));
-  choose.onclick = () => giveNupIcon(row, () => app().ChooseNupIcon(row.item.path, t("chooseImageTitle")));
-  element.querySelector(".tags").after(line);
+  line.querySelector(".paste-hint").textContent = t("pasteHint");
+  const buttons = [fromTitledb, search, choose];
+  if (replace) {
+    const close = document.createElement("button");
+    close.className = "quiet";
+    close.textContent = t("cancel");
+    close.onclick = () => {
+      row.iconChanging = false;
+      row.iconFailed = "";
+      renderCard(row);
+    };
+    line.querySelector(".paste-hint").before(close);
+    buttons.push(close);
+  }
+  for (const button of buttons) button.disabled = state.busy;
+  fromTitledb.onclick = () => giveNupIcon(row, () => app().FixNupIcon(row.item.path, replace));
+  search.onclick = () => openCoverSearch(row, replace, search);
+  choose.onclick = () => giveNupIcon(row, () => app().ChooseNupIcon(row.item.path, t("chooseImageTitle"), replace));
+  // an image pasted goes to the NUP whose line was used last
+  const aim = () => { iconTarget = { row, replace }; };
+  line.addEventListener("pointerdown", aim);
+  line.addEventListener("focusin", aim);
+  if (!iconTarget || iconTarget.row === row || !document.body.contains(iconTarget.row.tr)) aim();
+  return line;
+}
+
+// the NUP an image pasted (Ctrl+V) goes to: the one whose line of the icon was used last, or
+// the one the window to search is open for
+let iconTarget = null;
+
+// reads an image pasted, as an address of data; null when what was pasted is no image
+function pastedImage(event) {
+  const items = event.clipboardData ? [...event.clipboardData.items] : [];
+  const file = items.find(item => item.kind === "file" && item.type.startsWith("image/"))?.getAsFile();
+  if (!file) return null;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// an image pasted in the window goes to the NUP of the window to search, or of the line of the
+// icon used last, in Details; text pasted in a field stays text
+async function pasteIcon(event) {
+  const dialog = $("cover-dialog");
+  const target = dialog.open ? cover.target : iconTarget;
+  if (!target || state.busy) return;
+  if (!dialog.open && (state.mode !== "info" || !document.body.contains(target.row.tr) || !target.row.tr.querySelector(".nup-no-icon"))) return;
+  const reading = pastedImage(event);
+  if (!reading) return;
+  event.preventDefault();
+  let data;
+  try {
+    data = await reading;
+  } catch {
+    return;
+  }
+  if (dialog.open) dialog.close();
+  giveNupIcon(target.row, () => app().PasteNupIcon(target.row.item.path, data, target.replace));
+}
+
+// the window to search an image in the eShop, for one NUP (#102): the name it searches is the one
+// of the game, which can be changed, as file names and title IDs are often wrong
+const cover = { target: null, chosen: null, round: 0 };
+function openCoverSearch(row, replace, opener) {
+  cover.target = { row, replace };
+  cover.chosen = null;
+  // the name without the marks of file names: [title ID], [v0], (EU) and the extension
+  const shown = shownName(row);
+  const name = shown.replace(/\.(nup|nsp|nsz|xci|xcz)$/i, "").replace(/(\s*[\[(][^\])]*[\])])+/g, " ").replace(/\s+/g, " ").trim() || shown;
+  $("cover-title").textContent = t("coverTitle")(name);
+  $("cover-query").value = name;
+  $("cover-grid").replaceChildren();
+  $("cover-status").textContent = "";
+  $("cover-use").disabled = true;
+  openDialog($("cover-dialog"), opener);
+  searchCovers();
+}
+
+async function searchCovers() {
+  const round = ++cover.round;
+  const query = $("cover-query").value.trim();
+  cover.chosen = null;
+  $("cover-use").disabled = true;
+  $("cover-grid").replaceChildren();
+  $("cover-status").classList.remove("warning");
+  if (!query) {
+    $("cover-status").textContent = t("coverWriteName");
+    return;
+  }
+  $("cover-status").textContent = t("coverSearching");
+  $("cover-search").disabled = true;
+  try {
+    const covers = await app().SearchCovers(query, $("cover-switch2").checked);
+    if (round !== cover.round) return;
+    $("cover-status").textContent = covers.length ? "" : t("coverNone");
+    for (const found of covers) {
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "cover-tile";
+      tile.innerHTML = `<img alt=""><span class="cover-name"></span><span class="cover-system"></span>`;
+      tile.querySelector("img").src = found.image;
+      tile.querySelector(".cover-name").textContent = found.title;
+      tile.title = found.title;
+      tile.querySelector(".cover-system").textContent = (found.systems || []).join(" · ");
+      tile.setAttribute("aria-pressed", "false");
+      tile.onclick = () => {
+        for (const other of $("cover-grid").children) other.setAttribute("aria-pressed", "false");
+        tile.setAttribute("aria-pressed", "true");
+        cover.chosen = found.address;
+        $("cover-use").disabled = false;
+      };
+      tile.ondblclick = () => {
+        cover.chosen = found.address;
+        useCover();
+      };
+      $("cover-grid").append(tile);
+    }
+  } catch (error) {
+    if (round !== cover.round) return;
+    $("cover-status").textContent = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+    $("cover-status").classList.add("warning");
+  } finally {
+    if (round === cover.round) $("cover-search").disabled = false;
+  }
+}
+
+function useCover() {
+  const target = cover.target;
+  const address = cover.chosen;
+  if (!target || !address) return;
+  $("cover-dialog").close();
+  giveNupIcon(target.row, () => app().UseCover(target.row.item.path, address, target.replace));
 }
 
 // a note of NXPress begun with a capital, as a line of its own
@@ -418,6 +574,7 @@ async function giveNupIcon(row, give) {
       return;
     }
     row.iconFailed = "";
+    row.iconChanging = false;
     row.iconNote = capitalize(noteText(note));
     row.card = await app().Card(row.item.path);
     renderCard(row);
@@ -2748,6 +2905,15 @@ async function main() {
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
   $("space-cancel").onclick = () => $("space-dialog").close();
+  // the window to search an image of a NUP in the eShop (#102), and an image pasted (Ctrl+V)
+  $("cover-search").onclick = searchCovers;
+  $("cover-query").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); searchCovers(); } });
+  $("cover-switch2").onchange = searchCovers;
+  $("cover-use").onclick = useCover;
+  $("cover-cancel").onclick = () => $("cover-dialog").close();
+  $("cover-web").onclick = () => app().SearchCoverOnWeb($("cover-query").value);
+  $("cover-dialog").addEventListener("close", () => { cover.round++; });
+  document.addEventListener("paste", pasteIcon);
   // 2: a drop answers before it lands: the whole window says how many files it takes
   watchDrops(window, window.runtime, $("drop-overlay"), () => state.busy, (show, count) => {
     if (show) $("drop-text").textContent = t("dropOverlay")(count);

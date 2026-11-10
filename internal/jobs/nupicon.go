@@ -90,10 +90,18 @@ func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, string, 
 	from := "the icon of its game in titledb"
 	var data []byte
 	var err error
-	if o.NupIcon != "" {
+	given := o.NupIcon != "" || len(o.NupIconImage) > 0
+	switch {
+	case len(o.NupIconImage) > 0:
+		from = o.NupIconFrom
+		if from == "" {
+			from = "the image given"
+		}
+		data = o.NupIconImage
+	case o.NupIcon != "":
 		from = "the image given"
 		data, err = readIconFile(o.NupIcon)
-	} else {
+	default:
 		data, err = lookupIcon(ctx, id)
 	}
 	if err != nil {
@@ -104,7 +112,7 @@ func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, string, 
 		return nil, "", "", err
 	}
 	blurry := ""
-	if o.NupIcon != "" {
+	if given {
 		var size string
 		size, blurry = imageSizeNote(data)
 		from += size
@@ -188,15 +196,22 @@ func FixNupIcon(ctx context.Context, path string, o Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if container.Icon() != nil {
+	if container.Icon() != nil && !o.ReplaceNupIcon {
 		return "", Skipped(hasIcon)
+	}
+	if o.ReplaceNupIcon && container.GameIcons() {
+		return "", nup.ErrGameIcons
 	}
 	pkg := container.Packages[container.IconPackage()]
 	icon, from, blurry, err := iconOf(ctx, o, pkg.TitleID)
 	if err != nil {
 		return "", err
 	}
-	set, err := nup.SetIcon(path, icon)
+	setIcon := nup.SetIcon
+	if o.ReplaceNupIcon {
+		setIcon = nup.ReplaceIcon
+	}
+	set, err := setIcon(path, icon)
 	switch {
 	case err != nil:
 		return "", err

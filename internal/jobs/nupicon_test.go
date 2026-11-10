@@ -181,6 +181,43 @@ func TestFixNupIcon(t *testing.T) {
 	}
 }
 
+// The window gives a NUP an image found in the eShop or pasted (#102), and changes the icon it was
+// given already (#103); the icons of the game itself are kept.
+func TestFixNupIconWithAnImageOfTheWindow(t *testing.T) {
+	packages := []testnup.Package{{TitleId: 0x0400486024DED001, Kind: testnup.Addon, Version: 0,
+		Files: []testnup.File{{Path: "romfs/dlc.bin", Data: []byte("dlc")}}}}
+	path := filepath.Join(t.TempDir(), "dlc.nup")
+	os.WriteFile(path, testnup.Build(packages), 0o644)
+	useLookup(t, func(ctx context.Context, id uint64) ([]byte, error) {
+		t.Error("titledb asked")
+		return nil, ErrNoIcon
+	})
+	note, err := FixNupIcon(t.Context(), path, Options{NupIconImage: pngOf(t, 500, 500, color.White), NupIconFrom: "the image of the eShop"})
+	if err != nil || !strings.Contains(note, "it carries the image of the eShop (500×500, square already) now, 256×256") {
+		t.Fatalf("%q %v", note, err)
+	}
+	first, _ := nup.Open(path)
+	// given an icon already: kept, unless it is to be changed
+	if _, err := FixNupIcon(t.Context(), path, Options{NupIconImage: pngOf(t, 300, 200, color.Black)}); !IsSkipped(err) {
+		t.Errorf("again: %v", err)
+	}
+	note, err = FixNupIcon(t.Context(), path, Options{NupIconImage: pngOf(t, 300, 200, color.Black), ReplaceNupIcon: true})
+	if err != nil || !strings.Contains(note, "it carries the image given (300×200, its square of 200×200 at its middle) now, 256×256") || !strings.Contains(note, "may look blurry") {
+		t.Fatalf("%q %v", note, err)
+	}
+	if after, err := nup.Open(path); err != nil || after.Icon() == nil || bytes.Equal(after.Icon(), first.Icon()) {
+		t.Errorf("not changed: %v", err)
+	}
+
+	// a NUP with the icons of its game in each language keeps them
+	packages[0].Meta = []testnup.Record{{Type: testnup.Icon, Payload: testnup.Jpeg}, {Type: testnup.LocalizedIcons, Payload: testnup.Localized("en-us", string(testnup.Jpeg))}}
+	other := filepath.Join(t.TempDir(), "game.nup")
+	os.WriteFile(other, testnup.Build(packages), 0o644)
+	if _, err := FixNupIcon(t.Context(), other, Options{NupIconImage: pngOf(t, 300, 300, color.White), ReplaceNupIcon: true}); !errors.Is(err, nup.ErrGameIcons) {
+		t.Errorf("%v", err)
+	}
+}
+
 // OnlineIcons reads titledb once and downloads the icon of each game from it.
 func TestOnlineIcons(t *testing.T) {
 	icon := pngOf(t, 32, 32, color.White)
