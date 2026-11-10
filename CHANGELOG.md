@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- The box under “Open Switch files with NXPress” in Settings › Windows Explorer reads “Verify them as soon as they open”, which tells better what it does (thanks @NikoMuffin, #87)
+
 ## 1.7.5
 
 ### Improvements
