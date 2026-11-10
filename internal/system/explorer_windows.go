@@ -350,6 +350,12 @@ func RemoveMenu() error {
 	return nil
 }
 
+// InstallerLanguage is the language chosen in the installer of Windows, which it keeps under
+// Software\NXPress of the user; "" without one.
+func InstallerLanguage() string {
+	return readString(registry.CURRENT_USER, `Software\NXPress`, "Language")
+}
+
 // ExplorerPlaces says whether this system has them.
 func ExplorerPlaces() bool { return true }
 

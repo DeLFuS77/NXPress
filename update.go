@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,6 +35,9 @@ type Update struct {
 	Notes string `json:"notes"`
 	// GitHub answered: with no version, this one is the newest (Check now, #106)
 	Checked bool `json:"checked,omitempty"`
+	// Windows asks for the administrator to install it: NXPress is in a folder only the
+	// administrator writes in, as Program Files
+	Admin bool `json:"admin,omitempty"`
 }
 
 // CheckUpdate asks GitHub for the latest version of NXPress: one of the two times NXPress goes on
@@ -83,6 +87,9 @@ func (a *App) CheckUpdate() Update {
 	a.updateMutex.Unlock()
 	update := Update{Version: release.Tag, URL: release.URL, Notes: releaseNotes(release.Body), Checked: true}
 	update.Reason = installReason(found)
+	if update.Reason == "write" && runtime.GOOS == "windows" {
+		update.Reason, update.Admin = "", true
+	}
 	update.Installable = update.Reason == ""
 	return update
 }
@@ -99,6 +106,23 @@ func installReason(release selfupdate.Release) string {
 		return "write"
 	}
 	return ""
+}
+
+// replaceElevated has the NXPress installed put fresh in its place as the administrator, which
+// Windows asks the user for (see ReplaceChecked).
+func replaceElevated(program, fresh, sum string) error {
+	code, err := system.RunElevated(program, "--installer", "replace", fresh, sum)
+	switch {
+	case errors.Is(err, system.ErrDeclined):
+		return selfupdate.ErrDeclined
+	case err != nil:
+		return fmt.Errorf("%w: %v", selfupdate.ErrNoWrite, err)
+	case code == installerChecksum:
+		return selfupdate.ErrChecksum
+	case code != 0:
+		return fmt.Errorf("%w: the NXPress run as the administrator ended with %d", selfupdate.ErrNoWrite, code)
+	}
+	return nil
 }
 
 // writableBeside tells whether NXPress can write in the folder of its program: not in Program
@@ -160,6 +184,9 @@ func (a *App) InstallUpdate() error {
 		Progress: func(step string, done, total int64) {
 			wailsruntime.EventsEmit(a.ctx, "update-progress", map[string]any{"step": step, "done": done, "total": total})
 		},
+	}
+	if runtime.GOOS == "windows" && !writableBeside() {
+		installer.Elevate = func(fresh, sum string) error { return replaceElevated(program, fresh, sum) }
 	}
 	if err := installer.Install(ctx, release); err != nil {
 		return errors.New(selfupdate.Code(err) + ": " + err.Error())

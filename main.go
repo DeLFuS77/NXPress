@@ -21,6 +21,10 @@ func main() {
 	cli.Version = version
 	titledb.UserAgent = "NXPress/" + version
 	args := afterUpdate(os.Args[1:])
+	// the installer of Windows, putting NXPress in Windows or taking it away (see installer.go)
+	if len(args) > 0 && args[0] == "--installer" {
+		os.Exit(runInstaller(args[1:], os.Stdout, os.Stderr))
+	}
 	// the window, with the files it is given (see windowLaunch). Started from the Explorer, the
 	// console Windows opened for it is closed
 	if start, ok := windowLaunch(args); ok {
