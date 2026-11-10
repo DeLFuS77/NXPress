@@ -116,7 +116,12 @@ jobs:
               mkdir -p out/portable/NXPress/settings
               cp out/nxpress.exe out/portable/NXPress/
               printf '%s\r\n' "NXPress keeps its settings, its window and the files already checked in this folder." "Put your prod.keys next to nxpress.exe." > out/portable/NXPress/settings/README.txt
-              pwsh -NoProfile -Command "Compress-Archive -Path out/portable/NXPress -DestinationPath dist/nxpress-${{ matrix.name }}-portable.zip" ;;
+              pwsh -NoProfile -Command "Compress-Archive -Path out/portable/NXPress -DestinationPath dist/nxpress-${{ matrix.name }}-portable.zip"
+              # the installer (NSIS), the download most people want: tools/installer makes it
+              if ! command -v makensis > /dev/null && [ ! -f "/c/Program Files (x86)/NSIS/makensis.exe" ]; then
+                choco install nsis -y --no-progress
+              fi
+              go run ./tools/installer -program out/nxpress.exe -version "${VERSION}" -out "dist/nxpress-${{ matrix.name }}-setup.exe" ;;
             macOS)
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
               tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app ;;
@@ -145,6 +150,23 @@ jobs:
           HOME="$home" sh out/NXPress/install.sh --uninstall
           test ! -e "$home/.local/bin/nxpress"
           test ! -e "$home/.local/share/applications/nxpress.desktop"
+
+      # the installer puts NXPress in the folder given and in Installed apps, and the uninstaller
+      # takes it all away again; both silent
+      - name: Install on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $folder = Join-Path $env:RUNNER_TEMP "NXPress test"
+          $setup = Get-Item dist/nxpress-${{ matrix.name }}-setup.exe
+          Start-Process -FilePath $setup.FullName -ArgumentList "/S", "/D=$folder" -Wait
+          $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\NXPress"
+          if (-not (Test-Path "$folder\nxpress.exe") -or -not (Test-Path "$folder\uninstall.exe")) { throw "not installed" }
+          if ((Get-ItemProperty $key).InstallLocation -ne $folder) { throw "not in Installed apps" }
+          & "$folder\nxpress.exe" --version
+          Start-Process -FilePath "$folder\uninstall.exe" -ArgumentList "/S", "_?=$folder" -Wait
+          if (Test-Path "$folder\nxpress.exe") { throw "not uninstalled" }
+          if (Test-Path $key) { throw "still in Installed apps" }
 
       # the window opens, and is still open after a while: a screenshot of it is kept
       - name: Open the window
@@ -237,13 +259,16 @@ jobs:
 
           | System | File |
           |---|---|
-          | Windows | \`nxpress.exe\` |
+          | Windows, installer (recommended) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-setup.exe\` |
+          | Windows, the program on its own | \`nxpress.exe\` |
           | Windows, portable (all in its folder, for a USB stick) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-portable.zip\` |
           | macOS with Apple silicon (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
           | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
           | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |
 
+          The installer puts NXPress in your user folder (no administrator needed), with its shortcuts and the
+          options of its Settings, and adds it to Installed apps, where it is uninstalled.
           Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`).
           It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
           On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in

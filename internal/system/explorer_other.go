@@ -32,5 +32,6 @@ func MenuPlace(executable string) string                      { return PlaceMiss
 func AddMenu(executable string, texts ExplorerMenu) error     { return errNoExplorer }
 func RelabelMenu(executable string, texts ExplorerMenu) error { return nil }
 func RemoveMenu() error                                       { return nil }
+func InstallerLanguage() string                               { return "" }
 func ExplorerPlaces() bool                                    { return false }
 func Executable() (string, error)                             { return os.Executable() }

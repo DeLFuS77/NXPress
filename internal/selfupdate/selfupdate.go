@@ -60,6 +60,7 @@ var (
 	ErrNoWrite     = errors.New("NXPress cannot write in its folder")
 	ErrNotNewer    = errors.New("the version is not newer than this one")
 	ErrPrerelease  = errors.New("the version is a beta, and this NXPress is not")
+	ErrDeclined    = errors.New("the permission of the administrator was not given")
 )
 
 // Code is the reason of an error, as the window names it.
@@ -77,6 +78,8 @@ func Code(err error) string {
 		return "checksum"
 	case errors.Is(err, ErrNoWrite):
 		return "write"
+	case errors.Is(err, ErrDeclined):
+		return "declined"
 	case errors.Is(err, ErrUnsupported):
 		return "unsupported"
 	case errors.Is(err, ErrNotNewer):
@@ -183,6 +186,10 @@ type Installer struct {
 	Allowed func(*url.URL) bool
 	// told as it goes: "download" with the bytes done of the total, then "check" and "replace"
 	Progress func(step string, done, total int64)
+	// Elevate puts the program checked in place for an NXPress that cannot write in its folder (in
+	// Program Files): it runs, as the administrator, the NXPress installed with ReplaceChecked.
+	// With it, the download goes to the temporary folder of the user.
+	Elevate func(fresh, sum string) error
 }
 
 // the most each file may weigh: the checksums and their signature are small, a program is not
@@ -233,6 +240,14 @@ func (in Installer) Install(ctx context.Context, release Release) error {
 	}
 
 	folder := filepath.Dir(in.Program)
+	if in.Elevate != nil {
+		temporary, err := os.MkdirTemp("", "nxpress-update-")
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrNoWrite, err)
+		}
+		defer os.RemoveAll(temporary)
+		folder = temporary
+	}
 	part := filepath.Join(folder, ".nxpress-update-"+release.Tag+".part")
 	defer os.Remove(part)
 	if err := in.download(ctx, release.Assets[name], part, want); err != nil {
@@ -248,7 +263,44 @@ func (in Installer) Install(ctx context.Context, release Release) error {
 		}
 	}
 	in.progress("replace", 0, 0)
+	if in.Elevate != nil {
+		return in.Elevate(fresh, want)
+	}
 	return Replace(in.Program, fresh)
+}
+
+// ReplaceChecked puts fresh in place of the program, when it has the SHA-256 sum: what an update
+// of an NXPress in Program Files runs as the administrator. fresh is in a folder of the user, which
+// another program of the user could write in meanwhile: it is copied beside the program first, a
+// folder only the administrator writes in, and its sum checked there, so what is checked is what
+// runs.
+func ReplaceChecked(program, fresh, sum string) error {
+	input, err := os.Open(fresh)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	part := filepath.Join(filepath.Dir(program), ".nxpress-update-checked.part")
+	defer os.Remove(part)
+	output, err := os.OpenFile(part, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrNoWrite, err)
+	}
+	defer output.Close()
+	hash := sha256.New()
+	if _, err := io.Copy(io.MultiWriter(output, hash), io.LimitReader(input, programLimit+1)); err != nil {
+		return fmt.Errorf("%w: %v", ErrNoWrite, err)
+	}
+	if !strings.EqualFold(hex.EncodeToString(hash.Sum(nil)), sum) {
+		return ErrChecksum
+	}
+	if err := output.Sync(); err != nil {
+		return fmt.Errorf("%w: %v", ErrNoWrite, err)
+	}
+	if err := output.Close(); err != nil {
+		return fmt.Errorf("%w: %v", ErrNoWrite, err)
+	}
+	return Replace(program, part)
 }
 
 func (in Installer) progress(step string, done, total int64) {
