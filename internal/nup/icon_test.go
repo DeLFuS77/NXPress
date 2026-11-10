@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"hash/crc32"
 	"image"
 	"image/color"
@@ -339,4 +340,63 @@ func encodeBmp(t *testing.T, picture image.Image) []byte {
 		t.Fatal(err)
 	}
 	return out.Bytes()
+}
+
+func TestReplaceIconChangesTheOneGiven(t *testing.T) {
+	path := write(t, testnup.Build(noIcon()))
+	first, _ := MakeIcon(encodePng(t, sided(300, 300, color.RGBA{0, 0, 255, 255})))
+	if set, err := SetIcon(path, first); err != nil || !set {
+		t.Fatalf("%v %v", set, err)
+	}
+	// changed once, and again: each time the NUP reads the new one, and the same otherwise (#103)
+	for _, shade := range []color.Color{color.RGBA{255, 0, 0, 255}, color.RGBA{0, 255, 0, 255}} {
+		before, _ := Open(path)
+		icon, _ := MakeIcon(encodePng(t, sided(256, 256, shade)))
+		if set, err := ReplaceIcon(path, icon); err != nil || !set {
+			t.Fatalf("%v %v", set, err)
+		}
+		after, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(after.Icon(), icon) {
+			t.Fatal("the icon was not replaced")
+		}
+		if err := sameWithIcon(before, after, 0, icon); err != nil {
+			t.Error(err)
+		}
+		if _, check, err := Verify(context.Background(), path, 2, 2, nil); err != nil || len(check.Damaged) != 0 {
+			t.Errorf("%v %+v", err, check)
+		}
+		if got := after.Emulators(); len(got.Refused) != 0 || got.NoStart != "" {
+			t.Errorf("emulators %+v", got)
+		}
+	}
+	// a NUP with only the icon of the game, as packed by others, has it replaced too
+	path = write(t, testnup.Build(game()))
+	icon, _ := MakeIcon(encodePng(t, sided(64, 64, color.White)))
+	if set, err := ReplaceIcon(path, icon); err != nil || !set {
+		t.Fatalf("%v %v", set, err)
+	}
+	if after, _ := Open(path); !bytes.Equal(after.Icon(), icon) {
+		t.Error("the icon of a NUP with one was not replaced")
+	}
+}
+
+func TestReplaceIconKeepsTheIconsOfTheGame(t *testing.T) {
+	packages := game()
+	packages[0].Meta = append(packages[0].Meta, testnup.Record{Type: testnup.LocalizedIcons, Payload: testnup.Localized("en-us", string(testnup.Jpeg))})
+	path := write(t, testnup.Build(packages))
+	original, _ := os.ReadFile(path)
+	container, err := Open(path)
+	if err != nil || !container.GameIcons() {
+		t.Fatalf("%v %v", err, container != nil && container.GameIcons())
+	}
+	icon, _ := MakeIcon(encodePng(t, sided(64, 64, color.White)))
+	if set, err := ReplaceIcon(path, icon); !errors.Is(err, ErrGameIcons) || set {
+		t.Fatalf("%v %v", set, err)
+	}
+	if now, _ := os.ReadFile(path); !bytes.Equal(now, original) {
+		t.Error("the NUP changed")
+	}
 }

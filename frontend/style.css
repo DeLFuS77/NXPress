@@ -543,10 +543,31 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .file-card.has-icon { display: grid; grid-template-columns: 64px 1fr; column-gap: 12px; }
 .file-card.has-icon > :not(.nup-icon) { grid-column: 2; }
 .file-card .nup-icon { grid-row: 1 / span 9; width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: var(--bar); }
-.nup-no-icon .say { flex: 1 1 220px; margin: 0; font-size: 12px; color: var(--muted); }
+.nup-no-icon .say { flex: 1 1 100%; margin: 0; font-size: 12px; color: var(--muted); }
 .nup-no-icon button { padding: 3px 10px; font-size: 12px; }
 .nup-no-icon .say.warning { color: var(--warn); }
 .file-card .nup-icon-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.nup-no-icon .paste-hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.file-card .nup-icon-change { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+/* the window to search an image in the eShop (#102): the name, then the games in a grid */
+dialog.cover-dialog { max-width: 680px; }
+.cover-bar { display: flex; gap: 8px; }
+.cover-bar input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); padding: 6px 10px; }
+.cover-from { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.cover-from label { cursor: pointer; }
+.cover-status { margin: 10px 0 0; min-height: 1px; }
+.cover-status:empty { margin: 0; }
+.cover-status.warning { color: var(--warn); }
+.cover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; margin-top: 12px; max-height: 52vh; overflow-y: auto; padding: 2px; }
+.cover-grid:empty { display: none; }
+.cover-tile { display: flex; flex-direction: column; padding: 0; background: none; border: 2px solid transparent; border-radius: 10px; text-align: left; overflow: hidden; }
+.cover-tile:hover:not(:disabled) { background: none; border-color: var(--line); }
+.cover-tile[aria-pressed="true"] { border-color: var(--accent); }
+.cover-tile img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--bar); }
+.cover-name { font-size: 12px; padding: 4px 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cover-system { font-size: 11px; color: var(--muted); padding: 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cover-paste { margin: 10px 0 0; font-size: 12px; }
+.cover-dialog .dialog-actions .cover-web { margin-right: auto; }
 /* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
 .game .cover .cover-folder { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
 .dump-plan { margin-top: 4px; }

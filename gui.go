@@ -152,6 +152,10 @@ type App struct {
 	versionsMutex sync.Mutex
 	// the log of the works, written one change at a time (see worklog.go)
 	logMutex sync.Mutex
+	// the images of the last search of the eShop, by address, so the one chosen is not downloaded
+	// again (see covers.go)
+	coversMutex sync.Mutex
+	covers      map[string][]byte
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -468,6 +472,8 @@ type FileCard struct {
 	// the icon a NUP carries, as an address of data for the card; noIcon when it carries none
 	Icon   string `json:"icon,omitempty"`
 	NoIcon bool   `json:"noIcon,omitempty"`
+	// it carries the icons of its game itself, which are kept: no other is given it (#103)
+	GameIcons bool `json:"gameIcons,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
@@ -478,7 +484,8 @@ func (a *App) Card(path string) (FileCard, error) {
 			return FileCard{}, err
 		}
 		card := FileCard{Kind: "NUP", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
-			Emulators: details.Emulators, EmulatorsOK: details.EmulatorsOK, ZeroBased: details.ZeroBased, NoIcon: details.Icon == nil}
+			Emulators: details.Emulators, EmulatorsOK: details.EmulatorsOK, ZeroBased: details.ZeroBased, NoIcon: details.Icon == nil,
+			GameIcons: details.GameIcons}
 		if details.Icon != nil {
 			card.Icon = "data:" + http.DetectContentType(details.Icon) + ";base64," + base64.StdEncoding.EncodeToString(details.Icon)
 		}
@@ -509,8 +516,9 @@ func (a *App) FixNupMeta(path string) (string, error) {
 var fixNupMeta = jobs.FixNupMeta
 
 // FixNupIcon gives a NUP without an icon the one of its game in titledb, from the button of its
-// card, and tells what it did; not while a work is going on.
-func (a *App) FixNupIcon(path string) (string, error) {
+// card, and tells what it did; with replace, a NUP given one already has it changed (#103). Not
+// while a work is going on.
+func (a *App) FixNupIcon(path string, replace bool) (string, error) {
 	if a.working() {
 		return "", errors.New("wait for the work to end")
 	}
@@ -519,13 +527,14 @@ func (a *App) FixNupIcon(path string) (string, error) {
 		return "", err
 	}
 	defer done()
-	return fixNupIcon(a.ctx, path, jobs.Options{})
+	return fixNupIcon(a.ctx, path, jobs.Options{ReplaceNupIcon: replace})
 }
 
 // ChooseNupIcon asks for an image (PNG, JPEG, WEBP or BMP), with a title that tells the size an
 // icon is best made of, in the language of the page, and gives it to a NUP without an icon, cut
 // square at its middle and made 256×256, from the button of its card; "" when none is chosen.
-func (a *App) ChooseNupIcon(path string, title string) (string, error) {
+// With replace, a NUP given one already has it changed (#103).
+func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, error) {
 	if a.working() {
 		return "", errors.New("wait for the work to end")
 	}
@@ -541,7 +550,7 @@ func (a *App) ChooseNupIcon(path string, title string) (string, error) {
 		return "", err
 	}
 	defer done()
-	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image})
+	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, ReplaceNupIcon: replace})
 }
 
 // fixNupIcon is jobs.FixNupIcon, which the tests stand in for

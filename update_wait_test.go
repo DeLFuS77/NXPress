@@ -160,7 +160,7 @@ func TestRestartWaitsForTheChores(t *testing.T) {
 	give := fixNupIcon
 	fixNupIcon = func(context.Context, string, jobs.Options) (string, error) { given = true; return "", nil }
 	defer func() { fixNupIcon = give }()
-	if _, err := a.FixNupIcon("game.nup"); !errors.Is(err, errRestarting) || given {
+	if _, err := a.FixNupIcon("game.nup", false); !errors.Is(err, errRestarting) || given {
 		t.Fatalf("a NUP is given its icon while NXPress restarts: %v", err)
 	}
 	// the log of the work that ended is still written, and waited for
