@@ -89,6 +89,20 @@ func (c *Container) IconPackage() int {
 	return 0
 }
 
+// ErrGameIcons is told when an icon would replace the ones of the game itself, which a NUP made
+// with control data carries in each language: they are kept.
+var ErrGameIcons = errors.New("it carries the icons of the game itself, which are kept")
+
+// GameIcons tells whether the package that carries the icon of a NUP has the icons of the game in
+// each language, from its control data; a NUP given an icon afterwards has only the one.
+func (c *Container) GameIcons() bool {
+	if len(c.Packages) == 0 {
+		return false
+	}
+	localized, err := parseLocalized(c.Packages[c.IconPackage()].Meta[tlvLocalizedIcons])
+	return err == nil && len(localized) > 0
+}
+
 // IconBackup is the copy of the header and the table of contents of a NUP kept while an icon is
 // given to it.
 func IconBackup(path string) string {
@@ -98,13 +112,23 @@ func IconBackup(path string) string {
 const iconBackupMagic = "NXPICON1"
 
 // SetIcon gives a NUP that carries no icon the one given (made by MakeIcon), and tells whether it
-// did: a NUP that carries one keeps it. Nothing of what the NUP has changes: the metadata of the
+// did: a NUP that carries one keeps it (ReplaceIcon changes it). Nothing of what the NUP has changes: the metadata of the
 // package of the game is written again with the icon, after the end of the NUP, and the table of
 // contents points to it; the data of the files, and the metadata as it was, stay where they are.
 // The header and the table of contents as they were are kept beside the NUP while it is written,
 // and put back when it does not read the same afterwards; a NUP left with such a copy by a work
 // that stopped gets them back before anything else.
 func SetIcon(path string, icon []byte) (bool, error) {
+	return setIcon(path, icon, false)
+}
+
+// ReplaceIcon gives a NUP the icon given, whether it carries one or not (#103): the one it carried
+// is no longer pointed to, as SetIcon leaves the metadata as it was where it is.
+func ReplaceIcon(path string, icon []byte) (bool, error) {
+	return setIcon(path, icon, true)
+}
+
+func setIcon(path string, icon []byte, replace bool) (bool, error) {
 	if len(icon) == 0 || !bytes.HasPrefix(icon, []byte{0xFF, 0xD8, 0xFF}) && !bytes.HasPrefix(icon, []byte("\x89PNG\r\n\x1a\n")) {
 		return false, errors.New("the icon is not a JPEG or PNG image")
 	}
@@ -121,8 +145,11 @@ func SetIcon(path string, icon []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if before.Icon() != nil {
+	if before.Icon() != nil && !replace {
 		return false, nil
+	}
+	if replace && before.GameIcons() {
+		return false, ErrGameIcons
 	}
 	file, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {

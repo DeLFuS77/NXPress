@@ -61,6 +61,12 @@ type Options struct {
 	// of the one of titledb; --no-nup-icon: titledb not looked up, the NUP left without one
 	NupIcon   string
 	NoNupIcon bool
+	// an image a NUP takes from the window, found in the eShop or pasted (#102), and where it comes
+	// from, for the note; with ReplaceNupIcon, a NUP that carries an icon given already has it
+	// changed (#103)
+	NupIconImage   []byte
+	NupIconFrom    string
+	ReplaceNupIcon bool
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string

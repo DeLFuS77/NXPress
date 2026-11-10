@@ -5,6 +5,8 @@
 ### Improvements
 
 - The box under “Open Switch files with NXPress” in Settings › Windows Explorer reads “Verify them as soon as they open”, which tells better what it does (thanks @NikoMuffin, #87)
+- A NUP whose game titledb has no icon of, as many of the Switch 2, can get one from the eShop: Search image in its card opens a window that searches the eShop of Nintendo by the name of the game and shows the games it finds with their square image (500×500, which makes a sharp icon of 256×256), the Switch 2 only unless that box is unticked. The name searched is the one the game carries, without the marks of file names, and can be changed, as file names and title IDs are often wrong. The eShop is asked only when a search is started. For a game it does not have, Search the web opens a search of images in the browser (DuckDuckGo), and an image copied there is pasted into the card or the window with Ctrl+V (thanks @NikoMuffin, #102)
+- A NUP given an icon can have it changed: Change image in its card offers the same ways again (titledb, the eShop, an image of one's own or one pasted). The icons a NUP carries from the game itself are kept (thanks @NikoMuffin, #103)
 
 ## 1.7.5
 
