@@ -20,7 +20,7 @@ import (
 )
 
 // the latest release of NXPress, as GitHub tells it
-const latestRelease = "https://api.github.com/repos/DeLFuS77/NXPress/releases/latest"
+var latestRelease = "https://api.github.com/repos/DeLFuS77/NXPress/releases/latest"
 
 // Update is a newer version of NXPress, when there is one, and whether NXPress can install it by
 // itself (#91): it is signed, it has the program of this system, and NXPress can write in its
@@ -32,6 +32,8 @@ type Update struct {
 	Reason      string `json:"reason,omitempty"`
 	// what is new in it, the notes of the release without how to download it
 	Notes string `json:"notes"`
+	// GitHub answered: with no version, this one is the newest (Check now, #106)
+	Checked bool `json:"checked,omitempty"`
 }
 
 // CheckUpdate asks GitHub for the latest version of NXPress: one of the two times NXPress goes on
@@ -49,6 +51,8 @@ func (a *App) CheckUpdate() Update {
 	}
 	request.Header.Set("Accept", "application/vnd.github+json")
 	request.Header.Set("User-Agent", "NXPress/"+version)
+	// the answer of a moment ago is not wanted: a version just out is told at once (#106)
+	request.Header.Set("Cache-Control", "no-cache")
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return Update{}
@@ -68,7 +72,7 @@ func (a *App) CheckUpdate() Update {
 		return Update{}
 	}
 	if !newer(release.Tag, version) || !strings.HasPrefix(release.URL, "https://github.com/") {
-		return Update{}
+		return Update{Checked: true}
 	}
 	found := selfupdate.Release{Tag: release.Tag, Prerelease: release.Prerelease, Assets: map[string]string{}}
 	for _, asset := range release.Assets {
@@ -77,7 +81,7 @@ func (a *App) CheckUpdate() Update {
 	a.updateMutex.Lock()
 	a.release = found
 	a.updateMutex.Unlock()
-	update := Update{Version: release.Tag, URL: release.URL, Notes: releaseNotes(release.Body)}
+	update := Update{Version: release.Tag, URL: release.URL, Notes: releaseNotes(release.Body), Checked: true}
 	update.Reason = installReason(found)
 	update.Installable = update.Reason == ""
 	return update

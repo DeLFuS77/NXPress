@@ -62,6 +62,7 @@ texts.nl = {
   report: "Rapport kopiëren", reportCopied: "Rapport gekopieerd: plak het in een GitHub-issue of in de thread.",
   worklog: "Logboek", hintWorklog: "lijst van activiteiten", aboutWorklog: "Elke taak van NXPress, de nieuwste eerst: elk bestand, hoe het afliep en wat het bespaarde. Het wordt ook in een tekstbestand bewaard.",
   worklogFind: "Zoek een game of een bestand", worklogAll: "Alles", worklogProblems: "Met problemen", worklogExpandAll: "Alles uitklappen", worklogCollapseAll: "Alles inklappen", worklogCount: (w, f) => `${w} ${w === 1 ? "taak" : "taken"} · ${f} ${f === 1 ? "bestand" : "bestanden"}`,
+  listFind: "Zoek een game of een bestand", listFound: (s, n) => s + " van " + n + " getoond", checkNow: "Nu controleren", checkNowChecking: "Controleren…", checkNowLatest: (v) => v + " is de nieuwste versie.", checkNowFailed: "GitHub is niet bereikbaar.",
   worklogKeep: "Hoogstens bewaren", worklogKeepN: n => `${n} taken`, worklogNoLimit: "Geen limiet", worklogKeepHint: "Daarboven vallen de oudste taken weg, ook uit het tekstbestand.",
   worklogFile: "Tekstbestand", worklogFileHint: "Hetzelfde logboek als platte tekst, in de map met instellingen van NXPress: open het in elke editor of plak het in een issue.",
   worklogClear: "Logboek legen", worklogClearHint: "Wist de lijst en het tekstbestand; Ongedaan maken haalt ze een paar seconden lang terug.", worklogCleared: "Logboek geleegd",

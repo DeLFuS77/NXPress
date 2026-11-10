@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.7
+
+### Improvements
+
+- The list of every section has a search field, as the log has: as you type, it shows only the files whose name, game, title ID, folder or note have what is written, and tells how many of the list it shows. The files left out of sight are still worked on (thanks @NikoMuffin, #105)
+- Check now, under “Look for new versions on GitHub” in Settings, looks for a new version at once and tells when this one is the newest; the answer is asked fresh, not one GitHub kept from a moment ago (thanks @NikoMuffin, #106)
+
+### Fixes
+
+- The cover of a NUP in the list and in the grid shows the icon given to it at once, without leaving Details and coming back (thanks @NikoMuffin, #107)
+
 ## 1.7.6
 
 ### Improvements
