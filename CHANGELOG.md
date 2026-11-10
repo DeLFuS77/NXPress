@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- An installer for Windows, now the recommended download, and one for macOS: in the 11 languages of NXPress, with the shortcuts and options of Settings, and an uninstaller. `nxpress.exe`, the portable zip and the archives of macOS are still there
+- An NXPress installed in Program Files updates itself too, after asking Windows for an administrator
+
 ## 1.7.7
 
 ### Improvements

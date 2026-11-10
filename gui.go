@@ -194,6 +194,8 @@ type Setup struct {
 	Mica bool `json:"mica"`
 	// the computer can hibernate when the work is done (#62)
 	Hibernate bool `json:"hibernate"`
+	// the language chosen in the installer of Windows, for the page until one is chosen in it
+	Language string `json:"language"`
 }
 
 func (a *App) Setup() Setup {
@@ -202,7 +204,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
-		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(),
+		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), Language: system.InstallerLanguage(),
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {
@@ -539,7 +541,7 @@ func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, er
 		return "", errors.New("wait for the work to end")
 	}
 	image, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title: title,
+		Title:   title,
 		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
 	})
 	if err != nil || image == "" {

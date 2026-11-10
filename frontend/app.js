@@ -2664,7 +2664,8 @@ function paintUpdateDialog() {
   $("update-bar").firstElementChild.style.width = going && going.step === "download" && going.total > 0 ? Math.min(100, going.done / going.total * 100).toFixed(1) + "%" : going ? "100%" : "";
   $("update-error").hidden = !failed;
   $("update-error").textContent = failed ? t("updateError")(failed) : "";
-  $("update-hint").textContent = ready ? t("updateListBack") : failed ? "" : t("updateSigned");
+  // in Program Files, Windows asks for the administrator to put it in place
+  $("update-hint").textContent = ready ? t("updateListBack") : failed ? "" : t("updateSigned") + (state.update.admin ? " " + t("updateAdmin") : "");
   $("update-cancel").hidden = !(going && going.step === "download");
   $("update-dialog-close").hidden = !failed;
   $("update-page").hidden = !failed;
@@ -2802,9 +2803,11 @@ async function main() {
   state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
   applyPalette();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
-  // the language: the one chosen, else the one of the system when NXPress has it
+  // the language: the one chosen, else the one chosen in the installer of Windows, else the one
+  // of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);
-  state.language = load("language", texts[system] ? system : "en");
+  const installed = state.setup.language || "";
+  state.language = load("language", texts[installed] ? installed : texts[system] ? system : "en");
   if (!texts[state.language]) state.language = "en";
   for (const [code, name] of languages) if (texts[code]) $("language-select").append(new Option(name, code));
   // another language tells again what is shown: the new version and the games to combine too

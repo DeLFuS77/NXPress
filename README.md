@@ -28,9 +28,11 @@ It is one program with no Python or other dependencies. Opened with no arguments
 
 The program for Windows, macOS (Apple chip or Intel) and Linux (PC or ARM) is on the [releases page](https://github.com/DeLFuS77/NXPress/releases/latest). It needs your own `prod.keys`, dumped from your own console; none is included. Tested with DBI.
 
+On Windows the installer (`…-windows-x64-setup.exe`) is the easiest way. It speaks the 11 languages of NXPress, installs it in your user folder without asking for an administrator, and adds, as you choose, its shortcuts in the Start menu and on the desktop, opening Switch files with NXPress, its menu in the Explorer and “Send to”, as its Settings do. NXPress is then in Installed apps, where it is uninstalled (your settings kept, if you want), and the installer of a newer version updates it in its folder. In Program Files instead, Windows asks for an administrator to install it and on each update NXPress installs by itself. `nxpress.exe` on its own is still there too. Windows SmartScreen may warn about a program it does not know yet: More info, Run anyway.
+
 Each release has `SHA256SUMS.txt` and its signature, `SHA256SUMS.txt.minisig`, made with the key of the project. NXPress checks it before it installs a new version by itself.
 
-On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have; once unpacked, `install.sh` puts NXPress in the menu of applications with its icon.
+On macOS the installer (`…-macos-apple-silicon.pkg` or `…-macos-intel.pkg`) puts NXPress in Applications, for you only without a password, with Uninstall NXPress beside it. The app is not notarized: the first time, open it with right click, Open (or allow it in System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have; once unpacked, `install.sh` puts NXPress in the menu of applications with its icon.
 
 For Windows there is also a portable download (`…-windows-x64-portable.zip`): a folder with the program and its `settings` folder, ready to unpack anywhere. Any copy becomes portable with a folder named `settings` next to the program: NXPress then keeps its settings, its window and the files already checked in it, and nothing in your user folders. With `prod.keys` next to the program as well, the whole folder can go on a USB stick.
 
