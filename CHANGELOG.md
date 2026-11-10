@@ -4,8 +4,8 @@
 
 ### Improvements
 
-- An installer for Windows (`nxpress-1.7.8-windows-x64-setup.exe`), now the recommended download. It speaks the 11 languages of NXPress, chosen on its first page, and shows a notice (free software, with no relation to Nintendo, for copies of your own games, without warranty) and the license. It installs NXPress in your user folder, without an administrator, or in a folder you choose, and adds, as you choose, the shortcuts of the Start menu and the desktop, opening Switch files with NXPress, the menu of the Explorer and “Send to”, as Settings do. NXPress is in Installed apps with its icon and version: its uninstaller takes away the program, its shortcuts and what it added to Windows, and asks whether to keep the settings. The installer of a newer version updates it in its folder without asking again. `nxpress.exe` and the portable zip are still there
-- An NXPress installed in Program Files installs a new version by itself too: Windows asks for an administrator, as the window of the update tells beforehand, and the program downloaded is checked again against its signed checksum before it takes the place of the old one. Before, it only offered to download it
+- An installer for Windows, now the recommended download, and one for macOS: in the 11 languages of NXPress, with the shortcuts and options of Settings, and an uninstaller. `nxpress.exe`, the portable zip and the archives of macOS are still there
+- An NXPress installed in Program Files updates itself too, after asking Windows for an administrator
 
 ## 1.7.7
 

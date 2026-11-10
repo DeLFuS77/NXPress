@@ -124,7 +124,9 @@ jobs:
               go run ./tools/installer -program out/nxpress.exe -version "${VERSION}" -out "dist/nxpress-${{ matrix.name }}-setup.exe" ;;
             macOS)
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
-              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app ;;
+              tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app
+              # the installer (a package for the Installer of macOS): tools/installer makes it
+              go run ./tools/installer -mac -app out/NXPress.app -arch "$(uname -m)" -version "${VERSION}" -out "dist/nxpress-${{ matrix.name }}.pkg" ;;
             *)
               # the program, its icon, its entry in the menu and install.sh, which puts them in place
               mkdir -p out/NXPress
@@ -167,6 +169,18 @@ jobs:
           Start-Process -FilePath "$folder\uninstall.exe" -ArgumentList "/S", "_?=$folder" -Wait
           if (Test-Path "$folder\nxpress.exe") { throw "not uninstalled" }
           if (Test-Path $key) { throw "still in Installed apps" }
+
+      # the package installs NXPress for the user, in ~/Applications without a password, and its
+      # uninstaller takes it away again
+      - name: Install on macOS
+        if: runner.os == 'macOS'
+        run: |
+          installer -pkg "dist/nxpress-${{ matrix.name }}.pkg" -target CurrentUserHomeDirectory
+          "$HOME/Applications/NXPress.app/Contents/MacOS/nxpress" --version
+          test -x "$HOME/Applications/Uninstall NXPress.app/Contents/MacOS/uninstall"
+          "$HOME/Applications/Uninstall NXPress.app/Contents/MacOS/uninstall" --yes --keep
+          test ! -e "$HOME/Applications/NXPress.app"
+          test ! -e "$HOME/Applications/Uninstall NXPress.app"
 
       # the window opens, and is still open after a while: a screenshot of it is kept
       - name: Open the window
@@ -262,8 +276,10 @@ jobs:
           | Windows, installer (recommended) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-setup.exe\` |
           | Windows, the program on its own | \`nxpress.exe\` |
           | Windows, portable (all in its folder, for a USB stick) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-portable.zip\` |
-          | macOS with Apple silicon (M1 or newer) | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
-          | macOS with Intel chip | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
+          | macOS with Apple silicon (M1 or newer), installer | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.pkg\` |
+          | macOS with Intel chip, installer | \`nxpress-${GITHUB_REF_NAME}-macos-intel.pkg\` |
+          | macOS with Apple silicon, the app | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
+          | macOS with Intel chip, the app | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
           | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |
 

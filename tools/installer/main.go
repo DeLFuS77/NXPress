@@ -1,11 +1,13 @@
-// Command installer makes the installer of NXPress for Windows with NSIS: it writes the texts of
-// build/windows/installer/texts.json as language strings of NSIS, and runs makensis on
-// build/windows/installer/nxpress.nsi with the program given.
+// Command installer makes the installers of NXPress, with the texts of
+// build/windows/installer/texts.json in its 11 languages. For Windows it writes them as language
+// strings of NSIS and runs makensis on build/windows/installer/nxpress.nsi with the program given;
+// for macOS it makes a package of the app (see mac.go).
 //
 //	go run ./tools/installer -program out/nxpress.exe -version 1.7.8 -out dist/nxpress-windows-x64-setup.exe
+//	go run ./tools/installer -mac -app out/NXPress.app -arch arm64 -version 1.7.8 -out dist/nxpress-macos-apple-silicon.pkg
 //
-// It runs from the root of the repository, on Windows with NSIS 3 installed (makensis in the path
-// or in its usual folder).
+// It runs from the root of the repository: on Windows with NSIS 3 installed (makensis in the
+// path or in its usual folder), on a Mac with its own pkgbuild and productbuild.
 package main
 
 import (
@@ -41,24 +43,52 @@ func main() {
 	program := flag.String("program", "", "the nxpress.exe to install")
 	version := flag.String("version", "dev", "the version of NXPress, as 1.7.8")
 	out := flag.String("out", "", "the installer to write")
+	mac := flag.Bool("mac", false, "make the package of macOS")
+	app := flag.String("app", "", "the NXPress.app to install (macOS)")
+	arch := flag.String("arch", "", "arm64 or x86_64 (macOS)")
 	flag.Parse()
-	if err := run(*program, *version, *out); err != nil {
+	var err error
+	if *mac {
+		var texts map[string]map[string]string
+		if texts, err = readTexts(); err == nil {
+			err = runMac(*app, *arch, *version, *out, texts)
+		}
+	} else {
+		err = runWindows(*program, *version, *out)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "installer:", err)
 		os.Exit(1)
 	}
 }
 
-func run(program, version, out string) error {
+// readTexts reads the texts of the installers, by language.
+func readTexts() (map[string]map[string]string, error) {
+	data, err := os.ReadFile(filepath.Join("build", "windows", "installer", "texts.json"))
+	if err != nil {
+		return nil, err
+	}
+	texts := map[string]map[string]string{}
+	if err := json.Unmarshal(data, &texts); err != nil {
+		return nil, err
+	}
+	for _, code := range languages {
+		for _, key := range append(append([]string{}, keys...), macKeys...) {
+			if texts[code][key] == "" {
+				return nil, fmt.Errorf("texts.json has no %s in %s", key, code)
+			}
+		}
+	}
+	return texts, nil
+}
+
+func runWindows(program, version, out string) error {
 	if program == "" || out == "" {
 		return errors.New("give -program and -out")
 	}
 	folder := filepath.Join("build", "windows", "installer")
-	data, err := os.ReadFile(filepath.Join(folder, "texts.json"))
+	texts, err := readTexts()
 	if err != nil {
-		return err
-	}
-	texts := map[string]map[string]string{}
-	if err := json.Unmarshal(data, &texts); err != nil {
 		return err
 	}
 	langs, err := languageFile(texts)
