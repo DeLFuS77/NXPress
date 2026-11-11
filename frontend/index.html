@@ -168,6 +168,12 @@
           <p class="hint always" data-for="recompress" data-t="extraRecompress"></p>
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
+        <!-- Optimize for install (experimental): each game with its update into one NSZ that takes
+             the least room installed; the files of its list are the games and their updates -->
+        <div class="extra-field" data-for="compress">
+          <label class="check"><input id="optimize" type="checkbox"><span data-t="optimize"></span></label>
+          <p class="hint" data-t="optimizeHint"></p>
+        </div>
         <p class="hint" data-t="xczBlock"></p>
       </div>
     </section>
@@ -427,6 +433,18 @@
     <li data-t="extraWarnFormat"></li>
   </ul>
   <div class="dialog-actions"><button id="extra-cancel" data-t="cancel"></button><button id="extra-on" class="primary" data-t="extraWarnOn"></button></div>
+</dialog>
+<dialog id="optimize-dialog" class="warn-dialog" aria-labelledby="optimize-title" aria-describedby="optimize-intro">
+  <h2 id="optimize-title"><svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 9.5v4.5M12 16.8v.2"/></svg><span data-t="optimizeWarnTitle"></span></h2>
+  <p id="optimize-intro" class="muted" data-t="optimizeWarnIntro"></p>
+  <ul class="warn-list">
+    <li data-t="optimizeWarnWhat"></li>
+    <li data-t="optimizeWarnInstall"></li>
+    <li data-t="optimizeWarnUpdates"></li>
+    <li data-t="optimizeWarnOriginals"></li>
+    <li data-t="optimizeWarnDlc"></li>
+  </ul>
+  <div class="dialog-actions"><button id="optimize-cancel" data-t="cancel"></button><button id="optimize-on" class="primary" data-t="optimizeWarnOn"></button></div>
 </dialog>
 <!-- a new version installed from NXPress (#91): what is new in it while it is downloaded and
      checked, its progress in the blue of work, what kept it from it in red, and at the end
