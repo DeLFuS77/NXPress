@@ -95,6 +95,9 @@ func RebuildNote(res optimize.RebuildResult) string {
 	if res.Renamed > 0 {
 		done = append(done, fmt.Sprintf("%d NCA named again by their hash", res.Renamed))
 	}
+	if res.Relinked > 0 {
+		done = append(done, fmt.Sprintf("%d contents its CNMT listed under an ID no NCA had paired with the NCA of their type", res.Relinked))
+	}
 	if res.Standard > 0 {
 		done = append(done, fmt.Sprintf("%d NCA moved to standard crypto (no ticket)", res.Standard))
 	}

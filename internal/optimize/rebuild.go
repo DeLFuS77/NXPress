@@ -177,6 +177,7 @@ func Rebuild(ctx context.Context, file string, target string, o Options) (res Re
 		}
 		changed[old] = c
 	}
+	res.Relinked = relink(g.metas, ncas, changed)
 	for j, m := range g.metas {
 		header, section, err := native.RebuiltMeta(m.nca.header, m.section, changedFor(m, changed))
 		if err != nil {
@@ -212,6 +213,54 @@ func Rebuild(ctx context.Context, file string, target string, o Options) (res Re
 	}
 	done = true
 	return res, nil
+}
+
+// the content type of an NCA (its header, 0x205) that each content type of a CNMT is
+var ncaTypeOf = map[uint8]byte{1: 0, 2: 4, 3: 2, 4: 3, 5: 3}
+
+// relink pairs each content a CNMT lists under an ID no NCA of the package has with the NCA of
+// its type no CNMT lists, when there is only one: a tool renamed the NCA, or wrote a CNMT that
+// does not match it, and installers such as Sphaira do not find it. It gives how many it paired.
+func relink(metas []*meta, ncas []*nca, changed map[[16]byte]native.Content) int {
+	oldID := func(n *nca) [16]byte {
+		var id [16]byte
+		hex.Decode(id[:], []byte(strings.TrimSuffix(strings.ToLower(n.name), ".nca")))
+		return id
+	}
+	listed := map[[16]byte]bool{}
+	for _, m := range metas {
+		for _, c := range m.contents {
+			var id [16]byte
+			hex.Decode(id[:], []byte(c.id))
+			listed[id] = true
+		}
+	}
+	paired := 0
+	for _, m := range metas {
+		for _, c := range m.contents {
+			var id [16]byte
+			hex.Decode(id[:], []byte(c.id))
+			want, known := ncaTypeOf[c.typ]
+			if _, ok := changed[id]; ok || !known {
+				continue
+			}
+			var found *nca
+			candidates := 0
+			for _, n := range ncas {
+				if !listed[oldID(n)] && n.contentType() == want {
+					found = n
+					candidates++
+				}
+			}
+			if candidates != 1 {
+				continue
+			}
+			changed[id] = changed[oldID(found)]
+			listed[oldID(found)] = true
+			paired++
+		}
+	}
+	return paired
 }
 
 // changedFor is the part of changed a title lists: its contents only.

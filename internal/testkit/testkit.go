@@ -254,8 +254,15 @@ func TitleNsp(t *testing.T, path string, titleID uint64, version uint32, metaTyp
 // NspWith writes an NSP of one title with the program NCA given, under its name.
 func NspWith(t *testing.T, path string, titleID uint64, version uint32, metaType byte, program []byte, programName string, extra map[string][]byte) string {
 	t.Helper()
+	return NspListing(t, path, titleID, version, metaType, program, programName, strings.TrimSuffix(programName, ".nca"), extra)
+}
+
+// NspListing is NspWith with its CNMT listing the program under the content ID listed, which
+// need not be its name: a CNMT that does not match the package, as a tool can leave it.
+func NspListing(t *testing.T, path string, titleID uint64, version uint32, metaType byte, program []byte, programName string, listed string, extra map[string][]byte) string {
+	t.Helper()
 	var id [16]byte
-	hex.Decode(id[:], []byte(strings.TrimSuffix(programName, ".nca")))
+	hex.Decode(id[:], []byte(listed))
 	// the header, one content and the digest at the end, as the CNMT of Nintendo
 	cnmt := make([]byte, 0x20+0x38+0x20)
 	binary.LittleEndian.PutUint64(cnmt[0:8], titleID)

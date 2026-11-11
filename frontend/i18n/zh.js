@@ -129,7 +129,7 @@ texts.zh = {
     datNoSize: "不在 DAT 中：没有这个大小的转储", datOther: "不在 DAT 中：有 $1 个同大小的转储，但哈希不同", datIn: "在 DAT 中：",
     worksSolid: "兼容：所有安装器（NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira）；模拟器需要先解压",
     worksBlocks: "兼容：除 Awoo 外的所有安装器；支持 NSZ 的模拟器可直接运行",
-    worksAll: "兼容：所有安装器和模拟器", unsignedNote: "没有 Nintendo 签名：$1 个 NCA 被工具改写过，因此需要 sigpatches，部分安装器可能不接受；重建（--rebuild）可将其变为干净的包",
+    worksAll: "兼容：所有安装器和模拟器", unsignedNote: "没有 Nintendo 签名：$1 个 NCA 被工具改写过，因此需要 sigpatches，部分安装器可能不接受；重建（--rebuild）可将其变为干净的包", missingContents: "其 CNMT 列出了 $1 个文件中没有的内容，因此 Sphaira 等安装器找不到它；重建（--rebuild）可以修正",
     paddingInfo: "填充：$1，精简可去除", deltasInfo: "增量片段：$1，精简可去除",
     paddingTaken: " 填充已去除", deltasTaken: " 增量片段已去除", deltasLeft: " 增量片段未包含",
     newerInPlace: "，用较新版本替换了 ", ncaRewritten: "$1 个 NCA 被工具改写过，数据已校验",

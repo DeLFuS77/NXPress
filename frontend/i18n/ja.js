@@ -129,7 +129,7 @@ texts.ja = {
     datNoSize: "DAT にありません：このサイズのダンプはありません", datOther: "DAT にありません：このサイズのダンプが $1 個ありますがハッシュが異なります", datIn: "DAT にあります: ",
     worksSolid: "対応：すべてのインストーラー（NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira）。エミュレーターでは展開が必要",
     worksBlocks: "対応：Awoo を除くすべてのインストーラー。NSZ を読めるエミュレーターはそのまま起動",
-    worksAll: "対応：すべてのインストーラーとエミュレーター", unsignedNote: "Nintendo の署名なし: NCA $1 個がツールで書き換えられているため sigpatches が必要で、受け付けないインストーラーもあります。再構築 (--rebuild) できれいなパッケージになります",
+    worksAll: "対応：すべてのインストーラーとエミュレーター", unsignedNote: "Nintendo の署名なし: NCA $1 個がツールで書き換えられているため sigpatches が必要で、受け付けないインストーラーもあります。再構築 (--rebuild) できれいなパッケージになります", missingContents: "CNMT にファイル内にないコンテンツが $1 個あるため、Sphaira などのインストーラーは見つけられません。再構築 (--rebuild) で直ります",
     paddingInfo: "パディング：$1（スリム化で削除）", deltasInfo: "デルタフラグメント：$1（スリム化で削除）",
     paddingTaken: " のパディングを削除", deltasTaken: " のデルタフラグメントを削除", deltasLeft: " のデルタフラグメントを除外",
     newerInPlace: "、新しいバージョンに置き換え: ", ncaRewritten: "ツールで書き換えられた NCA $1 個、データは検証済み",

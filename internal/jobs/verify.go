@@ -3,6 +3,8 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/DeLFuS77/NXPress/internal/cache"
@@ -31,7 +33,60 @@ func verify(ctx context.Context, path string, o Options, out Output) (string, st
 	if err == nil && unsigned != nil {
 		return "", "", modified(joinNotes(unsigned.Error(), note))
 	}
+	// a CNMT that lists a content the file does not hold: the data can be sound, and installers
+	// such as Sphaira still do not find it
+	if missing := UnlistedContents(path); len(missing) > 0 && (err == nil || IsModified(err)) {
+		before := note
+		if err != nil {
+			before = err.Error()
+		}
+		return "", "", modified(joinNotes(MissingContentsNote(missing), before))
+	}
 	return "", note, err
+}
+
+// UnlistedContents are the content IDs the CNMT of an NSP or NSZ lists that no file in it has as
+// its name (.nca or .ncz), delta fragments left aside; none for an XCI or a file not read.
+func UnlistedContents(path string) []string {
+	if extension := strings.ToLower(filepath.Ext(path)); extension != ".nsp" && extension != ".nsz" {
+		return nil
+	}
+	pfs0, err := switchfs.ReadPfs0File(path)
+	if err != nil {
+		return nil
+	}
+	titles, err := switchfs.ReadNspMetadata(path)
+	if err != nil {
+		return nil
+	}
+	names := map[string]bool{}
+	for _, file := range pfs0.Files {
+		name := strings.ToLower(file.Name)
+		for _, suffix := range []string{".cnmt.nca", ".cnmt.ncz", ".nca", ".ncz"} {
+			if strings.HasSuffix(name, suffix) {
+				names[strings.TrimSuffix(name, suffix)] = true
+				break
+			}
+		}
+	}
+	missing := []string{}
+	for _, title := range titles {
+		for kind, content := range title.Contents {
+			if kind == "DeltaFragment" || kind == "Meta" || content.ID == "" {
+				continue
+			}
+			if !names[strings.ToLower(content.ID)] {
+				missing = append(missing, strings.ToLower(content.ID))
+			}
+		}
+	}
+	sort.Strings(missing)
+	return missing
+}
+
+// MissingContentsNote tells the contents a CNMT lists that the file does not hold.
+func MissingContentsNote(missing []string) string {
+	return fmt.Sprintf("its CNMT lists %d content not in the file, so installers such as Sphaira do not find it; Rebuild (--rebuild) makes it right: %s", len(missing), strings.Join(missing, ", "))
 }
 
 // verifyData checks the data of a file by its hashes (and against the DAT given), or tells it
