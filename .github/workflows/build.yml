@@ -265,6 +265,7 @@ jobs:
       - name: Keep the provenance with the release
         run: cp "${{ steps.attest.outputs.bundle-path }}" "dist/nxpress-${GITHUB_REF_NAME}.intoto.jsonl"
 
+      # each paragraph on one line: GitHub shows every line break of the notes
       - name: Add how to download
         run: |
           cat >> release-notes.md <<EOF
@@ -283,16 +284,15 @@ jobs:
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
           | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |
 
-          The installer puts NXPress in your user folder (no administrator needed), with its shortcuts and the
-          options of its Settings, and adds it to Installed apps, where it is uninstalled.
-          Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`).
-          It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
-          On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in
-          System Settings, Privacy & Security). On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have;
-          unpack it and run \`install.sh\` to put NXPress in the menu of applications with its icon.
-          \`SHA256SUMS.txt\` has the checksums of the files, and
-          \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here.
-          \`SHA256SUMS.txt.minisig\` is their signature with the key of NXPress (minisign), which NXPress checks before it installs a new version.
+          The installer puts NXPress in your user folder (no administrator needed), with its shortcuts and the options of its Settings, and adds it to Installed apps, where it is uninstalled.
+
+          Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`). It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
+
+          On macOS the app is not notarized: the first time, open it with right click, Open (or allow it in System Settings, Privacy & Security).
+
+          On Linux it needs GTK 3 and WebKitGTK 4.1, which most desktops have; unpack it and run \`install.sh\` to put NXPress in the menu of applications with its icon.
+
+          \`SHA256SUMS.txt\` has the checksums of the files, and \`gh attestation verify <file> -R DeLFuS77/NXPress\` proves a file was built here. \`SHA256SUMS.txt.minisig\` is their signature with the key of NXPress (minisign), which NXPress checks before it installs a new version.
           EOF
 
       # a draft: nobody sees it, nor NXPress, until the maintainer signs and publishes it
