@@ -7,7 +7,8 @@ const groups = [
   ["groupOrganize", ["pack", "split", "fat32", "convert", "rename"]],
   ["groupCheck", ["verify", "info"]],
 ];
-// what each mode takes, to show it
+// what each mode takes, to show it; Compress with Optimize for install takes what --optimize takes
+const takesOptimize = "NSP NSZ XCI XCZ";
 const takesShown = {
   compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP :takesCode", convert: "XCI XCZ",
   split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
@@ -1393,7 +1394,7 @@ function render() {
   $("title-tile").innerHTML = icon(page);
   $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
-  for (const entry of takesShown[state.mode].split(" ")) {
+  for (const entry of (optimizing() ? takesOptimize : takesShown[state.mode]).split(" ")) {
     // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on; ":takesDumps"
     // alone: what it takes besides files
     const [type, which] = entry.split(":");
@@ -1567,7 +1568,7 @@ function setMode(mode) {
 // list: the folders, to watch them, and all of them to fill the list again in another section.
 // replace starts a new list; with sameOrigins it is the same list, for another section.
 async function refill(paths, replace, sameOrigins) {
-  const items = paths.length ? await app().Expand(paths, state.mode) : [];
+  const items = paths.length ? await app().Expand(paths, expandMode()) : [];
   if (replace && sameOrigins) clearRows();
   else if (replace) clearList();
   addOrigins(paths);
@@ -1997,8 +1998,15 @@ function settings() {
     lowPriority: $("low-priority").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
+    // Optimize for install, in Compress
+    optimize: $("optimize").checked,
   };
 }
+
+// Compress with Optimize for install on: the games with their updates, into one NSZ each
+const optimizing = () => state.mode === "compress" && $("optimize").checked;
+// the files the list takes: Optimize for install takes NSZ and XCZ too
+const expandMode = () => (optimizing() ? "optimize" : state.mode);
 
 // presets: the settings of a compression kept with a name
 const builtinPresets = () => [
@@ -2843,6 +2851,8 @@ async function main() {
   $("low-priority").checked = !!chosen.lowPriority;
   // experimental, and off unless it was turned on
   $("extra").checked = !!(chosen.sparse || chosen.archive);
+  // experimental too, and not with the extra compression
+  $("optimize").checked = !!chosen.optimize && !$("extra").checked;
   $("updates").checked = load("updates", true);
   $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
@@ -2883,7 +2893,7 @@ async function main() {
     // section takes: one in a subfolder would else stand for it
     const folder = await app().ChooseOutput();
     if (!folder) return;
-    const items = await app().Expand([folder], state.mode) || [];
+    const items = await app().Expand([folder], expandMode()) || [];
     addOrigins([folder]);
     for (const item of items) add(item);
     if (state.mode === "rename") previewNames();
@@ -2903,6 +2913,8 @@ async function main() {
   $("extra").onchange = () => {
     if (!$("extra").checked) return render();
     $("extra").checked = false;
+    // the extra compression makes files installers do not read, which Optimize for install is for
+    if ($("optimize").checked) setOptimize(false);
     save("settings", settings());
     $("extra-dialog").showModal();
     $("extra-cancel").focus();
@@ -2914,6 +2926,25 @@ async function main() {
     render();
   };
   $("extra-cancel").onclick = () => $("extra-dialog").close();
+  // Optimize for install tells first what it changes, as the extra compression; the list is made
+  // again for the files it takes (NSZ and XCZ too) when it is turned on or off
+  const setOptimize = on => {
+    $("optimize").checked = on;
+    if (on && $("extra").checked) $("extra").checked = false;
+    save("settings", settings());
+    refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
+  };
+  $("optimize").onchange = () => {
+    if (!$("optimize").checked) return setOptimize(false);
+    $("optimize").checked = false;
+    $("optimize-dialog").showModal();
+    $("optimize-cancel").focus();
+  };
+  $("optimize-on").onclick = () => {
+    $("optimize-dialog").close();
+    setOptimize(true);
+  };
+  $("optimize-cancel").onclick = () => $("optimize-dialog").close();
   $("clear").onclick = () => {
     if (state.busy) return;
     const items = state.items.slice(), sources = state.sources.slice(), removed = [...state.removed];

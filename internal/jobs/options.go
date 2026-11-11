@@ -48,6 +48,9 @@ type Options struct {
 	// --pack-one: the files given in one pack named by packName, next to the first file or in -o
 	PackOne  bool
 	PackName string
+	// --optimize (experimental): each game given with its newest update into one NSP that takes the
+	// least room installed (an NSZ with -C), see internal/optimize
+	Optimize bool
 	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
 	// a NUP, next to it or in -o
 	Nup bool
@@ -135,7 +138,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
+	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
 	{"--fix-nup-icon", 0, false, false}, {"--nup-icon", 0, true, false}, {"--no-nup-icon", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
@@ -335,6 +338,8 @@ func (o *Options) flag(option optionName) {
 		o.PackGames = true
 	case "--pack-one":
 		o.PackOne = true
+	case "--optimize":
+		o.Optimize = true
 	case "--nup":
 		o.Nup = true
 	case "--fix-nup-meta":
@@ -451,17 +456,25 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	for _, on := range []bool{o.Compress, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
+	// -C with --optimize makes its files NSZ: one action
+	for _, on := range []bool{o.Compress && !o.Optimize, o.Optimize, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --nup, --fix-nup-meta and --fix-nup-icon")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --optimize, --nup, --fix-nup-meta and --fix-nup-icon")
 	}
 	// a watch would look for new files a pack does not take, without end
-	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup) {
-		return errors.New("--watch does not go with --pack, --pack-one, --pack-games or --nup: a pack is made of the files given at once")
+	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup || o.Optimize) {
+		return errors.New("--watch does not go with --pack, --pack-one, --pack-games, --optimize or --nup: a pack is made of the files given at once")
+	}
+	// the originals are what a game is optimized again from, with a newer update
+	if o.Optimize && o.RmSource {
+		return errors.New("--rm-source does not go with --optimize: keep the game and its update, an optimized game is optimized again from them when a newer update comes")
+	}
+	if o.Optimize && (o.Sparse || o.Archive) {
+		return errors.New("--extra does not go with --optimize: installers read an optimized NSZ as it is")
 	}
 	if o.Dat != "" && actions > 0 {
 		return errors.New("--dat goes with -V: it tells whether the files checked are dumps a DAT lists")
@@ -486,8 +499,8 @@ func (o *Options) Check() error {
 	if o.KeepNamed && o.Template == "" {
 		o.Notes = append(o.Notes, "--keep-named has no effect without --rename")
 	}
-	if o.PackName != "" && !o.PackGames && !o.PackOne {
-		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games or --pack-one")
+	if o.PackName != "" && !o.PackGames && !o.PackOne && !o.Optimize {
+		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games, --pack-one or --optimize")
 	}
 	if o.RmDumps && !o.RmSource {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
@@ -504,7 +517,7 @@ func (o *Options) Check() error {
 	if o.NupIcon != "" && o.NoNupIcon {
 		return errors.New("--nup-icon and --no-nup-icon cannot be used together")
 	}
-	if (o.Sparse || o.Archive) && !o.Compress && !o.Recompress && !o.Estimate {
+	if (o.Sparse || o.Archive) && !o.Optimize && !o.Compress && !o.Recompress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C or --recompress")
 	}
 	// these write no file
@@ -659,6 +672,18 @@ Usage: nxpress [options] file or folder...
                       of --rename
                       (default "{name} [{id}][v{version}] ({contents})")
 
+  --optimize          experimental, Optimize for install: each game given with its newest
+                      update into one NSP that takes the least room once installed, next to
+                      its files or in -o (an NSZ with -C): one Application of the version of
+                      the update, its program merged with the update and its RomFS packed with
+                      the LZ4 of the NCA (LZ4 HC level 9, what is held twice stored once, of
+                      each block the smaller), checked whole before it gets its name. Install
+                      it with NXDock or DBI, with sigpatches (firmware 12.0.0 or newer). Do
+                      not install official updates over it: keep the game and its update, and
+                      optimize them again with the newer update. DLC are left as they are.
+                      Named by --pack-name (default "{name} [{id}][v{version}] (optimized)").
+                      docs/optimize-install.md tells the format
+
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted
 and have no effect.
@@ -666,6 +691,8 @@ and have no effect.
 
 func (o Options) Action() string {
 	switch {
+	case o.Optimize:
+		return "optimize"
 	case o.Compress:
 		return "compress"
 	case o.Decompress:

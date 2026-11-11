@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.9
+
+### Improvements
+
+- **Optimize for install** (experimental): a game and its update become one game of the version of the update, its data compressed with the LZ4 the system reads and what is held twice stored once. Installed, it takes from a few percent to more than 80% less room than the game and its update apart
+  - In the window: Compress › **Optimize for install**, next to Extra compression. Add the game and its update (NSP, NSZ, XCI or XCZ); an NSZ comes out next to the game, which installs as that same game
+  - On the command line: `nxpress --optimize GAME UPDATE` writes an NSP; with `-C`, an NSZ
+  - Each file is checked whole before it gets its name: the hashes of every section, and its RomFS, which must be the one of the game with its update
+  - It installs with NXDock or DBI, with sigpatches and firmware 12.0.0 or newer. Tested with DBI
+  - Official updates do not go over it: when a newer one comes, optimize the original game again with it. The originals are never deleted
+  - DLC are left as they are. How it is made: docs/optimize-install.md
+
 ## 1.7.8
 
 ### Improvements
