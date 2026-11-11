@@ -6,6 +6,7 @@
 #include "merge_meta.hpp"
 #include "patch_view.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -24,6 +25,86 @@ void SetError(char* err, size_t errlen, const std::string& what) {
 
 void Sha256(const uint8_t* data, size_t size, uint8_t out[32]) {
     nxoGoSha256(const_cast<uint8_t*>(data), size, out);
+}
+
+void Put32(uint8_t* p, uint32_t v) { std::memcpy(p, &v, 4); }
+void Put64(uint8_t* p, uint64_t v) { std::memcpy(p, &v, 8); }
+uint64_t Align(uint64_t v, uint64_t a) { return (v + a - 1) / a * a; }
+
+// The name Nintendo gives the .cnmt of a title of type `type`.
+const char* CnmtName(uint8_t type) {
+    switch (type) {
+    case 0x01: return "SystemProgram";
+    case 0x02: return "SystemData";
+    case 0x03: return "SystemUpdate";
+    case 0x81: return "Patch";
+    case 0x82: return "AddOnContent";
+    case 0x83: return "Delta";
+    case 0x84: return "DataPatch";
+    default: return "Application";
+    }
+}
+
+// A meta NCA for `c` as Nintendo makes it, from the decrypted header of the meta NCA it had (as
+// mergemeta::MetaNca, for a title of any type): content type Meta, downloaded, one section from
+// 0xC00 with a PFS0 holding the .cnmt, hashed in blocks (HierarchicalSha256).
+bool RebuiltMetaNca(const uint8_t* model, const mergemeta::Cnmt& c, std::vector<uint8_t>& header, std::vector<uint8_t>& section,
+                    std::string& error) {
+    if (std::memcmp(model + 0x200, "NCA3", 4) != 0) {
+        error = "the meta NCA is not an NCA3";
+        return false;
+    }
+    uint32_t block = 0;
+    std::memcpy(&block, model + 0x400 + 0x28, 4);
+    if (model[0x403] != 2 || block < 0x200 || block > 0x100000) block = 0x1000;
+    char name[64];
+    std::snprintf(name, sizeof(name), "%s_%016llx.cnmt", CnmtName(c.type), (unsigned long long)c.title_id);
+    const std::vector<uint8_t> cnmt = mergemeta::WriteCnmt(c);
+    const size_t name_len = std::strlen(name) + 1;
+    const size_t strings = size_t(Align(0x10 + 0x18 + name_len, 0x20) - (0x10 + 0x18));
+    std::vector<uint8_t> pfs(0x10 + 0x18 + strings, 0);
+    std::memcpy(pfs.data(), "PFS0", 4);
+    Put32(pfs.data() + 4, 1);
+    Put32(pfs.data() + 8, uint32_t(strings));
+    Put64(pfs.data() + 0x10, 0);
+    Put64(pfs.data() + 0x18, cnmt.size());
+    Put32(pfs.data() + 0x20, 0);
+    std::memcpy(pfs.data() + 0x28, name, name_len);
+    pfs.insert(pfs.end(), cnmt.begin(), cnmt.end());
+    const uint64_t blocks = (pfs.size() + block - 1) / block;
+    const uint64_t hash_size = blocks * 32, pfs_at = Align(hash_size, 0x200);
+    section.assign(size_t(Align(pfs_at + pfs.size(), 0x200)), 0);
+    std::memcpy(section.data() + pfs_at, pfs.data(), pfs.size());
+    for (uint64_t b = 0; b < blocks; b++) {
+        const uint64_t from = b * block, n = std::min<uint64_t>(block, pfs.size() - from);
+        Sha256(pfs.data() + from, size_t(n), section.data() + b * 32);
+    }
+    header.assign(model, model + 0xC00);
+    header[0x204] = 0; // downloaded
+    header[0x205] = 1; // meta
+    uint8_t* fsh = header.data() + 0x400;
+    // a PFS0 hashed in blocks; the crypto (and its counter) of the FS header it had
+    fsh[2] = 1;
+    fsh[3] = 2;
+    std::memset(fsh + 8, 0, 0xF8);
+    Sha256(section.data(), size_t(hash_size), fsh + 8); // the master hash
+    Put32(fsh + 0x28, block);
+    Put32(fsh + 0x2C, 2);
+    Put64(fsh + 0x30, 0);
+    Put64(fsh + 0x38, hash_size);
+    Put64(fsh + 0x40, pfs_at);
+    Put64(fsh + 0x48, pfs.size());
+    for (int i = 1; i < 4; i++) {
+        std::memset(header.data() + 0x240 + i * 0x10, 0, 0x10);
+        std::memset(header.data() + 0x280 + i * 0x20, 0, 0x20);
+        std::memset(header.data() + 0x400 + i * 0x200, 0, 0x200);
+    }
+    std::memset(header.data() + 0x240, 0, 0x10);
+    Put32(header.data() + 0x240, 0xC00 / 0x200);
+    Put32(header.data() + 0x244, uint32_t((0xC00 + section.size()) / 0x200));
+    Put64(header.data() + 0x208, 0xC00 + section.size());
+    Sha256(fsh, 0x200, header.data() + 0x280);
+    return true;
 }
 
 void Ctr(const uint8_t key[16], const uint8_t ctr[16], uint8_t* data, size_t size) {
@@ -281,5 +362,55 @@ int nxo_read_cnmt(const uint8_t* header, const uint8_t* section, size_t len, uin
 }
 
 void nxo_free(void* p) { std::free(p); }
+
+int nxo_rebuilt_meta(const uint8_t* header, const uint8_t* section, size_t len, const uint8_t* old_ids, const nxo_content* changed,
+                     size_t count, uint8_t* out_header, uint8_t** out_section, size_t* out_len, char* err, size_t errlen) {
+    try {
+        std::string error;
+        mergemeta::Cnmt c;
+        if (!ReadCnmt(header, section, len, c, error)) {
+            SetError(err, errlen, error);
+            return 0;
+        }
+        // the delta fragments go: an installed game never uses them
+        std::vector<mergemeta::Content> kept;
+        for (const auto& content : c.contents) {
+            if (content.type != mergemeta::kContentDeltaFragment) kept.push_back(content);
+        }
+        c.contents = kept;
+        for (auto& content : c.contents) {
+            bool found = false;
+            for (size_t i = 0; i < count; i++) {
+                if (std::memcmp(content.id.data(), old_ids + i * 16, 16) != 0) continue;
+                std::memcpy(content.id.data(), changed[i].id, 16);
+                std::memcpy(content.hash.data(), changed[i].hash, 32);
+                content.size = changed[i].size;
+                found = true;
+                break;
+            }
+            if (!found) {
+                SetError(err, errlen, "a content its CNMT lists is not in the package");
+                return 0;
+            }
+        }
+        std::vector<uint8_t> h, s;
+        if (!RebuiltMetaNca(header, c, h, s, error) || h.size() != 0xC00) {
+            SetError(err, errlen, error.empty() ? "the meta NCA not made" : error);
+            return 0;
+        }
+        std::memcpy(out_header, h.data(), 0xC00);
+        *out_section = static_cast<uint8_t*>(std::malloc(s.size() ? s.size() : 1));
+        if (!*out_section) {
+            SetError(err, errlen, "out of memory");
+            return 0;
+        }
+        std::memcpy(*out_section, s.data(), s.size());
+        *out_len = s.size();
+        return 1;
+    } catch (const std::exception& e) {
+        SetError(err, errlen, e.what());
+        return 0;
+    }
+}
 
 } // extern "C"

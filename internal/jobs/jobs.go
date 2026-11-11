@@ -49,6 +49,8 @@ var Takes = map[string][]string{
 	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
 	// Optimize for install: a game with its update, by game
 	"optimize": {".nsp", ".nsz", ".xci", ".xcz"},
+	// Rebuild: any package, on its own
+	"rebuild": {".nsp", ".nsz", ".xci", ".xcz"},
 }
 
 // checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA
@@ -71,6 +73,7 @@ var checksOutput = map[string]bool{
 	"verify":     false,
 	"nup":        true,
 	"optimize":   true,
+	"rebuild":    true,
 }
 
 // RunJobs does the action on every file, several at once with -m, and gives how many failed.
@@ -546,6 +549,8 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		return recompress(ctx, path, o, threads, out)
 	case "trim":
 		return trim(ctx, path, o, out)
+	case "rebuild":
+		return rebuild(ctx, path, o, out)
 	case "estimate":
 		return estimate(ctx, path, o, threads, out)
 	case "fat32":

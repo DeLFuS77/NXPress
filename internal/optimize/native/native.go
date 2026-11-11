@@ -301,6 +301,49 @@ func ReadCnmt(header []byte, section []byte) (Cnmt, error) {
 	return out, nil
 }
 
+// RebuiltMeta makes the meta NCA of a title again with its contents changed: each content whose
+// ID is a key of changed takes its new ID, hash and size. It gives the header (decrypted) and the
+// section (not encrypted yet) of the new meta NCA.
+func RebuiltMeta(header []byte, section []byte, changed map[[16]byte]Content) ([]byte, []byte, error) {
+	if len(header) < 0xC00 || len(section) == 0 {
+		return nil, nil, errors.New("not a meta NCA")
+	}
+	h, s := C.CBytes(header[:0xC00]), C.CBytes(section)
+	defer C.free(h)
+	defer C.free(s)
+	n := len(changed)
+	old := C.malloc(C.size_t(16*n + 1))
+	defer C.free(old)
+	list := (*C.nxo_content)(C.calloc(C.size_t(n+1), C.size_t(unsafe.Sizeof(C.nxo_content{}))))
+	defer C.free(unsafe.Pointer(list))
+	olds := unsafe.Slice((*byte)(old), 16*n+1)
+	items := unsafe.Slice(list, n+1)
+	i := 0
+	for id, c := range changed {
+		copy(olds[16*i:], id[:])
+		for j := range c.ID {
+			items[i].id[j] = C.uint8_t(c.ID[j])
+		}
+		for j := range c.Hash {
+			items[i].hash[j] = C.uint8_t(c.Hash[j])
+		}
+		items[i].size = C.uint64_t(c.Size)
+		i++
+	}
+	out := make([]byte, 0xC00)
+	var (
+		sec    *C.uint8_t
+		secLen C.size_t
+	)
+	cerr := make([]byte, errLen)
+	if C.nxo_rebuilt_meta((*C.uint8_t)(h), (*C.uint8_t)(s), C.size_t(len(section)), (*C.uint8_t)(old), list, C.size_t(n),
+		(*C.uint8_t)(unsafe.Pointer(&out[0])), &sec, &secLen, (*C.char)(unsafe.Pointer(&cerr[0])), errLen) == 0 {
+		return nil, nil, (&Job{}).err(cerr)
+	}
+	defer C.nxo_free(unsafe.Pointer(sec))
+	return out, C.GoBytes(unsafe.Pointer(sec), C.int(secLen)), nil
+}
+
 // MergedMeta is the meta NCA of a merged game.
 type MergedMeta struct {
 	Header      []byte // decrypted, 0xC00

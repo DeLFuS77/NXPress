@@ -284,10 +284,11 @@ function renderCard(row) {
   const whole = Math.max(card.decompressed || card.size, card.size);
   const share = whole ? card.size / whole : 1;
   const compressed = card.solid + card.blocks > 0;
-  const works = card.format ? { NXPress: 1, DBI: 0, Tinfoil: 0, Awoo: 0, CyberFoil: 0, Sphaira: 0, emulators: 0 }
-    : card.solid > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 0 }
-    : card.blocks > 0 ? { DBI: 1, Tinfoil: 1, Awoo: 0, CyberFoil: 1, Sphaira: 1, emulators: 1 }
-    : { DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 1 };
+  // NXDock installs every one, the extra compression of NXPress too (NCZSECT2 and NCZSECT3)
+  const works = card.format ? { NXPress: 1, NXDock: 1, DBI: 0, Tinfoil: 0, Awoo: 0, CyberFoil: 0, Sphaira: 0, emulators: 0 }
+    : card.solid > 0 ? { NXDock: 1, DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 0 }
+    : card.blocks > 0 ? { NXDock: 1, DBI: 1, Tinfoil: 1, Awoo: 0, CyberFoil: 1, Sphaira: 1, emulators: 1 }
+    : { NXDock: 1, DBI: 1, Tinfoil: 1, Awoo: 1, CyberFoil: 1, Sphaira: 1, emulators: 1 };
   element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><div class="tags"></div>`;
   element.querySelector(".kind").textContent = card.kind;
   element.querySelector(".card-bar div").style.width = (share * 100).toFixed(1) + "%";
@@ -297,6 +298,13 @@ function renderCard(row) {
     tag.className = yes ? "yes" : "no";
     tag.textContent = name === "emulators" ? t("tagEmulators") : name;
     element.querySelector(".tags").append(tag);
+  }
+  // NCA rewritten by a tool: it needs sigpatches, and some installers may not take it
+  if (card.unsignedNote) {
+    const warning = document.createElement("p");
+    warning.className = "warning";
+    warning.textContent = noteText(card.unsignedNote).replace(/^./, (c) => c.toUpperCase()).replace("--rebuild", "‑‑rebuild");
+    element.append(warning);
   }
   row.tr.querySelector(".note").after(element);
 }

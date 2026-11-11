@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- `--rebuild` writes a package again as a clean NSP (an NSZ with `-C`): its NCA headers made right, standard crypto with no ticket, a new CNMT and a new PFS0, its data as it is. For a package another tool left that some installers do not take; it needs sigpatches. What it makes right: docs/rebuild.md. Thanks to lightwo (GBAtemp) for the idea and the testing
+- Details and `-i` tell when the NCA of a file are not signed by Nintendo: it needs sigpatches, and some installers may not take it
+- NXDock is now among the installers Details and `-i` list, also for the extra compression
+
 ## 1.7.9
 
 ### Improvements
