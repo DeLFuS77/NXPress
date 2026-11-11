@@ -47,6 +47,8 @@ var Takes = map[string][]string{
 	"nup": {dumpFolders},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
 	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
+	// Optimize for install: a game with its update, by game
+	"optimize": {".nsp", ".nsz", ".xci", ".xcz"},
 }
 
 // checksOutput tells, by action, whether the new file it gives is checked as a game (every NCA
@@ -68,6 +70,7 @@ var checksOutput = map[string]bool{
 	"info":       false,
 	"verify":     false,
 	"nup":        true,
+	"optimize":   true,
 }
 
 // RunJobs does the action on every file, several at once with -m, and gives how many failed.
@@ -94,6 +97,9 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 				return failedDumps
 			}
 		}
+	}
+	if action == "optimize" {
+		return OptimizeGames(ctx, o, out)
 	}
 	if action == "pack" && o.PackGames {
 		return failedDumps + PackGames(ctx, o, out)

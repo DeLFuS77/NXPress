@@ -696,6 +696,8 @@ type Request struct {
 	LowPriority  bool     `json:"lowPriority"`
 	Sparse       bool     `json:"sparse"`
 	Archive      bool     `json:"archive"`
+	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
+	Optimize bool `json:"optimize"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
 }
@@ -721,6 +723,12 @@ func (a *App) Start(request Request) error {
 	switch request.Mode {
 	case "compress":
 		o.Compress = true
+		// the originals are what an optimized game is made again from, the extra compression
+		// makes files installers do not read, and a game is optimized of the files given at once:
+		// none of them goes with it
+		if request.Optimize {
+			o.Optimize, o.Sparse, o.Archive, o.RmSource, o.Watch = true, false, false, false, false
+		}
 	case "decompress":
 		o.Decompress = true
 	case "convert":

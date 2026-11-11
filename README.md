@@ -83,6 +83,10 @@ Every new file is written under a hidden name, saved to the disk, checked, and o
 
 Each file gets what it needs, and one that needs neither stays a plain NSZ that every installer reads. Installers do not read the two extensions yet: decompress such a file with NXPress before installing it. `--sparse` and `--archive` turn on one half each.
 
+## Optimize for install (experimental)
+
+`--optimize`, or "Optimize for install" in Compress, makes each game and its update one NSP (an NSZ with `-C`) that takes the least room once installed: one game of the version of the update, its data compressed with the LZ4 the system reads. Install it with DBI, with sigpatches, and do not install official updates over it: optimize the original game again with the newer update. [docs/optimize-install.md](docs/optimize-install.md) tells how it is made and checked.
+
 ## Command line
 
 ```
@@ -96,6 +100,7 @@ nxpress --split super.nsp           split a multi-title file into one file per t
 nxpress --pack super.nsp a.nsp b.nsp  merge into one SuperNSP (with an XCI among them: an XCI with everything)
 nxpress --pack-one a.nsp b.nsp      the same, next to the files and named by --pack-name
 nxpress --pack-games games         a SuperNSP per game of a folder, named by --pack-name
+nxpress --optimize -C game update   the game and its update as one NSZ that takes the least room installed
 nxpress --convert game.xci          turn an XCI into an NSP
 nxpress --recompress -B game.nsz    write an NSZ again in blocks (or -S, solid), no NSP in between
 nxpress --trim game.xci update.nsp  take away the padding of an XCI and the delta fragments of an update

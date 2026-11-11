@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Optimize for install (experimental, `--optimize`, and a box in Compress): a game and its update become one NSP or NSZ that takes much less room once installed. It needs sigpatches; official updates do not go over it (see docs/optimize-install.md)
+
 ## 1.7.8
 
 ### Improvements

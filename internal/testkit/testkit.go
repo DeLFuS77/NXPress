@@ -256,7 +256,8 @@ func NspWith(t *testing.T, path string, titleID uint64, version uint32, metaType
 	t.Helper()
 	var id [16]byte
 	hex.Decode(id[:], []byte(strings.TrimSuffix(programName, ".nca")))
-	cnmt := make([]byte, 0x20+0x38)
+	// the header, one content and the digest at the end, as the CNMT of Nintendo
+	cnmt := make([]byte, 0x20+0x38+0x20)
 	binary.LittleEndian.PutUint64(cnmt[0:8], titleID)
 	binary.LittleEndian.PutUint32(cnmt[8:12], version)
 	cnmt[0xC] = metaType
