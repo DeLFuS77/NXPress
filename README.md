@@ -85,7 +85,7 @@ Each file gets what it needs, and one that needs neither stays a plain NSZ that 
 
 ## Optimize for install (experimental)
 
-`--optimize`, or "Optimize for install" in Compress, makes each game and its update one NSP (an NSZ with `-C`) that takes the least room once installed: one game of the version of the update, its data compressed with the LZ4 the system reads. Install it with DBI, with sigpatches, and do not install official updates over it: optimize the original game again with the newer update. [docs/optimize-install.md](docs/optimize-install.md) tells how it is made and checked.
+`--optimize`, or "Optimize for install" in Compress, makes each game and its update one NSP (an NSZ with `-C`, and always in the window) that takes the least room once installed: one game of the version of the update, its data compressed with the LZ4 the system reads. An NSZ installs as that same game. Install it with NXDock or DBI, with sigpatches, and do not install official updates over it: optimize the original game again with the newer update. [docs/optimize-install.md](docs/optimize-install.md) tells how it is made and checked.
 
 ## Command line
 

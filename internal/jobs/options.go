@@ -678,7 +678,7 @@ Usage: nxpress [options] file or folder...
                       the update, its program merged with the update and its RomFS packed with
                       the LZ4 of the NCA (LZ4 HC level 9, what is held twice stored once, of
                       each block the smaller), checked whole before it gets its name. Install
-                      it with DBI on a console with sigpatches (firmware 12.0.0 or newer). Do
+                      it with NXDock or DBI, with sigpatches (firmware 12.0.0 or newer). Do
                       not install official updates over it: keep the game and its update, and
                       optimize them again with the newer update. DLC are left as they are.
                       Named by --pack-name (default "{name} [{id}][v{version}] (optimized)").

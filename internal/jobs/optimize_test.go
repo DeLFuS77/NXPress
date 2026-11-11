@@ -41,7 +41,7 @@ func TestOptimizeOptions(t *testing.T) {
 	if o.Check(); len(o.Notes) != 0 || optimizeTemplate(o) != "{name}" {
 		t.Errorf("--pack-name with --optimize: %v, %q", o.Notes, optimizeTemplate(o))
 	}
-	if !strings.Contains(Usage, "--optimize") || !strings.Contains(Usage, "sigpatches") || !strings.Contains(Usage, "official updates") {
+	if !strings.Contains(Usage, "--optimize") || !strings.Contains(Usage, "sigpatches") || !strings.Contains(Usage, "NXDock or DBI") || !strings.Contains(Usage, "official updates") {
 		t.Error("the help does not tell --optimize, the sigpatches and the official updates")
 	}
 }

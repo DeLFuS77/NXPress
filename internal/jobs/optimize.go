@@ -212,7 +212,7 @@ func optimizeGame(ctx context.Context, o Options, files []string, next string, o
 	if err := finish(o, written, name); err != nil {
 		return "", "", err
 	}
-	note := fmt.Sprintf("experimental: v%d, one Application; installed, the game and its update take %s, now %s (%s smaller); install it with DBI, with sigpatches, and do not install official updates over it",
+	note := fmt.Sprintf("experimental: v%d, one Application; installed, the game and its update take %s, now %s (%s smaller); install it with NXDock or DBI, with sigpatches, and do not install official updates over it",
 		res.Version, size(res.InputSize), size(res.OutputSize), percent(res.InputSize-res.OutputSize, res.InputSize))
 	if o.Compress {
 		note += fmt.Sprintf("; the NSZ is %s", size(packed))

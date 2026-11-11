@@ -3,7 +3,7 @@
 *Optimize for install* turns a game and its update into one NSP that takes the least room once it
 is installed. It is experimental: the NSP it writes is a game laid out in a way Nintendo never
 ships, so it needs **sigpatches** and **firmware 12.0.0 or newer**, and it is installed with
-**DBI**. **Do not install official updates over it**: keep the game and its update, and optimize
+**NXDock or DBI**. **Do not install official updates over it**: keep the game and its update, and optimize
 them again from those originals when a newer update comes.
 
 ```
@@ -12,7 +12,9 @@ nxpress --optimize -C -o OUT FOLDER         # an NSZ per game (zstd over the NSP
 ```
 
 In the window it is the box **Optimize for install** of Compress, next to Extra compression: with it
-on, the list takes NSP, NSZ, XCI and XCZ files, and each game with its update becomes one NSZ.
+on, the list takes NSP, NSZ, XCI and XCZ files, and each game with its update becomes one NSZ: the
+optimized NSP, checked, with zstd over it. Installing the NSZ decompresses it into that same game,
+which takes the same room as the NSP once installed.
 
 ## What it writes
 
