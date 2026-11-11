@@ -154,15 +154,18 @@ func describe(path string) []string {
 	}
 	switch {
 	case facts.Archive > 0:
-		lines = append(lines, "works with: NXPress only, experimental archive format NCZSECT3: decompress it with NXPress to install it")
+		lines = append(lines, "works with: NXPress and NXDock only, experimental archive format NCZSECT3: decompress it with NXPress to install it with another installer")
 	case facts.Sparse > 0:
-		lines = append(lines, "works with: NXPress only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it")
+		lines = append(lines, "works with: NXPress and NXDock only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it with another installer")
 	case facts.Solid > 0:
-		lines = append(lines, "works with: every installer (DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators need it decompressed")
+		lines = append(lines, "works with: every installer (NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators need it decompressed")
 	case facts.Blocks > 0:
 		lines = append(lines, "works with: every installer but Awoo; emulators that read NSZ run it as it is")
 	default:
 		lines = append(lines, "works with: every installer and emulator")
+	}
+	if unsigned := UnsignedNcas(path); unsigned > 0 {
+		lines = append(lines, UnsignedNote(unsigned))
 	}
 	if facts.Padding > 0 {
 		lines = append(lines, fmt.Sprintf("padding: %s that trimming takes away", size(facts.Padding)))
@@ -171,4 +174,20 @@ func describe(path string) []string {
 		lines = append(lines, fmt.Sprintf("delta fragments: %s that trimming takes away", size(facts.DeltaFragments)))
 	}
 	return lines
+}
+
+// UnsignedNcas tells how many NCA files of a file are not signed by Nintendo (rewritten by a
+// tool), 0 when all of them are or the keys cannot tell.
+func UnsignedNcas(path string) int {
+	check, err := switchfs.CheckSignatures(path)
+	if err != nil {
+		return 0
+	}
+	return len(check.Unsigned)
+}
+
+// UnsignedNote is what a file with NCA files not signed by Nintendo needs: sigpatches, and an
+// installer that takes it; Rebuild makes such a package clean.
+func UnsignedNote(unsigned int) string {
+	return fmt.Sprintf("not signed by Nintendo: %d NCA rewritten by a tool, so it needs sigpatches, and some installers may not take it; Rebuild (--rebuild) makes it a clean package", unsigned)
 }

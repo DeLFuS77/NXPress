@@ -16,6 +16,16 @@ on, the list takes NSP, NSZ, XCI and XCZ files, and each game with its update be
 optimized NSP, checked, with zstd over it. Installing the NSZ decompresses it into that same game,
 which takes the same room as the NSP once installed.
 
+## What you lose with it
+
+- **Official updates.** They cannot be installed over it, not even from the eShop. To move to a newer version, optimize the original game again with the new update, so keep the original game and its update.
+- **The signature of Nintendo.** The program and the metadata are made again, so sigpatches and firmware 12.0.0 or newer are needed. DBI marks them as Fake when it installs them.
+- **Going back to version 1.0 just like that.** The optimized game is already at the version of the update; to go back, install the original again.
+- **Time and room on the computer.** Optimizing takes from seconds to about a minute per game in the tests. While it works it needs room for the new file and, for an NSZ or XCZ, for the decompressed NSP too.
+- **DLC save nothing.** They stay as they are.
+
+What you do not lose: the saves, the DLC installed and the game itself. What the game reads is the same as with its update, byte for byte, and that is checked before the file gets its name.
+
 ## What it writes
 
 The files given are grouped by game, as `--pack-games` groups them (a SuperNSP, an XCI or an XCZ

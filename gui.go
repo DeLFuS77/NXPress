@@ -476,6 +476,9 @@ type FileCard struct {
 	NoIcon bool   `json:"noIcon,omitempty"`
 	// it carries the icons of its game itself, which are kept: no other is given it (#103)
 	GameIcons bool `json:"gameIcons,omitempty"`
+	// its NCA files not signed by Nintendo (rewritten by a tool), told with what that needs
+	Unsigned     int    `json:"unsigned,omitempty"`
+	UnsignedNote string `json:"unsignedNote,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
@@ -497,7 +500,11 @@ func (a *App) Card(path string) (FileCard, error) {
 	if err != nil {
 		return FileCard{}, err
 	}
-	return FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments, Format: jobs.FormatOf(facts)}, nil
+	card := FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments, Format: jobs.FormatOf(facts)}
+	if card.Unsigned = jobs.UnsignedNcas(path); card.Unsigned > 0 {
+		card.UnsignedNote = jobs.UnsignedNote(card.Unsigned)
+	}
+	return card, nil
 }
 
 // FixNupMeta writes again the metadata of a NUP counted from 0, from the button of its card in

@@ -234,3 +234,14 @@ func (n *nca) readSection(i int) ([]byte, error) {
 	}
 	return data, nil
 }
+
+func ecbEncrypt(key []byte, data []byte) error {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return err
+	}
+	for i := 0; i+16 <= len(data); i += 16 {
+		block.Encrypt(data[i:i+16], data[i:i+16])
+	}
+	return nil
+}

@@ -76,6 +76,14 @@ int nxo_merged_meta(uintptr_t handle, const uint8_t* base_header, const uint8_t*
                     uint64_t* title_id, uint32_t* version, uint32_t* base_version, char* err, size_t errlen);
 void nxo_free(void* p);
 
+// The meta NCA of a title made again with its contents changed (Rebuild): its delta fragments
+// left out, and each content whose ID is in old_ids (16 bytes each) takes the ID, hash and size of
+// the same place of changed; any other content is an error. Its header (decrypted, 0xC00 bytes into out_header) and section (not
+// encrypted yet, to be freed with nxo_free), from the meta NCA it had (header and section
+// decrypted).
+int nxo_rebuilt_meta(const uint8_t* header, const uint8_t* section, size_t len, const uint8_t* old_ids, const nxo_content* changed,
+                     size_t count, uint8_t* out_header, uint8_t** out_section, size_t* out_len, char* err, size_t errlen);
+
 // The CNMT of a meta section: its title ID, type and version, and its contents (nxo_free).
 int nxo_read_cnmt(const uint8_t* header, const uint8_t* section, size_t len, uint64_t* title_id, uint8_t* type,
                   uint32_t* version, nxo_content** contents, size_t* count, char* err, size_t errlen);

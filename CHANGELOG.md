@@ -1,16 +1,34 @@
 # Changelog
 
+## 1.7.10
+
+### Improvements
+
+- `--rebuild` writes a package again as a clean NSP (an NSZ with `-C`): its NCA headers made right, standard crypto with no ticket, a new CNMT and a new PFS0, its data as it is. For a package another tool left that some installers do not take; it needs sigpatches. What it makes right: docs/rebuild.md. Thanks to lightwo (GBAtemp) for the idea and the testing
+- Details and `-i` tell when the NCA of a file are not signed by Nintendo: it needs sigpatches, and some installers may not take it
+- NXDock is now among the installers Details and `-i` list, also for the extra compression
+
 ## 1.7.9
 
 ### Improvements
 
-- **Optimize for install** (experimental): a game and its update become one game of the version of the update, its data compressed with the LZ4 the system reads and what is held twice stored once. Installed, it takes from a few percent to more than 80% less room than the game and its update apart
+- **Optimize for install** (experimental): turns a game and its update into one game, already at the version of the update, that takes much less room once installed: from a few percent to more than 80% less than the game and its update installed apart. Its data is compressed with LZ4, which the system reads directly, and what the game holds twice is stored only once
   - In the window: Compress › **Optimize for install**, next to Extra compression. Add the game and its update (NSP, NSZ, XCI or XCZ); an NSZ comes out next to the game, which installs as that same game
   - On the command line: `nxpress --optimize GAME UPDATE` writes an NSP; with `-C`, an NSZ
   - Each file is checked whole before it gets its name: the hashes of every section, and its RomFS, which must be the one of the game with its update
   - It installs with NXDock or DBI, with sigpatches and firmware 12.0.0 or newer. Tested with DBI
   - Official updates do not go over it: when a newer one comes, optimize the original game again with it. The originals are never deleted
   - DLC are left as they are. How it is made: docs/optimize-install.md
+
+**What you lose with it**
+
+- **Official updates.** They cannot be installed over it, not even from the eShop. To move to a newer version, optimize the original game again with the new update, so keep the original game and its update on your PC
+- **The signature of Nintendo.** The program and the metadata are made again, so sigpatches and firmware 12.0.0 or newer are needed. DBI marks them as Fake when it installs them
+- **Going back to version 1.0 just like that.** The optimized game is already at the version of the update; to go back, install the original again
+- **Time and room on the PC.** Optimizing takes from seconds to about a minute per game in the tests. While it works it needs room for the new file and, for an NSZ or XCZ, for the decompressed NSP too
+- **DLC save nothing.** They stay as they are
+
+What you do not lose: your saves, the DLC installed and the game itself. What the game reads is the same as with its update, byte for byte, and that is checked before the file gets its name.
 
 ## 1.7.8
 

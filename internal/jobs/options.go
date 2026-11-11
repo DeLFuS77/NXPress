@@ -51,6 +51,9 @@ type Options struct {
 	// --optimize (experimental): each game given with its newest update into one NSP that takes the
 	// least room installed (an NSZ with -C), see internal/optimize
 	Optimize bool
+	// --rebuild: each package given written again as a clean NSP (an NSZ with -C), its data as it
+	// is, see internal/optimize and docs/rebuild.md
+	Rebuild bool
 	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
 	// a NUP, next to it or in -o
 	Nup bool
@@ -138,7 +141,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
+	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--rebuild", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
 	{"--fix-nup-icon", 0, false, false}, {"--nup-icon", 0, true, false}, {"--no-nup-icon", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
@@ -340,6 +343,8 @@ func (o *Options) flag(option optionName) {
 		o.PackOne = true
 	case "--optimize":
 		o.Optimize = true
+	case "--rebuild":
+		o.Rebuild = true
 	case "--nup":
 		o.Nup = true
 	case "--fix-nup-meta":
@@ -456,14 +461,14 @@ func (o *Options) Check() error {
 		return ErrOutputModes
 	}
 	actions := 0
-	// -C with --optimize makes its files NSZ: one action
-	for _, on := range []bool{o.Compress && !o.Optimize, o.Optimize, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
+	// -C with --optimize or --rebuild makes its files NSZ: one action
+	for _, on := range []bool{o.Compress && !o.Optimize && !o.Rebuild, o.Optimize, o.Rebuild, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --optimize, --nup, --fix-nup-meta and --fix-nup-icon")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --optimize, --rebuild, --nup, --fix-nup-meta and --fix-nup-icon")
 	}
 	// a watch would look for new files a pack does not take, without end
 	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup || o.Optimize) {
@@ -472,6 +477,13 @@ func (o *Options) Check() error {
 	// the originals are what a game is optimized again from, with a newer update
 	if o.Optimize && o.RmSource {
 		return errors.New("--rm-source does not go with --optimize: keep the game and its update, an optimized game is optimized again from them when a newer update comes")
+	}
+	// the original is kept until the rebuilt package is known to install
+	if o.Rebuild && o.RmSource {
+		return errors.New("--rm-source does not go with --rebuild: keep the original until the rebuilt package installs")
+	}
+	if o.Rebuild && (o.Sparse || o.Archive) {
+		return errors.New("--extra does not go with --rebuild: the data of a rebuilt package stays as it is")
 	}
 	if o.Optimize && (o.Sparse || o.Archive) {
 		return errors.New("--extra does not go with --optimize: installers read an optimized NSZ as it is")
@@ -683,6 +695,14 @@ Usage: nxpress [options] file or folder...
                       optimize them again with the newer update. DLC are left as they are.
                       Named by --pack-name (default "{name} [{id}][v{version}] (optimized)").
                       docs/optimize-install.md tells the format
+  --rebuild           each package given (a game, an update or a DLC; NSP, NSZ, XCI or XCZ)
+                      written again as a clean NSP, next to it or in -o (an NSZ with -C), for
+                      a package a tool left that some installers do not take: the headers of
+                      its NCA made right, standard crypto with no ticket, a new CNMT with the
+                      IDs, hashes and sizes of its contents, a new PFS0 with the NCA only. Its
+                      data stays as it is: no compression, no LZ4. Checked whole before it gets
+                      its name. Its NCA are not signed by Nintendo, so it needs sigpatches.
+                      docs/rebuild.md tells what is made right
 
 Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
 --keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted
@@ -693,6 +713,8 @@ func (o Options) Action() string {
 	switch {
 	case o.Optimize:
 		return "optimize"
+	case o.Rebuild:
+		return "rebuild"
 	case o.Compress:
 		return "compress"
 	case o.Decompress:
