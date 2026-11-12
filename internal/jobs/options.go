@@ -73,6 +73,9 @@ type Options struct {
 	NupIconImage   []byte
 	NupIconFrom    string
 	ReplaceNupIcon bool
+	// the image chosen in Combine for each dump folder, by its path: its NUP takes it instead of
+	// the one of titledb, when the folder carries no icon of its own
+	NupIcons map[string]string
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string

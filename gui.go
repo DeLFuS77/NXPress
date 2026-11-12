@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/jobs"
+	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/selfupdate"
 	"github.com/DeLFuS77/NXPress/internal/system"
@@ -562,6 +563,55 @@ func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, er
 	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, ReplaceNupIcon: replace})
 }
 
+// CoverImage is an image chosen in Combine for the NUP of a dump folder: where it is, the icon it
+// makes, to be shown in its row, and its size.
+type CoverImage struct {
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	Preview string `json:"preview"`
+	Width   int    `json:"width"`
+	Height  int    `json:"height"`
+}
+
+// ChooseCoverImage asks for an image (PNG, JPEG, WEBP or BMP), with a title in the language of
+// the page, for the NUP a dump folder is combined into; it is read and made the icon it would be,
+// so an image that cannot be one is told at once. Nil when none is chosen.
+func (a *App) ChooseCoverImage(title string) (*CoverImage, error) {
+	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title:   title,
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
+	})
+	if err != nil || path == "" {
+		return nil, err
+	}
+	return coverImage(path)
+}
+
+// coverImage reads an image chosen for a NUP and makes its icon, to be shown before the NUP is
+// made.
+func coverImage(path string) (*CoverImage, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > nup.MaxIconFile {
+		return nil, errors.New("the image is too big to be an icon")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	icon, err := nup.MakeIcon(data)
+	if err != nil {
+		return nil, err
+	}
+	width, height, _ := nup.ImageSize(data)
+	return &CoverImage{
+		Path: path, Name: filepath.Base(path), Width: width, Height: height,
+		Preview: "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon),
+	}, nil
+}
+
 // fixNupIcon is jobs.FixNupIcon, which the tests stand in for
 var fixNupIcon = jobs.FixNupIcon
 
@@ -707,6 +757,9 @@ type Request struct {
 	Optimize bool `json:"optimize"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
+	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
+	// one of titledb
+	NupIcons map[string]string `json:"nupIcons"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -771,6 +824,7 @@ func (a *App) Start(request Request) error {
 		// a SuperNSP per game, or one file with everything, named by its template next to the
 		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
 		o.Origins = request.Origins
+		o.NupIcons = request.NupIcons
 		switch {
 		case request.PackGames:
 			o.PackGames, o.PackName = true, request.PackTemplate
