@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -166,11 +167,29 @@ func packIcon(ctx context.Context, dir string, o Options) ([]byte, string) {
 	if o.NoNupIcon {
 		return nil, ""
 	}
+	if chosen := chosenIcon(o.NupIcons, dir); chosen != "" {
+		o.NupIcon, o.NupIconImage = chosen, nil
+	}
 	icon, from, blurry, err := iconOf(ctx, o, main.TitleID)
 	if err != nil {
 		return nil, noIconNote(err)
 	}
 	return icon, "its folder has no icon: it carries " + from + ", 256×256" + blurry
+}
+
+// chosenIcon is the image chosen in Combine for a dump folder, found by its path as the window
+// gives it or cleaned, "" when none was chosen for it.
+func chosenIcon(chosen map[string]string, dir string) string {
+	if image := chosen[dir]; image != "" {
+		return image
+	}
+	clean := filepath.Clean(dir)
+	for folder, image := range chosen {
+		if filepath.Clean(folder) == clean {
+			return image
+		}
+	}
+	return ""
 }
 
 // appSource is the package of a dump folder that carries the icon of the game, as nup.Pack picks

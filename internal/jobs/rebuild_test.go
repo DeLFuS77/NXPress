@@ -72,3 +72,33 @@ func TestRebuildWritesNextToIt(t *testing.T) {
 		t.Fatal(note)
 	}
 }
+
+// -V tells a CNMT that lists a content the file does not hold, as installers such as Sphaira do
+// not find it (MODIFIED, not failed), and --rebuild pairs it with the NCA of its type.
+func TestVerifyTellsContentsNotInTheFile(t *testing.T) {
+	testkit.Isolate(t)
+	folder := t.TempDir()
+	program := testkit.ProgramNcaWith(testkit.GameData(0x10000, 1), nil)
+	path := testkit.NspListing(t, filepath.Join(folder, "game.nsp"), testkit.BaseID, 0, switchfs.ContentMetaType_Application, program, testkit.ContentName(program, ".nca"), "fedcba9876543210fedcba9876543210", nil)
+	if got := UnlistedContents(path); !reflect.DeepEqual(got, []string{"fedcba9876543210fedcba9876543210"}) {
+		t.Fatalf("missing: %v", got)
+	}
+	_, _, err := verify(context.Background(), path, Options{Verify: true, NoCache: true}, testkit.Quiet{})
+	if !IsModified(err) || !strings.Contains(err.Error(), "not in the file") {
+		t.Fatalf("told %v", err)
+	}
+	clean := testkit.TitleNsp(t, filepath.Join(folder, "clean.nsp"), testkit.BaseID, 0, switchfs.ContentMetaType_Application, 2, nil)
+	if got := UnlistedContents(clean); len(got) != 0 {
+		t.Fatalf("a clean package: %v", got)
+	}
+	if !optimize.Built {
+		return
+	}
+	results := &testkit.Results{}
+	if failed := RunJobs(context.Background(), Options{Rebuild: true, Threads: 1, Multi: 1, Files: []string{path}}, results); failed != 0 {
+		t.Fatalf("%v", results.Results)
+	}
+	if got := UnlistedContents(filepath.Join(folder, "game (rebuilt).nsp")); len(got) != 0 {
+		t.Fatalf("rebuilt: %v", got)
+	}
+}

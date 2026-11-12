@@ -51,6 +51,7 @@ const noteRules = [
   [/works with: NXPress and NXDock only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it with another installer/g, "worksSparse"],
   [/(\d+) NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it/g, "sparseNote"],
   [/works with: NXPress and NXDock only, experimental archive format NCZSECT3: decompress it with NXPress to install it with another installer/g, "worksArchive"],
+  [/its CNMT lists (\d+) content not in the file, so installers such as Sphaira do not find it; Rebuild \(--rebuild\) makes it right/g, "missingContents"],
   [/not signed by Nintendo: (\d+) NCA rewritten by a tool, so it needs sigpatches, and some installers may not take it; Rebuild \(--rebuild\) makes it a clean package/g, "unsignedNote"],
   [/(\d+) LZ4 blocks of Nintendo kept decompressed in the experimental archive format NCZSECT3: decompress it with NXPress to install it/g, "archiveNote"],
   // Recompress with the extra compression or back from it (#92)

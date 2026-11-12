@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.11
+
+### Improvements
+
+- Combine: **Add cover art icon** on each dump folder without an icon of its own. The image chosen (JPG, PNG, WebP or BMP) goes into its NUP at 256×256 instead of the one of titledb, which knows few Switch 2 games
+- `-V` tells when the CNMT of an NSP or NSZ lists a content the file does not hold, which installers such as Sphaira do not find; `--rebuild` pairs it with the NCA of its type. Thanks to lightwo (GBAtemp) for reporting it
+
 ## 1.7.10
 
 ### Improvements

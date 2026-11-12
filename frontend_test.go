@@ -129,6 +129,7 @@ const samples = [
   ["works with: NXPress and NXDock only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it with another installer", "works with"],
   ["works with: NXPress and NXDock only, experimental archive format NCZSECT3: decompress it with NXPress to install it with another installer", "works with"],
   ["not signed by Nintendo: 3 NCA rewritten by a tool, so it needs sigpatches, and some installers may not take it; Rebuild (--rebuild) makes it a clean package", "rewritten by a tool"],
+  ["its CNMT lists 1 content not in the file, so installers such as Sphaira do not find it; Rebuild (--rebuild) makes it right: 0123456789abcdef0123456789abcdef", "not in the file"],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 1 h 5 min at level 18", " at level "],
   ["about 8.0 GB -> 5.1 GB, 36.2% smaller, 40 s at level 3", " at level "],
   ["8.0 MB -> 42.3 KB, 99.5% smaller", " -> "],

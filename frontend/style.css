@@ -586,6 +586,16 @@ dialog.cover-dialog { max-width: 680px; }
 .dump-arrow { margin-top: 3px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .dump-arrow b { color: var(--text); font-weight: 600; }
 table.grid .dump-plan { display: none; }
+/* Combine: the image chosen for the NUP of a dump folder */
+.cover-line { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.cover-thumb { width: 44px; height: 44px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 8px; border: 1.5px dashed var(--line); background: var(--raised); color: var(--muted); font-size: 18px; }
+.cover-thumb.chosen { border-style: solid; border-color: var(--accent); }
+.cover-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cover-buttons { display: flex; gap: 6px; align-items: center; }
+.cover-buttons button { padding: 3px 10px; font-size: 12px; }
+.cover-hint { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.cover-hint.warning { color: var(--warn); }
 
 /* the switch of the list: rows or a grid of covers */
 /* Export, with the menu of its formats (#89) */
