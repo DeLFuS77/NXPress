@@ -38,12 +38,15 @@ type fakeRelease struct {
 
 func newFakeRelease() *fakeRelease {
 	f := &fakeRelease{draft: true, localTag: testCommit, remoteTag: testCommit, files: map[string][]byte{
-		"nxpress.exe":                         []byte("the program of Windows"),
-		"nxpress-1.7.4-linux-x64.tar.gz":      []byte("the program of Linux"),
-		"nxpress-1.7.4-windows-x64-setup.exe": []byte("the installer of Windows"),
+		"nxpress.exe":                           []byte("the program of Windows"),
+		"nxpress-1.7.4-linux-x64.tar.gz":        []byte("the program of Linux"),
+		"nxpress-1.7.4-windows-x64-setup.exe":   []byte("the installer of Windows"),
+		"nxpress-1.7.4-macos-apple-silicon.dmg": []byte("the disk image of macOS"),
+		"nxpress-1.7.4-macos-intel.dmg":         []byte("the disk image of macOS on Intel"),
 	}}
 	sums := ""
-	for _, name := range []string{"nxpress.exe", "nxpress-1.7.4-linux-x64.tar.gz", "nxpress-1.7.4-windows-x64-setup.exe"} {
+	for _, name := range []string{"nxpress.exe", "nxpress-1.7.4-linux-x64.tar.gz", "nxpress-1.7.4-windows-x64-setup.exe",
+		"nxpress-1.7.4-macos-apple-silicon.dmg", "nxpress-1.7.4-macos-intel.dmg"} {
 		sum := sha256.Sum256(f.files[name])
 		sums += hex.EncodeToString(sum[:]) + "  " + name + "\n"
 	}
@@ -133,7 +136,7 @@ func TestSignADraft(t *testing.T) {
 		if f.published != yes {
 			t.Errorf("published %v, told %v", f.published, yes)
 		}
-		if len(f.attested) != 3 {
+		if len(f.attested) != 5 {
 			t.Fatalf("%d files checked by their provenance", len(f.attested))
 		}
 		for _, want := range []string{"--signer-workflow", defaultRepo + "/" + defaultWorkflow, "--source-ref", "refs/tags/1.7.4",

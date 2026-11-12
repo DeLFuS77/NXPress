@@ -105,6 +105,15 @@ jobs:
           ./out/${exe} --version
           ./out/${exe} --help > /dev/null
 
+      # dmgbuild writes the window of the disk image; its version and those of what it needs are
+      # pinned by their hashes
+      - name: Install dmgbuild
+        if: runner.os == 'macOS'
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/dmgbuild"
+          "${RUNNER_TEMP}/dmgbuild/bin/pip" install --no-deps --require-hashes -r build/macos/dmg/requirements.txt
+          echo "${RUNNER_TEMP}/dmgbuild/bin" >> "${GITHUB_PATH}"
+
       - name: Package
         run: |
           mkdir -p dist
@@ -125,8 +134,8 @@ jobs:
             macOS)
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
               tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app
-              # the installer (a package for the Installer of macOS): tools/installer makes it
-              go run ./tools/installer -mac -app out/NXPress.app -arch "$(uname -m)" -version "${VERSION}" -out "dist/nxpress-${{ matrix.name }}.pkg" ;;
+              # the disk image to drag NXPress to Applications from, with no script: tools/installer makes it with dmgbuild
+              go run ./tools/installer -mac -app out/NXPress.app -out "dist/nxpress-${{ matrix.name }}.dmg" ;;
             *)
               # the program, its icon, its entry in the menu and install.sh, which puts them in place
               mkdir -p out/NXPress
@@ -170,17 +179,25 @@ jobs:
           if (Test-Path "$folder\nxpress.exe") { throw "not uninstalled" }
           if (Test-Path $key) { throw "still in Installed apps" }
 
-      # the package installs NXPress for the user, in ~/Applications without a password, and its
-      # uninstaller takes it away again
+      # the disk image opens with NXPress.app and the link to Applications, and nothing else; the
+      # app copied from it, as the Finder does when it is dragged, keeps its signature and runs
       - name: Install on macOS
         if: runner.os == 'macOS'
         run: |
-          installer -pkg "dist/nxpress-${{ matrix.name }}.pkg" -target CurrentUserHomeDirectory
-          "$HOME/Applications/NXPress.app/Contents/MacOS/nxpress" --version
-          test -x "$HOME/Applications/Uninstall NXPress.app/Contents/MacOS/uninstall"
-          "$HOME/Applications/Uninstall NXPress.app/Contents/MacOS/uninstall" --yes --keep
-          test ! -e "$HOME/Applications/NXPress.app"
-          test ! -e "$HOME/Applications/Uninstall NXPress.app"
+          image="dist/nxpress-${{ matrix.name }}.dmg"
+          hdiutil verify "${image}"
+          mount=$(mktemp -d)
+          hdiutil attach "${image}" -nobrowse -readonly -mountpoint "${mount}"
+          trap 'hdiutil detach "${mount}" || hdiutil detach -force "${mount}"' EXIT
+          ls -la "${mount}"
+          test "$(ls "${mount}" | paste -sd " " -)" = "Applications NXPress.app"
+          test "$(readlink "${mount}/Applications")" = "/Applications"
+          apps=$(mktemp -d)
+          ditto "${mount}/NXPress.app" "${apps}/NXPress.app"
+          codesign --verify "${apps}/NXPress.app"
+          "${apps}/NXPress.app/Contents/MacOS/nxpress" --version
+          rm -rf "${apps}/NXPress.app"
+          test ! -e "${apps}/NXPress.app"
 
       # the window opens, and is still open after a while: a screenshot of it is kept
       - name: Open the window
@@ -277,14 +294,16 @@ jobs:
           | Windows, installer (recommended) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-setup.exe\` |
           | Windows, the program on its own | \`nxpress.exe\` |
           | Windows, portable (all in its folder, for a USB stick) | \`nxpress-${GITHUB_REF_NAME}-windows-x64-portable.zip\` |
-          | macOS with Apple silicon (M1 or newer), installer | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.pkg\` |
-          | macOS with Intel chip, installer | \`nxpress-${GITHUB_REF_NAME}-macos-intel.pkg\` |
+          | macOS with Apple silicon (M1 or newer), disk image (recommended) | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.dmg\` |
+          | macOS with Intel chip, disk image (recommended) | \`nxpress-${GITHUB_REF_NAME}-macos-intel.dmg\` |
           | macOS with Apple silicon, the app | \`nxpress-${GITHUB_REF_NAME}-macos-apple-silicon.tar.gz\` |
           | macOS with Intel chip, the app | \`nxpress-${GITHUB_REF_NAME}-macos-intel.tar.gz\` |
           | Linux, PC | \`nxpress-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
           | Linux on ARM 64-bit | \`nxpress-${GITHUB_REF_NAME}-linux-arm64.tar.gz\` |
 
-          The installer puts NXPress in your user folder (no administrator needed), with its shortcuts and the options of its Settings, and adds it to Installed apps, where it is uninstalled.
+          The installer of Windows puts NXPress in your user folder (no administrator needed), with its shortcuts and the options of its Settings, and adds it to Installed apps, where it is uninstalled.
+
+          On macOS, open the \`.dmg\` and drag NXPress to Applications: it runs no script and installs nothing else. To uninstall it, move it to the Trash. If you installed it with the \`.pkg\` of an earlier version, drag it to the same Applications folder to replace it (or remove the old one with Uninstall NXPress first).
 
           Open it with no arguments for the window, or give it options for the command line (\`nxpress --help\`). It needs your own \`prod.keys\`: next to NXPress, in \`~/.switch\`, or chosen in the window.
 

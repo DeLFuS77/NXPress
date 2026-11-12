@@ -1,82 +1,55 @@
 package main
 
 import (
-	"encoding/xml"
+	"image"
+	_ "image/png"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// the texts, read from the root of the repository as the tool is
-func repoTexts(t *testing.T) map[string]map[string]string {
-	t.Helper()
+// dmgbuild is given the settings of the window, the app and its background, and names the disk
+// NXPress.
+func TestDmgArgs(t *testing.T) {
+	got := filepath.ToSlash(strings.Join(dmgArgs("out/NXPress.app", "dist/nxpress-macos-intel.dmg"), " "))
+	want := "-s build/macos/dmg/settings.py -D app=out/NXPress.app -D background=build/macos/dmg/background.png NXPress dist/nxpress-macos-intel.dmg"
+	if got != want {
+		t.Errorf("%s", got)
+	}
+}
+
+// The background fits the window of the settings, at twice its size for Retina beside it, and
+// the settings put in the image the app and the link to Applications only, where the background
+// has room for them.
+func TestDmgWindow(t *testing.T) {
 	t.Chdir(filepath.Join("..", ".."))
-	texts, err := readTexts()
+	settings, err := os.ReadFile(filepath.Join(dmgFolder, "settings.py"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return texts
-}
-
-// The pages of the Installer of macOS are written for each language, in the folder macOS names
-// it by, with the notice on the first one; the license and the background beside them.
-func TestMacResources(t *testing.T) {
-	texts := repoTexts(t)
-	resources := t.TempDir()
-	if err := writeMacResources(resources, "1.7.8", texts); err != nil {
-		t.Fatal(err)
+	text := string(settings)
+	for _, want := range []string{
+		`files = [(app, "NXPress.app")]`,
+		`symlinks = {"Applications": "/Applications"}`,
+		`window_rect = ((200, 140), (540, 360))`,
+		`icon_locations = {"NXPress.app": (140, 170), "Applications": (400, 170)}`,
+		`format = "UDZO"`,
+		`background = defines["background"]`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("settings.py has no %s", want)
+		}
 	}
-	for _, folder := range []string{"en", "es", "pt_BR", "zh_CN", "ja"} {
-		welcome, err := os.ReadFile(filepath.Join(resources, folder+".lproj", "welcome.html"))
+	for name, size := range map[string]image.Point{"background.png": {540, 360}, "background@2x.png": {1080, 720}} {
+		file, err := os.Open(filepath.Join(dmgFolder, name))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(string(welcome), "1.7.8") || !strings.Contains(string(welcome), `class="notice"`) || strings.Contains(string(welcome), "{VERSION}") {
-			t.Errorf("%s: %s", folder, welcome)
+		config, _, err := image.DecodeConfig(file)
+		file.Close()
+		if err != nil || config.Width != size.X || config.Height != size.Y {
+			t.Errorf("%s: %dx%d %v", name, config.Width, config.Height, err)
 		}
-		if _, err := os.Stat(filepath.Join(resources, folder+".lproj", "conclusion.html")); err != nil {
-			t.Error(err)
-		}
-	}
-	spanish, _ := os.ReadFile(filepath.Join(resources, "es.lproj", "welcome.html"))
-	if !strings.Contains(string(spanish), "no apoyamos la piratería") {
-		t.Error("the notice in Spanish")
-	}
-	for _, name := range []string{"LICENSE.txt", "background.png"} {
-		if _, err := os.Stat(filepath.Join(resources, name)); err != nil {
-			t.Error(err)
-		}
-	}
-	var script struct{ XMLName xml.Name }
-	if err := xml.Unmarshal([]byte(distributionXML("arm64", "1.7.8")), &script); err != nil || script.XMLName.Local != "installer-gui-script" {
-		t.Errorf("distribution: %v", err)
-	}
-	if !strings.Contains(distributionXML("x86_64", "1.7.8"), `hostArchitectures="x86_64"`) {
-		t.Error("the processor")
-	}
-}
-
-// The uninstaller speaks every language, and its script is one the shell reads.
-func TestUninstallScript(t *testing.T) {
-	texts := repoTexts(t)
-	script := uninstallScript(texts)
-	for _, want := range []string{"#!/bin/bash", "MacUnAsk='¿Desinstalar NXPress", "  zh)", "--forget " + bundleID, "with administrator privileges"} {
-		if !strings.Contains(script, want) {
-			t.Errorf("no %s", want)
-		}
-	}
-	if shellQuote(`It's "here"`) != `'It'\''s \"here\"'` {
-		t.Errorf("shellQuote: %s", shellQuote(`It's "here"`))
-	}
-	bash, err := exec.LookPath("bash")
-	if err != nil {
-		t.Skip("no bash")
-	}
-	file := filepath.Join(t.TempDir(), "uninstall")
-	os.WriteFile(file, []byte(script), 0o755)
-	if out, err := exec.Command(bash, "-n", file).CombinedOutput(); err != nil {
-		t.Errorf("bash -n: %v %s", err, out)
 	}
 }
