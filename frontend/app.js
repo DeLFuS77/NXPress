@@ -573,6 +573,55 @@ function capitalize(text) {
 
 // gives a NUP its icon, from its card, then reads the NUP again and tells what was done under the
 // icon; with no image chosen, nothing. Why it got none stays in the card, not in a notice that goes
+// the line of a dump folder in Combine where an image is chosen for its NUP: its icon as it will
+// be, the button, and the formats taken; once chosen, Change and Remove, and its name and size
+function coverLine(row) {
+  const cover = row.item.cover;
+  const line = document.createElement("div");
+  line.className = "cover-line";
+  line.innerHTML = `<div class="cover-thumb"></div><div class="cover-text"><div class="cover-buttons"></div><span class="cover-hint"></span></div>`;
+  const thumb = line.querySelector(".cover-thumb");
+  const buttons = line.querySelector(".cover-buttons");
+  const hint = line.querySelector(".cover-hint");
+  const choose = document.createElement("button");
+  choose.className = "outline";
+  choose.disabled = state.busy;
+  choose.onclick = event => { event.stopPropagation(); chooseCover(row, choose); };
+  buttons.append(choose);
+  if (cover) {
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = cover.preview;
+    thumb.append(image);
+    thumb.classList.add("chosen");
+    choose.textContent = t("coverChange");
+    const remove = document.createElement("button");
+    remove.className = "quiet";
+    remove.textContent = t("coverRemove");
+    remove.disabled = state.busy;
+    remove.onclick = event => { event.stopPropagation(); row.item.cover = null; row.coverFailed = ""; paint(row); };
+    buttons.append(remove);
+    hint.textContent = t("coverChosen")(cover.name, cover.width, cover.height);
+  } else {
+    thumb.textContent = "+";
+    choose.textContent = t("coverAdd");
+    hint.textContent = row.coverFailed || t("coverFormats");
+    hint.classList.toggle("warning", !!row.coverFailed);
+  }
+  return line;
+}
+
+async function chooseCover(row, button) {
+  button.disabled = true;
+  try {
+    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    if (cover) { row.item.cover = cover; row.coverFailed = ""; }
+  } catch (error) {
+    row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+  }
+  paint(row);
+}
+
 async function giveNupIcon(row, give) {
   const buttons = row.tr.querySelectorAll(".nup-no-icon button");
   for (const button of buttons) button.disabled = true;
@@ -1768,6 +1817,8 @@ function paint(row) {
     }
     plan.querySelector("b").textContent = row.game.nupName || "";
     plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
+    // a folder without an icon of its own: an image can be chosen for its NUP, instead of titledb's
+    if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
   // a warning of the list shows until the file is worked on
@@ -1785,6 +1836,12 @@ function paint(row) {
     icon.hidden = false;
     coverTone(row.game);
     row.tr.querySelector(".cover").hidden = true;
+  } else if (row.item.dump && state.mode === "pack") {
+    // the image chosen in Combine is the cover of its row until the NUP is made, and goes when removed
+    const chosen = row.item.cover && !row.status;
+    if (chosen) icon.src = row.item.cover.preview;
+    icon.hidden = !chosen;
+    row.tr.querySelector(".cover").hidden = !!chosen;
   }
   // the cover shimmers while the game is read
   row.tr.querySelector(".cover").classList.toggle("loading", (!!state.keys || isNup(row.item.path) || !!row.item.dump) && !row.described);
@@ -2109,7 +2166,10 @@ async function start(mode, extra) {
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, ...(extra || {}) };
+  // the image chosen in Combine for each dump folder, which its NUP takes instead of titledb's
+  const nupIcons = {};
+  if (mode === "pack") for (const item of state.items) if (item.dump && item.cover) nupIcons[item.path] = item.cover.path;
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;

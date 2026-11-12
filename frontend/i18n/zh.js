@@ -30,6 +30,7 @@ texts.zh = {
   fixForEmulators: "为模拟器修复",
   nupNoIcon: "没有图标：模拟器中显示为无图像。", iconFromTitledb: "使用 titledb 图标", chooseImage: "选择图片…", chooseImageTitle: "图标图片：正方形，256×256 或更大（PNG、JPEG、WEBP 或 BMP）",
   searchImage: "搜索图片…", pasteHint: "或粘贴复制的图片 (Ctrl+V)", changeImage: "更换图片…", changeImageSay: "为图标换一张图片：", coverTitle: name => "“" + name + "”的图片", coverQuery: "游戏名称", coverSearch: "搜索", coverFrom: "任天堂 eShop 的图片", coverOnlySwitch2: "仅 Switch 2", coverSearching: "正在搜索…", coverNone: "eShop 没有这个名称的游戏。请减少关键词、取消“仅 Switch 2”，或在网上搜索并粘贴图片。", coverWriteName: "请输入游戏名称。", coverPasteHere: "也可以在这里粘贴复制的图片 (Ctrl+V)。", coverWeb: "在网上搜索 ↗", coverUse: "使用这张图片",
+  coverAdd: "添加封面图标", coverChange: "更换", coverRemove: "移除", coverFormats: "JPG、PNG、WebP 或 BMP · 不选择时从 titledb 查找", coverChosen: (name, w, h) => name + " · " + w + "×" + h + " · 将以 256×256 放入 NUP",
   iconFromTitledbHelp: "按游戏的 ID（更新或 DLC 则用本体的 ID）在 titledb 中查找，下载其图标并以 256×256 写入 NUP。NUP 已有的内容都不会改变：游戏的元数据连同图标重新写在文件末尾，文件保持原样。需要在设置中开启“提醒缺少的更新”。用“选择图片”时，你自己的图片（PNG、JPEG、WEBP 或 BMP）会裁成居中的正方形。",
   removeDumps: "NUP 校验后也删除转储文件夹", removeDumpsHint: "NUP 完整读回、其中每个文件都按 SHA-256 校验后，会从转储文件夹中删除 NUP 包含的文件，再删除变空的文件夹。NUP 不包含的文件，或打包后有改动的文件，会保留在原处。", removeDumpsGo: "NUP 校验通过后，转储文件夹会被删除：只留下 NUP，可用“解压”还原成文件夹。",
   selected: (n, bytes) => `${n} 个文件 · ${size(bytes)}`, nothing: "还没有文件",
