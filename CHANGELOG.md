@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Combine: **Add cover art icon** on each dump folder without an icon of its own. The image chosen (JPG, PNG, WebP or BMP) goes into its NUP at 256×256 instead of the one of titledb, which knows few Switch 2 games
+
 ## 1.7.10
 
 ### Improvements
