@@ -129,7 +129,7 @@ texts.ko = {
     datNoSize: "DAT에 없음: 이 크기의 덤프가 없습니다", datOther: "DAT에 없음: 이 크기의 덤프 $1개가 있지만 해시가 다릅니다", datIn: "DAT에 있음: ",
     worksSolid: "호환: 모든 설치 프로그램(NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira), 에뮬레이터는 압축 해제 필요",
     worksBlocks: "호환: Awoo를 뺀 모든 설치 프로그램, NSZ를 읽는 에뮬레이터는 그대로 실행",
-    worksAll: "호환: 모든 설치 프로그램과 에뮬레이터", unsignedNote: "Nintendo 서명 없음: 도구가 다시 쓴 NCA $1개, 그래서 sigpatches가 필요하고 받지 않는 설치 프로그램도 있을 수 있습니다. 다시 만들기(--rebuild)로 깨끗한 패키지가 됩니다",
+    worksAll: "호환: 모든 설치 프로그램과 에뮬레이터", unsignedNote: "Nintendo 서명 없음: 도구가 다시 쓴 NCA $1개, 그래서 sigpatches가 필요하고 받지 않는 설치 프로그램도 있을 수 있습니다. 다시 만들기(--rebuild)로 깨끗한 패키지가 됩니다", missingContents: "CNMT에 파일에 없는 콘텐츠 $1개가 있어 Sphaira 같은 설치 프로그램이 찾지 못합니다. 다시 만들기(--rebuild)로 바로잡힙니다",
     paddingInfo: "채움 영역: $1(다듬기로 제거)", deltasInfo: "델타 조각: $1(다듬기로 제거)",
     paddingTaken: " 채움 영역 제거", deltasTaken: " 델타 조각 제거", deltasLeft: " 델타 조각 제외",
     newerInPlace: ", 새 버전으로 대체: ", ncaRewritten: "도구로 다시 쓴 NCA $1개, 데이터 검증됨",

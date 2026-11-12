@@ -129,7 +129,7 @@ texts.es = {
     datNoSize: "no está en el DAT: ningún volcado de su tamaño", datOther: "no está en el DAT: $1 volcados de su tamaño, con otros hashes", datIn: "en el DAT: ",
     worksSolid: "funciona con: todos los instaladores (NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira); los emuladores lo necesitan descomprimido",
     worksBlocks: "funciona con: todos los instaladores salvo Awoo; los emuladores que leen NSZ lo ejecutan tal cual",
-    worksAll: "funciona con: todos los instaladores y emuladores", unsignedNote: "sin la firma de Nintendo: $1 NCA rehechos por otra herramienta, así que necesita sigpatches y algún instalador puede no aceptarlo; Rehacer (--rebuild) lo deja como un paquete limpio",
+    worksAll: "funciona con: todos los instaladores y emuladores", unsignedNote: "sin la firma de Nintendo: $1 NCA rehechos por otra herramienta, así que necesita sigpatches y algún instalador puede no aceptarlo; Rehacer (--rebuild) lo deja como un paquete limpio", missingContents: "su CNMT lista $1 contenido que no está en el archivo, así que instaladores como Sphaira no lo encuentran; Rehacer (--rebuild) lo arregla",
     paddingInfo: "relleno: $1 que Recortar quita", deltasInfo: "fragmentos delta: $1 que Recortar quita",
     paddingTaken: " de relleno quitados", deltasTaken: " de fragmentos delta quitados", deltasLeft: " de fragmentos delta descartados",
     newerInPlace: ", versiones nuevas en lugar de ", ncaRewritten: "$1 NCA reescritos por una herramienta, sus datos comprobados",

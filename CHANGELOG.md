@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- `-V` tells when the CNMT of an NSP or NSZ lists a content the file does not hold, which installers such as Sphaira do not find; `--rebuild` pairs it with the NCA of its type
+
 ## 1.7.10
 
 ### Improvements

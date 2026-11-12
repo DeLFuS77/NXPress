@@ -141,6 +141,8 @@ func TestRebuildMakesPackagesClean(t *testing.T) {
 		name     string
 		program  func(header []byte)
 		wrongID  bool
+		listed   string // the ID its CNMT lists the program under, if not its name
+		relinked int
 		extra    func() map[string][]byte
 		renamed  int
 		standard int
@@ -150,6 +152,7 @@ func TestRebuildMakesPackagesClean(t *testing.T) {
 	}{
 		{name: "clean"},
 		{name: "named by another ID", wrongID: true, renamed: 1},
+		{name: "a CNMT that lists another ID", listed: "fedcba9876543210fedcba9876543210", relinked: 1},
 		{name: "a wrong FS header hash", program: func(h []byte) { h[0x280] ^= 0xFF }, renamed: 1, fsFixed: 1},
 		{name: "for a game card", program: func(h []byte) { h[0x204] = 1 }, renamed: 1, download: 1},
 		{
@@ -180,14 +183,18 @@ func TestRebuildMakesPackagesClean(t *testing.T) {
 			if test.extra != nil {
 				extra = test.extra()
 			}
-			source := testkit.NspWith(t, filepath.Join(folder, "game.nsp"), testkit.BaseID, 0, switchfs.ContentMetaType_Application, program, name, extra)
+			listed := strings.TrimSuffix(name, ".nca")
+			if test.listed != "" {
+				listed = test.listed
+			}
+			source := testkit.NspListing(t, filepath.Join(folder, "game.nsp"), testkit.BaseID, 0, switchfs.ContentMetaType_Application, program, name, listed, extra)
 			target := filepath.Join(folder, "game (rebuilt).nsp")
 			res, err := Rebuild(context.Background(), source, target, Options{})
 			if err != nil {
 				t.Fatal(err)
 			}
 			if res.Titles != 1 || res.NCAs != 1 || res.Renamed != test.renamed || res.Standard != test.standard ||
-				res.FsFixed != test.fsFixed || res.Download != test.download || res.Dropped != test.dropped {
+				res.FsFixed != test.fsFixed || res.Relinked != test.relinked || res.Download != test.download || res.Dropped != test.dropped {
 				t.Fatalf("%+v", res)
 			}
 			got := readRebuilt(t, target)

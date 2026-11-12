@@ -129,7 +129,7 @@ texts.nl = {
     datNoSize: "niet in de DAT: geen dump van deze grootte", datOther: "niet in de DAT: $1 dumps van deze grootte, met andere hashes", datIn: "in de DAT: ",
     worksSolid: "werkt met: alle installers (NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira); emulators hebben het uitgepakt nodig",
     worksBlocks: "werkt met: alle installers behalve Awoo; emulators die NSZ lezen starten het zoals het is",
-    worksAll: "werkt met: alle installers en emulators", unsignedNote: "niet door Nintendo ondertekend: $1 NCA herschreven door een tool, dus het heeft sigpatches nodig en sommige installers nemen het misschien niet aan; Opnieuw opbouwen (--rebuild) maakt er een schoon pakket van",
+    worksAll: "werkt met: alle installers en emulators", unsignedNote: "niet door Nintendo ondertekend: $1 NCA herschreven door een tool, dus het heeft sigpatches nodig en sommige installers nemen het misschien niet aan; Opnieuw opbouwen (--rebuild) maakt er een schoon pakket van", missingContents: "de CNMT noemt $1 inhoud die niet in het bestand staat, dus installers zoals Sphaira vinden die niet; Opnieuw opbouwen (--rebuild) maakt het goed",
     paddingInfo: "opvulling: $1 die Inkorten weghaalt", deltasInfo: "deltafragmenten: $1 die Inkorten weghaalt",
     paddingTaken: " opvulling weggehaald", deltasTaken: " deltafragmenten weggehaald", deltasLeft: " deltafragmenten weggelaten",
     newerInPlace: ", nieuwere versies in plaats van ", ncaRewritten: "$1 NCA herschreven door een tool, hun gegevens gecontroleerd",
