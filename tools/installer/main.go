@@ -7,7 +7,7 @@
 //	go run ./tools/installer -mac -app out/NXPress.app -out dist/nxpress-macos-apple-silicon.dmg
 //
 // It runs from the root of the repository: on Windows with NSIS 3 installed (makensis in the
-// path or in its usual folder), on a Mac with its own hdiutil.
+// path or in its usual folder), on a Mac with dmgbuild (build/macos/dmg/requirements.txt).
 package main
 
 import (
