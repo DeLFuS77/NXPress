@@ -319,4 +319,13 @@ func TestCode(t *testing.T) {
 	if AssetName("darwin", "arm64", "1.7.4") != "" || AssetName("windows", "amd64", "1.7.4") != "nxpress.exe" {
 		t.Error("AssetName")
 	}
+	// on macOS NXPress tells of the new version and opens its page, where the disk image is: it
+	// does not take it for a program to put in place of itself
+	release := Release{Tag: "1.7.4", Assets: map[string]string{SumsName: "s", SignatureName: "m",
+		"nxpress-1.7.4-macos-apple-silicon.dmg": "a", "nxpress-1.7.4-macos-intel.dmg": "i"}}
+	for _, arch := range []string{"arm64", "amd64"} {
+		if AssetName("darwin", arch, "1.7.4") != "" || Installable(release, []PublicKey{{}}, "darwin", arch) {
+			t.Error("a disk image is taken for the program of macOS on", arch)
+		}
+	}
 }

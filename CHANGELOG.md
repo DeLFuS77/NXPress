@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- macOS: NXPress now comes as a disk image (`.dmg`) instead of a `.pkg`: open it and drag NXPress to Applications. It runs no script. Thanks to NikoMuffin for the idea (#112)
+
 ## 1.7.10
 
 ### Improvements
