@@ -105,6 +105,15 @@ jobs:
           ./out/${exe} --version
           ./out/${exe} --help > /dev/null
 
+      # dmgbuild writes the window of the disk image; its version and those of what it needs are
+      # pinned by their hashes
+      - name: Install dmgbuild
+        if: runner.os == 'macOS'
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/dmgbuild"
+          "${RUNNER_TEMP}/dmgbuild/bin/pip" install --no-deps --require-hashes -r build/macos/dmg/requirements.txt
+          echo "${RUNNER_TEMP}/dmgbuild/bin" >> "${GITHUB_PATH}"
+
       - name: Package
         run: |
           mkdir -p dist
@@ -125,7 +134,7 @@ jobs:
             macOS)
               bash .github/scripts/macos_app.sh out/nxpress "${VERSION}" out
               tar -czf "dist/nxpress-${{ matrix.name }}.tar.gz" -C out NXPress.app
-              # the disk image to drag NXPress to Applications from, with no script: tools/installer makes it
+              # the disk image to drag NXPress to Applications from, with no script: tools/installer makes it with dmgbuild
               go run ./tools/installer -mac -app out/NXPress.app -out "dist/nxpress-${{ matrix.name }}.dmg" ;;
             *)
               # the program, its icon, its entry in the menu and install.sh, which puts them in place
