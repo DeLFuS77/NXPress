@@ -31,7 +31,7 @@ func TestTexts(t *testing.T) {
 			}
 		}
 		for key := range texts[code] {
-			if key != "nsis" && key != "name" && !contains(keys, key) && !contains(macKeys, key) {
+			if key != "nsis" && key != "name" && !contains(keys, key) {
 				t.Errorf("%s has %s, which the installer does not use", code, key)
 			}
 		}
