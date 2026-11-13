@@ -2532,6 +2532,16 @@ function listen() {
   });
   // NXPress called the turning off off by itself (a work started): its count goes
   events.EventsOn("shutdownCancelled", hideShutdown);
+  // the window is closed with files at work: the page asks, in the theme of the window (#115);
+  // No is the answer of Escape and of the button in focus
+  events.EventsOn("closeAsked", () => {
+    const dialog = $("close-dialog");
+    if (dialog.open) return;
+    $("close-yes").onclick = () => { dialog.close(); app().ConfirmClose(); };
+    $("close-no").onclick = () => dialog.close();
+    openDialog(dialog);
+    $("close-no").focus();
+  });
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
