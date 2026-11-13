@@ -39,11 +39,16 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
         int64_t c = -1;
         std::vector<uint8_t> plain, packed, work;
     };
-    std::vector<Job> jobs(size_t(threads) * 8);
-    for (auto& j : jobs) {
-        j.plain.resize(kBlock);
-        j.packed.resize(nx_lz4_bound(kBlock));
-        j.work.resize(NX_LZ4_WORK_SIZE);
+    // two batches: the next one is read while the one before is compressed (reading is mostly
+    // waiting on the storage, compressing is the cores), then written in order
+    std::vector<Job> sets[2];
+    for (auto& jobs : sets) {
+        jobs.resize(size_t(threads) * 8);
+        for (auto& j : jobs) {
+            j.plain.resize(kBlock);
+            j.packed.resize(nx_lz4_bound(kBlock));
+            j.work.resize(NX_LZ4_WORK_SIZE);
+        }
     }
     static const uint8_t zeros[16] = {};
     uint64_t at = 0; // stored bytes written
@@ -56,30 +61,41 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
         return true;
     };
     uint64_t virt = 0;
-    while (virt < virt_size) {
-        size_t count = 0;
+    // the next blocks, in order: the head stays as it is, then blocks of 64 KiB
+    const auto fill = [&](std::vector<Job>& jobs, size_t& count) {
+        count = 0;
         while (count < jobs.size() && virt < virt_size) {
-            // the head stays as it is, then blocks of 64 KiB
             Job& j = jobs[count++];
             j.virt = virt;
             j.n = uint32_t(std::min<uint64_t>(virt == 0 ? kHead : kBlock, virt_size - virt));
             if (!read(virt, j.plain.data(), j.n)) return false;
             virt += j.n;
         }
-        const auto run = [&](size_t first) {
+        return true;
+    };
+    size_t counts[2] = {0, 0};
+    int cur = 0;
+    if (!fill(sets[0], counts[0])) return false;
+    while (counts[cur] > 0) {
+        std::vector<Job>& jobs = sets[cur];
+        const size_t count = counts[cur];
+        const auto run = [&jobs, count, threads, level](size_t first) {
             for (size_t i = first; i < count; i += threads) {
                 Job& j = jobs[i];
                 j.c = j.virt == 0 ? -1 : nx_lz4_compress(j.plain.data(), j.n, j.packed.data(), j.packed.size(), level, j.work.data());
             }
         };
+        bool read_ok;
         if (threads > 1 && count > 1) {
-            std::vector<std::thread> helpers;
-            for (unsigned t = 1; t < threads && t < count; t++) helpers.emplace_back(run, t);
-            run(0);
-            for (auto& h : helpers) h.join();
+            std::vector<std::thread> workers;
+            for (unsigned t = 0; t < threads && t < count; t++) workers.emplace_back(run, t);
+            read_ok = fill(sets[cur ^ 1], counts[cur ^ 1]);
+            for (auto& w : workers) w.join();
         } else {
             run(0);
+            read_ok = fill(sets[cur ^ 1], counts[cur ^ 1]);
         }
+        if (!read_ok) return false;
         for (size_t i = 0; i < count; i++) {
             const Job& j = jobs[i];
             const bool lz4 = j.c > 0 && uint64_t(j.c) + min_gain <= j.n;
@@ -100,6 +116,7 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
             }
             if (step && !step(j.virt + j.n)) return false;
         }
+        cur ^= 1;
     }
     out.stored = at;
     out.table_offset = Align16(at);
@@ -153,10 +170,19 @@ bool ParseTable(const uint8_t* table, size_t size, uint32_t count, std::vector<E
             e.level = int8_t(p[17]);
             e.size = Get32(p + 20);
             if (k == 0 && Get64(table + 0x10 + s * 8) != e.virt) return false;
+            // the entries never go down, so each one ends where the next starts
+            if (!out.empty() && e.virt < out.back().virt) return false;
             out.push_back(e);
         }
     }
-    return out.size() == count;
+    if (out.size() != count || virt_end < out.back().virt) return false;
+    // an LZ4 block is one block of the data at most, so Unpack never takes more memory
+    for (size_t i = 0; i < out.size(); i++) {
+        if (out[i].type != kLz4) continue;
+        const uint64_t end = i + 1 < out.size() ? out[i + 1].virt : virt_end;
+        if (end - out[i].virt > kBlock || out[i].size > nx_lz4_bound(kBlock)) return false;
+    }
+    return true;
 }
 
 bool Unpack(const std::vector<Entry>& entries, uint64_t virt_end, const ReadFn& stored, uint64_t offset, uint8_t* out, size_t size) {

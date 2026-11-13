@@ -69,6 +69,8 @@ public:
     uint64_t DataOffset() const { return m_data_offset; }
     uint64_t DataSize() const { return m_romfs.StoredSize(); }
     uint64_t BaseSize() const { return m_base_ptr ? m_base_ptr->Size() : 0; }
+    // the base as the update reads it (for the spare of the merged game, merge_recipe)
+    bool ReadBase(uint64_t offset, uint8_t* buf, size_t size) { return m_base_ptr && m_base_ptr->Read(offset, buf, size); }
     bool RomfsCompressed() const { return m_romfs.Compressed(); }
     // blocks of the base or the update found damaged as they were read
     uint64_t Damaged() const { return m_romfs.Damaged(); }

@@ -8,7 +8,9 @@
 //    version of the update, the contents of the update (the merged program in place of its program,
 //    without its delta fragments) and no required application version, so the console does not
 //    ask for the update it already has; the firmware it needs is at least the higher of the two
-//    and 12.0.0 (the LZ4 layer of the NCA).
+//    and 12.0.0 (the LZ4 layer of the NCA). A base game Nintendo cut down is marked Compacted
+//    (whole only with its update): the merged game is whole, so the mark goes, or the console
+//    asks to download the update before the game starts.
 //  - Its meta NCA is made from the one of the base game: the same header and key area, one section
 //    with a PFS0 holding the .cnmt, hashed in blocks (HierarchicalSha256), as Nintendo makes them.
 //  - The record of the database of ncm: its header, extended header and every content, the meta
@@ -29,6 +31,8 @@ enum : uint8_t { kTypeApplication = 0x80, kTypePatch = 0x81 };
 enum : uint8_t { kContentMeta = 0, kContentProgram = 1, kContentDeltaFragment = 6 };
 
 constexpr uint32_t kFirmware12 = 12u << 26; // 12.0.0, as the console writes a version
+// The attributes of a CNMT (its header at 0x14): a base game that is whole only with its update.
+constexpr uint8_t kAttributeCompacted = 0x04;
 
 // One content of a CNMT: its hash, then the content info of ncm (id, size, attributes, type, id
 // offset), 0x38 bytes.
@@ -64,6 +68,14 @@ bool CnmtFromSection(const std::vector<uint8_t>& section, const uint8_t* fsh, st
 // header (decrypted, its section, FS header, size and hash set) and its one section, not encrypted
 // yet (from 0xC00 in the NCA).
 bool MetaNca(const uint8_t* model_header, const Cnmt& cnmt, const HashFn& hash, std::vector<uint8_t>& header, std::vector<uint8_t>& section);
+
+// The system version a record of the database of ncm asks for (its extended header, after the id
+// of the game or of its update), UINT32_MAX when it does not say.
+uint32_t RecordedSystemVersion(const uint8_t* record, size_t size);
+// A game merged on the console asks no more of the system than the record of what it replaces
+// (an installer such as DBI can have lowered it so the console starts the game), and never less
+// than the LZ4 layer needs (12.0.0). Asking for more, the console asks for a system update first.
+void KeepRecordedSystem(Cnmt& merged, uint32_t recorded);
 
 // The record of the database of ncm for `cnmt`, its meta NCA (id, size) listed first.
 std::vector<uint8_t> DbRecord(const Cnmt& cnmt, const std::array<uint8_t, 16>& meta_id, uint64_t meta_size);

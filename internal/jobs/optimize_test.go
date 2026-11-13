@@ -44,6 +44,10 @@ func TestOptimizeOptions(t *testing.T) {
 	if !strings.Contains(Usage, "--optimize") || !strings.Contains(Usage, "sigpatches") || !strings.Contains(Usage, "NXDock or DBI") || !strings.Contains(Usage, "official updates") {
 		t.Error("the help does not tell --optimize, the sigpatches and the official updates")
 	}
+	// an update left on the console is read over the optimized game, which then closes with an error
+	if !strings.Contains(strings.Join(strings.Fields(Usage), " "), "after deleting the update of the game from the console") {
+		t.Error("the help does not tell to delete the update of the game from the console before installing")
+	}
 }
 
 // What cannot be optimized is told and left as it is: a DLC, a game without its update, and a

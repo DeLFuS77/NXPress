@@ -3,7 +3,8 @@
 *Optimize for install* turns a game and its update into one NSP that takes the least room once it
 is installed. It is experimental: the NSP it writes is a game laid out in a way Nintendo never
 ships, so it needs **sigpatches** and **firmware 12.0.0 or newer**, and it is installed with
-**NXDock or DBI**. **Do not install official updates over it**: keep the game and its update, and optimize
+**NXDock or DBI**, after deleting the update of the game from the console (see [Installing it](#installing-it)).
+**Do not install official updates over it**: keep the game and its update, and optimize
 them again from those originals when a newer update comes.
 
 ```
@@ -25,6 +26,25 @@ which takes the same room as the NSP once installed.
 - **DLC save nothing.** They stay as they are.
 
 What you do not lose: the saves, the DLC installed and the game itself. What the game reads is the same as with its update, byte for byte, and that is checked before the file gets its name.
+
+## Installing it
+
+The optimized game takes the place of the game: it is the game at the version of the update, with
+no update under it. So:
+
+- **Delete the update of the game from the console first**, from the SD card and from the system
+  memory. An update left installed is read over the optimized game as it is read over the base
+  game it was made for; what it reads is no longer there, the FS finds data that does not match
+  its hashes and **the game closes with an error**. NXDock deletes it when it installs an
+  optimized game (an Application of a version above 0: every update of it at or below that
+  version, on both storages, and its record). An installer that replaces only the old game
+  leaves the update.
+- **If the console asks to download the update**: a game optimized before 1.7.13 from a base game
+  Nintendo cut down still says it needs its update; optimize it again and install it again. Else
+  the console remembers a newer version it wants before the game starts (the launch version of
+  AVM, kept when an update was installed or told by the version list of Nintendo): there is a newer
+  update to optimize the game with, or the version kept can be taken back to the one installed (in
+  NXDock: Drop the version it asks for).
 
 ## What it writes
 
@@ -84,6 +104,9 @@ The CNMT is the one of the base game (same title ID, attributes and extended hea
   fragments;
 - **no required application version** (the console does not ask for an update it already has), and
   as the required system version the higher of the two and 12.0.0;
+- **not Compacted**: Nintendo marks a base game it cut down (whole only with its update) with this
+  attribute; the merged game is whole, so the mark goes, or the console asks to download the update
+  before the game starts. Its other attributes stay;
 - no extended data (the history of the patch).
 
 Its meta NCA is made from the one of the base game: the same header and key area, one section
