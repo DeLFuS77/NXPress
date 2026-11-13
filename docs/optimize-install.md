@@ -39,11 +39,12 @@ no update under it. So:
   optimized game (an Application of a version above 0: every update of it at or below that
   version, on both storages, and its record). An installer that replaces only the old game
   leaves the update.
-- **If the console asks to download the update**, it remembers a newer version it wants before
-  the game starts (the launch version of AVM, kept when an update was installed or told by the
-  version list of Nintendo). The optimized game is at the version of its update; when the console
-  asks for one above it, there is a newer update to optimize the game with, or the version kept
-  can be taken back to the one installed (in NXDock: Drop the version it asks for).
+- **If the console asks to download the update**: a game optimized before 1.7.13 from a base game
+  Nintendo cut down still says it needs its update; optimize it again and install it again. Else
+  the console remembers a newer version it wants before the game starts (the launch version of
+  AVM, kept when an update was installed or told by the version list of Nintendo): there is a newer
+  update to optimize the game with, or the version kept can be taken back to the one installed (in
+  NXDock: Drop the version it asks for).
 
 ## What it writes
 
@@ -103,6 +104,9 @@ The CNMT is the one of the base game (same title ID, attributes and extended hea
   fragments;
 - **no required application version** (the console does not ask for an update it already has), and
   as the required system version the higher of the two and 12.0.0;
+- **not Compacted**: Nintendo marks a base game it cut down (whole only with its update) with this
+  attribute; the merged game is whole, so the mark goes, or the console asks to download the update
+  before the game starts. Its other attributes stay;
 - no extended data (the history of the patch).
 
 Its meta NCA is made from the one of the base game: the same header and key area, one section

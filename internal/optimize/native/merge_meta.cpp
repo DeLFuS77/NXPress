@@ -107,6 +107,8 @@ bool MergedCnmt(const Cnmt& base, const Cnmt& update, const Content& program, Cn
     const uint32_t need = std::max({Get32(base.extended.data() + 8), Get32(update.extended.data() + 8), kFirmware12});
     Put32(out.extended.data() + 8, need);
     Put32(out.extended.data() + 0xC, 0); // no required application version
+    // whole now: a base Nintendo cut down (Compacted) no longer needs its update
+    out.header[0x14] &= uint8_t(~kAttributeCompacted);
     // the download firmware of the header: the higher of the two
     Put32(out.header.data() + 0x18, std::max(Get32(base.header.data() + 0x18), Get32(update.header.data() + 0x18)));
     out.contents.clear();
@@ -127,7 +129,7 @@ bool MergedCnmt(const Cnmt& base, const Cnmt& update, const Content& program, Cn
 bool CnmtFromSection(const std::vector<uint8_t>& s, const uint8_t* fsh, std::vector<uint8_t>& cnmt) {
     if (fsh[3] != 2) return false; // HierarchicalSha256
     const uint64_t po = Get64(fsh + 0x40), ps = Get64(fsh + 0x48);
-    if (po + ps > s.size() || ps < 0x10) return false;
+    if (po > s.size() || ps > s.size() - po || ps < 0x10) return false;
     const uint8_t* pfs = s.data() + po;
     if (std::memcmp(pfs, "PFS0", 4) != 0) return false;
     const uint32_t files = Get32(pfs + 4), strings = Get32(pfs + 8);
@@ -139,8 +141,9 @@ bool CnmtFromSection(const std::vector<uint8_t>& s, const uint8_t* fsh, std::vec
         if (name_at >= head) return false;
         const std::string name(reinterpret_cast<const char*>(pfs + name_at), strnlen(reinterpret_cast<const char*>(pfs + name_at), size_t(head - name_at)));
         if (name.size() <= 5 || name.compare(name.size() - 5, 5, ".cnmt") != 0) continue;
-        const uint64_t at = head + Get64(e), n = Get64(e + 8);
-        if (at + n > ps) return false;
+        const uint64_t off = Get64(e), n = Get64(e + 8);
+        if (off > ps - head || n > ps - head - off) return false;
+        const uint64_t at = head + off;
         cnmt.assign(pfs + at, pfs + at + n);
         return true;
     }

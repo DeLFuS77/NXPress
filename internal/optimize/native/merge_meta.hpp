@@ -8,7 +8,9 @@
 //    version of the update, the contents of the update (the merged program in place of its program,
 //    without its delta fragments) and no required application version, so the console does not
 //    ask for the update it already has; the firmware it needs is at least the higher of the two
-//    and 12.0.0 (the LZ4 layer of the NCA).
+//    and 12.0.0 (the LZ4 layer of the NCA). A base game Nintendo cut down is marked Compacted
+//    (whole only with its update): the merged game is whole, so the mark goes, or the console
+//    asks to download the update before the game starts.
 //  - Its meta NCA is made from the one of the base game: the same header and key area, one section
 //    with a PFS0 holding the .cnmt, hashed in blocks (HierarchicalSha256), as Nintendo makes them.
 //  - The record of the database of ncm: its header, extended header and every content, the meta
@@ -29,6 +31,8 @@ enum : uint8_t { kTypeApplication = 0x80, kTypePatch = 0x81 };
 enum : uint8_t { kContentMeta = 0, kContentProgram = 1, kContentDeltaFragment = 6 };
 
 constexpr uint32_t kFirmware12 = 12u << 26; // 12.0.0, as the console writes a version
+// The attributes of a CNMT (its header at 0x14): a base game that is whole only with its update.
+constexpr uint8_t kAttributeCompacted = 0x04;
 
 // One content of a CNMT: its hash, then the content info of ncm (id, size, attributes, type, id
 // offset), 0x38 bytes.
