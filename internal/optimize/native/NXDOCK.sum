@@ -1,5 +1,5 @@
 # The code of NXDock in this folder, copied by tools/nxdocksync: never edit it here.
-commit 90209d397d199a4a9a3296416590d3766fec612a
+commit ab7a62ccba9e72ef6b347bc74515131da128741a
 ebffeb1cb06fb32bf9f6ec289d6bc39247a264a8206afd8a153de5e5ba2dacb8  patch_view.hpp  source/patch_view.hpp
 f6bad1bca5e5f0de4c5c34ca6f13615fdf8b1ae8320533c55a484a17455b13bd  patch_view.cpp  source/patch_view.cpp
 1d3ab43605623a1ef8d00573d0df66e4cd69a69a5016847259c47e13b235acfa  romfs_lz4.hpp  source/romfs_lz4.hpp
@@ -10,7 +10,7 @@ c639db33adf3a9fa38b831063a644659ae50314471740d28a6f68720195ba995  merge_nca.hpp 
 8da747fb44fa84e507c6a3b48e3b8bbf86d186435b9c6bdf3c370f58e2b283d0  merge_nca.cpp  source/merge_nca.cpp
 1e27b6e58a06d57cb1c6dfad6871f3f03d1fce2f7fc552cfff99451dfd0ab3a2  merge_game.hpp  source/merge_game.hpp
 12526bca702335d890043a9a5681b38c71c34232c383960450aa121f085a3ac8  merge_game.cpp  source/merge_game.cpp
-2e9d15988cac9455b67f6eda8cc2904eea47527eba55b95883fe0c5bacad8b6f  merge_meta.hpp  source/merge_meta.hpp
-eafce6f97853029e496416bc5cd19fab6adb5229eb0184d21dca9b12f9433d93  merge_meta.cpp  source/merge_meta.cpp
+8b2abd6753c341d7d4f3fede90a0ae4ceae6be3067e0c91a9833055d0aae5b17  merge_meta.hpp  source/merge_meta.hpp
+62a4be571e68f9ac3c3f42ba96b9addc7011cdc125435ad424030469367d3b9f  merge_meta.cpp  source/merge_meta.cpp
 adb8f76f1675d026c363a914a685d309110a1c5c621f3673bab3fcd38e01f72b  lz4nintendo.c  source/lz4nintendo.c
 d0c910717f632280da8ff546e75a6af5f27161fe0a3e4d10a8f17b3a052d318b  lz4nintendo.h  include/lz4nintendo.h

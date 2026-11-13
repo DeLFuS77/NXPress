@@ -69,6 +69,14 @@ bool CnmtFromSection(const std::vector<uint8_t>& section, const uint8_t* fsh, st
 // yet (from 0xC00 in the NCA).
 bool MetaNca(const uint8_t* model_header, const Cnmt& cnmt, const HashFn& hash, std::vector<uint8_t>& header, std::vector<uint8_t>& section);
 
+// The system version a record of the database of ncm asks for (its extended header, after the id
+// of the game or of its update), UINT32_MAX when it does not say.
+uint32_t RecordedSystemVersion(const uint8_t* record, size_t size);
+// A game merged on the console asks no more of the system than the record of what it replaces
+// (an installer such as DBI can have lowered it so the console starts the game), and never less
+// than the LZ4 layer needs (12.0.0). Asking for more, the console asks for a system update first.
+void KeepRecordedSystem(Cnmt& merged, uint32_t recorded);
+
 // The record of the database of ncm for `cnmt`, its meta NCA (id, size) listed first.
 std::vector<uint8_t> DbRecord(const Cnmt& cnmt, const std::array<uint8_t, 16>& meta_id, uint64_t meta_size);
 

@@ -202,6 +202,19 @@ bool MetaNca(const uint8_t* model, const Cnmt& c, const HashFn& hash, std::vecto
     return true;
 }
 
+uint32_t RecordedSystemVersion(const uint8_t* r, size_t n) {
+    if (n < 8) return UINT32_MAX;
+    const uint16_t ext = Get16(r);
+    if (ext < 0xC || n < 8 + size_t(ext)) return UINT32_MAX;
+    return Get32(r + 8 + 8);
+}
+
+void KeepRecordedSystem(Cnmt& m, uint32_t recorded) {
+    if (m.extended.size() < 0xC) return;
+    const uint32_t asks = Get32(m.extended.data() + 8);
+    Put32(m.extended.data() + 8, std::max(std::min(asks, recorded), kFirmware12));
+}
+
 std::vector<uint8_t> DbRecord(const Cnmt& c, const std::array<uint8_t, 16>& meta_id, uint64_t meta_size) {
     std::vector<uint8_t> o(8, 0);
     Put16(o.data(), uint16_t(c.extended.size()));
