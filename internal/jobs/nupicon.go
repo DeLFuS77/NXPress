@@ -108,25 +108,45 @@ func iconOf(ctx context.Context, o Options, id uint64) ([]byte, string, string, 
 	if err != nil {
 		return nil, "", "", err
 	}
-	icon, err := nup.MakeIcon(data)
+	crop := nup.Crop{}
+	if given {
+		crop = o.NupIconCrop
+	}
+	icon, err := nup.MakeIconCrop(data, crop)
 	if err != nil {
 		return nil, "", "", err
 	}
 	blurry := ""
 	if given {
 		var size string
-		size, blurry = imageSizeNote(data)
+		size, blurry = imageSizeNote(data, crop)
 		from += size
 	}
 	return icon, from, blurry, nil
 }
 
 // imageSizeNote tells the size of an image given and what was done with it: its square at its
-// middle taken, and made bigger when it is smaller than an icon.
-func imageSizeNote(data []byte) (string, string) {
+// middle taken, or the part chosen, or the whole of it; and made bigger when what was taken is
+// smaller than an icon.
+func imageSizeNote(data []byte, crop nup.Crop) (string, string) {
 	width, height, err := nup.ImageSize(data)
 	if err != nil {
 		return "", ""
+	}
+	switch {
+	case crop.Fit:
+		size := fmt.Sprintf(" (%d×%d, whole)", width, height)
+		if max(width, height) < nup.IconSize {
+			return size, "; " + imageSmall
+		}
+		return size, ""
+	case crop.Size >= 1:
+		side := min(int(crop.Size+0.5), width, height)
+		size := fmt.Sprintf(" (%d×%d, the part of %d×%d chosen)", width, height, side, side)
+		if side < nup.IconSize {
+			return size, "; " + imageSmall
+		}
+		return size, ""
 	}
 	side := min(width, height)
 	size := fmt.Sprintf(" (%d×%d, square already)", width, height)
@@ -168,7 +188,7 @@ func packIcon(ctx context.Context, dir string, o Options) ([]byte, string) {
 		return nil, ""
 	}
 	if chosen := chosenIcon(o.NupIcons, dir); chosen != "" {
-		o.NupIcon, o.NupIconImage = chosen, nil
+		o.NupIcon, o.NupIconImage, o.NupIconCrop = chosen, nil, chosenCrop(o.NupIconCrops, dir)
 	}
 	icon, from, blurry, err := iconOf(ctx, o, main.TitleID)
 	if err != nil {
@@ -190,6 +210,21 @@ func chosenIcon(chosen map[string]string, dir string) string {
 		}
 	}
 	return ""
+}
+
+// chosenCrop is the part of its image chosen in Combine for a dump folder, found as chosenIcon
+// finds the image; none: the square at its middle.
+func chosenCrop(crops map[string]nup.Crop, dir string) nup.Crop {
+	if crop, ok := crops[dir]; ok {
+		return crop
+	}
+	clean := filepath.Clean(dir)
+	for folder, crop := range crops {
+		if filepath.Clean(folder) == clean {
+			return crop
+		}
+	}
+	return nup.Crop{}
 }
 
 // appSource is the package of a dump folder that carries the icon of the game, as nup.Pack picks

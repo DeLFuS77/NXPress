@@ -561,6 +561,21 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .file-card .nup-icon-change { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
 /* the window to search an image in the eShop (#102): the name, then the games in a grid */
 dialog.cover-dialog { max-width: 680px; }
+/* the crop of an image chosen for an icon: a square fixed at the middle, the image moved and
+   zoomed under it, and the icon as it will be beside */
+dialog.crop-dialog { max-width: 640px; }
+.crop-body { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin-top: 10px; }
+.crop-stage { position: relative; width: 340px; height: 340px; max-width: 100%; overflow: hidden; border-radius: var(--radius); background: #0b0d11; cursor: grab; touch-action: none; user-select: none; }
+.crop-stage:active { cursor: grabbing; }
+.crop-stage img { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; max-width: none; }
+.crop-box { position: absolute; inset: 30px; border: 2px solid #fff; border-radius: 4px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); pointer-events: none; }
+.crop-side { display: flex; flex-direction: column; gap: 10px; min-width: 170px; }
+.crop-preview { width: 128px; height: 128px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.crop-note { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.crop-zoom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.crop-zoom input { flex: 1; min-width: 100px; }
+.crop-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.crop-buttons button { padding: 3px 10px; font-size: 12px; }
 .cover-bar { display: flex; gap: 8px; }
 .cover-bar input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); padding: 6px 10px; }
 .cover-from { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
