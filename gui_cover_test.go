@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/DeLFuS77/NXPress/internal/nup"
 )
 
 // An image chosen in Combine is read and made the icon it will be, with its name and size; one
@@ -48,6 +50,37 @@ func TestCoverImage(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 	if _, err := coverImage(filepath.Join(t.TempDir(), "missing.png")); err == nil {
+		t.Error("a missing image was taken")
+	}
+}
+
+// The image chosen comes with a smaller copy to crop on, and the icon of a crop is made from the
+// image itself.
+func TestCoverCrop(t *testing.T) {
+	picture := image.NewRGBA(image.Rect(0, 0, 2048, 1024))
+	var data bytes.Buffer
+	if err := png.Encode(&data, picture); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "wide.png")
+	os.WriteFile(path, data.Bytes(), 0o644)
+	cover, err := coverImage(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(cover.Source, "data:image/jpeg;base64,"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config, _, err := image.DecodeConfig(bytes.NewReader(source)); err != nil || config.Width != cropSide || config.Height != cropSide/2 {
+		t.Errorf("source %+v %v", config, err)
+	}
+	app := &App{}
+	preview, err := app.CoverPreview(path, nup.Crop{X: 100, Y: 100, Size: 500})
+	if err != nil || !strings.HasPrefix(preview, "data:image/jpeg;base64,") {
+		t.Errorf("%.40q %v", preview, err)
+	}
+	if _, err := app.CoverPreview(filepath.Join(t.TempDir(), "missing.png"), nup.Crop{}); err == nil {
 		t.Error("a missing image was taken")
 	}
 }

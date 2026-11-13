@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.12
+
+### Improvements
+
+- An image of your own for an icon (Add cover art icon in Combine, Choose image in Details) opens in a crop first: drag and zoom it under the square, or fit it whole, and see the icon as it will be
+
+### Fixes
+
+- Closing NXPress while files are at work asks in a dialog of the window, in its light or dark theme, not in a white one of the system. Thanks to NikoMuffin for reporting it (#115)
+
 ## 1.7.11
 
 ### Improvements

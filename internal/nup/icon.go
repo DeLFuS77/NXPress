@@ -33,9 +33,34 @@ const (
 	MaxIconFile = 32 << 20
 )
 
-// MakeIcon makes an image (PNG, JPEG, WEBP or BMP) the icon of a game: cut square at its middle, made
-// 256×256 and written as a JPEG, as the icons of the console are.
-func MakeIcon(data []byte) ([]byte, error) {
+// Crop is the part of an image chosen for an icon, in the pixels of the image: a square of side
+// Size at X, Y. With Fit the whole image is taken instead, on white around it. The zero Crop is
+// the square at the middle of the image.
+type Crop struct {
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Size float64 `json:"size"`
+	Fit  bool    `json:"fit"`
+}
+
+// Chosen tells a crop chosen apart from the square at the middle.
+func (c Crop) Chosen() bool { return c.Fit || c.Size >= 1 }
+
+// square is the part of the picture a crop takes, kept inside it: the square at its middle when
+// none was chosen.
+func (c Crop) square(bounds image.Rectangle) image.Rectangle {
+	side := min(bounds.Dx(), bounds.Dy())
+	if c.Size < 1 {
+		return image.Rect(0, 0, side, side).Add(image.Pt(bounds.Min.X+(bounds.Dx()-side)/2, bounds.Min.Y+(bounds.Dy()-side)/2))
+	}
+	size := max(1, min(int(c.Size+0.5), side))
+	x := min(max(int(c.X+0.5), 0), bounds.Dx()-size)
+	y := min(max(int(c.Y+0.5), 0), bounds.Dy()-size)
+	return image.Rect(0, 0, size, size).Add(image.Pt(bounds.Min.X+x, bounds.Min.Y+y))
+}
+
+// decodeIcon reads an image an icon is made from, refusing one too big to be one.
+func decodeIcon(data []byte) (image.Image, error) {
 	if len(data) > MaxIconFile {
 		return nil, errors.New("the image is too big to be an icon")
 	}
@@ -50,15 +75,55 @@ func MakeIcon(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the image cannot be read (PNG, JPEG, WEBP or BMP): %w", err)
 	}
+	return picture, nil
+}
+
+// MakeIcon makes an image (PNG, JPEG, WEBP or BMP) the icon of a game: cut square at its middle, made
+// 256×256 and written as a JPEG, as the icons of the console are.
+func MakeIcon(data []byte) ([]byte, error) {
+	return MakeIconCrop(data, Crop{})
+}
+
+// MakeIconCrop makes the part of an image chosen the icon of a game, as MakeIcon does with its
+// middle; with Fit, the whole image as big as it fits, on white.
+func MakeIconCrop(data []byte, crop Crop) ([]byte, error) {
+	picture, err := decodeIcon(data)
+	if err != nil {
+		return nil, err
+	}
 	bounds := picture.Bounds()
-	side := min(bounds.Dx(), bounds.Dy())
-	square := image.Rect(0, 0, side, side).Add(image.Pt(bounds.Min.X+(bounds.Dx()-side)/2, bounds.Min.Y+(bounds.Dy()-side)/2))
 	icon := image.NewRGBA(image.Rect(0, 0, IconSize, IconSize))
 	// a transparent image is shown on white, as JPEG keeps no transparency
 	draw.Draw(icon, icon.Bounds(), image.White, image.Point{}, draw.Src)
-	draw.CatmullRom.Scale(icon, icon.Bounds(), picture, square, draw.Over, nil)
+	if crop.Fit {
+		scale := float64(IconSize) / float64(max(bounds.Dx(), bounds.Dy()))
+		width, height := max(1, int(float64(bounds.Dx())*scale+0.5)), max(1, int(float64(bounds.Dy())*scale+0.5))
+		target := image.Rect(0, 0, width, height).Add(image.Pt((IconSize-width)/2, (IconSize-height)/2))
+		draw.CatmullRom.Scale(icon, target, picture, bounds, draw.Over, nil)
+	} else {
+		draw.CatmullRom.Scale(icon, icon.Bounds(), picture, crop.square(bounds), draw.Over, nil)
+	}
 	var out bytes.Buffer
 	if err := jpeg.Encode(&out, icon, &jpeg.Options{Quality: 92}); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
+// CropSource is an image made small enough to be cropped in the window, its longest side at most
+// side pixels, as a JPEG on white; the crop chosen on it is told in the pixels of the image.
+func CropSource(data []byte, side int) ([]byte, error) {
+	picture, err := decodeIcon(data)
+	if err != nil {
+		return nil, err
+	}
+	bounds := picture.Bounds()
+	scale := min(1, float64(side)/float64(max(bounds.Dx(), bounds.Dy())))
+	small := image.NewRGBA(image.Rect(0, 0, max(1, int(float64(bounds.Dx())*scale+0.5)), max(1, int(float64(bounds.Dy())*scale+0.5))))
+	draw.Draw(small, small.Bounds(), image.White, image.Point{}, draw.Src)
+	draw.CatmullRom.Scale(small, small.Bounds(), picture, bounds, draw.Over, nil)
+	var out bytes.Buffer
+	if err := jpeg.Encode(&out, small, &jpeg.Options{Quality: 88}); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil

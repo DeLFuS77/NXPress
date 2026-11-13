@@ -422,6 +422,23 @@
   <p class="cover-paste muted" data-t="coverPasteHere"></p>
   <div class="dialog-actions"><button id="cover-web" class="quiet cover-web" data-t="coverWeb"></button><button id="cover-cancel" data-t="cancel"></button><button id="cover-use" class="primary" data-t="coverUse" disabled></button></div>
 </dialog>
+<dialog id="crop-dialog" class="crop-dialog" aria-labelledby="crop-title">
+  <h2 id="crop-title" data-t="cropTitle"></h2>
+  <div class="crop-body">
+    <div id="crop-stage" class="crop-stage" tabindex="0"><img id="crop-image" alt=""><div class="crop-box"></div></div>
+    <div class="crop-side">
+      <canvas id="crop-preview" class="crop-preview" width="256" height="256"></canvas>
+      <span class="crop-note" data-t="cropAsIcon"></span>
+      <label class="crop-zoom"><span data-t="cropZoom"></span><input id="crop-zoom" type="range" min="1" max="4" step="0.01" value="1"></label>
+      <div class="crop-buttons"><button id="crop-fit" data-t="cropFit"></button><button id="crop-reset" class="quiet" data-t="cropReset"></button></div>
+      <span id="crop-name" class="crop-note"></span>
+    </div>
+  </div>
+  <div class="dialog-actions"><button id="crop-cancel" data-t="cancel"></button><button id="crop-use" class="primary" data-t="cropUse"></button></div>
+<dialog id="close-dialog" aria-labelledby="close-question">
+  <p id="close-question" data-t="closeAsk"></p>
+  <div class="dialog-actions"><button id="close-no" class="primary" data-t="closeNo"></button><button id="close-yes" data-t="closeYes"></button></div>
+</dialog>
 <dialog id="extra-dialog" class="warn-dialog" aria-labelledby="extra-title" aria-describedby="extra-intro">
   <h2 id="extra-title"><svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 9.5v4.5M12 16.8v.2"/></svg><span data-t="extraWarnTitle"></span></h2>
   <p id="extra-intro" class="muted" data-t="extraWarnIntro"></p>

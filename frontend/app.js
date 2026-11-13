@@ -446,7 +446,14 @@ function iconLine(row, replace) {
   for (const button of buttons) button.disabled = state.busy;
   fromTitledb.onclick = () => giveNupIcon(row, () => app().FixNupIcon(row.item.path, replace));
   search.onclick = () => openCoverSearch(row, replace, search);
-  choose.onclick = () => giveNupIcon(row, () => app().ChooseNupIcon(row.item.path, t("chooseImageTitle"), replace));
+  // an image of one's own, cropped before it is given; a crop cancelled gives nothing
+  choose.onclick = () => giveNupIcon(row, async () => {
+    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    if (!cover) return "";
+    const crop = await cropImage(cover);
+    if (!crop) return "";
+    return app().SetNupIcon(row.item.path, cover.path, crop, replace);
+  });
   // an image pasted goes to the NUP whose line was used last
   const aim = () => { iconTarget = { row, replace }; };
   line.addEventListener("pointerdown", aim);
@@ -573,6 +580,95 @@ function capitalize(text) {
 
 // gives a NUP its icon, from its card, then reads the NUP again and tells what was done under the
 // icon; with no image chosen, nothing. Why it got none stays in the card, not in a notice that goes
+// cropImage opens the crop of an image chosen for an icon: a square fixed at the middle and the
+// image moved (dragged, by touch too, or with the arrows) and zoomed (the slider, the wheel, + and
+// -) under it; Fit whole takes all of it on white. It gives the crop in the pixels of the image,
+// or null when cancelled.
+function cropImage(cover) {
+  const dialog = $("crop-dialog"), stage = $("crop-stage"), image = $("crop-image"), zoomer = $("crop-zoom");
+  const preview = $("crop-preview").getContext("2d");
+  const STAGE = 340, BOX = 280, OFF = (STAGE - BOX) / 2;
+  $("crop-name").textContent = `${cover.name} · ${cover.width}×${cover.height}`;
+  return new Promise(resolve => {
+    let width = 0, height = 0, base = 1, zoom = 1, x = 0, y = 0, fit = false, drag = null, answered = false;
+    const scale = () => base * zoom;
+    const draw = () => {
+      preview.fillStyle = "#fff";
+      preview.fillRect(0, 0, 256, 256);
+      if (!width) return;
+      if (fit) {
+        const k = 256 / Math.max(width, height);
+        preview.drawImage(image, 0, 0, width, height, (256 - width * k) / 2, (256 - height * k) / 2, width * k, height * k);
+      } else {
+        const s = scale();
+        preview.drawImage(image, (OFF - x) / s, (OFF - y) / s, BOX / s, BOX / s, 0, 0, 256, 256);
+      }
+    };
+    const update = () => {
+      if (fit) {
+        const s = BOX / Math.max(width, height);
+        image.style.transform = `translate(${OFF + (BOX - width * s) / 2}px, ${OFF + (BOX - height * s) / 2}px) scale(${s})`;
+      } else {
+        const s = scale();
+        // the square never shows outside the image
+        x = Math.min(OFF, Math.max(OFF + BOX - width * s, x));
+        y = Math.min(OFF, Math.max(OFF + BOX - height * s, y));
+        image.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+      }
+      draw();
+    };
+    const reset = () => {
+      fit = false; zoom = 1; zoomer.value = 1;
+      x = OFF + (BOX - width * base) / 2; y = OFF + (BOX - height * base) / 2;
+      update();
+    };
+    const zoomTo = value => {
+      const before = scale(), cx = OFF + BOX / 2, cy = OFF + BOX / 2;
+      const ix = (cx - x) / before, iy = (cy - y) / before;
+      zoom = Math.min(4, Math.max(1, value)); zoomer.value = zoom; fit = false;
+      x = cx - ix * scale(); y = cy - iy * scale();
+      update();
+    };
+    const finish = crop => {
+      if (answered) return;
+      answered = true;
+      dialog.close();
+      resolve(crop);
+    };
+    stage.onpointerdown = event => { if (!fit) { drag = { px: event.clientX, py: event.clientY, x, y }; stage.setPointerCapture(event.pointerId); } };
+    stage.onpointermove = event => { if (drag) { x = drag.x + event.clientX - drag.px; y = drag.y + event.clientY - drag.py; update(); } };
+    stage.onpointerup = stage.onpointercancel = () => { drag = null; };
+    stage.onwheel = event => { event.preventDefault(); zoomTo(zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1)); };
+    stage.onkeydown = event => {
+      const step = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] }[event.key];
+      if (step && !fit) { x += step[0]; y += step[1]; update(); event.preventDefault(); }
+      else if (event.key === "+" || event.key === "=") { zoomTo(zoom * 1.1); event.preventDefault(); }
+      else if (event.key === "-") { zoomTo(zoom / 1.1); event.preventDefault(); }
+    };
+    zoomer.oninput = () => zoomTo(+zoomer.value);
+    $("crop-fit").onclick = () => { fit = true; update(); };
+    $("crop-reset").onclick = reset;
+    $("crop-cancel").onclick = () => finish(null);
+    $("crop-use").onclick = () => {
+      if (fit) return finish({ x: 0, y: 0, size: 0, fit: true });
+      // the crop of the image shown, told in the pixels of the image chosen
+      const s = scale(), k = cover.width / width;
+      finish({ x: (OFF - x) / s * k, y: (OFF - y) / s * k, size: BOX / s * k, fit: false });
+    };
+    dialog.addEventListener("close", () => finish(null), { once: true });
+    image.onload = () => {
+      width = image.naturalWidth; height = image.naturalHeight;
+      base = BOX / Math.min(width, height);
+      reset();
+    };
+    // the same image again loads again, so it is shown as it is
+    image.removeAttribute("src");
+    image.src = cover.source;
+    openDialog(dialog);
+    stage.focus();
+  });
+}
+
 // the line of a dump folder in Combine where an image is chosen for its NUP: its icon as it will
 // be, the button, and the formats taken; once chosen, Change and Remove, and its name and size
 function coverLine(row) {
@@ -595,6 +691,12 @@ function coverLine(row) {
     thumb.append(image);
     thumb.classList.add("chosen");
     choose.textContent = t("coverChange");
+    const crop = document.createElement("button");
+    crop.className = "quiet";
+    crop.textContent = t("coverCrop");
+    crop.disabled = state.busy;
+    crop.onclick = event => { event.stopPropagation(); cropCover(row, cover, crop); };
+    buttons.append(crop);
     const remove = document.createElement("button");
     remove.className = "quiet";
     remove.textContent = t("coverRemove");
@@ -611,15 +713,33 @@ function coverLine(row) {
   return line;
 }
 
+// an image chosen for the NUP of a folder, cropped at once: cancelling the crop keeps what was
+// there before
 async function chooseCover(row, button) {
   button.disabled = true;
   try {
     const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
-    if (cover) { row.item.cover = cover; row.coverFailed = ""; }
+    if (cover) await cropCover(row, cover, button);
   } catch (error) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
   }
   paint(row);
+}
+
+// the crop of the image of a folder chosen again, and the icon it makes shown in its row
+async function cropCover(row, cover, button) {
+  button.disabled = true;
+  try {
+    const crop = await cropImage(cover);
+    if (!crop) return;
+    const preview = await app().CoverPreview(cover.path, crop);
+    row.item.cover = { ...cover, crop, preview };
+    row.coverFailed = "";
+  } catch (error) {
+    row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+  } finally {
+    paint(row);
+  }
 }
 
 async function giveNupIcon(row, give) {
@@ -2168,8 +2288,12 @@ async function start(mode, extra) {
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
   // the image chosen in Combine for each dump folder, which its NUP takes instead of titledb's
   const nupIcons = {};
-  if (mode === "pack") for (const item of state.items) if (item.dump && item.cover) nupIcons[item.path] = item.cover.path;
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, ...(extra || {}) };
+  const nupIconCrops = {};
+  if (mode === "pack") for (const item of state.items) if (item.dump && item.cover) {
+    nupIcons[item.path] = item.cover.path;
+    if (item.cover.crop) nupIconCrops[item.path] = item.cover.crop;
+  }
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -2408,6 +2532,16 @@ function listen() {
   });
   // NXPress called the turning off off by itself (a work started): its count goes
   events.EventsOn("shutdownCancelled", hideShutdown);
+  // the window is closed with files at work: the page asks, in the theme of the window (#115);
+  // No is the answer of Escape and of the button in focus
+  events.EventsOn("closeAsked", () => {
+    const dialog = $("close-dialog");
+    if (dialog.open) return;
+    $("close-yes").onclick = () => { dialog.close(); app().ConfirmClose(); };
+    $("close-no").onclick = () => dialog.close();
+    openDialog(dialog);
+    $("close-no").focus();
+  });
   events.OnFileDrop((x, y, paths) => { if (!state.busy) refill(paths, false); }, true);
 }
 
