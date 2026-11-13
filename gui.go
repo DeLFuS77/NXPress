@@ -563,14 +563,58 @@ func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, er
 	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, ReplaceNupIcon: replace})
 }
 
-// CoverImage is an image chosen in Combine for the NUP of a dump folder: where it is, the icon it
-// makes, to be shown in its row, and its size.
+// SetNupIcon gives a NUP the image chosen in its card, cut as chosen in the crop of the window
+// and made 256×256; with replace, a NUP given one already has it changed.
+func (a *App) SetNupIcon(path string, image string, crop nup.Crop, replace bool) (string, error) {
+	if a.working() {
+		return "", errors.New("wait for the work to end")
+	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
+	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, NupIconCrop: crop, ReplaceNupIcon: replace})
+}
+
+// CoverPreview is the icon an image chosen makes with the crop chosen, to be shown in the row of
+// its folder.
+func (a *App) CoverPreview(path string, crop nup.Crop) (string, error) {
+	data, err := readCoverFile(path)
+	if err != nil {
+		return "", err
+	}
+	icon, err := nup.MakeIconCrop(data, crop)
+	if err != nil {
+		return "", err
+	}
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon), nil
+}
+
+// CoverImage is an image chosen for the icon of a NUP: where it is, the icon it makes at its
+// middle, to be shown in its row, its size, and the image made small to be cropped in the window.
 type CoverImage struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
 	Preview string `json:"preview"`
+	Source  string `json:"source"`
 	Width   int    `json:"width"`
 	Height  int    `json:"height"`
+}
+
+// cropSide is the longest side of the image the crop of the window shows.
+const cropSide = 1024
+
+// readCoverFile reads an image chosen for an icon, of the size an icon can be made from.
+func readCoverFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > nup.MaxIconFile {
+		return nil, errors.New("the image is too big to be an icon")
+	}
+	return os.ReadFile(path)
 }
 
 // ChooseCoverImage asks for an image (PNG, JPEG, WEBP or BMP), with a title in the language of
@@ -590,14 +634,7 @@ func (a *App) ChooseCoverImage(title string) (*CoverImage, error) {
 // coverImage reads an image chosen for a NUP and makes its icon, to be shown before the NUP is
 // made.
 func coverImage(path string) (*CoverImage, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if info.Size() > nup.MaxIconFile {
-		return nil, errors.New("the image is too big to be an icon")
-	}
-	data, err := os.ReadFile(path)
+	data, err := readCoverFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -605,10 +642,15 @@ func coverImage(path string) (*CoverImage, error) {
 	if err != nil {
 		return nil, err
 	}
+	source, err := nup.CropSource(data, cropSide)
+	if err != nil {
+		return nil, err
+	}
 	width, height, _ := nup.ImageSize(data)
 	return &CoverImage{
 		Path: path, Name: filepath.Base(path), Width: width, Height: height,
 		Preview: "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon),
+		Source:  "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(source),
 	}, nil
 }
 
@@ -760,6 +802,8 @@ type Request struct {
 	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
 	// one of titledb
 	NupIcons map[string]string `json:"nupIcons"`
+	// and the part of each image chosen in its crop
+	NupIconCrops map[string]nup.Crop `json:"nupIconCrops"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -824,7 +868,7 @@ func (a *App) Start(request Request) error {
 		// a SuperNSP per game, or one file with everything, named by its template next to the
 		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
 		o.Origins = request.Origins
-		o.NupIcons = request.NupIcons
+		o.NupIcons, o.NupIconCrops = request.NupIcons, request.NupIconCrops
 		switch {
 		case request.PackGames:
 			o.PackGames, o.PackName = true, request.PackTemplate

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- An image of your own for an icon (Add cover art icon in Combine, Choose image in Details) opens in a crop first: drag and zoom it under the square, or fit it whole, and see the icon as it will be
+
 ## 1.7.11
 
 ### Improvements

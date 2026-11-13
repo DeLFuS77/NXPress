@@ -318,9 +318,58 @@ func TestImageSizeNote(t *testing.T) {
 		{512, 512, " (512×512, square already)", ""},
 		{300, 120, " (300×120, its square of 120×120 at its middle)", "; " + imageSmall},
 	} {
-		size, blurry := imageSizeNote(pngOf(t, c.width, c.height, color.White))
+		size, blurry := imageSizeNote(pngOf(t, c.width, c.height, color.White), nup.Crop{})
 		if size != c.size || blurry != c.blurry {
 			t.Errorf("%d×%d: %q %q", c.width, c.height, size, blurry)
 		}
+	}
+}
+
+// The part of the image chosen in Combine is the one its NUP takes, and the note tells so.
+func TestPackNupTakesTheCropChosenInCombine(t *testing.T) {
+	useLookup(t, func(ctx context.Context, id uint64) ([]byte, error) { return nil, ErrNoIcon })
+	picture := image.NewRGBA(image.Rect(0, 0, 600, 400))
+	for y := range 400 {
+		for x := range 600 {
+			c := color.RGBA{255, 0, 0, 255}
+			if x >= 300 {
+				c = color.RGBA{0, 0, 255, 255}
+			}
+			picture.Set(x, y, c)
+		}
+	}
+	var data bytes.Buffer
+	if err := png.Encode(&data, picture); err != nil {
+		t.Fatal(err)
+	}
+	chosen := filepath.Join(t.TempDir(), "chosen.png")
+	os.WriteFile(chosen, data.Bytes(), 0o644)
+	dir := writeDump(t, "MR2 ROM")
+	o := Options{NupIcons: map[string]string{dir: chosen}, NupIconCrops: map[string]nup.Crop{dir + string(filepath.Separator): {X: 320, Y: 50, Size: 280}}}
+	name, note, err := packNup(t.Context(), dir, o, 1, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(note, "it carries the image given (600×400, the part of 280×280 chosen), 256×256") {
+		t.Errorf("note %q", note)
+	}
+	container, err := nup.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	icon, _, err := image.Decode(bytes.NewReader(container.Icon()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, _, b, _ := icon.At(20, 128).RGBA(); b>>8 < 200 || r>>8 > 60 {
+		t.Error("the icon is not the blue part chosen")
+	}
+
+	// the whole image, from the card of a NUP
+	other := filepath.Join(t.TempDir(), "other.png")
+	os.WriteFile(other, data.Bytes(), 0o644)
+	note, err = FixNupIcon(t.Context(), name, Options{NupIcon: other, NupIconCrop: nup.Crop{Fit: true}, ReplaceNupIcon: true})
+	if err != nil || !strings.Contains(note, "(600×400, whole)") {
+		t.Errorf("%q %v", note, err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/DeLFuS77/NXPress/internal/dat"
+	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -76,6 +77,10 @@ type Options struct {
 	// the image chosen in Combine for each dump folder, by its path: its NUP takes it instead of
 	// the one of titledb, when the folder carries no icon of its own
 	NupIcons map[string]string
+	// the part of the image given chosen in the window for the icon, and the one chosen in Combine
+	// for each dump folder; none: the square at its middle
+	NupIconCrop  nup.Crop
+	NupIconCrops map[string]nup.Crop
 	// the files and folders dropped or chosen in the window, the files of its list came from: a
 	// pack of the files of a folder given goes next to it (#45)
 	Origins []string
