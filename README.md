@@ -85,7 +85,7 @@ Each file gets what it needs, and one that needs neither stays a plain NSZ that 
 
 ## Optimize for install (experimental)
 
-`--optimize`, or "Optimize for install" in Compress, makes each game and its update one NSP (an NSZ with `-C`, and always in the window) that takes the least room once installed: one game of the version of the update, its data compressed with the LZ4 the system reads. An NSZ installs as that same game. Install it with NXDock or DBI, with sigpatches, and do not install official updates over it: optimize the original game again with the newer update. [docs/optimize-install.md](docs/optimize-install.md) tells how it is made and checked.
+`--optimize`, or "Optimize for install" in Compress, makes each game and its update one NSP (an NSZ with `-C`, and always in the window) that takes the least room once installed: one game of the version of the update, its data compressed with the LZ4 the system reads. An NSZ installs as that same game. Install it with NXDock or DBI, with sigpatches, after deleting the update of the game from the console, and do not install official updates over it: optimize the original game again with the newer update. [docs/optimize-install.md](docs/optimize-install.md) tells how it is made and checked.
 
 `--rebuild` writes a package (a game, an update or a DLC) again as a clean NSP (an NSZ with `-C`), for a package another tool left that some installers do not take: its NCA headers made right, standard crypto with no ticket, a new CNMT with the IDs, hashes and sizes of its contents and a new PFS0. Its data stays as it is: no compression, no LZ4. It is checked whole, and it needs sigpatches. [docs/rebuild.md](docs/rebuild.md) tells what it makes right.
 

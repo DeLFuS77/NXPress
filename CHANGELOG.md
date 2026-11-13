@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Optimize for install: the help, the window and the docs tell to delete the update of the game from the console before installing an optimized game. An update left there is read over it and the game closes with an error. Thanks to Trickster101 (GBAtemp) for reporting it
+
 ## 1.7.12
 
 ### Improvements
