@@ -521,3 +521,19 @@ func TestHibernateEndsTheCount(t *testing.T) {
 		t.Fatal("hibernating is taken for a failed turning off")
 	}
 }
+
+// Once the page told its words, closing with files at work is asked by the page, in the theme of
+// the window (#115), and ConfirmClose lets the window close.
+func TestCloseAskedByThePage(t *testing.T) {
+	a := &App{}
+	if a.pageAsksClose() {
+		t.Error("the page asks before it told its words")
+	}
+	a.CloseTexts("¿Pararlos y cerrar NXPress?", "Sí", "No")
+	if !a.pageAsksClose() {
+		t.Error("the page does not ask once it told its words")
+	}
+	if a.closeConfirmed.Load() {
+		t.Error("closing confirmed before it was asked")
+	}
+}

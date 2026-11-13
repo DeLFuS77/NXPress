@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Closing NXPress while files are at work asks in a dialog of the window, in its light or dark theme, not in a white one of the system. Thanks to NikoMuffin for reporting it (#115)
+
 ## 1.7.11
 
 ### Improvements

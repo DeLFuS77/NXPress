@@ -148,6 +148,8 @@ type App struct {
 	noticesReady bool
 	// the question asked as the window closes with files at work, in the language of the page
 	closeAsk, closeYes, closeNo string
+	// the page asked it in its own dialog and the answer was yes: the window closes (#115)
+	closeConfirmed atomic.Bool
 	// the versions published of each game, once the page asked for them (see published.go)
 	versions      atomic.Pointer[titledb.Versions]
 	versionsMutex sync.Mutex
@@ -959,9 +961,15 @@ func (a *App) keepChildrenLow(low bool) {
 var closeWait = 10 * time.Second
 
 // beforeClose asks, while files are at work (or paused), whether to stop them and close; the
-// window stays open (true) unless the answer is yes.
+// window stays open (true) unless the answer is yes. The page asks it in its own dialog, in the
+// theme of the window (#115), and closes the window again with ConfirmClose; before the page has
+// told its words, the dialog of the system asks.
 func (a *App) beforeClose(ctx context.Context) bool {
-	if a.working() {
+	if a.working() && !a.closeConfirmed.Load() {
+		if a.pageAsksClose() {
+			wailsruntime.EventsEmit(ctx, "closeAsked")
+			return true
+		}
 		question, yes, no := a.closeQuestion()
 		// Windows names the buttons in its own language and answers "Yes"; the others give back
 		// the button chosen
@@ -977,6 +985,20 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	}
 	windowplace.KeepWindowPlace(ctx)
 	return false
+}
+
+// pageAsksClose tells the page can ask whether to close: it told the words of the question.
+func (a *App) pageAsksClose() bool {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	return a.closeAsk != ""
+}
+
+// ConfirmClose closes the window after the page asked and the answer was yes: the files at work
+// are stopped as the window closes.
+func (a *App) ConfirmClose() {
+	a.closeConfirmed.Store(true)
+	wailsruntime.Quit(a.ctx)
 }
 
 // CloseTexts are the words of the question asked as the window closes with files at work, in the
