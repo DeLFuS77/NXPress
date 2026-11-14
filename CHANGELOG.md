@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- A file dragged into the window no longer opens a window of Edge that downloads it. Thanks to NikoMuffin for reporting it (#120)
+
 ## 1.7.13
 
 ### Fixes

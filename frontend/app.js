@@ -2977,9 +2977,16 @@ async function restartUpdated() {
 // the drop itself and the page gets neither a drop nor a leave: the files the system hands over
 // (wails:file-drop of runtime) end it too, and so does the mouse moving on the layer, as no drag
 // is going on then; the layer would else stay over the window, and nothing could be clicked (#46).
+//
+// Whatever is dragged over the window, the browser of the window never takes it for itself: it
+// would open the file in a window of Edge and download it (#120). Files reach NXPress by its own
+// drop, and nothing else is dropped in it.
 function watchDrops(target, runtime, layer, busy, show) {
   let dragging = 0;
   const end = () => { dragging = 0; show(false); };
+  const keep = event => { if (event && event.preventDefault) event.preventDefault(); };
+  target.addEventListener("dragover", keep, true);
+  target.addEventListener("drop", keep, true);
   target.addEventListener("dragenter", event => {
     if (busy() || !event.dataTransfer || ![...event.dataTransfer.types].includes("Files")) return;
     dragging++;
