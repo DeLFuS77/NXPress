@@ -75,7 +75,9 @@ func TestOptionsAsArgparse(t *testing.T) {
 		{[]string{"--min"}, func(o jobs.Options) bool { return o.Minimal }},
 		{[]string{"--keep"}, func(o jobs.Options) bool { return reflect.DeepEqual(o.Ignored, []string{"--keep"}) && !o.KeepNamed }},
 		{[]string{"--keep-n"}, func(o jobs.Options) bool { return o.KeepNamed }},
-		{[]string{"-Ks4", "-L"}, func(o jobs.Options) bool { return reflect.DeepEqual(o.Ignored, []string{"--keep", "--bs", "--long"}) }},
+		{[]string{"-Ks4", "-L"}, func(o jobs.Options) bool { return reflect.DeepEqual(o.Ignored, []string{"--keep", "--bs"}) && !o.ShortWindow }},
+		{[]string{"--no-long"}, func(o jobs.Options) bool { return o.ShortWindow }},
+		{[]string{"--no-long", "--long"}, func(o jobs.Options) bool { return !o.ShortWindow }},
 		{[]string{"-h"}, func(o jobs.Options) bool { return o.Help }},
 		{[]string{"--he"}, func(o jobs.Options) bool { return o.Help }},
 	} {

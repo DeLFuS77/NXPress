@@ -72,7 +72,7 @@ func rebuild(ctx context.Context, path string, o Options, out Output) (string, s
 	if o.Compress {
 		nsz := temporary(name)
 		defer os.Remove(nsz)
-		result, err := switchfs.CompressGame(ctx, nsp, nsz, switchfs.CompressOptions{
+		result, err := switchfs.CompressGame(ctx, nsp, nsz, switchfs.CompressOptions{ShortWindow: o.ShortWindow, 
 			Level: strconv.Itoa(o.Level), Workers: o.Threads, Blocks: o.Block, Progress: out.Progress(path, "Compressing"),
 		})
 		if err != nil {
