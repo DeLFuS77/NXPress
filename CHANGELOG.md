@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Rename and the names of Combine: {language} writes the languages of the game as No-Intro does (En,Ja,Fr,De), and {region} the region they tell (World; Japan, Korea or China for a game only in that language; Asia for those together). Thanks to kftX for the idea (#119)
+
 ## 1.7.13
 
 ### Fixes

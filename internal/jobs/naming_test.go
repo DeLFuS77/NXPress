@@ -121,3 +121,34 @@ func TestExperimentalField(t *testing.T) {
 		t.Errorf("an NSP is never experimental: %q", got)
 	}
 }
+
+// The languages of a game as No-Intro writes them, and the region they tell (#119); both are
+// empty for a file without the control data of its game, and leave no brackets.
+func TestNewNameLanguageAndRegion(t *testing.T) {
+	game := GameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE"}
+	for _, test := range []struct {
+		tags   []string
+		name   string
+		region string
+	}{
+		{[]string{"en-US", "en-GB", "ja", "fr", "fr-CA", "de", "es-419", "es", "it", "nl", "pt-BR", "ru", "ko", "zh-Hans", "zh-Hant"}, "Game (World) (En,Ja,Fr,De,Es,It,Nl,Pt,Ru,Zh,Ko).nsp", "World"},
+		{[]string{"ja"}, "Game (Japan) (Ja).nsp", "Japan"},
+		{[]string{"ko"}, "Game (Korea) (Ko).nsp", "Korea"},
+		{[]string{"zh-Hant"}, "Game (China) (Zh).nsp", "China"},
+		{[]string{"zh-Hans", "zh-Hant", "ko", "ja"}, "Game (Asia) (Ja,Zh,Ko).nsp", "Asia"},
+		{[]string{"ja", "en-US"}, "Game (World) (En,Ja).nsp", "World"},
+		{nil, "Game.nsp", ""},
+	} {
+		game.Languages = test.tags
+		if got := NewName("C:/games/x.nsp", game, "{name} ({region}) ({language})"); got != test.name {
+			t.Errorf("%v: %q, want %q", test.tags, got, test.name)
+		}
+		if got := NewName("C:/games/x.nsp", game, "{REGION}"); test.region != "" && got != test.region+".nsp" {
+			t.Errorf("%v: {REGION} gives %q", test.tags, got)
+		}
+	}
+	game.Languages = []string{"fr"}
+	if got := NewName("C:/games/x.nsp", game, "{TITLE_NAME} [{LANGUAGE}]"); got != "Game [Fr].nsp" {
+		t.Error(got)
+	}
+}

@@ -2142,6 +2142,8 @@ const templateFields = [
   ["{size_gb}", "{SIZE_GB}", "fieldSizeGb", "2.7GB"],
   ["{size_mb}", "{SIZE_MB}", "fieldSizeMb", "2650MB"],
   ["{dlc_number}", "{DLC_NUMBER}", "fieldDlcNumber", "1"],
+  ["{language}", "{LANGUAGE}", "fieldLanguage", "En,Ja,Fr,De"],
+  ["{region}", "{REGION}", "fieldRegion", "World · Japan"],
   ["{experimental}", "", "fieldExperimental", "NCZSECT2"],
 ];
 function fillFields() {
