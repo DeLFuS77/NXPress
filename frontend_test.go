@@ -313,6 +313,15 @@ w = setup(false);
 w.target.fire("dragenter", { dataTransfer: { types: ["text/plain"] } });
 want("text dragged", w.seen.shown, false);
 
+// nothing dragged over the window or dropped on it is taken by its browser, files or not (#120)
+for (const types of [["Files"], ["text/uri-list"], ["text/plain"], []]) {
+  for (const name of ["dragover", "drop"]) {
+    let kept = false;
+    w.target.fire(name, { dataTransfer: { types }, preventDefault: () => { kept = true; } });
+    want(name + " of " + (types.join() || "nothing") + " kept from the browser", kept, true);
+  }
+}
+
 console.log(problems.join("\n"));
 `
 

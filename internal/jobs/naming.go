@@ -238,10 +238,13 @@ var emptyPairs = regexp.MustCompile(`\(\s*\)|\[\s*\]|<\s*>|\{\s*\}`)
 // update for a game with its updates), {version_txt} {VERSION_TXT} (as the game shows it,
 // 1.0.5), {type} {TYPE}, {titles}, {contents} {PACKAGE_CONTENTS} (1G+1U+2D), {size_gb}
 // {SIZE_GB}, {size_mb} {SIZE_MB}, {dlc_number} {DLC_NUMBER} (1 for the first DLC of its
-// game, empty for other files) and {experimental} (the experimental formats of NXPress the file
-// is in, NCZSECT2 or NCZSECT3, empty for any other file). {REGION} and {DLC_NAME}, which that
-// program takes from its database of titles, are left empty, as brackets left with nothing,
-// and a field it does not know is left out. Its extension is kept, and it fits the 255 bytes
+// game, empty for other files), {experimental} (the experimental formats of NXPress the file
+// is in, NCZSECT2 or NCZSECT3, empty for any other file), {language} {LANGUAGE} (the languages
+// of the game as No-Intro writes them, En,Ja,Fr) and {region} {REGION} (the region they tell, as
+// No-Intro names it: World, Japan, Korea, China or Asia), both empty for a file without the
+// control data of its game, as a DLC. {DLC_NAME}, which Switch Library Manager takes from its
+// database of titles, is left empty, as brackets left with nothing, and a field it does not know
+// is left out (#119). Its extension is kept, and it fits the 255 bytes
 // of a file name.
 func NewName(path string, title GameTitle, template string) string {
 	if template == "" {
@@ -257,7 +260,8 @@ func NewName(path string, title GameTitle, template string) string {
 		fields := []string{
 			"{name}", name, "{id}", title.TitleID, "{version}", fmt.Sprint(max(title.Latest, title.Version)), "{version_txt}", title.VersionTxt,
 			"{type}", title.Type, "{titles}", fmt.Sprint(title.Titles), "{contents}", switchfs.PackageContents(title.Bases, title.Updates, title.Dlcs),
-			"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{experimental}", title.Format, "{dlc_number}", "",
+			"{size_gb}", sizeGB, "{size_mb}", sizeMB, "{experimental}", title.Format,
+			"{language}", languageCodes(title.Languages), "{region}", regionOf(title.Languages), "{dlc_number}", "",
 		}
 		if title.Type == "DLC" && title.Titles == 1 {
 			fields[len(fields)-1] = dlcNumber(title.TitleID)
@@ -274,7 +278,7 @@ func NewName(path string, title GameTitle, template string) string {
 				fields = append(fields, upper, fields[i+1])
 			}
 		}
-		return append(fields, "{REGION}", "", "{region}", "", "{DLC_NAME}", "", "{dlc_name}", "")
+		return append(fields, "{DLC_NAME}", "", "{dlc_name}", "")
 	}
 	// a field no template knows ({titel}) is left out, not written as it is
 	known := map[string]bool{}
@@ -303,6 +307,68 @@ func NewName(path string, title GameTitle, template string) string {
 		result = title.TitleID
 	}
 	return result + extension
+}
+
+// noIntroLanguages are the languages of the control data of a game, by their tags, as No-Intro
+// writes them: one code for the variants of a language (en-US and en-GB are En), in its order.
+var noIntroLanguages = []struct {
+	code string
+	tags []string
+}{
+	{"En", []string{"en-US", "en-GB"}},
+	{"Ja", []string{"ja"}},
+	{"Fr", []string{"fr", "fr-CA"}},
+	{"De", []string{"de"}},
+	{"Es", []string{"es", "es-419"}},
+	{"It", []string{"it"}},
+	{"Nl", []string{"nl"}},
+	{"Pt", []string{"pt", "pt-BR"}},
+	{"Ru", []string{"ru"}},
+	{"Zh", []string{"zh-Hans", "zh-Hant"}},
+	{"Ko", []string{"ko"}},
+}
+
+// languageCodes are the languages of a game, by the tags of its control data, as No-Intro
+// writes them: En,Ja,Fr,De; "" when it has none.
+func languageCodes(tags []string) string {
+	has := map[string]bool{}
+	for _, tag := range tags {
+		has[tag] = true
+	}
+	var codes []string
+	for _, language := range noIntroLanguages {
+		for _, tag := range language.tags {
+			if has[tag] {
+				codes = append(codes, language.code)
+				break
+			}
+		}
+	}
+	return strings.Join(codes, ",")
+}
+
+// regionOf is the region the languages of a game tell, as No-Intro names it. Games of the
+// Switch play on any console, and their files say no region: a game only in Japanese is of
+// Japan, only in Korean of Korea, only in Chinese of China, in more than one of these and no
+// other of Asia, and any other one of the World. "" when it has no languages.
+func regionOf(tags []string) string {
+	codes := languageCodes(tags)
+	switch codes {
+	case "":
+		return ""
+	case "Ja":
+		return "Japan"
+	case "Ko":
+		return "Korea"
+	case "Zh":
+		return "China"
+	}
+	for _, code := range strings.Split(codes, ",") {
+		if code != "Ja" && code != "Ko" && code != "Zh" {
+			return "World"
+		}
+	}
+	return "Asia"
 }
 
 // maxNameBytes is the longest name a new file gets, in bytes of UTF-8: the 255 of file systems,

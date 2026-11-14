@@ -88,6 +88,9 @@ type Options struct {
 	// whether -l was given: the files of a NUP take zstd at level 3 unless it was
 	LevelGiven  bool
 	Block       bool
+	// --no-long: the zstd stream keeps the window of its level (8 MiB) instead of the long one of
+	// 128 MiB, for an installer that cannot take it
+	ShortWindow bool
 	LowPriority bool
 	Sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
 	Archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
@@ -139,6 +142,7 @@ var optionNames = []optionName{
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
 	{"--extra", 0, false, false}, {"--sparse", 0, false, false}, {"--archive", 0, false, false},
+	{"--no-long", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
@@ -159,7 +163,7 @@ var optionNames = []optionName{
 
 // the options of nsz that NXPress accepts and has no use for
 var noEffect = map[string]bool{
-	"--long": true, "--keep": true, "--fix-padding": true, "--alwaysParseCnmt": true, "--rm-old-version": true, "--bs": true, "--depth": true,
+	"--keep": true, "--fix-padding": true, "--alwaysParseCnmt": true, "--rm-old-version": true, "--bs": true, "--depth": true,
 }
 
 // ParseOptions reads the command line as argparse reads the one of nsz: letters together
@@ -303,6 +307,11 @@ func (o *Options) flag(option optionName) {
 		o.Block = true
 	case "--extra":
 		o.Sparse, o.Archive = true, true
+	case "--no-long":
+		o.ShortWindow = true
+	case "--long":
+		// nsz's long distance mode: NXPress compresses so by default
+		o.ShortWindow = false
 	case "--sparse":
 		o.Sparse = true
 	case "--archive":
@@ -581,6 +590,9 @@ Usage: nxpress [options] file or folder...
                       as it is; every installer takes it but Awoo
   -S, --solid         solid compression (the default for NSZ): the smallest, and every
                       installer takes it
+  --no-long           solid compression with the window of the level (8 MiB) instead of the
+                      long window of 128 MiB with long distance matching, the default, which
+                      makes some games 5 to 17 %% smaller (tried with DBI)
   --extra             experimental, extra compression that only NXPress reads: base games
                       in sparse storage (NCZSECT2, docs/ncz-sparse.md) and the LZ4 blocks
                       Nintendo compressed inside games and updates, kept decompressed and
@@ -669,7 +681,9 @@ Usage: nxpress [options] file or folder...
                       example "{name} [{id}][v{version}]"; {dlc_number} is the number of a
                       DLC (1, 2...), for names like "{name} [DLC {dlc_number}] [{id}]";
                       {experimental} is the experimental format of NXPress a file is in
-                      (NCZSECT2, NCZSECT3), empty for any other file
+                      (NCZSECT2, NCZSECT3), empty for any other file; {language} the
+                      languages of the game as No-Intro writes them (En,Ja,Fr) and
+                      {region} the region they tell (World, Japan, Korea, China, Asia)
   --keep-named        with --rename, leave the files whose name has their title ID in
                       brackets, as you named them
   --split             split multi-title files (SuperNSP) into one file per title
@@ -714,9 +728,9 @@ Usage: nxpress [options] file or folder...
                       its name. Its NCA are not signed by Nintendo, so it needs sigpatches.
                       docs/rebuild.md tells what is made right
 
-Multi-title files (SuperNSP) compress like any other file. The options of nsz --long,
---keep, --fix-padding, --alwaysParseCnmt, --rm-old-version, --bs and --depth are accepted
-and have no effect.
+Multi-title files (SuperNSP) compress like any other file. --long, the long distance
+mode of nsz, is the default. Its options --keep, --fix-padding, --alwaysParseCnmt,
+--rm-old-version, --bs and --depth are accepted and have no effect.
 `
 
 func (o Options) Action() string {

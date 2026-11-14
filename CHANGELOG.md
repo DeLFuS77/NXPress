@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.14
+
+### Improvements
+
+- Compress: NSZ files use a window of 128 MiB, which makes some games 5 to 17 % smaller at the same speed. Tried with DBI; --no-long keeps the window of before (8 MiB)
+- Rename and Combine: new fields {language}, the languages of the game as No-Intro writes them (En,Ja,Fr), and {region}, the region they tell (World, Japan, Korea, China or Asia). Thanks to kftX for the idea (#119)
+
+### Fixes
+
+- The window no longer stops responding at the end of a work, which happened since 1.7.12. Thanks to NikoMuffin for reporting it (#121)
+- A file dragged into the window no longer opens a window of Edge that downloads it. Thanks to NikoMuffin for reporting it (#120)
+
 ## 1.7.13
 
 ### Fixes
