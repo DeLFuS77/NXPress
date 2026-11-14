@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The window no longer stops responding at the end of a work: the card that tells it is done (and the dialogs of closing, extra compression, Optimize for install and updates) opened hidden since 1.7.12. Thanks to NikoMuffin for reporting it (#121)
+
 ## 1.7.13
 
 ### Fixes
