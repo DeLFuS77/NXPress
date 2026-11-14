@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- Rename and the names of Combine: {language} writes the languages of the game as No-Intro does (En,Ja,Fr,De), and {region} the region they tell (World; Japan, Korea or China for a game only in that language; Asia for those together). Thanks to kftX for the idea (#119)
+
 ### Fixes
 
 - The window no longer stops responding at the end of a work: the card that tells it is done (and the dialogs of closing, extra compression, Optimize for install and updates) opened hidden since 1.7.12. Thanks to NikoMuffin for reporting it (#121)

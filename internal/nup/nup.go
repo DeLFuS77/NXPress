@@ -630,6 +630,40 @@ const (
 var languages = [nacpLanguages]string{"en-us", "en-gb", "ja", "fr", "de", "es-419", "es", "it", "nl", "fr-ca", "pt",
 	"ru", "ko", "zh-hant", "zh-hans", "pt-br"}
 
+// languageTags are the same languages as the library app tags them (switchfs), in the order of a
+// NACP.
+var languageTags = [nacpLanguages]string{"en-US", "en-GB", "ja", "fr", "de", "es-419", "es", "it", "nl", "fr-CA", "pt",
+	"ru", "ko", "zh-Hant", "zh-Hans", "pt-BR"}
+
+// nacpLanguageFlag is where a NACP tells the languages its game comes in, a bit for each.
+const nacpLanguageFlag = 0x302C
+
+// Languages are the languages the game of a package comes in, tagged as the library app tags
+// them (en-US, ja, zh-Hant): the ones its NACP tells, else the ones its names are given in; none
+// for a package without either, as a DLC (#119).
+func (pkg Package) Languages() []string {
+	var tags []string
+	if raw := pkg.Meta[tlvNacp]; len(raw) >= nacpLanguageFlag+4 {
+		flag := binary.LittleEndian.Uint32(raw[nacpLanguageFlag:])
+		for i := 0; i < nacpLanguages; i++ {
+			if flag&(1<<uint(i)) != 0 {
+				tags = append(tags, languageTags[i])
+			}
+		}
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+	if localized, err := parseLocalized(pkg.Meta[tlvLocalizedTitles]); err == nil {
+		for i, tag := range languages {
+			if cleanName(localized[tag]) != "" {
+				tags = append(tags, languageTags[i])
+			}
+		}
+	}
+	return tags
+}
+
 // Name is the name of the game a package gives: American English, else the name of the default
 // language, else the first other name; "" when it gives none.
 func (pkg Package) Name() string {

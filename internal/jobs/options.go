@@ -669,7 +669,9 @@ Usage: nxpress [options] file or folder...
                       example "{name} [{id}][v{version}]"; {dlc_number} is the number of a
                       DLC (1, 2...), for names like "{name} [DLC {dlc_number}] [{id}]";
                       {experimental} is the experimental format of NXPress a file is in
-                      (NCZSECT2, NCZSECT3), empty for any other file
+                      (NCZSECT2, NCZSECT3), empty for any other file; {language} the
+                      languages of the game as No-Intro writes them (En,Ja,Fr) and
+                      {region} the region they tell (World, Japan, Korea, China, Asia)
   --keep-named        with --rename, leave the files whose name has their title ID in
                       brackets, as you named them
   --split             split multi-title files (SuperNSP) into one file per title

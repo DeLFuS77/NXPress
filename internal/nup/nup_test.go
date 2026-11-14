@@ -372,6 +372,25 @@ func TestNames(t *testing.T) {
 	}
 }
 
+// The languages of a game: the ones its NACP tells, else the ones its names are given in, as
+// the library app tags them (#119).
+func TestLanguages(t *testing.T) {
+	nacp := make([]byte, 0x4000)
+	nacp[0x302C] = 1<<0 | 1<<2 | 1<<5 // en-US, ja, es-419
+	nacp[0x302D] = 1 << (13 - 8)      // zh-Hant
+	pkg := Package{Meta: map[uint16][]byte{tlvNacp: nacp, tlvLocalizedTitles: testnup.Localized("fr", "Nom")}}
+	if got := strings.Join(pkg.Languages(), " "); got != "en-US ja es-419 zh-Hant" {
+		t.Errorf("from the NACP: %q", got)
+	}
+	pkg = Package{Meta: map[uint16][]byte{tlvLocalizedTitles: testnup.Localized("fr", "Nom")}}
+	if got := strings.Join(pkg.Languages(), " "); got != "fr" {
+		t.Errorf("from the names: %q", got)
+	}
+	if got := (Package{}).Languages(); got != nil {
+		t.Errorf("of nothing: %q", got)
+	}
+}
+
 // Many small files, more than one read of the window holds, and files big enough to be read on
 // their own, raw and with zstd: every one is checked, and a damaged one found wherever it is.
 func TestVerifyManySmallAndBigFiles(t *testing.T) {

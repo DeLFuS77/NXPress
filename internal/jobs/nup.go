@@ -420,6 +420,9 @@ func nupTitle(path string, withIcon bool) (GameTitle, error) {
 		if result.Publisher == "" {
 			result.Publisher = pkg.Publisher()
 		}
+		if result.Languages == nil {
+			result.Languages = pkg.Languages()
+		}
 	}
 	// a NUP made of a dump without its control data gives no name: the list of the games of the
 	// Switch 2 names it, else the label of its dump made readable, as Combine names it now
