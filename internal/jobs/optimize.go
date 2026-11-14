@@ -198,7 +198,7 @@ func optimizeGame(ctx context.Context, o Options, files []string, next string, o
 	if o.Compress {
 		nsz := temporary(name)
 		defer os.Remove(nsz)
-		result, err := switchfs.CompressGame(ctx, nsp, nsz, switchfs.CompressOptions{
+		result, err := switchfs.CompressGame(ctx, nsp, nsz, switchfs.CompressOptions{ShortWindow: o.ShortWindow, 
 			Level: strconv.Itoa(o.Level), Workers: o.Threads, Blocks: o.Block, Progress: out.Progress(files[0], "Compressing"),
 		})
 		if err != nil {

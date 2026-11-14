@@ -89,7 +89,7 @@ func measure(ctx context.Context, path string, o Options, out Output) (string, s
 		if i == 0 {
 			// from the end of the game, which the trials read last, so the first one does not
 			// find its part in memory
-			_, err := measureOne(ctx, path, folder, (float64(places)-0.5)/float64(places), switchfs.CompressOptions{Level: level, Workers: trials[0].Threads, Blocks: o.Block}, measureWarmUp)
+			_, err := measureOne(ctx, path, folder, (float64(places)-0.5)/float64(places), switchfs.CompressOptions{ShortWindow: o.ShortWindow, Level: level, Workers: trials[0].Threads, Blocks: o.Block}, measureWarmUp)
 			if errors.Is(err, switchfs.ErrNothingToMeasure) {
 				return "", "", NotMeasurable(path)
 			}
@@ -102,7 +102,7 @@ func measure(ctx context.Context, path string, o Options, out Output) (string, s
 			wait.Add(1)
 			go func(from float64) {
 				defer wait.Done()
-				done, err := measureOne(ctx, path, folder, from, switchfs.CompressOptions{Level: level, Workers: trials[i].Threads, Blocks: o.Block}, measureTrialTime)
+				done, err := measureOne(ctx, path, folder, from, switchfs.CompressOptions{ShortWindow: o.ShortWindow, Level: level, Workers: trials[i].Threads, Blocks: o.Block}, measureTrialTime)
 				mutex.Lock()
 				defer mutex.Unlock()
 				total += done
@@ -140,7 +140,7 @@ func measure(ctx context.Context, path string, o Options, out Output) (string, s
 // of a compression more than the compression. When none can, the biggest one is skipped with
 // why; when one could not be read at all (damaged, no keys for it), that error is told instead.
 func MeasurableGame(ctx context.Context, files []string, o Options) (string, error) {
-	options := switchfs.CompressOptions{Level: strconv.Itoa(o.Level), Workers: 1, Blocks: o.Block}
+	options := switchfs.CompressOptions{ShortWindow: o.ShortWindow, Level: strconv.Itoa(o.Level), Workers: 1, Blocks: o.Block}
 	sizes := map[string]int64{}
 	for _, path := range files {
 		if info, err := os.Stat(path); err == nil {

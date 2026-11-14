@@ -35,7 +35,7 @@ func compress(ctx context.Context, path string, o Options, threads int, out Outp
 	}
 	written := temporary(name)
 	defer os.Remove(written)
-	result, err := switchfs.CompressGame(ctx, path, written, switchfs.CompressOptions{
+	result, err := switchfs.CompressGame(ctx, path, written, switchfs.CompressOptions{ShortWindow: o.ShortWindow, 
 		Level: strconv.Itoa(o.Level), Workers: threads, Blocks: o.Block, Sparse: o.Sparse, Rebuild: o.Archive, Progress: out.Progress(path, "Compressing"),
 	})
 	// the most common reason, told plainly
@@ -169,7 +169,7 @@ func recompress(ctx context.Context, path string, o Options, threads int, out Ou
 	}
 	written := temporary(name)
 	defer os.Remove(written)
-	result, err := switchfs.RecompressGame(ctx, path, written, switchfs.CompressOptions{
+	result, err := switchfs.RecompressGame(ctx, path, written, switchfs.CompressOptions{ShortWindow: o.ShortWindow, 
 		Level: strconv.Itoa(o.Level), Workers: threads, Blocks: o.Block, Progress: out.Progress(path, "Recompressing"),
 	})
 	if err != nil {
@@ -232,7 +232,7 @@ func recompressThrough(ctx context.Context, path string, o Options, threads int,
 	}
 	written := temporary(name)
 	defer os.Remove(written)
-	result, err := switchfs.CompressGame(ctx, plain, written, switchfs.CompressOptions{
+	result, err := switchfs.CompressGame(ctx, plain, written, switchfs.CompressOptions{ShortWindow: o.ShortWindow, 
 		Level: strconv.Itoa(o.Level), Workers: threads, Blocks: o.Block, Sparse: o.Sparse, Rebuild: o.Archive, Progress: out.Progress(path, "Compressing"),
 	})
 	if errors.Is(err, switchfs.ErrSparseStorage) {
