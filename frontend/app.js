@@ -1579,7 +1579,7 @@ function render() {
   $("title-tile").innerHTML = icon(page);
   $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
-  for (const entry of (optimizing() ? takesOptimize : takesShown[state.mode]).split(" ")) {
+  for (const entry of (optimizing() ? takesOptimize : toCard() ? "NSP NSZ" : takesShown[state.mode]).split(" ")) {
     // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on; ":takesDumps"
     // alone: what it takes besides files
     const [type, which] = entry.split(":");
@@ -2193,6 +2193,8 @@ function settings() {
     nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
+    // Convert: NSP and NSZ into game cards instead of game cards into NSP and NSZ (#127)
+    toCard: $("convert-to-card").checked,
     lowPriority: $("low-priority").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
@@ -2205,8 +2207,11 @@ function settings() {
 
 // Compress with Optimize for install on: the games with their updates, into one NSZ each
 const optimizing = () => state.mode === "compress" && $("optimize").checked;
-// the files the list takes: Optimize for install takes NSZ and XCZ too
-const expandMode = () => (optimizing() ? "optimize" : state.mode);
+// Convert from NSP and NSZ into game cards
+const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
+// the files the list takes: Optimize for install takes NSZ and XCZ too, and Convert into game
+// cards NSP and NSZ
+const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : state.mode);
 
 // presets: the settings of a compression kept with a name
 const builtinPresets = () => [
@@ -3089,6 +3094,8 @@ async function main() {
   $("template").value = state.template;
   // a pack per game unless one file with everything was chosen last
   $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
+  // Convert into NSP and NSZ unless into game cards was chosen last
+  $(chosen.toCard === true ? "convert-to-card" : "convert-to-nsp").checked = true;
   state.packTemplate = text(chosen.packTemplate) || await app().DefaultPackTemplate();
   $("pack-template").value = state.packTemplate;
 
@@ -3234,6 +3241,11 @@ async function main() {
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
   for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); previewPacks(); };
+  // the list is made again for the files of the way chosen, as for Optimize for install
+  for (const radio of [$("convert-to-nsp"), $("convert-to-card")]) radio.onchange = () => {
+    save("settings", settings());
+    refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
+  };
   $("overwrite").addEventListener("change", previewPacks);
   for (const field of [$("template"), $("pack-template")]) {
     field.addEventListener("input", () => fitTemplate(field));

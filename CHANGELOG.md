@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Convert: it now also goes the other way, NSP and NSZ to XCI and XCZ (--convert --to-xci). The game card gets a header written by NXPress, not signed by Nintendo. Thanks to NikoMuffin for the idea (#127)
+
 ## 1.7.16
 
 ### Improvements

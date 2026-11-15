@@ -24,6 +24,8 @@ type Options struct {
 	Verify     bool
 	Info       bool
 	Convert    bool
+	// with Convert, NSP and NSZ into XCI and XCZ (#127)
+	ToCard     bool
 	Recompress bool
 	Trim       bool
 	Estimate   bool
@@ -86,8 +88,8 @@ type Options struct {
 	Origins []string
 	Level   int
 	// whether -l was given: the files of a NUP take zstd at level 3 unless it was
-	LevelGiven  bool
-	Block       bool
+	LevelGiven bool
+	Block      bool
 	// --no-long: the zstd stream keeps the window of its level (8 MiB) instead of the long one of
 	// 128 MiB, for an installer that cannot take it
 	ShortWindow bool
@@ -97,12 +99,12 @@ type Options struct {
 	// with -C and without the extra compression: the update of a game in sparse storage given
 	// with it is left as it is too, so the two stay together
 	SkipSparseUpdates bool
-	Threads     int
-	Multi       int
-	Output      string
-	Overwrite   bool
-	RmSource    bool
-	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
+	Threads           int
+	Multi             int
+	Output            string
+	Overwrite         bool
+	RmSource          bool
+	RmDumps           bool // with RmSource, the dump folders whose NUP is checked go too
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
 	// file whole into a temporary file each time a game starts to read it
@@ -154,7 +156,7 @@ var optionNames = []optionName{
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
-	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
+	{"--convert", 0, false, false}, {"--to-xci", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
 	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--rebuild", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
@@ -338,6 +340,8 @@ func (o *Options) flag(option optionName) {
 		o.Info = true
 	case "--convert":
 		o.Convert = true
+	case "--to-xci":
+		o.ToCard = true
 	case "--recompress":
 		o.Recompress = true
 	case "--trim":
@@ -540,6 +544,9 @@ func (o *Options) Check() error {
 	if o.RmDumps && !o.RmSource {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
 	}
+	if o.ToCard && !o.Convert {
+		o.Notes = append(o.Notes, "--to-xci has no effect without --convert")
+	}
 	if o.RmDumps && !o.Nup && o.Pack == "" && !o.PackGames && !o.PackOne {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --nup")
 	}
@@ -669,6 +676,8 @@ Usage: nxpress [options] file or folder...
   --version           show the version
 
   --convert           turn XCI and XCZ files into NSP and NSZ
+  --to-xci            with --convert, the other way round: NSP and NSZ files into XCI and
+                      XCZ, with a header of their own (not signed by Nintendo)
   --recompress        write NSZ and XCZ files again, solid (-S) or in blocks (-B), at the
                       level of -l: no NSP in between and no keys needed; a file is replaced
                       once its new copy is checked, unless -o gives another folder. With
@@ -752,6 +761,8 @@ func (o Options) Action() string {
 		return "compress"
 	case o.Decompress:
 		return "decompress"
+	case o.Convert && o.ToCard:
+		return "tocard"
 	case o.Convert:
 		return "convert"
 	case o.Recompress:

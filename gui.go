@@ -803,6 +803,8 @@ type Request struct {
 	Archive      bool     `json:"archive"`
 	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
 	Optimize bool `json:"optimize"`
+	// Convert: NSP and NSZ into XCI and XCZ (#127)
+	ToCard bool `json:"toCard"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
 	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
@@ -843,7 +845,7 @@ func (a *App) Start(request Request) error {
 	case "decompress":
 		o.Decompress = true
 	case "convert":
-		o.Convert = true
+		o.Convert, o.ToCard = true, request.ToCard
 	case "recompress":
 		o.Recompress = true
 	case "trim":

@@ -193,6 +193,16 @@
       <label class="check"><input id="keep-named" type="checkbox"><span data-t="keepNamed"></span></label>
     </section>
 
+    <!-- Convert goes one way or the other: the list takes the files of the way chosen (#127) -->
+    <section class="block" data-for="convert">
+      <div class="field" role="radiogroup">
+        <label class="choice"><input type="radio" name="convert-way" value="nsp" id="convert-to-nsp">
+          <span><b data-t="convertToNsp"></b><small data-t="convertToNspHint"></small></span></label>
+        <label class="choice"><input type="radio" name="convert-way" value="card" id="convert-to-card">
+          <span><b data-t="convertToCard"></b><small data-t="convertToCardHint"></small></span></label>
+      </div>
+    </section>
+
     <section class="block" data-for="fat32">
       <h2>FAT32</h2>
       <p class="hint" data-t="fat32Hint"></p>
