@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.16
+
+### Improvements
+
+- Right-click on a file at work or still waiting: "Skip this file" stops it and the rest of the work goes on. Thanks to ItsmeAJ (GBAtemp) for the idea
+- Compress: new option "Skip the updates of games in sparse storage", so a game left as NSP keeps its update as NSP too (--skip-sparse-updates). Thanks to ItsmeAJ (GBAtemp) for the idea
+
+### Fixes
+
+- Compress: at the highest levels every thread keeps working with the window of 128 MiB, so games compress faster; they can be up to 1 % bigger. Thanks to ItsmeAJ (GBAtemp) for reporting it
+- Measure this computer: each setting is tried for seconds; with a big game the measure took up to an hour
+
 ## 1.7.15
 
 ### Improvements

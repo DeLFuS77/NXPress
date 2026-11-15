@@ -16,6 +16,8 @@ const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
   [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Made for, or use --extra$/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
+  [/^skipped by hand: left as it is$/, "skippedByHand"],
+  [/^its game uses sparse storage and is left as it is: the update is left with it$/, "sparseUpdateSkip"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which only the experimental format NCZSECT2 compresses/g, "sparseWhy"],
   [/its sections use an encryption the app does not read/g, "encryptionWhy"],

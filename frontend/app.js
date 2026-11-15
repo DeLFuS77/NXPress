@@ -1068,6 +1068,13 @@ function refreshHelp() {
 
 // the menu of a file, with a right click: show it in its folder, copy its title ID, its name or
 // its path, check only it, take it out of the list
+// a file of the work at hand can be skipped while the rest goes on, at work or still waiting:
+// not in Combine, Measure or Optimize for install, which take the files together
+function skippable(row) {
+  const run = state.lastRun;
+  if (!state.busy || !run || row.run !== run.started || !["work", "waiting"].includes(row.status)) return false;
+  return !["pack", "measure"].includes(run.mode) && !(run.mode === "compress" && run.request.optimize);
+}
 function showRowMenu(row, remove, x, y) {
   hidePop();
   const menu = $("row-menu");
@@ -1077,6 +1084,7 @@ function showRowMenu(row, remove, x, y) {
     row.game && row.game.titleId && ["menuCopyId", () => copy(row.game.titleId)],
     ["menuCopyName", () => copy(shownName(row))],
     ["menuCopyPath", () => copy(row.item.path)],
+    skippable(row) && ["menuSkip", () => { app().Skip(row.item.path); showToast(t("skipAsked")(shownName(row))); }],
     /\.(nsp|nsz|xci|xcz)$/i.test(row.item.path) && ["menuVerify", () => start("verify", { files: [row.item.path], removeSource: false, output: "", watch: false }), true],
     ["menuRemove", remove, true],
   ].filter(Boolean);
@@ -1627,6 +1635,9 @@ function render() {
   // the files that use the extra compression do not go with the installers above as they are; it
   // is for Compress only, where its box is
   $("extra-target-warning").hidden = !$("extra").checked || !["compress", "recompress"].includes(state.mode);
+  // with the extra compression the game in sparse storage is compressed, and Optimize for install
+  // takes the two together: the box has nothing to do then
+  $("skip-sparse-updates").disabled = $("extra").checked || $("optimize").checked;
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
@@ -2187,6 +2198,8 @@ function settings() {
     sparse: $("extra").checked, archive: $("extra").checked,
     // Optimize for install, in Compress
     optimize: $("optimize").checked,
+    // the update of a game in sparse storage left as it is with it, in Compress
+    skipSparseUpdates: $("skip-sparse-updates").checked,
   };
 }
 
@@ -3064,6 +3077,7 @@ async function main() {
   $("extra").checked = !!(chosen.sparse || chosen.archive);
   // experimental too, and not with the extra compression
   $("optimize").checked = !!chosen.optimize && !$("extra").checked;
+  $("skip-sparse-updates").checked = !!chosen.skipSparseUpdates;
   $("updates").checked = load("updates", true);
   $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
@@ -3119,6 +3133,7 @@ async function main() {
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = render;
+  $("skip-sparse-updates").onchange = () => save("settings", settings());
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
   $("extra").onchange = () => {

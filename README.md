@@ -95,6 +95,7 @@ Each file gets what it needs, and one that needs neither stays a plain NSZ that 
 nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
 nxpress -C --extra game.nsp         compress with the experimental extra compression, NXPress only
+nxpress -C --skip-sparse-updates games  leave the update of a game in sparse storage as NSP, like its game
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds
