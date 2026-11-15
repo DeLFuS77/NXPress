@@ -79,6 +79,20 @@ func nxoGoOut(handle C.uintptr_t, data *C.uint8_t, size C.size_t) C.int {
 	return 1
 }
 
+//export nxoGoBegin
+func nxoGoBegin(handle C.uintptr_t, at C.uint64_t) C.int {
+	job := cgo.Handle(handle).Value().(*Job)
+	if job.Begin == nil {
+		job.fail(fmt.Errorf("a part of the NCA at %d with nowhere to start it", uint64(at)))
+		return 0
+	}
+	if err := job.Begin(uint64(at)); err != nil {
+		job.fail(err)
+		return 0
+	}
+	return 1
+}
+
 //export nxoGoStep
 func nxoGoStep(handle C.uintptr_t, phase C.int, done C.uint64_t) C.int {
 	job := cgo.Handle(handle).Value().(*Job)

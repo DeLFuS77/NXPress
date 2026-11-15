@@ -90,9 +90,13 @@ It is the program NCA of the update made whole, so it no longer needs the base g
       same as one stored before it, is stored once: several entries of the table point at the same
       stored block (also back to blocks stored before them).
 
-The NCA is written in one pass after a first pass that measures it (and keeps only the hashes of
-what it stores); the second pass must give the same hashes, or nothing is written. The bytes are
-the same for any number of threads.
+The RomFS is packed once: the place of its data level in the new NCA is known before it is packed,
+so what it stores is written there as it is packed, and the rest of the NCA (header, hash levels,
+table) is written around it after; the NCA is then read back for its hash. When what it stores
+comes out bigger than the RomFS (it would not fit in that place), the NCA is written again in two
+passes: a first one that measures it (and keeps only the hashes of what it stores), and a second
+one that must give the same hashes, or nothing is written. Both ways give the same NCA, byte for
+byte, for any number of threads.
 
 ### The new CNMT and meta NCA
 

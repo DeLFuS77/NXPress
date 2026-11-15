@@ -10,6 +10,9 @@
 //     and the header are made;
 //  2. Write packs it again (the same bytes: merge_pack gives the same on any number of threads) and
 //     writes the NCA from its start; what it stores must hash as the first time, or it fails.
+// Or in one pass: the place of the data level in the new NCA is known before it is packed (its IVFC
+// is laid out for the RomFS as the game reads it), so Measure writes what it stores there as it
+// packs it, and WriteAround writes the rest around it; the NCA is the same, byte for byte.
 //
 // Plain C++: AES-CTR, the AES-XTS of the header and the reads are given to it, so it is tested on
 // the computer, with real games.
@@ -54,8 +57,19 @@ public:
     uint64_t RomfsSize() const { return m_romfs.Size(); }
     // the RomFS read as the game reads it (for an estimate from a sample of it)
     bool ReadRomfs(uint64_t offset, uint8_t* buf, size_t size) { return m_romfs.Read(offset, buf, size); }
-    // 1. packed once, measured: after it, NcaSize is known
-    bool Measure(const lz4pack::StepFn& step, std::string& error);
+    // 1. packed once, measured: after it, NcaSize is known. With `data`, what it stores goes out at
+    // the same time, encrypted for its place, in order from DataPlace() (one pass).
+    bool Measure(const lz4pack::StepFn& step, std::string& error, const OutFn& data = {});
+    // One pass: where the data level goes in the new NCA, and the size the new NCA cannot pass
+    // while it is there (known once opened).
+    uint64_t DataPlace() const;
+    uint64_t OnceBound() const;
+    // After Measure with `data`: the data level is where it was written (false when it came out
+    // bigger than the RomFS: then it is written again by Write, in two passes).
+    bool Placed() const { return m_placed; }
+    // One pass: the rest of the new NCA around the data level Measure wrote; `begin` starts a part
+    // at that place of the NCA, `out` gives its bytes in order.
+    bool WriteAround(const std::function<bool(uint64_t at)>& begin, const OutFn& out, std::string& error);
     uint64_t NcaSize() const { return m_plan.size; }
     // what the RomFS takes now (the data level stored with its table)
     uint64_t StoredSize() const { return m_stored; }
@@ -77,6 +91,10 @@ public:
 
 private:
     bool PackOnce(const lz4pack::WriteFn& write, const lz4pack::StepFn& step, lz4pack::Packed& out);
+    // the RomFS section in the header of the update: where it starts (it keeps its place)
+    uint64_t RomfsStart() const;
+    // the NCA from its start (two passes), or around the data level (`begin` given, one pass)
+    bool WriteNca(const OutFn& out, const lz4pack::StepFn& step, std::string& error, const std::function<bool(uint64_t)>* begin);
     Input m_in;
     std::unique_ptr<patchview::Section> m_base, m_patched;
     patchview::Section* m_base_ptr = nullptr;
@@ -90,7 +108,7 @@ private:
     mergenca::Plan m_plan;
     mergepack::Stats m_stats;
     uint64_t m_stored = 0;
-    bool m_measured = false;
+    bool m_measured = false, m_placed = false;
 };
 
 } // namespace nxdock::mergegame

@@ -73,29 +73,9 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
         }
         return true;
     };
-    size_t counts[2] = {0, 0};
-    int cur = 0;
-    if (!fill(sets[0], counts[0])) return false;
-    while (counts[cur] > 0) {
-        std::vector<Job>& jobs = sets[cur];
-        const size_t count = counts[cur];
-        const auto run = [&jobs, count, threads, level](size_t first) {
-            for (size_t i = first; i < count; i += threads) {
-                Job& j = jobs[i];
-                j.c = j.virt == 0 ? -1 : nx_lz4_compress(j.plain.data(), j.n, j.packed.data(), j.packed.size(), level, j.work.data());
-            }
-        };
-        bool read_ok;
-        if (threads > 1 && count > 1) {
-            std::vector<std::thread> workers;
-            for (unsigned t = 0; t < threads && t < count; t++) workers.emplace_back(run, t);
-            read_ok = fill(sets[cur ^ 1], counts[cur ^ 1]);
-            for (auto& w : workers) w.join();
-        } else {
-            run(0);
-            read_ok = fill(sets[cur ^ 1], counts[cur ^ 1]);
-        }
-        if (!read_ok) return false;
+    // What a batch compressed, written in order: the main thread does this (and reads the next
+    // batch) while the cores compress the batch after it, so they do not wait for the writing.
+    const auto put = [&](const std::vector<Job>& jobs, size_t count) {
         for (size_t i = 0; i < count; i++) {
             const Job& j = jobs[i];
             const bool lz4 = j.c > 0 && uint64_t(j.c) + min_gain <= j.n;
@@ -116,8 +96,44 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
             }
             if (step && !step(j.virt + j.n)) return false;
         }
+        return true;
+    };
+    const auto compress = [level](std::vector<Job>& jobs, size_t first, size_t count, unsigned every) {
+        for (size_t i = first; i < count; i += every) {
+            Job& j = jobs[i];
+            j.c = j.virt == 0 ? -1 : nx_lz4_compress(j.plain.data(), j.n, j.packed.data(), j.packed.size(), level, j.work.data());
+        }
+    };
+    // The cores on a batch, until joined (always joined before the batch is used or left).
+    std::vector<std::thread> workers;
+    const auto start = [&](std::vector<Job>& jobs, size_t count) {
+        if (threads > 1 && count > 1) {
+            for (unsigned t = 0; t < threads && t < count; t++) workers.emplace_back(compress, std::ref(jobs), t, count, threads);
+        } else {
+            compress(jobs, 0, count, 1);
+        }
+    };
+    const auto join = [&] {
+        for (auto& w : workers) w.join();
+        workers.clear();
+    };
+    size_t counts[2] = {0, 0};
+    int cur = 0;
+    if (!fill(sets[0], counts[0])) return false;
+    // the first batch compressed while the second is read
+    start(sets[0], counts[0]);
+    bool ok = fill(sets[1], counts[1]);
+    join();
+    while (ok && counts[cur] > 0) {
+        // `cur` is compressed, the other one read: that one is compressed while `cur` is written
+        // and the next blocks are read into it
+        start(sets[cur ^ 1], counts[cur ^ 1]);
+        ok = put(sets[cur], counts[cur]) && fill(sets[cur], counts[cur]);
+        join();
+        if (!ok) break;
         cur ^= 1;
     }
+    if (!ok) return false;
     out.stored = at;
     out.table_offset = Align16(at);
     return pad_to(out.table_offset);
