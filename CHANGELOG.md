@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Compress: at the highest levels every thread keeps working with the window of 128 MiB, so games compress faster; they can be up to 1 % bigger
+- Measure this computer: each setting is tried for seconds; with a big game the measure took up to an hour
+
 ## 1.7.15
 
 ### Improvements
