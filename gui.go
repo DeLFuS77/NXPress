@@ -80,7 +80,7 @@ func runWindow(start launch) int {
 		BackgroundColour:   background,
 		AssetServer:        &assetserver.Options{Assets: frontend},
 		OnStartup:          app.startup,
-		OnDomReady:         windowplace.PlaceWindow,
+		OnDomReady:         func(ctx context.Context) { blockNewWindows(ctx); windowplace.PlaceWindow(ctx) },
 		OnBeforeClose:      app.beforeClose,
 		OnShutdown:         app.closed,
 		DragAndDrop:        &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
