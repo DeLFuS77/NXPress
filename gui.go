@@ -936,11 +936,12 @@ func (a *App) Start(request Request) error {
 			system.SetTaskbarProgress("none", 1, 1)
 		}
 		a.mutex.Unlock()
-		close(finished)
 		emit(a.ctx, "finished", map[string]any{
 			"failed": failed, "cancelled": cancelled, "seconds": int(time.Since(started).Seconds()),
 		})
 		cancel()
+		// closed last: whoever waits for the work to end (closing, a test) finds nothing more sent
+		close(finished)
 	}()
 	return nil
 }
