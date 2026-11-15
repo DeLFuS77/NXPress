@@ -153,6 +153,8 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	}
 	ctx = withDestinations(ctx, files)
 	threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+	// the updates whose game in sparse storage is left as it is, left as they are with it
+	pairs := sparsePairs(ctx, o, action, files)
 	var (
 		mutex  sync.Mutex
 		failed = len(missing)
@@ -170,7 +172,12 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 				if ctx.Err() != nil {
 					continue
 				}
-				output, note, err := safeJob(ctx, action, path, o, threads, out)
+				output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
+					if reason, ok := pairs[path]; ok {
+						return "", "", Skipped(reason)
+					}
+					return safeJob(ctx, action, path, o, threads, out)
+				})
 				// a new file checked as a game before it got its name need not be read again (a
 				// folder a NUP was unpacked into is no file to remember)
 				if err == nil && output != "" && checksOutput[action] && !isDir(output) {

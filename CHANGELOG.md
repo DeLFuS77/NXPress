@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Right-click on a file at work or still waiting: "Skip this file" stops it and the rest of the work goes on. Thanks to ItsmeAJ (GBAtemp) for the idea
+- Compress: new option "Skip the updates of games in sparse storage", so a game left as NSP keeps its update as NSP too (--skip-sparse-updates). Thanks to ItsmeAJ (GBAtemp) for the idea
+
 ## 1.7.15
 
 ### Improvements

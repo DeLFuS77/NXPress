@@ -94,6 +94,9 @@ type Options struct {
 	LowPriority bool
 	Sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
 	Archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
+	// with -C and without the extra compression: the update of a game in sparse storage given
+	// with it is left as it is too, so the two stay together
+	SkipSparseUpdates bool
 	Threads     int
 	Multi       int
 	Output      string
@@ -142,6 +145,7 @@ var optionNames = []optionName{
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
 	{"--extra", 0, false, false}, {"--sparse", 0, false, false}, {"--archive", 0, false, false},
+	{"--skip-sparse-updates", 0, false, false},
 	{"--no-long", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
@@ -314,6 +318,8 @@ func (o *Options) flag(option optionName) {
 		o.ShortWindow = false
 	case "--sparse":
 		o.Sparse = true
+	case "--skip-sparse-updates":
+		o.SkipSparseUpdates = true
 	case "--archive":
 		o.Archive = true
 	case "--low-priority":
@@ -600,6 +606,9 @@ Usage: nxpress [options] file or folder...
                       gets what it needs; one that needs neither stays a plain NSZ. Installers
                       do not read the rest yet: decompress such a file with NXPress to install
                       it. --sparse and --archive turn on one half each
+  --skip-sparse-updates  with -C and without --extra, a base game in sparse storage is left
+                      as it is, and so is its update among the files given: the two stay
+                      together as NSP
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)
