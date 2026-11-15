@@ -1626,6 +1626,7 @@ function render() {
   const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
   $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
+  $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
   // added on their own
   const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
@@ -2194,6 +2195,9 @@ function settings() {
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     lowPriority: $("low-priority").checked,
+    // recovery data (.par2) for the percent chosen of each new file, and Verify repairing with it
+    par2: $("par2").checked ? +$("par2-percent").value : 0, par2Percent: +$("par2-percent").value,
+    repair: $("repair").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
     // Optimize for install, in Compress
@@ -3070,6 +3074,10 @@ async function main() {
   $("nup-raw-big").checked = chosen.nupRawBig !== false;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  $("par2").checked = chosen.par2 > 0;
+  $("par2-percent").value = String([1, 3, 5, 10].includes(chosen.par2Percent) ? chosen.par2Percent : 3);
+  // Verify repairs with the recovery data unless it was turned off
+  $("repair").checked = chosen.repair !== false;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
   $("keep-named").checked = !!chosen.keepNamed;
   $("low-priority").checked = !!chosen.lowPriority;
@@ -3132,7 +3140,7 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
-  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = render;
+  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;
   $("skip-sparse-updates").onchange = () => save("settings", settings());
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed

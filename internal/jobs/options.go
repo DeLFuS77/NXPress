@@ -102,6 +102,10 @@ type Options struct {
 	Output      string
 	Overwrite   bool
 	RmSource    bool
+	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
+	// rebuilds a damaged file with its .par2
+	Par2   int
+	Repair bool
 	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
@@ -150,7 +154,7 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--par2", 0, true, false}, {"--repair", 0, false, false}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
@@ -330,6 +334,8 @@ func (o *Options) flag(option optionName) {
 		o.Overwrite = true
 	case "--rm-source":
 		o.RmSource = true
+	case "--repair":
+		o.Repair = true
 	case "--rm-dumps":
 		o.RmDumps = true
 	case "--nup-zstd-big":
@@ -426,6 +432,11 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Output = value
 	case "--keys":
 		o.Keys = value
+	case "--par2":
+		o.Par2, err = number(1)
+		if err == nil && o.Par2 > 100 {
+			err = fmt.Errorf("%s takes a percentage from 1 to 100", told)
+		}
 	case "--dat":
 		o.Dat = value
 	case "--rename":
@@ -537,6 +548,12 @@ func (o *Options) Check() error {
 	if o.PackName != "" && !o.PackGames && !o.PackOne && !o.Optimize {
 		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games, --pack-one or --optimize")
 	}
+	if o.Par2 > 0 && !recoveryActions[o.Action()] {
+		o.Notes = append(o.Notes, "--par2 has no effect without a work that writes new files")
+	}
+	if o.Repair && o.Action() != "verify" {
+		o.Notes = append(o.Notes, "--repair has no effect without -V")
+	}
 	if o.RmDumps && !o.RmSource {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
 	}
@@ -622,6 +639,9 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
+  --par2 PERCENT      write recovery data next to each new file, "<name>.par2" (PAR 2.0):
+                      it rebuilds damaged parts of the file up to PERCENT of it
+  --repair            with -V, rebuild a damaged file with its .par2, then check it again
   --rm-dumps          with --rm-source, delete each dump folder too once its NUP is read
                       back and checked: the files the NUP holds, then the folders left
                       empty; a file it does not hold, or one changed since, stays

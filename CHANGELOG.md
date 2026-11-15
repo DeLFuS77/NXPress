@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Recovery data: Compress, Recompress, Decompress, Convert and Trim can write a .par2 file next to each new file (--par2 PERCENT). It rebuilds the parts of the file damaged on the disk over time, and par2cmdline and MultiPar read it too. Verify repairs a damaged file with it (--repair). A file renamed or deleted by NXPress takes its .par2 along. Thanks to TeleTubby666 (GBAtemp) for the idea
+
 ## 1.7.16
 
 ### Improvements
