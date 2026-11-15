@@ -80,7 +80,7 @@ texts.en = {
   shutdownFailed: forced => `The computer did not shut down: ${forced ? "something kept it on" : "a program kept it on, probably with work not saved. Tick “Force it” to close such programs without saving"}.`,
   resumeFound: n => n === 1 ? "1 file was left unfinished last time." : `${n} files were left unfinished last time.`, resumeGo: "Resume them", resumeDrop: "Forget them",
   presets: "Saved settings", presetNone: "Choose…", presetSave: "Save", presetReplace: "Replace", presetExists: name => `“${name}” exists already: Replace saves over it.`, presetBuiltin: "NXPress uses this name for its own settings: choose another.", presetReplaced: name => `Settings “${name}” replaced`, presetDelete: "Delete", presetName: "Enter a name for these settings",
-  presetInstallers: "For installers", presetEmulators: "For emulators", presetFast: "Quick",
+  presetInstallers: "For installers", presetEmulators: "For emulators", presetFast: "Quick", presetMax: "Maximum", presetMaxExtra: "Maximum (experimental)",
   compareLevels: "Compare the levels on this computer", compareHint: "Compresses samples of the files at each level, to tell the size and the time of each: nothing is written.",
   measurePc: "Measure this PC", measureMac: "Measure this Mac", measureComputer: "Measure this computer",
   measureHint: "Compresses a few seconds of the first game of the list with several threads and files at once, at the level and kind chosen, and puts the fastest in these fields. It takes 1 to 3 minutes.", measureNeedsGame: "Add an NSP or XCI to measure with.",

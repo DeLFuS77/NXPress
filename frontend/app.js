@@ -2213,6 +2213,10 @@ const builtinPresets = () => [
   { name: t("presetInstallers"), level: 18, block: false, builtin: true },
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
   { name: t("presetFast"), level: 3, block: false, builtin: true },
+  // the smallest files: the highest level, for installers, and with the extra compression too,
+  // which asks first, as its box does (#125)
+  { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
+  { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
 // the preset chosen is kept by what it is, not by its place in the list, which changes when one
 // is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
@@ -2273,6 +2277,14 @@ function applyPreset() {
   $(preset.block ? "target-block" : "target-solid").checked = true;
   if (preset.threads) $("threads").value = preset.threads;
   if (preset.multi) $("multi").value = preset.multi;
+  // the presets of NXPress say whether the extra compression goes with them: turned on, it asks
+  // first, and stays off if that is not accepted
+  if (preset.extra === false && $("extra").checked) $("extra").checked = false;
+  if (preset.extra === true && !$("extra").checked) {
+    $("extra").checked = true;
+    $("extra").onchange();
+    return;
+  }
   save("settings", settings());
   render();
 }

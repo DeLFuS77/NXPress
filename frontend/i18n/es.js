@@ -79,7 +79,7 @@ texts.es = {
   shutdownFailed: forced => `El equipo no se ha apagado: ${forced ? "algo lo impidió" : "un programa lo impidió, seguramente con algo sin guardar. Marca «Forzar» para cerrar esos programas sin guardar"}.`,
   resumeFound: n => n === 1 ? "La última vez quedó 1 archivo sin terminar." : `La última vez quedaron ${n} archivos sin terminar.`, resumeGo: "Continuar con ellos", resumeDrop: "Olvidarlos",
   presets: "Ajustes guardados", presetNone: "Elegir…", presetSave: "Guardar", presetReplace: "Reemplazar", presetExists: name => `«${name}» ya existe: Reemplazar guarda encima.`, presetBuiltin: "NXPress usa este nombre para sus propios ajustes: elige otro.", presetReplaced: name => `Ajustes «${name}» reemplazados`, presetDelete: "Borrar", presetName: "Escribe un nombre",
-  presetInstallers: "Para instaladores", presetEmulators: "Para emuladores", presetFast: "Rápido",
+  presetInstallers: "Para instaladores", presetEmulators: "Para emuladores", presetFast: "Rápido", presetMax: "Máxima", presetMaxExtra: "Máxima (experimental)",
   compareLevels: "Comparar los niveles en este equipo", compareHint: "Comprime muestras de los archivos en cada nivel para decir el tamaño y el tiempo de cada uno: no se escribe nada.",
   measurePc: "Medir este PC", measureMac: "Medir este Mac", measureComputer: "Medir este equipo",
   measureHint: "Comprime unos segundos del primer juego de la lista con varios hilos y archivos a la vez, al nivel y tipo elegidos, y pone lo más rápido en estos campos. Tarda de 1 a 3 minutos.", measureNeedsGame: "Añade un NSP o XCI con el que medir.",

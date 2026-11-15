@@ -79,7 +79,7 @@ texts.ja = {
   shutdownFailed: forced => `コンピューターの電源が切れませんでした: ${forced ? "何かが妨げました" : "保存していない作業があるプログラムが妨げたようです。「強制する」にチェックすると、そうしたプログラムを保存せずに閉じます"}。`,
   resumeFound: n => `前回 ${n} 個のファイルが未完了でした。`, resumeGo: "続ける", resumeDrop: "破棄",
   presets: "保存した設定", presetNone: "選択…", presetSave: "保存", presetReplace: "置き換え", presetExists: name => `「${name}」はすでにあります。置き換えると上書き保存されます。`, presetBuiltin: "この名前は NXPress の設定で使われています。別の名前にしてください。", presetReplaced: name => `設定「${name}」を置き換えました`, presetDelete: "削除", presetName: "この設定の名前を入力",
-  presetInstallers: "インストーラー向け", presetEmulators: "エミュレーター向け", presetFast: "高速",
+  presetInstallers: "インストーラー向け", presetEmulators: "エミュレーター向け", presetFast: "高速", presetMax: "最大", presetMaxExtra: "最大（実験的）",
   compareLevels: "このコンピューターでレベルを比較", compareHint: "各レベルでファイルのサンプルを圧縮し、サイズと時間を表示します。何も書き込みません。",
   measurePc: "この PC を測定", measureMac: "この Mac を測定", measureComputer: "このコンピューターを測定",
   measureHint: "リストの最初のゲームを数秒間、選んだレベルと種類で、スレッド数と同時ファイル数を変えて圧縮し、最も速い組み合わせをこの欄に入れます。1〜3分かかります。", measureNeedsGame: "測定に使う NSP か XCI を追加してください。",
