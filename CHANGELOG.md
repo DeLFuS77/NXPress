@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Combine with "Delete originals once checked": the folders the originals leave empty are deleted too, up to the folder given. A folder with any other file in it stays. Thanks to NikoMuffin for the idea (#126)
+
 ## 1.7.16
 
 ### Improvements
