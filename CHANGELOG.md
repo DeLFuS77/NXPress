@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- "Made for": NXDock is shown among the installers that take both kinds of file
+
 ## 1.7.14
 
 ### Improvements

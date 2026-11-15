@@ -68,7 +68,7 @@ NXPress goes on the internet for two things only, both from the window and each 
 
 ## Solid or in blocks
 
-A solid NSZ (the default) is the smallest and every installer takes it (DBI, Tinfoil, Awoo, CyberFoil, Sphaira). With `-B`, or "Emulators and installers" in the window, it is written in blocks, which emulators that read NSZ can run as it is, without installing it; every installer but Awoo takes it too. XCZ files are always in blocks, as nsz writes them.
+A solid NSZ (the default) is the smallest and every installer takes it (NXDock, DBI, Tinfoil, Awoo, CyberFoil, Sphaira). With `-B`, or "Emulators and installers" in the window, it is written in blocks, which emulators that read NSZ can run as it is, without installing it; every installer but Awoo takes it too. XCZ files are always in blocks, as nsz writes them.
 
 The level goes from 1 to 19, in three bands: Light 1–6, Medium 7–14 and Maximum 15–19. 18, the default of nsz, is also the one of NXPress. "Compare the levels on this computer" tells the size and the time of each level from samples of the files, and "Measure this PC" tries threads and files at once and keeps the fastest.
 
