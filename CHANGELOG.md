@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Folders dragged into the window no longer open windows of their own, also when they come from another screen. Thanks to NikoMuffin for reporting it (#120)
+
 ## 1.7.16
 
 ### Improvements
