@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Optimize for install: the game and its update are merged in one pass instead of two, which takes less time
+
 ## 1.7.14
 
 ### Improvements
