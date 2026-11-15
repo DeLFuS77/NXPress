@@ -28,8 +28,10 @@ var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
 	"decompress": {".nsz", ".xcz", ".nup"},
 	// the dump folders, by the code of their games
-	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
-	"convert":    {".xci", ".xcz"},
+	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
+	"convert": {".xci", ".xcz"},
+	// Convert the other way round, NSP and NSZ into game cards (#127)
+	"tocard":     {".nsp", ".nsz"},
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
 	"estimate":   {".nsp", ".xci"},
@@ -60,6 +62,7 @@ var checksOutput = map[string]bool{
 	"compress":   true,
 	"decompress": true,
 	"convert":    true,
+	"tocard":     true,
 	"recompress": true,
 	"trim":       true,
 	"fat32":      false,
@@ -550,7 +553,7 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		return compress(ctx, path, o, threads, out)
 	case "decompress":
 		return decompress(ctx, path, o, out)
-	case "convert":
+	case "convert", "tocard":
 		return convert(ctx, path, o, out)
 	case "recompress":
 		return recompress(ctx, path, o, threads, out)

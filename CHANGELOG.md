@@ -6,6 +6,7 @@
 
 - Saved settings: two new ones, "Maximum" (the highest level, for installers) and "Maximum (experimental)" (the same with the extra compression). Thanks to NikoMuffin for the idea (#125)
 - Combine with "Delete originals once checked": the folders the originals leave empty are deleted too, up to the folder given. A folder with any other file in it stays. Thanks to NikoMuffin for the idea (#126)
+- Convert: it now also goes the other way, NSP and NSZ to XCI and XCZ (--convert --to-xci). The game card gets a header written by NXPress, not signed by Nintendo. Thanks to NikoMuffin for the idea (#127)
 
 ### Fixes
 
