@@ -29,13 +29,14 @@ void CounterAt(const uint8_t* fsh, uint64_t at, uint8_t ctr[16]) {
     for (int i = 0; i < 8; i++) ctr[8 + i] = uint8_t(block >> (8 * (7 - i)));
 }
 
-// Bytes given in order, encrypted with AES-CTR for their places from `at` (a multiple of 16), and
-// passed on in pieces of whole blocks.
+// Bytes given in order, encrypted with AES-CTR for their places from `at`, and passed on in pieces
+// of whole blocks. A start inside a block: the block is encrypted whole and its first bytes dropped.
 class CtrOut {
 public:
     CtrOut(const OutFn& out, const patchview::CtrFn& ctr, const uint8_t* key, const uint8_t* fsh, uint64_t at)
-        : m_out(out), m_ctr(ctr), m_key(key), m_fsh(fsh), m_at(at) {
+        : m_out(out), m_ctr(ctr), m_key(key), m_fsh(fsh), m_at(at & ~uint64_t(15)), m_skip(size_t(at & 15)) {
         m_buf.reserve(kChunk + 0x10000);
+        m_buf.assign(m_skip, 0);
     }
     bool Put(const uint8_t* d, size_t n) {
         m_buf.insert(m_buf.end(), d, d + n);
@@ -56,7 +57,8 @@ public:
         uint8_t c[16];
         CounterAt(m_fsh, m_at, c);
         m_ctr(m_key, c, m_buf.data(), n);
-        if (!m_out(m_buf.data(), n)) return false;
+        if (n > m_skip && !m_out(m_buf.data() + m_skip, n - m_skip)) return false;
+        m_skip = 0;
         m_buf.erase(m_buf.begin(), m_buf.begin() + std::ptrdiff_t(n));
         m_at += n;
         return true;
@@ -68,6 +70,7 @@ private:
     const uint8_t* m_key;
     const uint8_t* m_fsh;
     uint64_t m_at;
+    size_t m_skip;
     std::vector<uint8_t> m_buf;
 };
 
@@ -143,11 +146,48 @@ bool Merger::PackOnce(const lz4pack::WriteFn& write, const lz4pack::StepFn& step
                            m_stats, m_in.threads);
 }
 
-bool Merger::Measure(const lz4pack::StepFn& step, std::string& error) {
+uint64_t Merger::RomfsStart() const {
+    uint32_t s = 0;
+    std::memcpy(&s, m_in.update_header.data() + 0x240 + m_in.update_index * 0x10, 4);
+    return uint64_t(s) * 0x200;
+}
+
+uint64_t Merger::DataPlace() const {
+    return RomfsStart() + mergenca::IvfcLayout(m_romfs.Size()).back().offset;
+}
+
+uint64_t Merger::OnceBound() const {
+    // the RomFS section with its data level as large as the RomFS: what is stored is never more
+    // while it stays in its place
+    const uint64_t data_at = mergenca::IvfcLayout(m_romfs.Size()).back().offset;
+    mergenca::Plan plan;
+    const std::array<uint8_t, 0x200> fsh{};
+    const lz4pack::HashFn none = [](const uint8_t*, size_t, uint8_t out[32]) { std::memset(out, 0, 32); };
+    if (!mergenca::PlanNca(m_in.update_header.data(), m_in.update_index, data_at + m_romfs.Size(), fsh, none, plan)) return 0;
+    return plan.size;
+}
+
+bool Merger::Measure(const lz4pack::StepFn& step, std::string& error, const OutFn& data) {
     m_measured = false;
+    m_placed = false;
     lz4pack::BlockHasher hasher(1u << 14, m_in.hash);
-    if (!PackOnce([&](uint64_t, const uint8_t* d, size_t n) { hasher.Feed(d, n); return true; }, step, m_packed)) {
-        error = m_romfs.Damaged() ? "damaged" : "stopped";
+    // one pass: what it stores, encrypted for its place in the new NCA (its FS header keeps the
+    // counter of the update's)
+    std::unique_ptr<CtrOut> enc;
+    if (data) enc = std::make_unique<CtrOut>(data, m_in.update.ctr, m_in.update.key.data(), m_in.update.fsh.data(), DataPlace());
+    uint64_t written = 0;
+    bool wrote = true;
+    const bool packed = PackOnce([&](uint64_t, const uint8_t* d, size_t n) {
+            hasher.Feed(d, n);
+            if (enc) {
+                written += n;
+                wrote = enc->Put(d, n);
+            }
+            return wrote;
+        }, step, m_packed);
+    if (packed && enc) wrote = enc->Flush(true);
+    if (!packed || !wrote) {
+        error = !wrote ? "write" : m_romfs.Damaged() ? "damaged" : "stopped";
         return false;
     }
     m_table = lz4pack::BuildTable(m_packed.entries, m_romfs.Size());
@@ -168,12 +208,30 @@ bool Merger::Measure(const lz4pack::StepFn& step, std::string& error) {
         return false;
     }
     m_measured = true;
+    // in its place when what is stored is not bigger than the RomFS (its IVFC laid out as planned)
+    m_placed = enc && written == m_packed.table_offset && m_stored <= m_romfs.Size() && RomfsStart() + m_levels.back().offset == DataPlace();
     return true;
 }
 
 bool Merger::Write(const OutFn& out, const lz4pack::StepFn& step, std::string& error) {
+    return WriteNca(out, step, error, nullptr);
+}
+
+bool Merger::WriteAround(const std::function<bool(uint64_t at)>& begin, const OutFn& out, std::string& error) {
+    if (!m_placed) {
+        error = "not in its place";
+        return false;
+    }
+    return WriteNca(out, {}, error, &begin);
+}
+
+bool Merger::WriteNca(const OutFn& out, const lz4pack::StepFn& step, std::string& error, const std::function<bool(uint64_t)>* begin) {
     if (!m_measured) {
         error = "not measured";
+        return false;
+    }
+    if (begin && !(*begin)(0)) {
+        error = "write";
         return false;
     }
     std::vector<uint8_t> head = m_plan.header;
@@ -233,6 +291,21 @@ bool Merger::Write(const OutFn& out, const lz4pack::StepFn& step, std::string& e
         if (!enc.Put(levels.data(), levels.size())) {
             error = "write";
             return false;
+        }
+        if (begin) {
+            // one pass: the data level is there already; its table and the zeros after it
+            const uint64_t table_at = s.start + data_at + m_packed.table_offset;
+            if (!enc.Flush(true) || !(*begin)(table_at)) {
+                error = "write";
+                return false;
+            }
+            CtrOut rest(out, m_in.update.ctr, m_in.update.key.data(), fsh, table_at);
+            if (!rest.Put(m_table.data(), m_table.size()) || !rest.Zeros(s.end - s.start - data_at - m_stored) || !rest.Flush(true)) {
+                error = "write";
+                return false;
+            }
+            at = s.end;
+            continue;
         }
         lz4pack::BlockHasher check(1u << 14, m_in.hash);
         lz4pack::Packed again;

@@ -23,6 +23,9 @@ type Options struct {
 	Work string
 	// the progress: a step ("Reading", "Measuring", "Writing", "Checking") and its bytes
 	Progress func(step string, done int64, total int64)
+
+	// the merged program measured, then written again (the tests compare it with one pass)
+	twoPasses bool
 }
 
 // Result is what was made.
@@ -40,6 +43,7 @@ type Result struct {
 	OldKept       uint64
 	ProgramID     string // the content ID of the merged program
 	ProgramHash   string // its SHA-256
+	OnePass       bool   // the merged program written as it was packed, not packed twice
 }
 
 // ErrNotBuilt is told when NXPress is built without cgo, which the code of NXDock needs.

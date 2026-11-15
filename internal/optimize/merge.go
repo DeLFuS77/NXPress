@@ -3,7 +3,9 @@
 package optimize
 
 import (
+	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
@@ -14,6 +16,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/DeLFuS77/NXPress/internal/optimize/native"
@@ -179,21 +182,12 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 		return res, err
 	}
 
-	// 2. measured, then written
+	// 2. the merged program, written as it is packed (one pass), or measured and written again
 	m, err := native.Open(job, bsec, usec, ui, uprog.header, o.Level, o.Threads)
 	if err != nil {
 		return res, ErrNotPair{err.Error()}
 	}
 	defer m.Close()
-	romfs := m.Info().RomfsSize
-	job.Step = stepped("Measuring", romfs)
-	if err := m.Measure(); err != nil {
-		if ctx.Err() != nil {
-			return res, ctx.Err()
-		}
-		return res, err
-	}
-	info := m.Info()
 
 	// the files of the NSP: the merged program, the other contents of the update (no delta
 	// fragments), the meta NCA, and the tickets of what has a rights ID
@@ -254,24 +248,16 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 		return res, err
 	}
 	pw.next()
-	var whole hash.Hash = sha256.New()
-	job.Out = func(p []byte) error {
-		whole.Write(p)
-		_, err := pw.Write(p)
-		return err
-	}
-	job.Step = stepped("Writing", romfs)
-	if err := m.Write(); err != nil {
+	info, sum, once, err := writeProgram(ctx, f, pw, job, m, !o.twoPasses, stepped)
+	if err != nil {
 		if ctx.Err() != nil {
 			return res, ctx.Err()
 		}
 		return res, err
 	}
-	if uint64(pw.sizes[0]) != info.NcaSize {
-		return res, fmt.Errorf("the merged NCA was written with %d bytes, measured %d", pw.sizes[0], info.NcaSize)
-	}
+	res.OnePass = once
 	var program native.Content
-	copy(program.Hash[:], whole.Sum(nil))
+	copy(program.Hash[:], sum)
 	copy(program.ID[:], program.Hash[:16])
 	program.Size, program.Type = info.NcaSize, native.ContentProgram
 	res.ProgramID = hex.EncodeToString(program.ID[:])
@@ -339,6 +325,163 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	}
 	done = true
 	return res, nil
+}
+
+// offsetWriter writes in order from a place of a file, without moving its offset.
+type offsetWriter struct {
+	f  *os.File
+	at int64
+}
+
+func (w *offsetWriter) Write(p []byte) (int, error) {
+	n, err := w.f.WriteAt(p, w.at)
+	w.at += int64(n)
+	return n, err
+}
+
+// writeProgram writes the merged program NCA as the first file of the NSP pw writes to f, and
+// gives what was measured and its SHA-256. In one pass when it can (once): the data level of the
+// RomFS goes to its place as it is packed, then the rest of the NCA around it, and the NCA is read
+// back for its hash. When what is stored came out bigger than the RomFS, it is not where it was
+// written: the NCA is written again from its start, in two passes, as without once.
+func writeProgram(ctx context.Context, f *os.File, pw *pfsWriter, job *native.Job, m *native.Merger, once bool,
+	stepped func(string, uint64) func(int, uint64) bool) (native.Info, []byte, bool, error) {
+	romfs := m.Info().RomfsSize
+	once = once && m.OnceBound() > 0
+	dataLen := uint64(0)
+	if once {
+		// the head of the NSP on the disk: the NCA goes after it
+		if err := pw.w.Flush(); err != nil {
+			return native.Info{}, nil, false, err
+		}
+		data := bufio.NewWriterSize(&offsetWriter{f: f, at: pw.head + int64(m.DataPlace())}, chunk)
+		job.Out = func(p []byte) error {
+			_, err := data.Write(p)
+			dataLen += uint64(len(p))
+			return err
+		}
+		job.Step = stepped("Writing", romfs)
+		if err := m.MeasureOnce(); err != nil {
+			return native.Info{}, nil, false, err
+		}
+		if err := data.Flush(); err != nil {
+			return native.Info{}, nil, false, err
+		}
+		if !m.Placed() {
+			// what it stores is bigger than the RomFS: what was written goes, written again in order
+			once = false
+			if err := f.Truncate(pw.head); err != nil {
+				return native.Info{}, nil, false, err
+			}
+			if _, err := f.Seek(pw.head, io.SeekStart); err != nil {
+				return native.Info{}, nil, false, err
+			}
+		}
+	} else {
+		job.Step = stepped("Measuring", romfs)
+		if err := m.Measure(); err != nil {
+			return native.Info{}, nil, false, err
+		}
+	}
+	info := m.Info()
+	if once {
+		// each part written, [from, to) of the NCA: with the data level, the whole NCA once each
+		parts := [][2]uint64{{m.DataPlace(), m.DataPlace() + dataLen}}
+		var part *bufio.Writer
+		job.Begin = func(at uint64) error {
+			if part != nil {
+				if err := part.Flush(); err != nil {
+					return err
+				}
+			}
+			part = bufio.NewWriterSize(&offsetWriter{f: f, at: pw.head + int64(at)}, chunk)
+			parts = append(parts, [2]uint64{at, at})
+			return nil
+		}
+		job.Out = func(p []byte) error {
+			if part == nil {
+				return errors.New("a part of the NCA with no place")
+			}
+			_, err := part.Write(p)
+			parts[len(parts)-1][1] += uint64(len(p))
+			return err
+		}
+		err := m.WriteAround()
+		job.Begin = nil
+		if err != nil {
+			return info, nil, true, err
+		}
+		if part == nil {
+			return info, nil, true, errors.New("nothing written around the data level")
+		}
+		if err := part.Flush(); err != nil {
+			return info, nil, true, err
+		}
+		if err := partsWhole(parts, info.NcaSize); err != nil {
+			return info, nil, true, err
+		}
+		// the NCA whole: the files after it go from its end
+		pw.sizes[0], pw.at = int64(info.NcaSize), int64(info.NcaSize)
+		if _, err := f.Seek(pw.head+int64(info.NcaSize), io.SeekStart); err != nil {
+			return info, nil, true, err
+		}
+		pw.w.Reset(f)
+		// its hash, read back (f is opened only to write)
+		r, err := os.Open(f.Name())
+		if err != nil {
+			return info, nil, true, err
+		}
+		defer r.Close()
+		whole := sha256.New()
+		buf := make([]byte, chunk)
+		for off := uint64(0); off < info.NcaSize; {
+			if err := ctx.Err(); err != nil {
+				return info, nil, true, err
+			}
+			n := int(min(uint64(len(buf)), info.NcaSize-off))
+			if _, err := r.ReadAt(buf[:n], pw.head+int64(off)); err != nil {
+				return info, nil, true, err
+			}
+			whole.Write(buf[:n])
+			off += uint64(n)
+		}
+		return info, whole.Sum(nil), true, nil
+	}
+	var whole hash.Hash = sha256.New()
+	job.Out = func(p []byte) error {
+		whole.Write(p)
+		_, err := pw.Write(p)
+		return err
+	}
+	job.Step = stepped("Writing", romfs)
+	if err := m.Write(); err != nil {
+		return info, nil, false, err
+	}
+	if uint64(pw.sizes[0]) != info.NcaSize {
+		return info, nil, false, fmt.Errorf("the merged NCA was written with %d bytes, measured %d", pw.sizes[0], info.NcaSize)
+	}
+	return info, whole.Sum(nil), false, nil
+}
+
+// partsWhole checks the parts written of an NCA of size bytes, [from, to) each, make it whole:
+// none over another, no gap.
+func partsWhole(parts [][2]uint64, size uint64) error {
+	sorted := slices.Clone(parts)
+	slices.SortFunc(sorted, func(a, b [2]uint64) int { return cmp.Compare(a[0], b[0]) })
+	at := uint64(0)
+	for _, p := range sorted {
+		if p[1] == p[0] {
+			continue
+		}
+		if p[0] != at || p[1] < p[0] {
+			return fmt.Errorf("the merged NCA was not written whole in one pass: a part of %d to %d where %d was next", p[0], p[1], at)
+		}
+		at = p[1]
+	}
+	if at != size {
+		return fmt.Errorf("the merged NCA was written in one pass up to %d bytes, measured %d", at, size)
+	}
+	return nil
 }
 
 // sameContents checks the CNMT made lists the files of the NSP.

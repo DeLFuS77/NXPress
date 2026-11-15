@@ -39,8 +39,12 @@ type Job struct {
 	NCAs []io.ReaderAt
 	// the AES-XTS of an NCA header, in place
 	EncryptHeader func(header []byte)
-	// the new NCA, in order from its start
+	// the new NCA, in order from its start (two passes); in one pass, the data level in order from
+	// its place (MeasureOnce), then each part around it in order from where Begin started it
+	// (WriteAround)
 	Out func(p []byte) error
+	// one pass: the next bytes of Out go at this place of the NCA (WriteAround)
+	Begin func(at uint64) error
 	// the progress of each phase (Measure, Write): the bytes of the RomFS done; false stops
 	Step func(phase int, done uint64) bool
 
@@ -147,6 +151,37 @@ func (m *Merger) Measure() error {
 func (m *Merger) Write() error {
 	cerr := make([]byte, errLen)
 	if C.nxo_merger_write(m.m, (*C.char)(unsafe.Pointer(&cerr[0])), errLen) == 0 {
+		return m.job.err(cerr)
+	}
+	return nil
+}
+
+// DataPlace is where the data level of the RomFS goes in the new NCA, and OnceBound the size the
+// NCA cannot pass while it is there (0: it is not written in one pass); both known once opened.
+func (m *Merger) DataPlace() uint64 { return uint64(C.nxo_merger_data_place(m.m)) }
+func (m *Merger) OnceBound() uint64 { return uint64(C.nxo_merger_once_bound(m.m)) }
+
+// MeasureOnce is Measure that gives Job.Out what the data level stores at the same time, in order
+// from DataPlace (one pass). Then, when Placed, WriteAround writes the rest; if not, Write writes
+// the whole NCA again.
+func (m *Merger) MeasureOnce() error {
+	cerr := make([]byte, errLen)
+	if C.nxo_merger_measure_once(m.m, (*C.char)(unsafe.Pointer(&cerr[0])), errLen) == 0 {
+		return m.job.err(cerr)
+	}
+	return nil
+}
+
+// Placed tells, after MeasureOnce, the data level is where it was written: false when what it
+// stores came out bigger than the RomFS.
+func (m *Merger) Placed() bool { return C.nxo_merger_placed(m.m) != 0 }
+
+// WriteAround writes the rest of the NCA around the data level MeasureOnce wrote: Job.Begin starts
+// each part at its place, Job.Out takes its bytes in order. The NCA is the one Write gives, byte for
+// byte.
+func (m *Merger) WriteAround() error {
+	cerr := make([]byte, errLen)
+	if C.nxo_merger_write_around(m.m, (*C.char)(unsafe.Pointer(&cerr[0])), errLen) == 0 {
 		return m.job.err(cerr)
 	}
 	return nil

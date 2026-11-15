@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Optimize for install: the game and its update are merged in one pass instead of two, which takes less time
 - "Made for": NXDock is shown among the installers that take both kinds of file
 
 ## 1.7.14
