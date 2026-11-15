@@ -235,6 +235,51 @@ int nxo_merger_write(nxo_merger* m, char* err, size_t errlen) {
     }
 }
 
+uint64_t nxo_merger_data_place(nxo_merger* m) { return m->merger.DataPlace(); }
+uint64_t nxo_merger_once_bound(nxo_merger* m) {
+    try {
+        return m->merger.OnceBound();
+    } catch (...) {
+        return 0;
+    }
+}
+
+int nxo_merger_measure_once(nxo_merger* m, char* err, size_t errlen) {
+    try {
+        const uintptr_t handle = m->handle;
+        std::string error;
+        if (!m->merger.Measure([handle](uint64_t done) { return nxoGoStep(handle, NXO_MEASURE, done) != 0; }, error,
+                               [handle](const uint8_t* d, size_t n) { return nxoGoOut(handle, const_cast<uint8_t*>(d), n) != 0; })) {
+            SetError(err, errlen, error);
+            return 0;
+        }
+        return 1;
+    } catch (const std::exception& e) {
+        SetError(err, errlen, e.what());
+        return 0;
+    }
+}
+
+int nxo_merger_placed(nxo_merger* m) { return m->merger.Placed() ? 1 : 0; }
+
+int nxo_merger_write_around(nxo_merger* m, char* err, size_t errlen) {
+    try {
+        const uintptr_t handle = m->handle;
+        std::string error;
+        const bool ok = m->merger.WriteAround([handle](uint64_t at) { return nxoGoBegin(handle, at) != 0; },
+                                              [handle](const uint8_t* d, size_t n) { return nxoGoOut(handle, const_cast<uint8_t*>(d), n) != 0; },
+                                              error);
+        if (!ok) {
+            SetError(err, errlen, error);
+            return 0;
+        }
+        return 1;
+    } catch (const std::exception& e) {
+        SetError(err, errlen, e.what());
+        return 0;
+    }
+}
+
 void nxo_merger_info(nxo_merger* m, nxo_info* out) {
     out->romfs_size = m->merger.RomfsSize();
     out->stored_size = m->merger.StoredSize();

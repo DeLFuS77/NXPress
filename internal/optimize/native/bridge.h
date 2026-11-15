@@ -44,6 +44,19 @@ int nxo_merger_open(nxo_merger* m, const nxo_section* base, const nxo_section* u
                     const uint8_t* update_header, int level, unsigned threads, char* err, size_t errlen);
 int nxo_merger_measure(nxo_merger* m, char* err, size_t errlen);
 int nxo_merger_write(nxo_merger* m, char* err, size_t errlen);
+// One pass: the place of the data level in the new NCA, and the size the NCA cannot pass while it
+// is there (0: no one pass), known once opened.
+uint64_t nxo_merger_data_place(nxo_merger* m);
+uint64_t nxo_merger_once_bound(nxo_merger* m);
+// One pass: measured as nxo_merger_measure, what the data level stores given to nxoGoOut at the
+// same time, in order from nxo_merger_data_place.
+int nxo_merger_measure_once(nxo_merger* m, char* err, size_t errlen);
+// After nxo_merger_measure_once: 1 when the data level is where it was written (0: it came out
+// bigger than the RomFS, and the NCA is written again by nxo_merger_write).
+int nxo_merger_placed(nxo_merger* m);
+// One pass: the rest of the NCA around the data level, each part started by nxoGoBegin with its
+// place in the NCA, its bytes given to nxoGoOut in order.
+int nxo_merger_write_around(nxo_merger* m, char* err, size_t errlen);
 void nxo_merger_info(nxo_merger* m, nxo_info* out);
 void nxo_merger_free(nxo_merger* m);
 
@@ -94,6 +107,7 @@ extern void nxoGoCtr(uint8_t* key, uint8_t* ctr, uint8_t* data, size_t size);
 extern void nxoGoSha256(uint8_t* data, size_t size, uint8_t* out);
 extern void nxoGoHeader(uintptr_t handle, uint8_t* header, size_t size);
 extern int nxoGoOut(uintptr_t handle, uint8_t* data, size_t size);
+extern int nxoGoBegin(uintptr_t handle, uint64_t at);
 extern int nxoGoStep(uintptr_t handle, int phase, uint64_t done);
 
 #ifdef __cplusplus
