@@ -79,7 +79,7 @@ texts.it = {
   shutdownFailed: forced => `Il computer non si è spento: ${forced ? "qualcosa lo ha impedito" : "un programma lo ha impedito, probabilmente con lavoro non salvato. Spunta «Forza» per chiudere quei programmi senza salvare"}.`,
   resumeFound: n => n === 1 ? "L'ultima volta 1 file è rimasto incompleto." : `L'ultima volta ${n} file sono rimasti incompleti.`, resumeGo: "Riprendili", resumeDrop: "Dimenticali",
   presets: "Impostazioni salvate", presetNone: "Scegli…", presetSave: "Salva", presetReplace: "Sostituisci", presetExists: name => `«${name}» esiste già: Sostituisci salva sopra.`, presetBuiltin: "NXPress usa questo nome per le sue impostazioni: scegline un altro.", presetReplaced: name => `Impostazioni «${name}» sostituite`, presetDelete: "Elimina", presetName: "Scrivi un nome",
-  presetInstallers: "Per installer", presetEmulators: "Per emulatori", presetFast: "Veloce",
+  presetInstallers: "Per installer", presetEmulators: "Per emulatori", presetFast: "Veloce", presetMax: "Massima", presetMaxExtra: "Massima (sperimentale)",
   compareLevels: "Confronta i livelli su questo computer", compareHint: "Comprime campioni dei file a ogni livello per indicarne dimensione e tempo: non viene scritto nulla.",
   measurePc: "Misura questo PC", measureMac: "Misura questo Mac", measureComputer: "Misura questo computer",
   measureHint: "Comprime alcuni secondi del primo gioco della lista con più thread e file alla volta, al livello e tipo scelti, e mette il più veloce in questi campi. Richiede da 1 a 3 minuti.", measureNeedsGame: "Aggiungi un NSP o XCI con cui misurare.",

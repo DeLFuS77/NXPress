@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- Saved settings: two new ones, "Maximum" (the highest level, for installers) and "Maximum (experimental)" (the same with the extra compression). Thanks to NikoMuffin for the idea (#125)
+
 ### Fixes
 
 - Folders dragged into the window no longer open windows of their own, also when they come from another screen. Thanks to NikoMuffin for reporting it (#120)
