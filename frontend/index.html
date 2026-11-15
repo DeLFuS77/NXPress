@@ -168,6 +168,12 @@
           <p class="hint always" data-for="recompress" data-t="extraRecompress"></p>
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
+        <!-- without the extra compression a base game in sparse storage is left as it is: its
+             update can be left with it, so the two stay together -->
+        <div class="extra-field" data-for="compress">
+          <label class="check"><input id="skip-sparse-updates" type="checkbox"><span data-t="skipSparseUpdates"></span></label>
+          <p class="hint" data-t="skipSparseUpdatesHint"></p>
+        </div>
         <!-- Optimize for install (experimental): each game with its update into one NSZ that takes
              the least room installed; the files of its list are the games and their updates -->
         <div class="extra-field" data-for="compress">

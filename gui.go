@@ -106,6 +106,8 @@ type App struct {
 	mutex  sync.Mutex
 	keys   string
 	cancel context.CancelFunc
+	// the files of the work at hand skipped from the list while it goes on
+	skips *jobs.Skips
 	// closed once the work stopped, its half written files removed
 	finished chan struct{}
 	// the files NXPress was started with, the section the Explorer asked for (#88), and whether
@@ -796,6 +798,8 @@ type Request struct {
 	Levels       bool     `json:"levels"`
 	LowPriority  bool     `json:"lowPriority"`
 	Sparse       bool     `json:"sparse"`
+	// Compress: the update of a game in sparse storage left as it is with its game
+	SkipSparseUpdates bool `json:"skipSparseUpdates"`
 	Archive      bool     `json:"archive"`
 	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
 	Optimize bool `json:"optimize"`
@@ -823,6 +827,7 @@ func (a *App) Start(request Request) error {
 	o.NoCache = request.NoCache
 	o.Levels = request.Levels
 	o.Sparse = request.Sparse
+	o.SkipSparseUpdates = request.SkipSparseUpdates && request.Mode == "compress"
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
 	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
@@ -898,8 +903,10 @@ func (a *App) Start(request Request) error {
 		return errRestarting
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
+	skips := jobs.NewSkips()
+	ctx = jobs.WithSkips(ctx, skips)
 	finished := make(chan struct{})
-	a.cancel, a.finished = cancel, finished
+	a.cancel, a.finished, a.skips = cancel, finished, skips
 	// a turning off still to come was for the work before: it would cut this one off
 	stopped := a.stopShutdown()
 	priority := a.setPriority(request.LowPriority)
@@ -921,7 +928,7 @@ func (a *App) Start(request Request) error {
 		failed := work(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
 		cancelled := ctx.Err() != nil
 		a.mutex.Lock()
-		a.cancel, a.finished = nil, nil
+		a.cancel, a.finished, a.skips = nil, nil, nil
 		// the taskbar ends as the work did: red while there are errors to look at, else nothing
 		if failed > 0 && !cancelled {
 			system.SetTaskbarProgress("error", 1, 1)
@@ -1144,6 +1151,16 @@ func (a *App) Cancel() {
 	}
 }
 
+// Skip skips one file of the work while the rest goes on: the one at work stops and its half
+// written file is removed, and one still waiting is left out when its turn comes.
+func (a *App) Skip(path string) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.skips != nil {
+		a.skips.Skip(path)
+	}
+}
+
 // SetPaused stops the work where it is, or lets it go on.
 func (a *App) SetPaused(paused bool) {
 	a.setPaused(paused)
@@ -1301,7 +1318,14 @@ const windowEvery = 500 * time.Millisecond
 // WaitWhilePaused holds the work while it is paused, until it goes on or is cancelled: before
 // each file, and at every step that tells its progress.
 func (w *window) WaitWhilePaused() {
-	for w.app != nil && w.app.paused.Load() && w.job.Err() == nil {
+	w.waitWhilePaused("")
+}
+
+// waitWhilePaused holds the file path while the work is paused, and lets it go once it is
+// skipped by hand, so it stops at once.
+func (w *window) waitWhilePaused(path string) {
+	skips := jobs.SkipsOf(w.job)
+	for w.app != nil && w.app.paused.Load() && w.job.Err() == nil && !(path != "" && skips != nil && skips.Asked(path)) {
 		time.Sleep(200 * time.Millisecond)
 	}
 }
@@ -1313,7 +1337,7 @@ func (w *window) Progress(path string, step string) func(done int64, total int64
 		lastShare = int64(-1)
 	)
 	return func(done int64, total int64) {
-		w.WaitWhilePaused()
+		w.waitWhilePaused(path)
 		share := int64(0)
 		if total > 0 {
 			share = done * 1000 / total
