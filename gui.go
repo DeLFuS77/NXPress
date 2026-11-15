@@ -800,11 +800,14 @@ type Request struct {
 	Sparse       bool     `json:"sparse"`
 	// Compress: the update of a game in sparse storage left as it is with its game
 	SkipSparseUpdates bool `json:"skipSparseUpdates"`
-	Archive      bool     `json:"archive"`
+	Archive           bool `json:"archive"`
 	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
 	Optimize bool `json:"optimize"`
 	// Convert: NSP and NSZ into XCI and XCZ (#127)
 	ToCard bool `json:"toCard"`
+	// recovery data (.par2) for this percent of each new file, and Verify repairing with it
+	Par2   int  `json:"par2"`
+	Repair bool `json:"repair"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
 	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
@@ -833,6 +836,10 @@ func (a *App) Start(request Request) error {
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
 	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
+	if request.Par2 > 0 && request.Par2 <= 100 {
+		o.Par2 = request.Par2
+	}
+	o.Repair = request.Repair && request.Mode == "verify"
 	switch request.Mode {
 	case "compress":
 		o.Compress = true

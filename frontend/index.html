@@ -218,6 +218,8 @@
       <p class="hint" id="verify-level-hint"></p>
       <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
       <p class="hint" data-t="noCacheHint"></p>
+      <label class="check"><input id="repair" type="checkbox"><span data-t="repair"></span></label>
+      <p class="hint" data-t="repairHint"></p>
     </section>
 
     <section class="block" data-for="pack">
@@ -260,6 +262,11 @@
       <label class="check sub-check" id="remove-dumps-option" hidden><input id="remove-dumps" type="checkbox"><span data-t="removeDumps"></span></label>
       <p class="hint" data-t="removeDumpsHint"></p>
       <p class="warning" id="remove-warning" hidden></p>
+      <!-- recovery data next to each new file, in the PAR 2.0 format: it rebuilds the parts of
+           the file damaged on the disk over time -->
+      <label class="check" data-for="compress decompress recompress trim convert"><input id="par2" type="checkbox"><span data-t="par2"></span></label>
+      <label class="small-check sub-check" id="par2-amount" data-for="compress decompress recompress trim convert"><span data-t="par2Amount"></span> <select id="par2-percent"><option value="1">1 %</option><option value="3">3 %</option><option value="5">5 %</option><option value="10">10 %</option></select></label>
+      <p class="hint" data-for="compress decompress recompress trim convert" data-t="par2Hint"></p>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim verify">

@@ -181,6 +181,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 					}
 					return safeJob(ctx, action, path, o, threads, out)
 				})
+				// the recovery data of the new file, with --par2, or made again for a file written again
+				if err == nil {
+					note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
+				}
 				// a new file checked as a game before it got its name need not be read again (a
 				// folder a NUP was unpacked into is no file to remember)
 				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
@@ -594,6 +598,8 @@ func removeSource(o Options, path string, check switchfs.FileCheck, name string,
 	if err := os.Remove(path); err != nil {
 		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 	}
+	// its recovery data goes with it, or it would be left for a file no longer there
+	removeRecovery(path)
 	return name, note, nil
 }
 
