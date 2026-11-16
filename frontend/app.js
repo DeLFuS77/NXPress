@@ -956,7 +956,7 @@ function helpName(hint) {
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status)");
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
