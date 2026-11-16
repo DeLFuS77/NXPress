@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The settings on the right are dimmed while a work is running, as the side menu is. Thanks to NikoMuffin for reporting it (#133)
+
 ## 1.7.17
 
 ### Improvements
