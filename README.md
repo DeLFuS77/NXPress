@@ -159,4 +159,6 @@ The [wiki](https://github.com/DeLFuS77/NXPress/wiki) has a guide to each section
 
 ## License
 
-AGPL-3.0
+AGPL-3.0. The name "NXPress" and its logo are not licensed with the code: a modified version needs a name and a logo of its own, and must say it is not NXPress. See [TRADEMARKS.md](TRADEMARKS.md).
+
+Only the versions published here are official: they are built here and signed. Report problems with another build to whoever made it.

@@ -1,0 +1,29 @@
+name: Bug report
+description: Something in NXPress does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This tracker is for the official versions of NXPress, the ones published at https://github.com/DeLFuS77/NXPress/releases. A build made or changed by someone else (NXPress tells "Unofficial build" in its side menu) is supported by whoever made it: report its problems there.
+  - type: checkboxes
+    id: official
+    attributes:
+      label: Official version
+      options:
+        - label: I use an official version of NXPress, downloaded from its releases page or updated by NXPress itself, not a modified or self-built copy.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      description: As NXPress shows it, for example "1.7.17, Windows 11".
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead. The report of the work (Copy report) helps a lot.
+    validations:
+      required: true

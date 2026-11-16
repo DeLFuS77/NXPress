@@ -266,6 +266,22 @@ jobs:
           for file in nxpress-*; do
             mv "${file}" "${file/nxpress-/nxpress-${GITHUB_REF_NAME}-}"
           done
+          # the checksums of the programs inside the archives too, by system: NXPress tells by them
+          # whether the program running is an official version (official.go, TRADEMARKS.md)
+          programs="nxpress-${GITHUB_REF_NAME}-programs.sha256"
+          echo "$(sha256sum nxpress.exe | cut -d' ' -f1)  windows-x64" > "../${programs}"
+          for archive in nxpress-${GITHUB_REF_NAME}-linux-*.tar.gz nxpress-${GITHUB_REF_NAME}-macos-*.tar.gz; do
+            system="${archive#nxpress-${GITHUB_REF_NAME}-}"
+            system="${system%.tar.gz}"
+            unpacked="$(mktemp -d)"
+            tar -xzf "${archive}" -C "${unpacked}"
+            find "${unpacked}" -type f -name nxpress -print0 | while IFS= read -r -d '' program; do
+              echo "$(sha256sum "${program}" | cut -d' ' -f1)  ${system}" >> "../${programs}"
+            done
+            rm -rf "${unpacked}"
+          done
+          mv "../${programs}" .
+          cat "${programs}"
           sha256sum nxpress.exe nxpress-* > SHA256SUMS.txt
           ls -l
 

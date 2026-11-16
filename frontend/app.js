@@ -1493,6 +1493,7 @@ function startSoon() {
 }
 
 function render() {
+  paintOfficial();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -2436,7 +2437,7 @@ function report() {
   const run = state.lastRun || {};
   const r = run.request || {};
   const lines = [
-    `NXPress ${state.setup.version} · ${state.setup.platform}`,
+    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
     `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
@@ -2856,8 +2857,18 @@ function applyListFind() {
   $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
 }
 
+// a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
+// GitHub answers when the window asks for updates
+function paintOfficial() {
+  const unofficial = state.official === "unofficial";
+  $("unofficial").hidden = !unofficial;
+  $("unofficial").textContent = t("unofficialBuild");
+  $("unofficial").title = t("unofficialBuildHint");
+}
+
 async function checkUpdate(asked = false) {
   if (!$("updates").checked && !asked) return;
+  app().Official().then(official => { state.official = official && official.state; paintOfficial(); }).catch(() => {});
   const update = await app().CheckUpdate();
   if (asked) {
     // Check now (#106): the new version again, though it was closed, or that this is the newest
@@ -3212,6 +3223,7 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  $("unofficial").onclick = () => app().OpenURL(repository + "/releases/latest");
   $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire

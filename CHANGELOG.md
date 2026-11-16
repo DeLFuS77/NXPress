@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- A program that is not an official version of NXPress says so in the side menu ("Unofficial build"), and the report of a work too. The official versions are known by their signed checksums
+- The name and the logo of NXPress are not licensed with the code: a modified version needs its own (TRADEMARKS.md)
+
 ## 1.7.17
 
 ### Improvements
