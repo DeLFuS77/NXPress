@@ -152,6 +152,20 @@ func NupName(dir string) (string, error) {
 	return name + ".nup", nil
 }
 
+// NupNameWith is the name of the NUP of a dump folder by a template, as Combine names the
+// SuperNSP of each game (the fields of Rename, the version being the newest one in the folder);
+// without a template, NupName.
+func NupNameWith(dir string, template string) (string, error) {
+	if template == "" {
+		return NupName(dir)
+	}
+	title, err := dumpTitle(dir)
+	if err != nil {
+		return "", err
+	}
+	return NewName(filepath.Clean(dir)+".nup", title, template), nil
+}
+
 // dumpTitle is the main title of a dump folder, as ReadTitle gives the one of a game file, with
 // the size of its files.
 func dumpTitle(dir string) (GameTitle, error) {
@@ -217,7 +231,7 @@ func NupUncompressed(path string) int64 {
 // packNup makes the NUP of a dump folder, next to it or in the output folder: written under a
 // hidden name, read back whole and checked by the hashes of its files, then given its name.
 func packNup(ctx context.Context, dir string, o Options, threads int, out Output) (string, string, error) {
-	name, err := NupName(dir)
+	name, err := NupNameWith(dir, o.NupTemplate)
 	if err != nil {
 		return "", "", fmt.Errorf("cannot be read: %w", err)
 	}

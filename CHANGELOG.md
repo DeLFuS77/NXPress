@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Combine: the NUP of each dump folder is named by the template, as the SuperNSP of each game are. Thanks to QuickWick for spotting it
+
 ## 1.7.17
 
 ### Improvements

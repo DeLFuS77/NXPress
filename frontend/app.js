@@ -2121,6 +2121,15 @@ function previewPacks() {
     if (state.mode !== "pack" || !$("pack-games").checked) return;
     const paths = state.items.map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
+    // the NUP of each dump folder is named by the same template as the packs of each game
+    const dumps = state.items.filter(item => item.dump).map(item => item.path);
+    if (dumps.length) {
+      const names = await app().NupNames(dumps, state.packTemplate) || {};
+      for (const path of dumps) {
+        const row = state.rows.get(path);
+        if (row && row.game && names[path] && row.game.nupName !== names[path]) { row.game.nupName = names[path]; paint(row); }
+      }
+    }
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
