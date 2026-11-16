@@ -55,3 +55,36 @@ func TestPackNupNameFromTheList(t *testing.T) {
 		t.Errorf("without the list the NUP carries %q", got)
 	}
 }
+
+// Combine with a pack per game names the NUP of a dump folder by the template of the packs, as it
+// names them; without one, as before.
+func TestPackNupNameFollowsTheTemplate(t *testing.T) {
+	dir := writeDump(t, "MR2 ROM")
+	plain, err := NupNameWith(dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, _ := NupName(dir); plain != want {
+		t.Fatalf("without a template: %s, want %s", plain, want)
+	}
+	named, err := NupNameWith(dir, "{id} - {name} v{version}")
+	if err != nil || !strings.HasPrefix(named, "0400D4201C6EA000 - ") || !strings.HasSuffix(named, " v0.nup") {
+		t.Fatalf("with a template: %q %v", named, err)
+	}
+	name, _, err := packNup(t.Context(), dir, Options{NupTemplate: "{id} - {name} v{version}"}, 1, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Base(name) != named {
+		t.Fatalf("written as %s, shown as %s", filepath.Base(name), named)
+	}
+}
+
+// The template of Combine as it comes leaves the NUP named as before, without its contents.
+func TestPackNupNameWithTheDefaultTemplate(t *testing.T) {
+	dir := writeDump(t, "MR2 ROM")
+	want, _ := NupName(dir)
+	if got, err := NupNameWith(dir, DefaultPackTemplate); err != nil || got != want {
+		t.Fatalf("%q %v, want %q", got, err, want)
+	}
+}

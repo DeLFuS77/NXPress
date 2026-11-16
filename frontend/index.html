@@ -23,6 +23,8 @@
     <div class="side-foot">
       <button id="open-preferences" class="side-item" data-t-label="preferences" data-t-title="preferences"><span class="tile tone-neutral"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b data-t="preferences"></b></button>
       <button id="keys" class="side-keys"></button>
+      <!-- a program that is not an official version tells it, and opens the official ones -->
+      <button id="unofficial" class="side-unofficial" hidden></button>
     </div>
   </nav>
 
@@ -404,8 +406,23 @@
             <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
             <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
             <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="shortcutUndo"></dd>
           </dl></div>
+        </div>
+      </section>
+      <!-- who makes NXPress, and who helps it most -->
+      <section class="pref-group" id="credits">
+        <h2 data-t="credits"></h2>
+        <div class="pref-item credit">
+          <span class="credit-badge" aria-hidden="true">D</span>
+          <div class="pref-text"><b>DeLFuS77</b><small class="credit-role" data-t="creditAuthor"></small></div>
+        </div>
+        <div class="pref-item credit">
+          <span class="credit-badge tester" aria-hidden="true">N</span>
+          <div class="pref-text"><b>NikoMuffin</b><small class="credit-role" data-t="creditNiko"></small></div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><small data-t="creditThanks"></small></div>
         </div>
       </section>
       </div>

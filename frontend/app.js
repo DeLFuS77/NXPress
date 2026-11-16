@@ -956,7 +956,7 @@ function helpName(hint) {
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status)");
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
@@ -1391,6 +1391,18 @@ function paintPublished() {
   const date = $("published").checked ? state.versionsDate : null;
   $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
+// the most text the log of a work keeps, its last part (#135)
+const logKept = 4 << 20;
+// what the work told and the log has not shown yet, added ten times a second at most (#135)
+let said = "", sayFrame = 0;
+// clearLog empties the log, with what was still to be shown in it
+function clearLog() {
+  said = "";
+  if (sayFrame) clearTimeout(sayFrame);
+  sayFrame = 0;
+  $("log").textContent = "";
+  $("log").hidden = true;
+}
 let warnTimer = 0;
 function warnSoon() {
   clearTimeout(warnTimer);
@@ -1493,6 +1505,7 @@ function startSoon() {
 }
 
 function render() {
+  paintOfficial();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -1776,8 +1789,7 @@ function clearRows() {
   state.rows.clear();
   state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
 }
 function clearList() {
@@ -1953,9 +1965,10 @@ function paint(row) {
     if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
-  // a warning of the list shows until the file is worked on
+  // a warning of the list shows until the file is worked on; in Verify and Details, which leave
+  // the file as it is, it stays after the work too, where it is looked at most (#136)
   let warn = row.tr.querySelector(".list-warn");
-  if (row.warn && !row.status) {
+  if (row.warn && (!row.status || ["verify", "info"].includes(state.mode))) {
     if (!warn) {
       warn = document.createElement("div");
       warn.className = "list-warn";
@@ -2121,6 +2134,15 @@ function previewPacks() {
     if (state.mode !== "pack" || !$("pack-games").checked) return;
     const paths = state.items.map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
+    // the NUP of each dump folder is named by the same template as the packs of each game
+    const dumps = state.items.filter(item => item.dump).map(item => item.path);
+    if (dumps.length) {
+      const names = await app().NupNames(dumps, state.packTemplate) || {};
+      for (const path of dumps) {
+        const row = state.rows.get(path);
+        if (row && row.game && names[path] && row.game.nupName !== names[path]) { row.game.nupName = names[path]; paint(row); }
+      }
+    }
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
@@ -2355,8 +2377,7 @@ async function start(mode, extra) {
     before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
     Object.assign(row, fresh);
   }
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
   resetSpeed();
   state.busy = true;
@@ -2436,7 +2457,7 @@ function report() {
   const run = state.lastRun || {};
   const r = run.request || {};
   const lines = [
-    `NXPress ${state.setup.version} · ${state.setup.platform}`,
+    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
     `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
@@ -2495,10 +2516,22 @@ function listen() {
     trackSpeed();
     summary();
   });
+  // what the work tells goes to the log ten times a second at most, added at its end: written again whole and
+  // scrolled at each file, a long Details of thousands of files kept the window far behind the
+  // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
+  // last megabytes.
   events.EventsOn("say", text => {
-    $("log").hidden = false;
-    $("log").textContent += noteText(text) + "\n";
-    $("log").scrollTop = $("log").scrollHeight;
+    said += noteText(text) + "\n";
+    if (sayFrame) return;
+    sayFrame = setTimeout(() => {
+      sayFrame = 0;
+      const log = $("log");
+      log.hidden = false;
+      log.append(said);
+      said = "";
+      while (log.childNodes.length > 1 && log.textContent.length > logKept) log.firstChild.remove();
+      log.scrollTop = log.scrollHeight;
+    }, 100);
   });
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {
@@ -2856,8 +2889,18 @@ function applyListFind() {
   $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
 }
 
+// a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
+// GitHub answers when the window asks for updates
+function paintOfficial() {
+  const unofficial = state.official === "unofficial";
+  $("unofficial").hidden = !unofficial;
+  $("unofficial").textContent = t("unofficialBuild");
+  $("unofficial").title = t("unofficialBuildHint");
+}
+
 async function checkUpdate(asked = false) {
   if (!$("updates").checked && !asked) return;
+  app().Official().then(official => { state.official = official && official.state; paintOfficial(); }).catch(() => {});
   const update = await app().CheckUpdate();
   if (asked) {
     // Check now (#106): the new version again, though it was closed, or that this is the newest
@@ -3212,6 +3255,7 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  $("unofficial").onclick = () => app().OpenURL(repository + "/releases/latest");
   $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire

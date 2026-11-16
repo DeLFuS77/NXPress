@@ -1,0 +1,11 @@
+name: Idea
+description: Something NXPress could do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What NXPress could do, and what it would help you with.
+    validations:
+      required: true

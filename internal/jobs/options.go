@@ -106,9 +106,11 @@ type Options struct {
 	RmSource          bool
 	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
 	// rebuilds a damaged file with its .par2
-	Par2    int
-	Repair  bool
-	RmDumps bool // with RmSource, the dump folders whose NUP is checked go too
+	Par2   int
+	Repair bool
+	// the template the NUP of a dump folder is named by, in Combine; none: NupName
+	NupTemplate string
+	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
 	// file whole into a temporary file each time a game starts to read it
