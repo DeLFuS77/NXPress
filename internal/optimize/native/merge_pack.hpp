@@ -8,6 +8,9 @@
 //    from the start of each run of the update (its indirect table), so a run that holds the same
 //    bytes as an earlier one is made of the same blocks, and its entries point at them;
 //  - any block of 64 KiB the same as one stored before it is stored once too (found by its hash);
+//    and wherever a new run holds a whole block stored before, at any byte and not only where
+//    blocks are cut, the blocks are cut around it so its entry points at the one stored (found by
+//    spots that come with the content: a rolling hash of 64 bytes);
 //  - each block is the smallest of Nintendo's own LZ4 of it (when the game was compressed by
 //    Nintendo and the block is one of its blocks) and the LZ4 HC made here.
 // Entries of the table may point back at blocks stored before them; the FS reads that (it reads
@@ -39,6 +42,7 @@ using OldBlockFn = std::function<bool(uint64_t virt, uint32_t size, std::vector<
 struct Stats {
     uint64_t runs_again = 0;   // bytes stored once for runs that hold the same as another
     uint64_t blocks_again = 0; // bytes stored once for blocks the same as another
+    uint64_t moved_again = 0;  // of those, bytes of blocks found away from where blocks are cut
     uint64_t old_kept = 0;     // blocks where Nintendo's LZ4 was the smaller
 };
 
