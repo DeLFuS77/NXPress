@@ -537,3 +537,6 @@ func TestCloseAskedByThePage(t *testing.T) {
 		t.Error("closing confirmed before it was asked")
 	}
 }
+
+// The window is told what a measure found: it has the method the measure looks for (#128).
+var _ jobs.Measured = (*window)(nil)
