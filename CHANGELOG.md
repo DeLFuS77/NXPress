@@ -4,6 +4,13 @@
 
 ### Improvements
 
+- Settings: the shortcut Ctrl+Z tells what it undoes. Thanks to NikoMuffin for asking (#131)
+- Settings: a clearer help for "Play a sound when done". Thanks to NikoMuffin for the text (#130)
+
+## Unreleased
+
+### Improvements
+
 - Verify and Details: the notes of the list, such as a newer update in the list or a newer version published, stay under each file after the work too. Thanks to NikoMuffin for the idea (#136)
 - Settings: a Credits section
 - A program that is not an official version of NXPress says so in the side menu ("Unofficial build"), and the report of a work too. The official versions are known by their signed checksums
