@@ -52,9 +52,11 @@ type MeasureReport struct {
 	Per10GB time.Duration
 }
 
-// measured is told to the window once a measure chose its setting, to apply and show it.
-type measured interface {
-	measured(report MeasureReport)
+// Measured is told to the window once a measure chose its setting, to apply and show it. Its
+// method is exported: the window is in another package, which could not have an unexported one
+// of this package, and the measure was told to no window (#128).
+type Measured interface {
+	Measured(report MeasureReport)
 }
 
 // measure tries settings of the compression on part of a game, as a compression reads,
@@ -129,8 +131,8 @@ func measure(ctx context.Context, path string, o Options, out Output) (string, s
 	}
 	out.Say("%d processors, level %d (threads × files at once):\n  %s", runtime.NumCPU(), o.Level, strings.Join(lines, "\n  "))
 	per10GB := time.Duration(float64(10<<10) / float64(max(1, best.Speed)) * float64(time.Second))
-	if window, ok := out.(measured); ok {
-		window.measured(MeasureReport{Processors: runtime.NumCPU(), Level: o.Level, Block: o.Block, Trials: trials, Best: best, Faster: fasterTrial(trials, best), Per10GB: per10GB})
+	if window, ok := out.(Measured); ok {
+		window.Measured(MeasureReport{Processors: runtime.NumCPU(), Level: o.Level, Block: o.Block, Trials: trials, Best: best, Faster: fasterTrial(trials, best), Per10GB: per10GB})
 	}
 	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.Threads, best.Files, best.Speed, duration(per10GB)), nil
 }

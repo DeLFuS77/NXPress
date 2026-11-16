@@ -1388,9 +1388,9 @@ func (w *window) Say(format string, args ...any) {
 	emit(w.ctx, "say", fmt.Sprintf(format, args...))
 }
 
-// measured gives the page what a measure found: the setting chosen, to put in its fields, and
+// Measured gives the page what a measure found: the setting chosen, to put in its fields, and
 // every setting tried, to show them.
-func (w *window) measured(report jobs.MeasureReport) {
+func (w *window) Measured(report jobs.MeasureReport) {
 	trials := []map[string]any{}
 	for _, t := range report.Trials {
 		trials = append(trials, map[string]any{"threads": t.Threads, "multi": t.Files, "speed": t.Speed, "best": t == report.Best})

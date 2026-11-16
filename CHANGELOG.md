@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Measure this PC shows its results in a window again, with every setting tried. Thanks to NikoMuffin for reporting it (#128)
+
 ## 1.7.17
 
 ### Improvements
