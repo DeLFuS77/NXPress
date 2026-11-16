@@ -192,13 +192,59 @@ func NotMeasurable(path string) error {
 
 // measureOne compresses a part of the game for a trial, for about the time given, into a hidden
 // file in folder, and deletes it; where nothing can be written, the measure leaves the writing
-// out.
+// out. Cancelled, it returns at once (#149): the part zstd has taken, tens of MB at the max level
+// with the long window, is compressed to its end behind, into nothing, as its file is deleted
+// right away.
 func measureOne(ctx context.Context, path string, folder string, from float64, options switchfs.CompressOptions, trial time.Duration) (int64, error) {
-	var output io.Writer = io.Discard
-	if file, err := os.CreateTemp(folder, ".nxpress-measure-*"); err == nil {
-		defer os.Remove(file.Name())
-		defer file.Close()
-		output = file
+	output := &droppableWriter{}
+	file, err := os.CreateTemp(folder, ".nxpress-measure-*")
+	if err == nil {
+		output.to = file
 	}
-	return switchfs.MeasureCompression(ctx, path, from, options, trial, output)
+	drop := func() {
+		output.drop()
+		if file != nil {
+			file.Close()
+			os.Remove(file.Name())
+		}
+	}
+	type result struct {
+		done int64
+		err  error
+	}
+	ended := make(chan result, 1)
+	go func() {
+		done, err := switchfs.MeasureCompression(ctx, path, from, options, trial, output)
+		ended <- result{done, err}
+	}()
+	select {
+	case r := <-ended:
+		drop()
+		return r.done, r.err
+	case <-ctx.Done():
+		drop()
+		return 0, ctx.Err()
+	}
+}
+
+// droppableWriter writes to its file until it is dropped, and then into nothing: a write going
+// on ends before drop returns, so the file can be closed and deleted.
+type droppableWriter struct {
+	mutex sync.Mutex
+	to    io.Writer
+}
+
+func (w *droppableWriter) Write(p []byte) (int, error) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if w.to == nil {
+		return len(p), nil
+	}
+	return w.to.Write(p)
+}
+
+func (w *droppableWriter) drop() {
+	w.mutex.Lock()
+	w.to = nil
+	w.mutex.Unlock()
 }
