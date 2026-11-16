@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Settings: a Credits section
+
 ## 1.7.17
 
 ### Improvements
