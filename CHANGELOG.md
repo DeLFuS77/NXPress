@@ -14,7 +14,7 @@
 - The settings on the right are dimmed while a work is running, as the side menu is. Thanks to NikoMuffin for reporting it (#133)
 - Measure this PC shows its results in a window again, with every setting tried. Thanks to NikoMuffin for reporting it (#128)
 - Details of thousands of files: the window keeps up with the work, so Cancel stops it when pressed. Thanks to NikoMuffin for reporting it (#135)
-- Combine: the NUP of each dump folder follows the template once it is changed, as the SuperNSP of each game do. Thanks to QuickWick for spotting it
+- Combine: the NUP of each dump folder follows the template once it is changed, as the SuperNSP of each game do
 
 ## 1.7.17
 
