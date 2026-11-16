@@ -79,3 +79,12 @@ func TestPackNupNameFollowsTheTemplate(t *testing.T) {
 		t.Fatalf("written as %s, shown as %s", filepath.Base(name), named)
 	}
 }
+
+// The template of Combine as it comes leaves the NUP named as before, without its contents.
+func TestPackNupNameWithTheDefaultTemplate(t *testing.T) {
+	dir := writeDump(t, "MR2 ROM")
+	want, _ := NupName(dir)
+	if got, err := NupNameWith(dir, DefaultPackTemplate); err != nil || got != want {
+		t.Fatalf("%q %v, want %q", got, err, want)
+	}
+}

@@ -154,9 +154,10 @@ func NupName(dir string) (string, error) {
 
 // NupNameWith is the name of the NUP of a dump folder by a template, as Combine names the
 // SuperNSP of each game (the fields of Rename, the version being the newest one in the folder);
-// without a template, NupName.
+// without a template, or with the one of Combine as it comes (whose contents a NUP does not
+// carry in its name), NupName.
 func NupNameWith(dir string, template string) (string, error) {
-	if template == "" {
+	if template == "" || template == DefaultPackTemplate {
 		return NupName(dir)
 	}
 	title, err := dumpTitle(dir)
