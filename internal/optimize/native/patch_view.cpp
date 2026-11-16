@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 DeLFuS77
 #include "patch_view.hpp"
+#include "read_note.hpp"
 
 #include <algorithm>
 #include <cstring>
 
 namespace nxdock::patchview {
 namespace {
+
+using readnote::Add;
+using readnote::Note;
+using ull = unsigned long long;
 
 constexpr uint32_t kNode = 0x4000;
 constexpr uint32_t kBktr = 0x52544B42; // "BKTR"
@@ -65,14 +70,25 @@ bool BucketEntries(const std::vector<uint8_t>& table, size_t entry_size, uint32_
 // AES-CTR (or not encrypted): read at its place.
 class Plain : public Section {
 public:
-    explicit Plain(const NcaSection& s) : m_s(s) {}
+    // who: "base" or "update", for the log of a read that fails
+    Plain(const NcaSection& s, const char* who) : m_s(s), m_who(who) {}
     bool Read(uint64_t offset, uint8_t* buf, size_t size) override {
-        if (offset > m_s.size || size > m_s.size - offset) return false;
+        if (offset > m_s.size || size > m_s.size - offset) {
+            Note("%s section: %zu bytes at %llu, past its size %llu", m_who, size, ull(offset), ull(m_s.size));
+            return false;
+        }
         const uint8_t enc = m_s.fsh[4];
-        if (enc == 1) return m_s.raw(m_s.start + offset, buf, size);
+        if (enc == 1) {
+            if (m_s.raw(m_s.start + offset, buf, size)) return true;
+            Add("%s section at %llu, %zu bytes", m_who, ull(offset), size);
+            return false;
+        }
         const uint64_t at = m_s.start + offset, from = at & ~uint64_t(15);
         m_work.resize(size_t(at - from) + size);
-        if (!m_s.raw(from, m_work.data(), m_work.size())) return false;
+        if (!m_s.raw(from, m_work.data(), m_work.size())) {
+            Add("%s section at %llu, %zu bytes", m_who, ull(offset), size);
+            return false;
+        }
         uint8_t ctr[16];
         Counter(m_s.fsh.data(), from, ctr);
         m_s.ctr(m_s.key.data(), ctr, m_work.data(), m_work.size());
@@ -83,6 +99,7 @@ public:
 
 private:
     NcaSection m_s;
+    const char* m_who;
     std::vector<uint8_t> m_work;
 };
 
@@ -134,7 +151,10 @@ public:
         return true;
     }
     bool Read(uint64_t offset, uint8_t* buf, size_t size) override {
-        if (offset > m_size || size > m_size - offset) return false;
+        if (offset > m_size || size > m_size - offset) {
+            Note("base section (sparse): %zu bytes at %llu, past its size %llu", size, ull(offset), ull(m_size));
+            return false;
+        }
         std::memset(buf, 0, size);
         const uint64_t end = offset + size;
         auto it = std::upper_bound(m_pieces.begin(), m_pieces.end(), offset, [](uint64_t o, const Piece& p) { return o < p.virt; });
@@ -147,7 +167,14 @@ public:
             const uint64_t place = m_s.start + a, skip = place & 15;
             const uint64_t file = m_physical + it->phys + (a - it->virt);
             m_work.resize(size_t(skip + (b - a)));
-            if (file < skip || !m_s.raw(file - skip, m_work.data(), m_work.size())) return false;
+            if (file < skip) {
+                Note("base section (sparse): a piece at virt %llu stored before its start (%llu)", ull(a), ull(file));
+                return false;
+            }
+            if (!m_s.raw(file - skip, m_work.data(), m_work.size())) {
+                Add("base section (sparse): piece at virt %llu, stored at %llu, %llu bytes", ull(a), ull(file), ull(b - a));
+                return false;
+            }
             uint8_t ctr[16];
             Counter(m_s.fsh.data(), place - skip, ctr);
             m_s.ctr(m_s.key.data(), ctr, m_work.data(), m_work.size());
@@ -174,7 +201,7 @@ class CtrEx : public Section {
 public:
     bool Open(const NcaSection& s, std::string& error) {
         m_s = s;
-        m_plain = std::make_unique<Plain>(s);
+        m_plain = std::make_unique<Plain>(s, "update");
         const uint8_t* f = s.fsh.data();
         const uint64_t table_offset = Get64(f + 0x120), table_size = Get64(f + 0x128);
         const uint32_t count = Get32(f + 0x138);
@@ -203,7 +230,10 @@ public:
         return true;
     }
     bool Read(uint64_t offset, uint8_t* buf, size_t size) override {
-        if (offset > m_s.size || size > m_s.size - offset) return false;
+        if (offset > m_s.size || size > m_s.size - offset) {
+            Note("update section: %zu bytes at %llu, past its size %llu", size, ull(offset), ull(m_s.size));
+            return false;
+        }
         while (size) {
             if (offset >= m_end) return m_plain->Read(offset, buf, size);
             auto it = std::upper_bound(m_runs.begin(), m_runs.end(), offset, [](uint64_t o, const Run& r) { return o < r.offset; }) - 1;
@@ -211,7 +241,10 @@ public:
             const size_t n = size_t(std::min<uint64_t>(size, next - offset));
             const uint64_t at = m_s.start + offset, from = at & ~uint64_t(15);
             m_work.resize(size_t(at - from) + n);
-            if (!m_s.raw(from, m_work.data(), m_work.size())) return false;
+            if (!m_s.raw(from, m_work.data(), m_work.size())) {
+                Add("update section at %llu, %zu bytes", ull(offset), n);
+                return false;
+            }
             uint8_t ctr[16];
             Counter(m_s.fsh.data(), from, ctr);
             SetGeneration(ctr, it->generation);
@@ -278,13 +311,27 @@ public:
         return true;
     }
     bool Read(uint64_t offset, uint8_t* buf, size_t size) override {
-        if (offset > m_end || size > m_end - offset) return false;
+        if (offset > m_end || size > m_end - offset) {
+            Note("patched section: %zu bytes at %llu, past its end %llu", size, ull(offset), ull(m_end));
+            return false;
+        }
         while (size) {
             auto it = std::upper_bound(m_entries.begin(), m_entries.end(), offset, [](uint64_t o, const IndirectEntry& e) { return o < e.virt; }) - 1;
             const uint64_t next = it + 1 != m_entries.end() ? (it + 1)->virt : m_end;
             const size_t n = size_t(std::min<uint64_t>(size, next - offset));
             Section* from = it->storage == 1 ? m_update.get() : m_base;
-            if (!from->Read(it->phys + (offset - it->virt), buf, n)) return false;
+            const char* who = it->storage == 1 ? "update" : "base";
+            const uint64_t phys = it->phys + (offset - it->virt);
+            // the indirect table of the update pointing past the end of what it points into
+            if (phys > from->Size() || n > from->Size() - phys) {
+                Note("the indirect table points past the end of the %s: virt %llu -> phys %llu, %zu bytes, the %s is %llu", who, ull(offset),
+                     ull(phys), n, who, ull(from->Size()));
+                return false;
+            }
+            if (!from->Read(phys, buf, n)) {
+                Add("indirect run: virt %llu from the %s at phys %llu, %zu bytes", ull(offset), who, ull(phys), n);
+                return false;
+            }
             buf += n;
             offset += n;
             size -= n;
@@ -323,7 +370,7 @@ std::unique_ptr<Section> OpenBase(const NcaSection& s, std::string& error) {
         error = "base section encryption";
         return nullptr;
     }
-    return std::make_unique<Plain>(s);
+    return std::make_unique<Plain>(s, "base");
 }
 
 std::unique_ptr<Section> OpenPatched(const NcaSection& update, Section* base, std::string& error) {
@@ -401,8 +448,14 @@ bool Romfs::Open(Section* section, const uint8_t* fsh, lz4pack::HashFn hash, std
 }
 
 bool Romfs::ReadStored(uint64_t offset, uint8_t* buf, size_t size) {
-    if (offset > m_data_size || size > m_data_size - offset) return false;
-    if (!m_section->Read(m_data_offset + offset, buf, size)) return false;
+    if (offset > m_data_size || size > m_data_size - offset) {
+        Note("data level: %zu bytes at %llu, past its size %llu", size, ull(offset), ull(m_data_size));
+        return false;
+    }
+    if (!m_section->Read(m_data_offset + offset, buf, size)) {
+        Add("data level at %llu, %zu bytes", ull(offset), size);
+        return false;
+    }
     // each block not checked yet, against its hash: whole in what was read, or read whole
     std::vector<uint8_t> block;
     for (uint64_t b = offset / m_block; b * m_block < offset + size; b++) {
@@ -412,11 +465,13 @@ bool Romfs::ReadStored(uint64_t offset, uint8_t* buf, size_t size) {
         if (from >= offset && from + n <= offset + size) {
             std::memcpy(block.data(), buf + (from - offset), size_t(n));
         } else if (!m_section->Read(m_data_offset + from, block.data(), size_t(n))) {
+            Add("block %llu of the data level, to check it", ull(b));
             return false;
         }
         uint8_t d[32];
         m_hash(block.data(), block.size(), d);
         if (std::memcmp(d, m_hashes.data() + b * 32, 32)) {
+            Note("block %llu of the data level (at %llu in the section) does not match its hash", ull(b), ull(m_data_offset + from));
             m_damaged++;
             return false;
         }
@@ -435,7 +490,10 @@ bool Romfs::StoredBlock(uint64_t virt, uint32_t size, std::vector<uint8_t>& out)
 }
 
 bool Romfs::Read(uint64_t offset, uint8_t* buf, size_t size) {
-    if (offset > m_size || size > m_size - offset) return false;
+    if (offset > m_size || size > m_size - offset) {
+        Note("RomFS: %zu bytes at %llu, past its size %llu", size, ull(offset), ull(m_size));
+        return false;
+    }
     if (m_entries.empty()) return ReadStored(offset, buf, size);
     return lz4pack::Unpack(m_entries, m_virt_end, [this](uint64_t o, uint8_t* b, size_t n) { return ReadStored(o, b, n); }, offset, buf, size);
 }
