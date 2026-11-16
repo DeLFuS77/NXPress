@@ -1953,9 +1953,10 @@ function paint(row) {
     if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
-  // a warning of the list shows until the file is worked on
+  // a warning of the list shows until the file is worked on; in Verify and Details, which leave
+  // the file as it is, it stays after the work too, where it is looked at most (#136)
   let warn = row.tr.querySelector(".list-warn");
-  if (row.warn && !row.status) {
+  if (row.warn && (!row.status || ["verify", "info"].includes(state.mode))) {
     if (!warn) {
       warn = document.createElement("div");
       warn.className = "list-warn";

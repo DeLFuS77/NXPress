@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Verify and Details: the notes of the list, such as a newer update in the list or a newer version published, stay under each file after the work too. Thanks to NikoMuffin for the idea (#136)
+
 ## 1.7.17
 
 ### Improvements
