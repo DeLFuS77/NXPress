@@ -51,7 +51,7 @@ func TestSearchCoversAndUseOne(t *testing.T) {
 	server := standInForTheEShop(t)
 	given := standInForTheIcon(t)
 	a := &App{}
-	covers, err := a.SearchCovers("Made-up Quest [v0].nup", true)
+	covers, err := a.SearchCovers("Made-up Quest [v0].nup", "switch2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,13 +78,13 @@ func TestSearchCoversTellsImagesThatDoNotCome(t *testing.T) {
 	// only the game whose image does not come
 	hosts := eshop.ImageHosts
 	a := &App{}
-	covers, err := a.SearchCovers("Gone", false)
+	covers, err := a.SearchCovers("Gone", "")
 	if err != nil || len(covers) != 1 {
 		t.Fatalf("%+v %v", covers, err)
 	}
 	eshop.ImageHosts = hosts
 	server.Close()
-	if _, err := a.SearchCovers("Gone", false); err == nil || !strings.Contains(err.Error(), "eShop") {
+	if _, err := a.SearchCovers("Gone", ""); err == nil || !strings.Contains(err.Error(), "eShop") {
 		t.Errorf("%v", err)
 	}
 }

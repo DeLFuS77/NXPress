@@ -217,7 +217,7 @@ func NupUncompressed(path string) int64 {
 // packNup makes the NUP of a dump folder, next to it or in the output folder: written under a
 // hidden name, read back whole and checked by the hashes of its files, then given its name.
 func packNup(ctx context.Context, dir string, o Options, threads int, out Output) (string, string, error) {
-	name, err := NupName(dir)
+	name, err := NupNameBy(dir, o.PackName)
 	if err != nil {
 		return "", "", fmt.Errorf("cannot be read: %w", err)
 	}
@@ -244,6 +244,11 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
 	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
+	// the cover the person chose for this folder: it is the icon, and titledb is not asked for one
+	if cover := coverFor(dir); len(cover) > 0 {
+		packing.Cover = cover
+		o.NoNupIcon = true
+	}
 	icon, iconNote := packIcon(ctx, dir, o)
 	packing.Icon = icon
 	if !o.NupZstdBig {
@@ -392,6 +397,8 @@ func unpackNup(ctx context.Context, path string, o Options, threads int, out Out
 	if err != nil {
 		return "", "", err
 	}
+	// the icon of the game, in the root of what was unpacked
+	writeNupIcon(written, nupIcon(path))
 	// a folder that took the name meanwhile is never replaced (on Linux and macOS a rename would
 	// replace an empty one without a word): the files stay in the hidden folder, said where
 	if _, err := os.Lstat(name); err == nil {

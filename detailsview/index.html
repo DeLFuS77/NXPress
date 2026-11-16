@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NXPress</title>
+<style>
+  /* the window of the details of a file, a program window of its own: the text, selectable, and a button
+     to copy it. It follows the light or dark theme of the system. */
+  :root { color-scheme: light dark; --bg: #ffffff; --bar: #f3f4f6; --text: #1b1f24; --muted: #5d6673; --line: #dde1e6; --accent: #0b6bcb; --accent-text: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #18181b; --bar: #202024; --text: #e8ebef; --muted: #99a3b0; --line: #34343a; --accent: #4da3ff; --accent-text: #08121d; } }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; background: var(--bg); color: var(--text); font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  #text { flex: 1; min-height: 0; margin: 0; padding: 14px 18px; overflow: auto; white-space: pre; font: 13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; user-select: text; -webkit-user-select: text; cursor: text; outline: none; }
+  #foot { display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--bar); }
+  #status { color: var(--muted); font-size: 13px; }
+  button { padding: 8px 20px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+<pre id="text" tabindex="0"></pre>
+<div id="foot"><span id="status" role="status"></span><button type="button" id="copy"></button><button type="button" id="export"></button></div>
+<script>
+(async () => {
+  const text = document.getElementById("text"), copy = document.getElementById("copy"), save = document.getElementById("export"), status = document.getElementById("status");
+  // the bindings of the window come as it starts: wait for them a moment
+  for (let tries = 0; tries < 100 && !(window.go && window.go.main && window.go.main.DetailsView && window.runtime); tries++) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  let data;
+  try {
+    data = await window.go.main.DetailsView.Data();
+  } catch (error) {
+    text.textContent = String(error && error.message || error);
+    return;
+  }
+  document.title = data.title;
+  text.textContent = data.text;
+  copy.textContent = data.copy;
+  save.textContent = data.export;
+  let wait = 0;
+  const say = words => {
+    status.textContent = words;
+    clearTimeout(wait);
+    wait = setTimeout(() => { status.textContent = ""; }, 4000);
+  };
+  copy.onclick = async () => {
+    const chosen = String(getSelection());
+    try { await window.runtime.ClipboardSetText(chosen || data.text); } catch (error) { await navigator.clipboard.writeText(chosen || data.text); }
+    say(data.copied);
+  };
+  // the whole text, as a .txt file, in the place the person chooses
+  save.onclick = async () => {
+    try {
+      const path = await window.go.main.DetailsView.Export();
+      if (path) say(data.saved.replace("{name}", path.replace(/^.*[\\/]/, "")));
+    } catch (error) {
+      say(String(error && error.message || error));
+    }
+  };
+  document.addEventListener("keydown", event => { if (event.key === "Escape") window.runtime.Quit(); });
+  text.focus();
+})();
+</script>
+</body>
+</html>

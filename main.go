@@ -25,6 +25,11 @@ func main() {
 	if len(args) > 0 && args[0] == "--installer" {
 		os.Exit(runInstaller(args[1:], os.Stdout, os.Stderr))
 	}
+	// the window of the details of a file, started by another NXPress (see detailswindow.go)
+	if len(args) == 2 && args[0] == "--details-view" {
+		system.HideConsole()
+		os.Exit(runDetailsView(args[1]))
+	}
 	// the window, with the files it is given (see windowLaunch). Started from the Explorer, the
 	// console Windows opened for it is closed
 	if start, ok := windowLaunch(args); ok {

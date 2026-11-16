@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/DeLFuS77/NXPress/internal/jobs"
-	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/portable"
 	"github.com/DeLFuS77/NXPress/internal/selfupdate"
 	"github.com/DeLFuS77/NXPress/internal/system"
@@ -49,6 +48,8 @@ const singleWindow = "nxpress-window-1"
 func runWindow(start launch) int {
 	app := &App{files: start.files, section: start.section, open: start.open}
 	var single *wailsoptions.SingleInstanceLock
+	// a window of its own, next to the one open: see below
+	var sideBySide bool
 	if runtime.GOOS == "windows" {
 		// the files go to the NXPress open, which comes to the front; one starting meanwhile
 		// is waited for, until its window takes files (see startup)
@@ -58,7 +59,14 @@ func runWindow(start launch) int {
 		if another {
 			system.AllowForeground()
 		}
-		single = &wailsoptions.SingleInstanceLock{UniqueId: singleWindow, OnSecondInstanceLaunch: app.secondInstance}
+		// An NXPress started with no files while another has a window (its icon, the Start menu)
+		// opens a window of its own: any number of them can be open. The files the Explorer gives
+		// still go to the first window, which keeps the lock, and come to the front.
+		if another && len(start.files) == 0 && start.section == "" {
+			sideBySide = true
+		} else {
+			single = &wailsoptions.SingleInstanceLock{UniqueId: singleWindow, OnSecondInstanceLaunch: app.secondInstance}
+		}
 	}
 	// the window opens where it was left and as big (see windowplace.go)
 	place, _ := windowplace.LoadWindowPlace()
@@ -71,7 +79,7 @@ func runWindow(start launch) int {
 		backdrop = windows.Mica
 	}
 	err := wails.Run(&wailsoptions.App{
-		Title:              "NXPress " + version,
+		Title:              "NXPress 1.7.16 - WICKED EDITION",
 		Width:              place.Width,
 		Height:             place.Height,
 		MinWidth:           windowplace.WindowMinWidth,
@@ -80,7 +88,14 @@ func runWindow(start launch) int {
 		BackgroundColour:   background,
 		AssetServer:        &assetserver.Options{Assets: frontend},
 		OnStartup:          app.startup,
-		OnDomReady:         windowplace.PlaceWindow,
+		OnDomReady: func(ctx context.Context) {
+			windowplace.PlaceWindow(ctx)
+			// a window next to another is moved down and to the right, to be seen beside it
+			if sideBySide {
+				x, y := wailsruntime.WindowGetPosition(ctx)
+				wailsruntime.WindowSetPosition(ctx, x+36, y+36)
+			}
+		},
 		OnBeforeClose:      app.beforeClose,
 		OnShutdown:         app.closed,
 		DragAndDrop:        &wailsoptions.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: true},
@@ -567,97 +582,6 @@ func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, er
 	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, ReplaceNupIcon: replace})
 }
 
-// SetNupIcon gives a NUP the image chosen in its card, cut as chosen in the crop of the window
-// and made 256×256; with replace, a NUP given one already has it changed.
-func (a *App) SetNupIcon(path string, image string, crop nup.Crop, replace bool) (string, error) {
-	if a.working() {
-		return "", errors.New("wait for the work to end")
-	}
-	done, err := a.chore(true)
-	if err != nil {
-		return "", err
-	}
-	defer done()
-	return fixNupIcon(a.ctx, path, jobs.Options{NupIcon: image, NupIconCrop: crop, ReplaceNupIcon: replace})
-}
-
-// CoverPreview is the icon an image chosen makes with the crop chosen, to be shown in the row of
-// its folder.
-func (a *App) CoverPreview(path string, crop nup.Crop) (string, error) {
-	data, err := readCoverFile(path)
-	if err != nil {
-		return "", err
-	}
-	icon, err := nup.MakeIconCrop(data, crop)
-	if err != nil {
-		return "", err
-	}
-	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon), nil
-}
-
-// CoverImage is an image chosen for the icon of a NUP: where it is, the icon it makes at its
-// middle, to be shown in its row, its size, and the image made small to be cropped in the window.
-type CoverImage struct {
-	Path    string `json:"path"`
-	Name    string `json:"name"`
-	Preview string `json:"preview"`
-	Source  string `json:"source"`
-	Width   int    `json:"width"`
-	Height  int    `json:"height"`
-}
-
-// cropSide is the longest side of the image the crop of the window shows.
-const cropSide = 1024
-
-// readCoverFile reads an image chosen for an icon, of the size an icon can be made from.
-func readCoverFile(path string) ([]byte, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if info.Size() > nup.MaxIconFile {
-		return nil, errors.New("the image is too big to be an icon")
-	}
-	return os.ReadFile(path)
-}
-
-// ChooseCoverImage asks for an image (PNG, JPEG, WEBP or BMP), with a title in the language of
-// the page, for the NUP a dump folder is combined into; it is read and made the icon it would be,
-// so an image that cannot be one is told at once. Nil when none is chosen.
-func (a *App) ChooseCoverImage(title string) (*CoverImage, error) {
-	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title:   title,
-		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
-	})
-	if err != nil || path == "" {
-		return nil, err
-	}
-	return coverImage(path)
-}
-
-// coverImage reads an image chosen for a NUP and makes its icon, to be shown before the NUP is
-// made.
-func coverImage(path string) (*CoverImage, error) {
-	data, err := readCoverFile(path)
-	if err != nil {
-		return nil, err
-	}
-	icon, err := nup.MakeIcon(data)
-	if err != nil {
-		return nil, err
-	}
-	source, err := nup.CropSource(data, cropSide)
-	if err != nil {
-		return nil, err
-	}
-	width, height, _ := nup.ImageSize(data)
-	return &CoverImage{
-		Path: path, Name: filepath.Base(path), Width: width, Height: height,
-		Preview: "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon),
-		Source:  "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(source),
-	}, nil
-}
-
 // fixNupIcon is jobs.FixNupIcon, which the tests stand in for
 var fixNupIcon = jobs.FixNupIcon
 
@@ -805,11 +729,6 @@ type Request struct {
 	Optimize bool `json:"optimize"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
-	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
-	// one of titledb
-	NupIcons map[string]string `json:"nupIcons"`
-	// and the part of each image chosen in its crop
-	NupIconCrops map[string]nup.Crop `json:"nupIconCrops"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -875,7 +794,6 @@ func (a *App) Start(request Request) error {
 		// a SuperNSP per game, or one file with everything, named by its template next to the
 		// files or in Save to; a file chosen by name is a work of a window before 1.3.0, resumed
 		o.Origins = request.Origins
-		o.NupIcons, o.NupIconCrops = request.NupIcons, request.NupIconCrops
 		switch {
 		case request.PackGames:
 			o.PackGames, o.PackName = true, request.PackTemplate

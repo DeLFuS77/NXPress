@@ -1,5 +1,105 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- Emulators: the page starts with the section titles only and no emulators; Reset to default goes back to that. Lists already saved are kept
+- The window title reads "NXPress 1.7.16 - WICKED EDITION"
+- Emulators, Import: the paste box says "Paste a code here (Ctrl+V)"
+- Based on the official 1.7.16. Its Add cover art icon in Combine (1.7.11) and its crop of the icon (1.7.12) are not in this version: the cover art icon and the crop of this version replace them
+- Rename: the blue button reads "Rename based on Template", and the button is as wide as its text
+- Emulators: the note of Orchid, Lichii and Nemyu ends with a period
+- Emulators, editing: drag the three dots to move a section, a category (inside its own section) or an emulator (into any category); the arrows of the keyboard move it one place
+- Emulators, editing: Share (save the list as a file, or copy it as a code) and Import (a file or a pasted code; Add what you don't have, or Replace your list)
+- Emulators: a category (Yuzu-Based, Ryujinx-Based, ...) opens and closes by its name, with an arrow after it; the ones closed are remembered, and while editing they all show
+- Emulators: Orchid, Lichii and Nemyu say "An Eden Fork for universal games"
+- Emulators, Recompilations: NX2navi under Switch 2, and a new All Consoles category with DecompBuddy
+- Emulators: the sections start closed the first time, and then the ones left open are remembered
+- Emulators: the note of BananaNative says "Android Only"
+- eShop cover search: the Switch 2 games come first; both "Only Switch 1" and "Only Switch 2" are ticked by default
+- eShop cover search: "Only Switch 1" next to "Only Switch 2" (each on its own, or both; none ticked searches all games)
+- Settings, Keys: with no prod.keys it says "No prod.keys detected", in red
+- Settings, Keys: the line over the keys file says "Select Change to Insert your prod.keys" (was "prod.keys file")
+- Combine: the card of a game does not open over the menu of the cover button, and closes when the menu opens
+- Combine: the three buttons of the cover (local file, Nintendo eShop, SteamGridDB) are one button, Add Cover Art Icon, that opens a menu with them, so the row no longer runs past the list and forces the scroll bar
+- Rename, Split, Verify and Details: under the name of a game, its ID and under it the name of its file with its extension, without the version and the kind
+- Rename: the Edit Title & Icon button of a NUP is in line with the text of its game, not under the icon
+- Rename: the description is "Change Title Name & Icon" (was "Names from the Contents")
+- Emulators: every note has the warning sign, also the ones of nxnative and Longshot
+
+- Emulators: eden-nx2-android and Hokkaido (Android Only) come after FEFW in Yuzu-Based, in Nintendo Switch 2
+- Emulators: Native is called nxnative-Based, and has NX Play, NX2Apple and LumaNX (iOS/Mac Only) and nxnative (the original nxnative) after BananaNative
+- Verify: the kind of file under the drop area for dump folders says just Dump Folders, without "(their code)"
+- The kinds of file under the drop area write Dump Folders with capitals, as NSP, NSZ and XCI do
+- A NUP dropped in a work that does not take it (Combine, Compress...) says "NUP loaded!" on its own line under the file name, and sends you to Split, Rename, Verify or Details, after one line starting with ** that says Combine is for dump folders; the lines wrap under their text (in all 11 languages; the command line keeps its text)
+
+- Settings: the arrows of the groups in the sidebar list are bigger (26 px, were 13 px)
+
+- Emulators: Add section is a button with a soft gray border and a green plus, on the right above the first section (with room under Done editing and Reset to default); a second one after the last section shows only once the top one is scrolled out of view, replacing the dashed bar
+
+- Emulators: Longshot is in a category called Switch 2 in Recompilations
+- Emulators: more room (32 px) after a section that is open; the sections that are closed stay as close as before
+- Emulators: Recompilations has an icon (a monitor with green code falling on its black screen, as in The Matrix, in color, sized to fit the line of its name) after its name, and the icons of the sections are sized by the text of the name and centered on its capitals
+- Emulators: the names of the sections (Nintendo Switch 1, Nintendo Switch 2, Recompilations) are blue in the light theme and green-yellow in the dark one, larger (19 px), so they are easier to see
+- Emulators: Droplet (https://gitlab.com/seighttt/droplet), an Eden fork with multiplayer for SR, MKW and LoZ OTT, comes after Nemyu in Yuzu-Based, in Nintendo Switch 2
+- Emulators: the section Recompilation is called Recompilations
+- Emulators: the list can be changed. Edit, at the top of the page, shows a 📝 (change), a green plus (add) and a ⛔ (delete) at the right of each section, category and emulator, and Done editing hides them again. A section holds categories (Yuzu-Based), and a category holds emulators with a name, a page and an optional note; Add section makes a new section, and Reset to default (asked twice) brings back the list NXPress comes with
+- Emulators: the pages of the list open for any http or https address, since the list is now the person's own
+- Emulators: a Native category in Nintendo Switch 2 with BananaNative (https://github.com/shamonj03/BananaNative), a nxnative fork for Android only
+- Emulators: the note of Lemon reads "Android Only"
+- Emulators: the page of Orchid is https://gitlab.com/MythosOfs/Orchid
+- Emulators: the page of Eden is https://git.eden-emu.dev/, and a Recompilation section comes after Nintendo Switch 1 and Nintendo Switch 2, with Longshot (Legend of Zelda Ocarina of Time Recompilation)
+- Settings: Keys comes above Sidebar
+- Settings, Sidebar: Space, Organize and Check open and close with an arrow at their name, and start closed, so the list does not take the room of the page
+- Settings, Sidebar: a switch for each group of the side menu (Space, Organize, Check) and for each of its tools; a group switched off hides all its tools, a hidden tool does not come back by itself, and the section open when it is hidden is replaced by the first one that is shown
+- Details: in the Totals of the report of a NUP, Icon comes under Files, and Storage Saved has two decimals cut off, not rounded (51.98%)
+- Details: the report of a card has no scroll bar under it the first time it is opened (the room for its own vertical scroll bar is kept from the start, so the longest line, the name of a game, fits as it does the second time)
+- Details: Storage Saved in the report of a NUP has two decimals (51.99%) and is no longer rounded to one (52.0%)
+- Details: in the Totals of the report of a NUP, Storage Saved comes before Icon
+- Details: in the Totals of the report of a NUP, "Smaller Than The Files" is called "Storage Saved", and the icon line reads "Yes (60.1 KB)" or "No"
+- Details: the labels of the Totals of the report of a NUP are capitalized (Original File Bytes, Unique Stored Data, NUP File Size, Compressed Files, Raw Files, Unique Extents, Smaller Than The Files)
+- Details: the report of a NUP no longer has the line "newest update published" under each package
+- Details: the Totals of the report of a NUP start in the same column as the lines of the packages
+- Details: the report of a NUP no longer ends with "Compatibility" (it meets what Eglantine and Lichii ask / works with programs that read NUP files); it is told only when something keeps an emulator from the NUP
+- Details: in the report of a NUP, each package starts with "Base ID:", "Update ID:" or "DLC ID:", its sizes read "When Uncompressed (Total):" and "When Compressed (Total):", and what the lines tell starts in one column
+- Details: the card of a NUP no longer shows the green Eglantine and Lichii tags nor the line "Made of a dump folder in Combine; Decompress turns it back into one" (the orange note of what keeps an emulator from a NUP stays)
+- Details: the text report under the list is gone (the cards already show everything; Copy report and Copy full details still work)
+- Details: in the card of a NUP, the green Game / Update / DLC label and the text next to it are centered vertically in each package line
+- Details: the package lines of the card of a NUP no longer widen the list (no scroll bar at the bottom): they go past their column over the empty part under Size and State
+- Details: in the card of a NUP, the files, the size and the compressed size of each line are in the middle of the line
+- Details: in the card of a NUP, the lines of the game, the update and the DLC share their columns: the kind centered in its green mark, the title ID and versions, the number of files with “Files” under it, the size with “Uncompressed” under it and the compressed size with “Compressed” under it, each aligned from one line to the next
+- Details: in the card of a NUP, the title ID and the versions of a game are under its name
+- Details: the card of a NUP is as wide as its package lines need, even past its column and up to 860 pixels, so the title ID, the versions and the count of files are not broken onto another line and the border of each line reaches the right edge of the card
+- Details: a NUP tells each game and update as `ID · v458752 · 3.2.0`, the version the game shows after its internal version, with no parentheses
+- Details: in the card of a game, each Base and Update line also tells the version the game shows (the external version) after its title ID and its internal version: `040077201BE50800 - v458752 - 1.3.3`, with **None**, in red and with a border, for whatever the file does not tell (the title ID, the internal version or the version the game shows). A DLC has no version to show. The card is as wide as its lines, and its two buttons, Copy Details and View Details, are at the bottom left
+- A menu entry **Emulators** (its line under the name reads “Let’s Play”), under the Log in the same color, with the icon of a Nintendo Switch: a page of its own that lists the emulators by console, each with its page, which opens in the browser: Nintendo Switch 1, by family (Yuzu-Based: Eden, NeXium, Citron Neo, Lemon, which is for Android only; Ryujinx-Based: Ryubing Stable and Canary) and Nintendo Switch 2 (Yuzu-Based: Orchid, Lichii, Frichii, Nemyu, FEFW), with a note for Frichii (a Lichii Fork for Legend of Zelda Ocarina of Time only) and for FEFW (for Fire Emblem Fortune’s Weave only); each console has its icon after its title, drawn from the console, with a white screen: the Nintendo Switch with a 1 has neon blue and neon red Joy-Con; the Nintendo Switch with a 2 has dark Joy-Con 2 with a blue and a red ring around the thumbsticks and a line of each along their inner side, opens and closes by its title, and the ones closed are remembered
+- Details: **View Details** opens the details in a window of the system, out of the window of NXPress: it moves, sizes and minimizes like any program window, has its own button in the taskbar, and stays open when NXPress is closed. NXPress starts another copy of itself that shows only the text (selectable, with a button to copy it and one to export it as a .txt file); when it cannot, the window inside NXPress opens as before
+- Details: the card of a game over its name tells its titles one by one: **Base**, **Update** and **DLC**, each with its title ID and version (the first three DLC, and how many more). Under its cover the card has **Copy Details**, which copies the full details as the right click menu does, and **View Details**, which opens them in a window of their own: it moves by its bar, can be sized, its text can be selected, and it has a button to copy it
+- Details: the full details no longer tell the folder of the file, and call an update UPDATE
+- Split: at the right of each NUP of the list, its own choices: **Base**, **Update**, **DLC** and **Icon**, one under the other (all chosen; the ones that NUP does not have are shown off). Only what is chosen of it is read and written; what it does not have is skipped
+- Rename: a NUP in the list has an **Edit Title & Icon** button: it changes the title name of the game and swaps its icon in the metadata of the NUP, in place. The NUP is written the way Change image writes it, with a copy of its table of contents beside it while it is, put back when the NUP does not read the same afterwards. Rename then names the file from the new title
+- Details: in the card of a game, Holds is at the bottom, and Base, Update and DLC are set apart from each other
+- Split takes NUP files, as Decompress does, also from a folder, and unpacks them the same way: one folder named after the NUP, with its `base`, `updates` and `dlc` folders. The NUP stays as it is
+- Decompress and Split of a NUP put the icon of the game in the root of the folder they make, as `icon.jpg`
+- Combine: the button of the cover reads **Add Cover Art Icon (Local)**, and under it NXPress tells the formats it takes
+- Combine: the NUP of a dump folder is named by the template of **Name of each SuperNSP or SuperXCI**, the one written in the options, with all its fields ({name}, {id}, {version}, {version_txt}, {contents}, {size_gb} and the others), and the name told under the folder follows it as it is written. The default template is now `{name} [{id}][v{version}]`, without the contents ({contents}) it had: a SuperNSP and a NUP are named `Game [ID][vN]` unless the template says otherwise, and a template saved as the old default becomes the new one
+- Combine: next to **Add Cover Art Icon (Local)**, a **Search Images from Nintendo eShop** button looks for the image of the game in the eShop, as the card of a NUP does; the image chosen goes to the same cut as a picture of the computer
+- Search Images on SteamGridDB also works with no API key, by hand: **Open SteamGridDB in the browser** opens the search of the site for the game; the image copied there (right click, Copy image) is pasted in the window with Ctrl+V, and goes to the same cut as any picture
+- Combine: a **Search Images on SteamGridDB** button, next to the one of the eShop, searches the game of the folder in steamgriddb.com by its name (written again if it is not the one), as its site does: its games to choose from, then its four kinds of image, **Icons** (first), **Grids**, **Heroes** and **Logos**. The image chosen goes to the same cut as a picture of the computer. SteamGridDB asks for a free API key, from the profile on its site (Preferences › API): it is asked for the first time and kept in the settings of the window
+- Combine: a dump folder in the list has no folder icon at the left of its line (the list view; the grid keeps it), so its line, and the buttons of its cover, begin further left and the list scrolls sideways less
+- Combine: the card of a game has no Copy Details and View Details buttons: a dump folder has no file to tell the details of
+- Combine: a cover for the NUP of each dump folder, the way NSP Box adds one. Each dump folder in the list has an **Add cover** button: choose a picture (JPG, PNG, BMP, WebP, AVIF, GIF or ICO), drag it and zoom to place the square that becomes the icon of the game (256 × 256), or tick "Fit the whole picture on white". It takes the place of the icon of the control data of the game and of titledb, in the metadata of the NUP, so emulators and NXPress show it; the files of the game do not change. It is the one icon of the NUP, as one given to it afterwards is, so **Change image** in its card can still change it
+- NXPress can be open more than once on Windows: starting it with no files (its icon, the Start menu, the program itself) while another window is open opens a window of its own, a little down and to the right of the first. The files the Explorer gives (Open with, Send to, its menu) still go to the first window, as before. The windows share the settings and the list of files already checked, and the last to close keeps its place
+- Rename: **Edit Title & Icon** has, next to **Change Cover Art Icon (Local)**, the searches of the Nintendo eShop and of SteamGridDB: the image chosen goes to the same cut, and from it to the icon to save
+- Details: in the card of a game, the newest version published is just above the line with Holds under it, and the values of all its lists line up
+- Details: the row of the newest version published in the card of a game says what that version belongs to, as `v65536 (Base)`: the title of the file that has it, or an update when none here does
+- Details: the card of a NUP no longer has the **Change image…** button. A NUP that has no icon still offers the ways to give it one, and the title and the icon of a NUP are changed in Rename, with **Edit Title & Icon**
+- Details: the text of a file can be selected and copied. The card of a game (the one with its cover, over the name) stays open for a moment when the mouse leaves the name, so the mouse can go into it, and has a right click menu: copy the details, the title ID, the name, the path, or what is selected
+- Details: **Full details** under each file once it is read: its titles (game, updates, DLC) with ID, version, name, publisher and what each holds, then, for a NUP, the totals NSP Box tells (original bytes, unique stored data, file size, compressed and raw files, unique extents, icon) and what reads it. Select any of it, or copy it all with the button or a right click. In Details, the right click menu of a file has **Copy full details**
+- Details: Export now also writes a text file (**Text (.txt)**) with the full details of every file in the list, one after the other
+- `build-windows.bat`, `build-linux.sh` and `build-macos.sh` build NXPress, and a `settings` folder with a README comes with the source (it makes the build portable)
+
 ## 1.7.16
 
 ### Improvements
@@ -40,10 +140,6 @@
 
 ## 1.7.12
 
-### Improvements
-
-- An image of your own for an icon (Add cover art icon in Combine, Choose image in Details) opens in a crop first: drag and zoom it under the square, or fit it whole, and see the icon as it will be
-
 ### Fixes
 
 - Closing NXPress while files are at work asks in a dialog of the window, in its light or dark theme, not in a white one of the system. Thanks to NikoMuffin for reporting it (#115)
@@ -52,7 +148,6 @@
 
 ### Improvements
 
-- Combine: **Add cover art icon** on each dump folder without an icon of its own. The image chosen (JPG, PNG, WebP or BMP) goes into its NUP at 256×256 instead of the one of titledb, which knows few Switch 2 games
 - `-V` tells when the CNMT of an NSP or NSZ lists a content the file does not hold, which installers such as Sphaira do not find; `--rebuild` pairs it with the NCA of its type. Thanks to lightwo (GBAtemp) for reporting it
 - macOS: NXPress now comes as a disk image (`.dmg`) instead of a `.pkg`: open it and drag NXPress to Applications. It runs no script. Thanks to NikoMuffin for the idea (#112)
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,8 +29,16 @@ type ExportTexts struct {
 	Kinds  map[string]string `json:"kinds"`
 }
 
-// ExportDetails asks where to save what Details tells of the files given, as XLSX or CSV, and
-// writes it; it gives the file written, "" when none was chosen.
+// Report is the full text of Details for one file: its titles with their IDs, versions, names
+// and publishers, how it is stored and what reads it. The page shows it under the file, and
+// copies it from there or from the menu of the row.
+func (a *App) Report(path string) (string, error) {
+	return jobs.Report(path, a.versions.Load())
+}
+
+// ExportDetails asks where to save what Details tells of the files given, as XLSX, CSV or a text
+// file (txt, the report of each file one after the other), and writes it; it gives the file
+// written, "" when none was chosen.
 func (a *App) ExportDetails(paths []string, format string, texts ExportTexts) (string, error) {
 	path, err := a.exportPath(texts.File, format)
 	if err != nil || path == "" {
@@ -40,6 +49,14 @@ func (a *App) ExportDetails(paths []string, format string, texts ExportTexts) (s
 		return "", err
 	}
 	defer done()
+	if format == "txt" {
+		text := jobs.ReportFiles(paths, a.versions.Load())
+		if runtime.GOOS == "windows" {
+			// Notepad of older Windows shows lines ended by a lone LF as one
+			text = strings.ReplaceAll(text, "\n", "\r\n")
+		}
+		return path, os.WriteFile(path, []byte(text), 0o644)
+	}
 	table := export.Table{Sheet: texts.Sheet, Header: texts.Header, Rows: detailsRows(paths, a.versions.Load(), texts.Kinds)}
 	return path, export.Write(path, table)
 }
@@ -62,8 +79,11 @@ func (a *App) ExportLog(format string, texts ExportTexts, rows [][]any) (string,
 // exportPath asks where to save a file of the format, with the name proposed.
 func (a *App) exportPath(name string, format string) (string, error) {
 	extension, filter := ".csv", wailsruntime.FileFilter{DisplayName: "CSV (*.csv)", Pattern: "*.csv"}
-	if format == "xlsx" {
+	switch format {
+	case "xlsx":
 		extension, filter = ".xlsx", wailsruntime.FileFilter{DisplayName: "Excel (*.xlsx)", Pattern: "*.xlsx"}
+	case "txt":
+		extension, filter = ".txt", wailsruntime.FileFilter{DisplayName: "Text (*.txt)", Pattern: "*.txt"}
 	}
 	path, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
 		DefaultFilename: safeName(name) + extension, Filters: []wailsruntime.FileFilter{filter}, CanCreateDirectories: true,

@@ -33,10 +33,10 @@ var coverClient = http.DefaultClient
 // coverDownloads is how many images of a search are downloaded at once.
 const coverDownloads = 6
 
-// SearchCovers asks the eShop for the games of a name, the ones of the Switch 2 only when asked,
+// SearchCovers asks the eShop for the games of a name, the ones of one system only when asked ("switch", "switch2" or "both"),
 // with their images; a game whose image does not come is left out.
-func (a *App) SearchCovers(name string, onlySwitch2 bool) ([]Cover, error) {
-	games, err := eshop.Search(a.context(), coverClient, name, onlySwitch2)
+func (a *App) SearchCovers(name string, system string) ([]Cover, error) {
+	games, err := eshop.Search(a.context(), coverClient, name, system)
 	if err != nil {
 		return nil, err
 	}

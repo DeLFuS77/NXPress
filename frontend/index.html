@@ -338,6 +338,11 @@
           <button id="keys-change" data-t="prefChange"></button>
         </div>
       </section>
+      <section class="pref-group" id="sidebar-group">
+        <h2 data-t="prefSidebar"></h2>
+        <div class="pref-item pref-stack"><div class="pref-text"><small data-t="prefSidebarHint"></small></div></div>
+        <div id="sidebar-rows"></div>
+      </section>
       </div>
       <div class="pref-column">
       <!-- the places of NXPress in the Explorer, on Windows only: Send to, its menu (#88), and
@@ -422,25 +427,25 @@
 <dialog id="cover-dialog" class="cover-dialog" aria-labelledby="cover-title">
   <h2 id="cover-title"></h2>
   <div class="cover-bar"><input id="cover-query" type="search" data-t-label="coverQuery" maxlength="200" spellcheck="false"><button id="cover-search" class="primary small" data-t="coverSearch"></button></div>
-  <p class="cover-from"><span data-t="coverFrom"></span> · <label><input id="cover-switch2" type="checkbox" checked> <span data-t="coverOnlySwitch2"></span></label></p>
+  <p class="cover-from"><span data-t="coverFrom"></span> · <label><input id="cover-switch1" type="checkbox" checked> <span data-t="coverOnlySwitch1"></span></label> · <label><input id="cover-switch2" type="checkbox" checked> <span data-t="coverOnlySwitch2"></span></label></p>
   <p id="cover-status" class="cover-status" role="status" aria-live="polite"></p>
   <div id="cover-grid" class="cover-grid"></div>
   <p class="cover-paste muted" data-t="coverPasteHere"></p>
   <div class="dialog-actions"><button id="cover-web" class="quiet cover-web" data-t="coverWeb"></button><button id="cover-cancel" data-t="cancel"></button><button id="cover-use" class="primary" data-t="coverUse" disabled></button></div>
 </dialog>
-<dialog id="crop-dialog" class="crop-dialog" aria-labelledby="crop-title">
-  <h2 id="crop-title" data-t="cropTitle"></h2>
-  <div class="crop-body">
-    <div id="crop-stage" class="crop-stage" tabindex="0"><img id="crop-image" alt=""><div class="crop-box"></div></div>
-    <div class="crop-side">
-      <canvas id="crop-preview" class="crop-preview" width="256" height="256"></canvas>
-      <span class="crop-note" data-t="cropAsIcon"></span>
-      <label class="crop-zoom"><span data-t="cropZoom"></span><input id="crop-zoom" type="range" min="1" max="4" step="0.01" value="1"></label>
-      <div class="crop-buttons"><button id="crop-fit" data-t="cropFit"></button><button id="crop-reset" class="quiet" data-t="cropReset"></button></div>
-      <span id="crop-name" class="crop-note"></span>
+<dialog id="emu-import-dialog" class="emu-import-dialog" aria-labelledby="emu-import-title">
+  <h2 id="emu-import-title" data-t="nEmuImportTitle"></h2>
+  <p class="muted" data-t="nEmuImportIntro"></p>
+  <p><button id="emu-import-file" type="button" data-t="nEmuImportFile"></button></p>
+  <div class="emu-import-body">
+    <textarea id="emu-import-text" spellcheck="false" autocomplete="off" data-t-label="nEmuImportPaste" data-t-placeholder="nEmuImportPaste"></textarea>
+    <div class="emu-import-help">
+      <p><b data-t="nEmuAddLabel"></b> <span data-t="nEmuAddText"></span></p>
+      <p><b data-t="nEmuReplaceLabel"></b> <span data-t="nEmuReplaceText"></span></p>
     </div>
   </div>
-  <div class="dialog-actions"><button id="crop-cancel" data-t="cancel"></button><button id="crop-use" class="primary" data-t="cropUse"></button></div>
+  <p id="emu-import-found" class="emu-import-found" role="status" aria-live="polite"></p>
+  <div class="dialog-actions"><button id="emu-import-cancel" type="button" data-t="cancel"></button><button id="emu-import-add" type="button" class="primary" data-t="nEmuImportAdd" disabled></button><button id="emu-import-replace" type="button" class="primary" data-t="nEmuImportReplace" disabled></button></div>
 </dialog>
 <dialog id="close-dialog" aria-labelledby="close-question">
   <p id="close-question" data-t="closeAsk"></p>

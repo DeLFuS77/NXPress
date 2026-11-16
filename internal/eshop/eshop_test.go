@@ -63,7 +63,7 @@ func TestSearch(t *testing.T) {
 			{"title":"Elsewhere","image_url_sq_s":"https://example.org/b.jpg"},
 			{"title":" Made-up Quest DX ","system_names_txt":["Nintendo Switch"],"image_url_sq_s":"https://www.nintendo.com/eu/c.jpg"}]}}`))
 	})
-	games, err := Search(t.Context(), server.Client(), "Made-up Quest [0400486024DEC000][v0].nup", true)
+	games, err := Search(t.Context(), server.Client(), "Made-up Quest [0400486024DEC000][v0].nup", "switch2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,20 +73,26 @@ func TestSearch(t *testing.T) {
 	if len(games) != 2 || games[0].Title != "Made-up Quest" || games[0].Systems[0] != "Nintendo Switch 2" || games[1].Title != "Made-up Quest DX" {
 		t.Errorf("%+v", games)
 	}
-	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", false); err != nil || asked.Get("fq") != "type:GAME" {
+	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", "switch"); err != nil || asked.Get("fq") != "type:GAME AND system_type:nintendoswitch AND -system_type:nintendoswitch2" {
+		t.Fatalf("Switch 1 only asked %q", asked.Get("fq"))
+	}
+	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", "both"); err != nil || asked.Get("fq") != "type:GAME AND (system_type:nintendoswitch OR system_type:nintendoswitch2)" {
+		t.Fatalf("both asked %q", asked.Get("fq"))
+	}
+	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", ""); err != nil || asked.Get("fq") != "type:GAME" {
 		t.Errorf("%v %v", err, asked)
 	}
-	if _, err := Search(t.Context(), server.Client(), " [v0] ", true); err == nil {
+	if _, err := Search(t.Context(), server.Client(), " [v0] ", "switch2"); err == nil {
 		t.Error("an empty name was searched")
 	}
 
 	// an answer that is no search
 	server = serve(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("<html>")) })
-	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", true); err == nil || !strings.Contains(err.Error(), "cannot be read") {
+	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", "switch2"); err == nil || !strings.Contains(err.Error(), "cannot be read") {
 		t.Errorf("%v", err)
 	}
 	server = serve(t, func(w http.ResponseWriter, r *http.Request) { http.Error(w, "no", http.StatusServiceUnavailable) })
-	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", true); err == nil || !strings.Contains(err.Error(), "503") {
+	if _, err := Search(t.Context(), server.Client(), "Made-up Quest", "switch2"); err == nil || !strings.Contains(err.Error(), "503") {
 		t.Errorf("%v", err)
 	}
 }
@@ -116,5 +122,26 @@ func TestWebSearch(t *testing.T) {
 	parsed, err := url.Parse(address)
 	if err != nil || parsed.Host != "duckduckgo.com" || parsed.Query().Get("q") != "Made-up Quest Switch 2 cover" || parsed.Query().Get("iax") != "images" {
 		t.Errorf("%s %v", address, err)
+	}
+}
+
+func TestSearchPutsSwitch2First(t *testing.T) {
+	server := serve(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"response":{"docs":[
+			{"title":"One","system_names_txt":["Nintendo Switch"],"image_url_sq_s":"https://www.nintendo.com/eu/1.jpg"},
+			{"title":"Two","system_names_txt":["Nintendo Switch 2"],"image_url_sq_s":"https://www.nintendo.com/eu/2.jpg"},
+			{"title":"Three","system_names_txt":["Nintendo Switch"],"image_url_sq_s":"https://www.nintendo.com/eu/3.jpg"},
+			{"title":"Four","system_names_txt":["Nintendo Switch","Nintendo Switch 2"],"image_url_sq_s":"https://www.nintendo.com/eu/4.jpg"}]}}`))
+	})
+	games, err := Search(t.Context(), server.Client(), "Quest", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var order []string
+	for _, game := range games {
+		order = append(order, game.Title)
+	}
+	if strings.Join(order, ",") != "Two,Four,One,Three" {
+		t.Errorf("order %v", order)
 	}
 }

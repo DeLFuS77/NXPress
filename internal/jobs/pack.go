@@ -296,9 +296,10 @@ func readAt(reader io.ReaderAt, p []byte, offset int64) error {
 	return err
 }
 
-// DefaultPackTemplate is the name of the pack of each game, as Switch Library Manager names a
-// SuperNSP: Game [0100...][v65536] (1G+1U+2D)
-const DefaultPackTemplate = "{name} [{id}][v{version}] ({contents})"
+// DefaultPackTemplate is the name of the pack of each game, and of the NUP of a dump folder: the
+// name of the game, its title ID and its newest version, Game [0100...][v65536]. The contents of
+// the pack, (1G+1U+2D) as Switch Library Manager writes them, are one field away: {contents}.
+const DefaultPackTemplate = "{name} [{id}][v{version}]"
 
 // GameGroups puts the files of each game together, in the order the games come and with the
 // game itself first; the files that cannot be read are given apart, with why.

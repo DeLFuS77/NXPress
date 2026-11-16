@@ -450,6 +450,9 @@ type PackOptions struct {
 	Publisher string
 	// the icon of the game (a JPEG made by MakeIcon), when its folder has no control data with one
 	Icon []byte
+	// the cover the person chose for the game (CheckCover): it takes the place of its icon, whatever
+	// its control data or Icon give, and is the one icon of the NUP, as an icon given to it is
+	Cover []byte
 	// files bigger than this are stored as they are, 0 for none: Eglantine and Lichii decompress a
 	// file with zstd whole the first time it is read, into a temporary file past 256 MiB, and
 	// their packers store such files raw (RawBig)
@@ -486,6 +489,12 @@ type fileOut struct {
 // told the bytes of files packed of the ones to pack. A file of the folder that changes while it
 // is packed fails the work; out is then left to the caller to remove.
 func Pack(ctx context.Context, src string, out string, o PackOptions, progress func(done int64, total int64)) (PackResult, error) {
+	// a cover that is not one is refused before anything is read
+	if len(o.Cover) > 0 {
+		if err := CheckCover(o.Cover); err != nil {
+			return PackResult{}, err
+		}
+	}
 	sources, notes, err := Discover(src)
 	if err != nil {
 		return PackResult{}, err
@@ -716,6 +725,12 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		}
 		if _, ok := records[tlvIcon]; !ok && len(o.Icon) > 0 {
 			records[tlvIcon] = o.Icon
+		}
+		if len(o.Cover) > 0 {
+			records[tlvIcon] = o.Cover
+			// the icons by language of its control data would show the old icon in an emulator in
+			// that language: the cover is the one icon, as of a NUP given an icon afterwards
+			delete(records, tlvLocalizedIcons)
 		}
 	case source.Kind == KindUpdate:
 		if version := controlVersion(source.Control); version != "" {

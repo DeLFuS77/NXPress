@@ -7,6 +7,7 @@ space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
   --warn: #f0a33a; --bar: #2c313a; --hover: #252a32; --focus: #7fd0f2;
   --radius: 8px; --radius-small: 6px;
   --tone-space: #3db7ea; --tone-organize: #a98bff; --tone-check: #3fd0c6; --tone-neutral: #98a0ad; --tile-on: #0b0d11;
+  --emu-head: #c9e44a; --emu-head-hover: #e0f67a; --emu-head-line: rgba(201, 228, 74, .45);
   color-scheme: dark;
 }
 /* the theme of Windows, unless one is chosen in the settings */
@@ -17,6 +18,7 @@ space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
     --ok: #187a41; --ok-soft: rgba(24, 122, 65, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
     --warn: #8a5000; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
     --tone-space: #0a6fb0; --tone-organize: #6a43c9; --tone-check: #0b7f7a; --tone-neutral: #5d6470; --tile-on: #fff;
+    --emu-head: #0a5fa8; --emu-head-hover: #074a85; --emu-head-line: #7fb6e8;
     color-scheme: light;
   }
 }
@@ -26,6 +28,7 @@ space saved; spacing on a 4 px grid; type at 12, 13, 14, 15, 22 px */
     --ok: #187a41; --ok-soft: rgba(24, 122, 65, .1); --bad: #c8232c; --bad-soft: rgba(200, 35, 44, .08);
     --warn: #8a5000; --bar: #e3e7ec; --hover: #eef1f5; --focus: #0a6fb0;
     --tone-space: #0a6fb0; --tone-organize: #6a43c9; --tone-check: #0b7f7a; --tone-neutral: #5d6470; --tile-on: #fff;
+    --emu-head: #0a5fa8; --emu-head-hover: #074a85; --emu-head-line: #7fb6e8;
     color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -53,7 +56,7 @@ button.outline:hover:not(:disabled) { background: var(--accent-soft); }
 button.secondary { padding: 10px 18px; font-weight: 600; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
-button.primary.big { padding: 10px 28px; font-size: 15px; min-width: 170px; }
+button.primary.big { padding: 10px 28px; font-size: 15px; min-width: 170px; white-space: nowrap; }
 /* a start that cannot be pressed yet reads as waiting, not as a faded color */
 button.primary:disabled { background: var(--hover); border-color: var(--line); color: var(--muted); opacity: 1; }
 button.primary.small { padding: 6px 14px; white-space: nowrap; }
@@ -67,7 +70,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 main { flex: 1; display: flex; min-height: 0; }
 /* Windows 11: the menu shows the Mica of the system, the work stays on its own ground */
 html.mica body, html.mica nav { background: transparent; }
-html.mica #work, html.mica #preferences { background: var(--bg); }
+html.mica #work, html.mica #preferences, html.mica #emulator { background: var(--bg); }
 
 /* the modes, by group */
 nav { width: 210px; flex: none; border-right: 1px solid var(--line); background: var(--panel); padding: 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
@@ -108,6 +111,7 @@ nav button.on b { color: var(--text); }
 .pref-group { max-width: 560px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .pref-group h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
 .pref-keys { margin: 0; font-size: 12px; color: var(--muted); word-break: break-all; }
+.pref-keys.keys-none { color: var(--bad); font-weight: 600; }
 .pref-sound { display: flex; align-items: center; gap: 10px; padding-left: 26px; font-size: 12px; color: var(--muted); }
 .pref-sound span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .page-head { padding: 20px 24px 4px; }
@@ -301,6 +305,7 @@ input.changed { animation: changed 2.5s ease-out; }
 .badge.skipped, .badge.modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 /* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
+#log .log-hang { padding-left: 3ch; text-indent: -3ch; white-space: pre-wrap; }
 #log { margin: 0 20px 12px; max-height: min(160px, 16vh); overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 24px; border-top: 1px solid var(--line); background: var(--panel); }
@@ -444,6 +449,9 @@ table.grid .game.refill { transition: none; }
 /* a card over the cover of a game: what it is, at a glance */
 .game-pop { --pop-tone: var(--accent); position: fixed; z-index: 45; display: flex; gap: 14px; width: 380px; max-width: calc(100vw - 16px); padding: 14px; border: 1px solid color-mix(in srgb, var(--pop-tone) 35%, var(--line)); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--pop-tone) 22%, var(--raised)), var(--raised) 65%); box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; transition: background .3s, border-color .3s; }
 .game-pop img { flex: none; width: 112px; height: 112px; border-radius: var(--radius-small); object-fit: cover; box-shadow: 0 6px 18px color-mix(in srgb, var(--pop-tone) 45%, transparent); }
+/* Details: the card of a game can be selected and right clicked, so the mouse may go into it */
+.game-pop { user-select: text; -webkit-user-select: text; pointer-events: auto; }
+.game-pop img { user-select: none; -webkit-user-select: none; }
 .game-pop > div { min-width: 0; flex: 1; }
 .game-pop .pop-name { font-weight: 600; font-size: 15px; line-height: 1.3; }
 .game-pop .pop-publisher { color: var(--muted); font-size: 12px; margin-top: 2px; }
@@ -531,6 +539,12 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 
 /* the card of a file in Info */
 .file-card { margin-top: 8px; max-width: 520px; }
+/* what Details tells of a file can be selected and copied: its name, its note and its card */
+td.name .title, td.name .note, .file-card { user-select: text; -webkit-user-select: text; }
+.card-report { margin-top: 8px; }
+.card-report summary { cursor: pointer; width: fit-content; font-size: 12px; color: var(--accent); }
+.card-report-bar { margin: 6px 0 2px; }
+.card-report pre { margin: 6px 0 0; max-height: 340px; padding: 10px 12px; overflow: auto; font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; border: 1px solid var(--line); border-radius: var(--radius-small); background: color-mix(in srgb, var(--muted) 7%, transparent); user-select: text; -webkit-user-select: text; cursor: text; }
 .file-card:has(.nup-packages) { max-width: 560px; }
 .card-sizes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .card-sizes .kind { font-weight: 700; color: var(--accent); min-width: 34px; }
@@ -561,21 +575,6 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .file-card .nup-icon-change { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
 /* the window to search an image in the eShop (#102): the name, then the games in a grid */
 dialog.cover-dialog { max-width: 680px; }
-/* the crop of an image chosen for an icon: a square fixed at the middle, the image moved and
-   zoomed under it, and the icon as it will be beside */
-dialog.crop-dialog { max-width: 640px; }
-.crop-body { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin-top: 10px; }
-.crop-stage { position: relative; width: 340px; height: 340px; max-width: 100%; overflow: hidden; border-radius: var(--radius); background: #0b0d11; cursor: grab; touch-action: none; user-select: none; }
-.crop-stage:active { cursor: grabbing; }
-.crop-stage img { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; max-width: none; }
-.crop-box { position: absolute; inset: 30px; border: 2px solid #fff; border-radius: 4px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); pointer-events: none; }
-.crop-side { display: flex; flex-direction: column; gap: 10px; min-width: 170px; }
-.crop-preview { width: 128px; height: 128px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
-.crop-note { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.crop-zoom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-.crop-zoom input { flex: 1; min-width: 100px; }
-.crop-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-.crop-buttons button { padding: 3px 10px; font-size: 12px; }
 .cover-bar { display: flex; gap: 8px; }
 .cover-bar input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); padding: 6px 10px; }
 .cover-from { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
@@ -601,16 +600,6 @@ dialog.crop-dialog { max-width: 640px; }
 .dump-arrow { margin-top: 3px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .dump-arrow b { color: var(--text); font-weight: 600; }
 table.grid .dump-plan { display: none; }
-/* Combine: the image chosen for the NUP of a dump folder */
-.cover-line { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.cover-thumb { width: 44px; height: 44px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 8px; border: 1.5px dashed var(--line); background: var(--raised); color: var(--muted); font-size: 18px; }
-.cover-thumb.chosen { border-style: solid; border-color: var(--accent); }
-.cover-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cover-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.cover-buttons { display: flex; gap: 6px; align-items: center; }
-.cover-buttons button { padding: 3px 10px; font-size: 12px; }
-.cover-hint { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.cover-hint.warning { color: var(--warn); }
 
 /* the switch of the list: rows or a grid of covers */
 /* Export, with the menu of its formats (#89) */
@@ -939,3 +928,267 @@ dragged over and the icon lifts: the icon's center is 40px above it (half its 56
 /* with colors other than NXPress, the menu wears them instead of the Mica of Windows 11 */
 html.mica[data-palette] body { background: var(--bg); }
 html.mica[data-palette] nav { background: var(--panel); }
+
+/* the cover of the NUP of a dump folder (Combine): a thumbnail and the button that adds or edits it */
+.ncover-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.ncover-thumb { display: block; flex: none; width: 36px; height: 36px; padding: 0; border-radius: var(--radius-small); border: 1px dashed var(--line); background: color-mix(in srgb, var(--muted) 10%, transparent); object-fit: cover; }
+img.ncover-thumb { border-style: solid; cursor: pointer; }
+.ncover-set { font-size: 12px; padding: 3px 10px; }
+.ncover-clear { padding: 2px 7px; }
+dialog.ncover-dialog { max-width: 420px; }
+.ncover-stage { display: flex; justify-content: center; margin: 12px 0 8px; }
+.ncover-stage canvas { width: 256px; height: 256px; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; cursor: grab; touch-action: none; }
+.ncover-stage canvas:active { cursor: grabbing; }
+.ncover-stage canvas.fit { cursor: default; }
+.ncover-zoom { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; color: var(--muted); }
+.ncover-zoom input { flex: 1; min-width: 0; }
+.ncover-dialog .dialog-actions { align-items: center; }
+.ncover-dialog #ncover-other { margin-right: auto; }
+
+/* the card of a game: the buttons under its cover, and its titles */
+.game-pop > .pop-side { display: flex; flex: none; flex-direction: column; gap: 8px; width: 112px; }
+.pop-actions { display: flex; flex-direction: column; gap: 6px; }
+.pop-action { width: 100%; padding: 5px 8px; font-size: 12px; }
+.pop-action.pop-view { border-color: color-mix(in srgb, var(--pop-tone) 55%, var(--line)); color: var(--pop-tone); }
+
+/* the window of the details of a file: it moves by its bar, can be sized, and its text is selectable */
+.nvd-window { position: fixed; z-index: 70; display: flex; flex-direction: column; width: 640px; height: 460px; min-width: 320px; min-height: 220px; max-width: 96vw; max-height: 92vh; overflow: hidden; resize: both; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 18px 50px rgba(0, 0, 0, .35); }
+.nvd-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line); background: var(--raised); cursor: move; user-select: none; -webkit-user-select: none; touch-action: none; }
+.nvd-title { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.nvd-close { padding: 2px 8px; cursor: pointer; }
+.nvd-text { flex: 1; min-height: 0; margin: 0; padding: 12px 14px; overflow: auto; font: 12.5px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; user-select: text; -webkit-user-select: text; cursor: text; outline: none; }
+.nvd-foot { display: flex; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--raised); }
+
+/* the cover button of a dump folder, with the formats it takes under it */
+.ncover-row { align-items: flex-start; }
+.ncover-side { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ncover-line { display: flex; align-items: center; gap: 8px; }
+.ncover-accepts { color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+/* the card of a game: its titles apart from each other, and Holds at the bottom */
+.game-pop > div:not(.pop-side) { display: flex; flex-direction: column; align-self: stretch; }
+.game-pop dl:not(.pop-holds) { row-gap: 11px; margin-bottom: 12px; }
+.game-pop dt:has(+ dd.pop-part) { color: var(--text); font-weight: 600; }
+.game-pop dd.pop-part { font-weight: 500; }
+.game-pop dl.pop-holds { margin-top: auto; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--pop-tone) 28%, var(--line)); }
+.game-pop dl.pop-holds:empty { display: none; }
+
+/* Split: what to take out of each NUP, one under the other at the right of its line; the ones the
+   NUP does not have are shown off */
+.nsplit-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; margin-left: 64px; position: relative; left: 20px; font-size: 12.5px; line-height: 1.25; }
+/* label.check of the panels gives a box room above (10px): here the boxes sit close */
+.nsplit-row label.nsplit-check { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; cursor: pointer; }
+.nsplit-row .nsplit-check input { width: 13px; height: 13px; margin: 0; }
+.nsplit-row label.nsplit-check.is-off { cursor: default; opacity: .5; }
+
+/* Rename: the editor of the title and the icon of a NUP */
+.nedit-row { margin-top: 6px; }
+table.grid .nedit-row { padding-bottom: 8px; }
+.nedit-dialog { min-width: 360px; }
+.nedit-field { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-size: 13px; color: var(--muted); }
+.nedit-field input { padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--panel); color: var(--text); font: inherit; font-size: 14px; }
+.nedit-icon { display: flex; align-items: center; gap: 14px; margin: 10px 0; }
+.nedit-icon img { width: 96px; height: 96px; flex: none; border-radius: var(--radius-small); border: 1px solid var(--line); object-fit: cover; }
+.nedit-icon-side { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 13px; color: var(--muted); }
+
+/* Combine: the buttons of the cover side by side, and the card of a folder with no buttons */
+.ncover-line { flex-wrap: wrap; }
+.pop-actions[hidden] { display: none; }
+
+/* the two buttons of the cover side by side, with the formats under both: their line is as wide as
+   nothing and they run over the columns at its right, which are empty under the first line of the row,
+   so the column of the names does not grow */
+.ncover-side { width: 0; min-width: 0; overflow: visible; }
+.ncover-line { flex-wrap: nowrap; white-space: nowrap; }
+.ncover-set, .ncover-accepts { white-space: nowrap; }
+/* the menu of the cover button, in the line under it */
+.ncover-menu { display: flex; flex-direction: column; width: max-content; min-width: 240px; margin-top: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 18px rgba(0, 0, 0, .16); white-space: nowrap; }
+.ncover-menu[hidden] { display: none; }
+.ncover-menu button { border: 0; background: transparent; text-align: left; font-size: 13px; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.ncover-menu button:hover, .ncover-menu button:focus-visible { background: var(--hover); }
+
+/* Details: the card of a NUP has no Change image button (the icon is changed in Rename, Edit Title & Icon) */
+.file-card .nup-icon-change { display: none !important; }
+
+/* the search of SteamGridDB in Combine: its game, its four kinds of image like its site, its key */
+dialog.nsgdb-dialog { max-width: 780px; }
+.nsgdb-game { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.nsgdb-game select { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--panel); color: var(--text); font: inherit; }
+.nsgdb-tabs { display: flex; gap: 2px; margin-top: 10px; border-bottom: 1px solid var(--line); }
+.nsgdb-tab { padding: 6px 14px; border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.nsgdb-tab:hover { background: none; color: var(--text); }
+.nsgdb-tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.nsgdb-grid.wide { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.nsgdb-grid.wide .cover-tile img { aspect-ratio: 16 / 9; object-fit: contain; }
+.nsgdb-grid.fit .cover-tile img { object-fit: contain; }
+.nsgdb-key { margin-top: 10px; }
+.nsgdb-key .quiet { margin-top: 8px; }
+#nsgdb-more { display: block; margin: 10px auto 0; }
+
+/* the editor of a NUP: its three ways to an icon, one under the other */
+.nedit-icon-side button { align-self: flex-start; }
+.nedit-icon-side .ncover-accepts { margin-top: 6px; }
+
+/* Combine: a dump folder in the list has no folder icon at the left of its line, so that its name and
+   what is under it begin further left; in the grid the folder is the picture of its card */
+table#files:not(.grid) .game .cover:has(svg) { display: none; }
+
+/* the card of a game: the newest version just above the line, Holds under it; every list has the same
+   column of labels, so that their values line up */
+.game-pop dl { grid-template-columns: 5.4em 1fr; }
+.game-pop dl.pop-newest { margin-top: auto; margin-bottom: 10px; }
+.game-pop dl.pop-newest:empty { display: none; }
+.game-pop dl.pop-newest:not(:empty) + dl.pop-holds { margin-top: 0; }
+
+/* the editor of a NUP: a line between its icon and the note under it, as the options of Combine have */
+#nedit-note { margin: 28px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* the search of SteamGridDB: with no key the site is opened in the browser and an image is pasted; the
+   instructions for that are under a line, apart from the key */
+#nsgdb-keyget { margin-top: 8px; }
+#nsgdb-nokey { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.nsgdb-key .ncover-set { margin-top: 2px; }
+
+/* the button in the sentence of the instructions for no key: as tall as the words around it */
+.nsgdb-key p .ncover-inline { margin: 0 2px; padding: 1px 9px; font-size: inherit; vertical-align: baseline; }
+
+/* the page of the Emulator: the room of the section, as the page of the settings has it */
+#emulator { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+#emulator[hidden] { display: none; }
+
+/* the emulators, by console: a card each, with its page, a note when it has one, and its button */
+.emu-list { display: flex; flex-direction: column; max-width: 940px; }
+.emu-section { margin: 6px 0 4px; }
+/* an open section leaves 32 px (26 and the 6 of the next one) before the next; closed ones stay close together */
+.emu-section[open] { margin-bottom: 26px; }
+.emu-group { display: flex; align-items: center; margin: 8px 0; padding: 4px 0 8px; border-bottom: 1px solid var(--emu-head-line); font-size: 19px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--emu-head); cursor: pointer; list-style: none; user-select: none; -webkit-user-select: none; }
+.emu-group::-webkit-details-marker { display: none; }
+.emu-group::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 6px 1px auto; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s ease; }
+.emu-section[open] > .emu-group::after { transform: rotate(45deg); }
+.emu-group:hover { color: var(--emu-head-hover); }
+.emu-group:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.emu-cards { display: flex; flex-direction: column; gap: 8px; }
+.emu-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); }
+.emu-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.emu-text b { font-size: 15px; }
+.emu-text small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.emu-note { width: fit-content; margin: 6px 0 0; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); font-size: 12px; font-weight: 600; }
+.emu-card .ncover-set { flex: none; white-space: nowrap; }
+
+/* the emulators of a family come under its name */
+.emu-family { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 0; font-size: 13px; font-weight: 700; color: var(--text); }
+.emu-cards > .emu-family:first-child { margin-top: 2px; }
+/* outside editing a category opens and closes by its name, with its arrow right after it */
+.emu-family.fold { justify-content: flex-start; gap: 6px; cursor: pointer; user-select: none; -webkit-user-select: none; width: fit-content; }
+.emu-family.fold:hover { color: var(--emu-head); }
+.emu-family.fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.emu-chev { flex: none; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .15s ease; }
+.emu-family.closed .emu-chev { transform: translate(-1px, .5px) rotate(-45deg); }
+
+/* the icon of a console, after its title: the Joy-Con in color, the rest in the color of the text */
+.emu-console { display: inline-flex; align-items: center; flex: none; margin-left: .6em; color: var(--text); line-height: 0; position: relative; top: .05em; }
+.emu-console .icon { display: block; width: 1.45em; height: 1.45em; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.emu-console.fit .icon { width: 1.2em; height: 1.2em; }
+
+/* the card: as wide as its lines (ID - v458752 - 1.3.3), the two buttons at the bottom left, and None in red when
+   a game or an update does not tell the version it shows */
+.game-pop { width: max-content; min-width: 380px; max-width: min(540px, calc(100vw - 16px)); }
+.game-pop > .pop-side .pop-actions { margin-top: auto; }
+.game-pop .pop-name { max-width: 300px; }
+.game-pop dd.pop-part { white-space: nowrap; }
+.game-pop .pop-none { color: #d13438; border: 1px solid #d13438; border-radius: 4px; padding: 0 5px; font-size: 12px; font-weight: 600; }
+
+/* the card of a NUP and its package lines: as wide as the lines need, even past its column (the Size and State
+   columns have nothing under their first line), up to the window, so ID · v458752 · 3.2.0 and the count of files
+   are on one line and the border of each line reaches the right edge of the card */
+.file-card:has(.nup-packages) { width: max-content; min-width: min(560px, 100%); max-width: min(860px, calc(100vw - 340px)); }
+.nup-packages li { grid-template-columns: auto minmax(max-content, 1fr) auto; }
+.nup-packages .who span { white-space: nowrap; }
+/* the title ID and the versions of a game go under its name */
+.nup-packages .who b:not([hidden]) + span { display: block; }
+/* the name of a game wraps within 300px, as a column of its own, so a long one does not widen the card */
+.nup-packages .who b:not([hidden]) { display: block; max-width: 300px; }
+/* the package lines share their columns: the name of the kind (centered in its green mark), the title ID and the
+   versions, the files, the size and the size as stored, each aligned from one line to the next */
+.nup-packages { display: grid; grid-template-columns: auto auto auto auto auto; gap: 4px 0; }
+.nup-packages li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: 8px; }
+.nup-packages .k { text-align: center; margin-right: 6px; }
+.nup-packages .who { overflow-wrap: normal; min-width: auto; margin-right: 14px; }
+.nup-packages .num { text-align: left; }
+.nup-packages .num span { display: block; }
+.nup-packages .num small { display: block; font-size: 10px; line-height: 1.2; margin-top: 1px; opacity: .85; }
+.nup-packages .n-size, .nup-packages .n-stored { text-align: center; }
+.nup-packages .n-files { text-align: center; }
+/* the files, the size and the compressed size of a package: in the middle of its line */
+.nup-packages .num { align-self: center; }
+/* the card of a NUP does not ask its column for its width: the package lines go past it, over the empty part under
+   Size and State, so the list is not made wider (no scroll bar at the bottom); the name of a game wraps at 260px */
+.file-card:has(.nup-packages) { contain: inline-size; width: auto; min-width: 0; max-width: none; }
+.file-card:has(.nup-packages) .nup-packages { width: max-content; max-width: 860px; }
+.nup-packages .who b:not([hidden]) { max-width: 260px; }
+/* the green kind label and the name/ID text sit in the vertical middle of their package line */
+.nup-packages li { align-items: center; }
+.nup-packages .k, .nup-packages .who { align-self: center; }
+/* the empty tags and note of the card of a NUP take no room */
+.file-card:has(.nup-packages) .tags:empty, .file-card:has(.nup-packages) .card-only:empty { display: none; }
+/* the box of the report is as wide as its longest line, and its own scroll bar, that comes when the report
+   is taller than the box, takes room from that line: the room is kept from the first time the report is
+   opened, so no scroll bar shows under the report when the longest line is the name of a game */
+.card-report pre { scrollbar-gutter: stable; }
+/* Settings, Sidebar: the tools of a group are a step in from it, and the ones of a group switched off are dimmed */
+#sidebar-rows .pref-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#sidebar-rows .pref-head { background: var(--raised); margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+#sidebar-rows .pref-sub { padding-left: 16px; }
+#sidebar-rows .pref-sub b { font-weight: 400; }
+#sidebar-rows .pref-item.off { opacity: .5; }
+/* the groups of the Sidebar in Settings open and close with an arrow at their name */
+#sidebar-rows [hidden] { display: none; }
+#sidebar-rows .side-fold { flex: none; width: 24px; height: 24px; margin: 0 4px 0 -6px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+#sidebar-rows .pref-head .pref-text { flex: 1; cursor: pointer; user-select: none; }
+#sidebar-rows .pref-sub { padding-left: 34px; }
+
+/* changing the list of emulators: Edit at the top, the small buttons at the right of what they change */
+.emu-tools { display: flex; justify-content: flex-end; gap: 8px; max-width: 940px; margin-bottom: -6px; }
+.emu-save { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.emu-row { display: flex; align-items: center; gap: 6px; }
+.emu-row > .emu-card, .emu-row > .emu-form { flex: 1; min-width: 0; }
+.emu-sub { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 0 16px; }
+.emu-ctl { display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex: none; min-width: 78px; margin-left: auto; text-transform: none; letter-spacing: 0; }
+.emu-ib { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; font-size: 15px; line-height: 1; padding: 4px 3px; border-radius: 6px; cursor: pointer; }
+.emu-ib:hover, .emu-ib:focus-visible { background: var(--raised); }
+.emu-ib svg { display: block; }
+.emu-ib.arm { font-size: 12px; font-weight: 700; padding: 4px 8px; color: #fff; background: #d13438; }
+.emu-list.editing .emu-group::after { display: none; }
+.emu-form { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--raised); font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.emu-form label { font-size: 12px; color: var(--muted); }
+.emu-form input { box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font: inherit; }
+.emu-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.emu-addsection { display: inline-flex; align-items: center; gap: 8px; align-self: flex-end; padding: 6px 12px 6px 8px; border: 1px solid color-mix(in srgb, var(--line), var(--text) 12%); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.emu-addsection:hover, .emu-addsection:focus-visible { background: var(--raised); }
+.emu-addsection svg { display: block; flex: none; }
+.emu-addsection.top { margin: 22px 0 -8px; }
+.emu-addsection.bottom { margin: 6px 0 0; }
+
+/* Emulators: moving by dragging, Share and Import */
+.emu-grip { display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; width: 14px; margin-right: 6px; font-size: 18px; font-weight: 700; line-height: 1; letter-spacing: 0; color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 4px; }
+.emu-grip:hover, .emu-grip:focus-visible { color: var(--text); background: var(--raised); }
+.emu-row > .emu-grip { margin-right: 0; }
+.emu-moving, .emu-moving * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.emu-dragging { opacity: .35; }
+.emu-list.drag-section .emu-cards, .emu-list.drag-category .emu-sub { display: none; }
+.emu-ghost { position: fixed; z-index: 1001; margin: 0; pointer-events: none; opacity: .92; background: var(--panel); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+.emu-ghost .emu-ctl, .emu-ghost::after { display: none; }
+.emu-dropline { position: fixed; z-index: 1000; height: 3px; margin-top: -1px; border-radius: 2px; background: var(--accent); pointer-events: none; }
+.emu-dropline[hidden] { display: none; }
+.emu-dropline span { position: absolute; right: 6px; top: -10px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.emu-dropline span[hidden] { display: none; }
+.emu-share { position: relative; display: inline-flex; }
+.emu-share .ncover-menu { position: absolute; top: 100%; left: 0; z-index: 20; }
+dialog.emu-import-dialog { max-width: 720px; }
+.emu-import-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.emu-import-body textarea { box-sizing: border-box; flex: 0 0 300px; max-width: 100%; height: 112px; resize: vertical; padding: 6px 8px; font: 13px/1.4 ui-monospace, Consolas, monospace; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
+.emu-import-help { flex: 1 1 240px; min-width: 0; font-size: 14px; line-height: 1.4; }
+.emu-import-help p { margin: 0 0 10px; }
+.emu-import-help p:first-child { margin-top: 0; }
+.emu-import-found { min-height: 1.4em; margin: 10px 0 0; }
+.emu-import-found.warning { color: var(--warn); }

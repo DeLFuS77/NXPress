@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -62,9 +63,10 @@ func Query(name string) string {
 	return strings.Join(strings.Fields(name), " ")
 }
 
-// Search asks the eShop for the games of a name, the ones of the Switch 2 only when asked; the
+// Search asks the eShop for the games of a name, the ones of one system only when asked ("switch", "switch2"
+// or "both"), the
 // games without a square image are left out.
-func Search(ctx context.Context, client *http.Client, name string, onlySwitch2 bool) ([]Game, error) {
+func Search(ctx context.Context, client *http.Client, name string, system string) ([]Game, error) {
 	query := Query(name)
 	if query == "" {
 		return nil, errors.New("write the name of the game")
@@ -73,7 +75,13 @@ func Search(ctx context.Context, client *http.Client, name string, onlySwitch2 b
 		return nil, errors.New("the name is too long")
 	}
 	filter := "type:GAME"
-	if onlySwitch2 {
+	switch system {
+	case "switch":
+		// the Switch 2 games carry the Switch type too, so they are taken out
+		filter += " AND system_type:nintendoswitch AND -system_type:nintendoswitch2"
+	case "both":
+		filter += " AND (system_type:nintendoswitch OR system_type:nintendoswitch2)"
+	case "switch2":
 		filter += " AND system_type:nintendoswitch2"
 	}
 	values := url.Values{
@@ -118,6 +126,10 @@ func Search(ctx context.Context, client *http.Client, name string, onlySwitch2 b
 	if err := json.Unmarshal(data, &answer); err != nil {
 		return nil, fmt.Errorf("the answer of the eShop cannot be read: %w", err)
 	}
+	// the games of the Switch 2 come first, the others after them in the order the eShop gave
+	sort.SliceStable(answer.Response.Docs, func(i, j int) bool {
+		return forSwitch2(answer.Response.Docs[i].Systems) && !forSwitch2(answer.Response.Docs[j].Systems)
+	})
 	games := []Game{}
 	seen := map[string]bool{}
 	for _, doc := range answer.Response.Docs {
@@ -189,4 +201,14 @@ func WebSearch(name string) string {
 		query = "Nintendo Switch 2"
 	}
 	return "https://duckduckgo.com/?" + url.Values{"q": {query + " Switch 2 cover"}, "ia": {"images"}, "iax": {"images"}}.Encode()
+}
+
+// forSwitch2 tells whether the systems of a game name the Switch 2.
+func forSwitch2(systems []string) bool {
+	for _, system := range systems {
+		if strings.Contains(system, "Switch 2") {
+			return true
+		}
+	}
+	return false
 }
