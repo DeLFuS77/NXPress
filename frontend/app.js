@@ -1391,6 +1391,18 @@ function paintPublished() {
   const date = $("published").checked ? state.versionsDate : null;
   $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
+// the most text the log of a work keeps, its last part (#135)
+const logKept = 4 << 20;
+// what the work told and the log has not shown yet, added ten times a second at most (#135)
+let said = "", sayFrame = 0;
+// clearLog empties the log, with what was still to be shown in it
+function clearLog() {
+  said = "";
+  if (sayFrame) clearTimeout(sayFrame);
+  sayFrame = 0;
+  $("log").textContent = "";
+  $("log").hidden = true;
+}
 let warnTimer = 0;
 function warnSoon() {
   clearTimeout(warnTimer);
@@ -1776,8 +1788,7 @@ function clearRows() {
   state.rows.clear();
   state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
 }
 function clearList() {
@@ -2355,8 +2366,7 @@ async function start(mode, extra) {
     before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
     Object.assign(row, fresh);
   }
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
   resetSpeed();
   state.busy = true;
@@ -2495,10 +2505,22 @@ function listen() {
     trackSpeed();
     summary();
   });
+  // what the work tells goes to the log ten times a second at most, added at its end: written again whole and
+  // scrolled at each file, a long Details of thousands of files kept the window far behind the
+  // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
+  // last megabytes.
   events.EventsOn("say", text => {
-    $("log").hidden = false;
-    $("log").textContent += noteText(text) + "\n";
-    $("log").scrollTop = $("log").scrollHeight;
+    said += noteText(text) + "\n";
+    if (sayFrame) return;
+    sayFrame = setTimeout(() => {
+      sayFrame = 0;
+      const log = $("log");
+      log.hidden = false;
+      log.append(said);
+      said = "";
+      while (log.childNodes.length > 1 && log.textContent.length > logKept) log.firstChild.remove();
+      log.scrollTop = log.scrollHeight;
+    }, 100);
   });
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Details of thousands of files: the window keeps up with the work, so Cancel stops it when pressed. Thanks to NikoMuffin for reporting it (#135)
+
 ## 1.7.17
 
 ### Improvements
