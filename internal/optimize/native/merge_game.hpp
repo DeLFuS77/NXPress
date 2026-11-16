@@ -90,6 +90,8 @@ public:
     uint64_t Damaged() const { return m_romfs.Damaged(); }
 
 private:
+    static lz4pack::StepFn Watched(const lz4pack::StepFn& step, bool& halted);
+    std::string Failure(bool wrote, bool halted) const;
     bool PackOnce(const lz4pack::WriteFn& write, const lz4pack::StepFn& step, lz4pack::Packed& out);
     // the RomFS section in the header of the update: where it starts (it keeps its place)
     uint64_t RomfsStart() const;

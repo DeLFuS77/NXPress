@@ -34,6 +34,8 @@ var Files = [][2]string{
 	{"source/merge_game.cpp", "merge_game.cpp"},
 	{"source/merge_meta.hpp", "merge_meta.hpp"},
 	{"source/merge_meta.cpp", "merge_meta.cpp"},
+	{"source/read_note.hpp", "read_note.hpp"},
+	{"source/work_thread.hpp", "work_thread.hpp"},
 	{"source/lz4nintendo.c", "lz4nintendo.c"},
 	{"include/lz4nintendo.h", "lz4nintendo.h"},
 }

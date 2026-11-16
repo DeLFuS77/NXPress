@@ -496,15 +496,20 @@ async function pasteIcon(event) {
     return;
   }
   if (dialog.open) dialog.close();
+  if (target.folder) {
+    folderCover(target.row, () => app().PastedCoverImage(data));
+    return;
+  }
   giveNupIcon(target.row, () => app().PasteNupIcon(target.row.item.path, data, target.replace));
 }
 
 // the window to search an image in the eShop, for one NUP (#102): the name it searches is the one
 // of the game, which can be changed, as file names and title IDs are often wrong
-const cover = { target: null, chosen: null, round: 0 };
-function openCoverSearch(row, replace, opener) {
-  cover.target = { row, replace };
+const cover = { target: null, chosen: null, chosenTitle: "", round: 0 };
+function openCoverSearch(row, replace, opener, folder = false) {
+  cover.target = { row, replace, folder };
   cover.chosen = null;
+  cover.chosenTitle = "";
   // the name without the marks of file names: [title ID], [v0], (EU) and the extension
   const shown = shownName(row);
   const name = shown.replace(/\.(nup|nsp|nsz|xci|xcz)$/i, "").replace(/(\s*[\[(][^\])]*[\])])+/g, " ").replace(/\s+/g, " ").trim() || shown;
@@ -548,10 +553,12 @@ async function searchCovers() {
         for (const other of $("cover-grid").children) other.setAttribute("aria-pressed", "false");
         tile.setAttribute("aria-pressed", "true");
         cover.chosen = found.address;
+        cover.chosenTitle = found.title;
         $("cover-use").disabled = false;
       };
       tile.ondblclick = () => {
         cover.chosen = found.address;
+        cover.chosenTitle = found.title;
         useCover();
       };
       $("cover-grid").append(tile);
@@ -570,6 +577,10 @@ function useCover() {
   const address = cover.chosen;
   if (!target || !address) return;
   $("cover-dialog").close();
+  if (target.folder) {
+    folderCover(target.row, () => app().EshopCoverImage(address, cover.chosenTitle));
+    return;
+  }
   giveNupIcon(target.row, () => app().UseCover(target.row.item.path, address, target.replace));
 }
 
@@ -684,6 +695,13 @@ function coverLine(row) {
   choose.disabled = state.busy;
   choose.onclick = event => { event.stopPropagation(); chooseCover(row, choose); };
   buttons.append(choose);
+  // or an image of the eShop, found by the name of the game, as a NUP is given one (#102)
+  const search = document.createElement("button");
+  search.className = "outline";
+  search.textContent = t("searchImage");
+  search.disabled = state.busy;
+  search.onclick = event => { event.stopPropagation(); openCoverSearch(row, false, search, true); };
+  buttons.append(search);
   if (cover) {
     const image = document.createElement("img");
     image.alt = "";
@@ -724,6 +742,18 @@ async function chooseCover(row, button) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
   }
   paint(row);
+}
+
+// an image of the eShop or pasted for the NUP of a folder (#102): kept in a file by NXPress, then
+// cropped as one chosen from the disk
+async function folderCover(row, get) {
+  try {
+    const found = await get();
+    if (found) await cropCover(row, found, { disabled: false });
+  } catch (error) {
+    row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+    paint(row);
+  }
 }
 
 // the crop of the image of a folder chosen again, and the icon it makes shown in its row
@@ -1540,6 +1570,13 @@ function render() {
       // the menu keeps its tiles only on a narrow window: the name shows on hover
       button.title = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
+      // Combine and Split say what they do with NUP files too, on a line of its own (#141)
+      const nup = t("hint" + mode[0].toUpperCase() + mode.slice(1) + "Nup");
+      if (nup) {
+        const line = document.createElement("small");
+        line.textContent = nup;
+        button.querySelector("small").after(line);
+      }
       button.className = mode === state.mode && !state.view ? "on" : "";
       // the tile chosen pops; the menu is drawn again while it does, and the pop goes on where it was
       const since = performance.now() - (state.chosenAt || 0);
@@ -1582,7 +1619,9 @@ function render() {
   $("settings").hidden = preferences || ![...$("settings").children].some(block => !block.hidden);
   $("preferences").hidden = !preferences;
   $("open-preferences").classList.toggle("on", preferences);
-  $("keys-path").textContent = state.keys || t("keys")("");
+  // with none, said in red, as the side menu says it (#146)
+  $("keys-path").textContent = state.keys || t("keysNone");
+  $("keys-path").classList.toggle("bad", !state.keys);
   paintPublished();
   const page = worklog ? "worklog" : state.mode;
   $("title").textContent = t(page);

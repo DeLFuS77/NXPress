@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.7.19
+
+### Improvements
+
+- Combine: "Search image…" for the NUP of a dump folder too, with the images of the eShop or one pasted, then cropped. Thanks to NikoMuffin for the idea (#102)
+- Settings: with no prod.keys found it says so in red, and its help tells how to choose them. Thanks to NikoMuffin for the idea (#146)
+- Side menu: Combine and Split also say what they do with NUP files ("folder → NUP", "NUP → folder"). Thanks to NikoMuffin for the idea (#141)
+- Optimize for install (experimental): what a game holds more than once is stored once, wherever it is, and the next part is read while the one before is compressed: some games come out about 10 % smaller, and faster. The idea comes from hacBrewPackLZ
+
+### Fixes
+
+- Measure this PC: Cancel stops it at once, not about 30 seconds later. Thanks to NikoMuffin for reporting it (#149)
+
 ## 1.7.18
 
 ### Improvements
