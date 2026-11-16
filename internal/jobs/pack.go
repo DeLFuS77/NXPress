@@ -81,6 +81,7 @@ func pack(ctx context.Context, o Options, out Output) error {
 			return err
 		}
 	}
+	removeEmptyFolders(o, sources)
 	return nil
 }
 
@@ -510,7 +511,51 @@ func combine(ctx context.Context, o Options, files []string, template string, ne
 			failed++
 		}
 	}
+	removeEmptyFolders(o, files)
 	return failed
+}
+
+// removeEmptyFolders deletes, with --rm-source, the folders the originals of a pack were in when
+// nothing is left in them (#126): a game given as a folder with its updates and DLC in folders of
+// their own leaves none behind once its pack is made. Only folders that are empty go, from the
+// one of each original up to the folder given that holds it, never above it; a folder with
+// anything else in it, a file of the user or a hidden one, stays, and so do the ones above it.
+// Files given one by one leave their folders as they are.
+func removeEmptyFolders(o Options, files []string) {
+	if !o.RmSource {
+		return
+	}
+	given := GivenFolders(o)
+	for _, file := range files {
+		if _, err := os.Lstat(file); err == nil {
+			continue // kept: its folder is not empty
+		}
+		absolute, err := filepath.Abs(file)
+		if err != nil {
+			continue
+		}
+		top := ""
+		for _, folder := range given {
+			if inside(absolute, folder) && len(folder) > len(top) {
+				top = folder
+			}
+		}
+		if top == "" {
+			continue
+		}
+		for dir := filepath.Dir(absolute); inside(dir, top) || dir == top; dir = filepath.Dir(dir) {
+			// a folder with anything in it is not removed: the delete fails, and the climb ends
+			if os.Remove(dir) != nil || dir == top {
+				break
+			}
+		}
+	}
+}
+
+// inside tells whether path is in folder, at any depth, folder itself not counted
+func inside(path, folder string) bool {
+	relative, err := filepath.Rel(folder, path)
+	return err == nil && relative != "." && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative)
 }
 
 // packGame writes the pack of the files of a game, named by the titles it holds and its size,

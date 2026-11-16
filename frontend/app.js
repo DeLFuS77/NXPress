@@ -1579,7 +1579,7 @@ function render() {
   $("title-tile").innerHTML = icon(page);
   $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
-  for (const entry of (optimizing() ? takesOptimize : takesShown[state.mode]).split(" ")) {
+  for (const entry of (optimizing() ? takesOptimize : toCard() ? "NSP NSZ" : takesShown[state.mode]).split(" ")) {
     // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on; ":takesDumps"
     // alone: what it takes besides files
     const [type, which] = entry.split(":");
@@ -1626,6 +1626,7 @@ function render() {
   const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
   $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
+  $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
   // added on their own
   const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
@@ -2193,7 +2194,12 @@ function settings() {
     nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
+    // Convert: NSP and NSZ into game cards instead of game cards into NSP and NSZ (#127)
+    toCard: $("convert-to-card").checked,
     lowPriority: $("low-priority").checked,
+    // recovery data (.par2) for the percent chosen of each new file, and Verify repairing with it
+    par2: $("par2").checked ? +$("par2-percent").value : 0, par2Percent: +$("par2-percent").value,
+    repair: $("repair").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
     // Optimize for install, in Compress
@@ -2205,14 +2211,21 @@ function settings() {
 
 // Compress with Optimize for install on: the games with their updates, into one NSZ each
 const optimizing = () => state.mode === "compress" && $("optimize").checked;
-// the files the list takes: Optimize for install takes NSZ and XCZ too
-const expandMode = () => (optimizing() ? "optimize" : state.mode);
+// Convert from NSP and NSZ into game cards
+const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
+// the files the list takes: Optimize for install takes NSZ and XCZ too, and Convert into game
+// cards NSP and NSZ
+const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : state.mode);
 
 // presets: the settings of a compression kept with a name
 const builtinPresets = () => [
   { name: t("presetInstallers"), level: 18, block: false, builtin: true },
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
   { name: t("presetFast"), level: 3, block: false, builtin: true },
+  // the smallest files: the highest level, for installers, and with the extra compression too,
+  // which asks first, as its box does (#125)
+  { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
+  { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
 // the preset chosen is kept by what it is, not by its place in the list, which changes when one
 // is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
@@ -2273,6 +2286,14 @@ function applyPreset() {
   $(preset.block ? "target-block" : "target-solid").checked = true;
   if (preset.threads) $("threads").value = preset.threads;
   if (preset.multi) $("multi").value = preset.multi;
+  // the presets of NXPress say whether the extra compression goes with them: turned on, it asks
+  // first, and stays off if that is not accepted
+  if (preset.extra === false && $("extra").checked) $("extra").checked = false;
+  if (preset.extra === true && !$("extra").checked) {
+    $("extra").checked = true;
+    $("extra").onchange();
+    return;
+  }
   save("settings", settings());
   render();
 }
@@ -3070,6 +3091,10 @@ async function main() {
   $("nup-raw-big").checked = chosen.nupRawBig !== false;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  $("par2").checked = chosen.par2 > 0;
+  $("par2-percent").value = String([1, 3, 5, 10].includes(chosen.par2Percent) ? chosen.par2Percent : 3);
+  // Verify repairs with the recovery data unless it was turned off
+  $("repair").checked = chosen.repair !== false;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
   $("keep-named").checked = !!chosen.keepNamed;
   $("low-priority").checked = !!chosen.lowPriority;
@@ -3089,6 +3114,8 @@ async function main() {
   $("template").value = state.template;
   // a pack per game unless one file with everything was chosen last
   $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
+  // Convert into NSP and NSZ unless into game cards was chosen last
+  $(chosen.toCard === true ? "convert-to-card" : "convert-to-nsp").checked = true;
   state.packTemplate = text(chosen.packTemplate) || await app().DefaultPackTemplate();
   $("pack-template").value = state.packTemplate;
 
@@ -3132,7 +3159,7 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
-  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = render;
+  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;
   $("skip-sparse-updates").onchange = () => save("settings", settings());
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
@@ -3234,6 +3261,11 @@ async function main() {
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
   for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); previewPacks(); };
+  // the list is made again for the files of the way chosen, as for Optimize for install
+  for (const radio of [$("convert-to-nsp"), $("convert-to-card")]) radio.onchange = () => {
+    save("settings", settings());
+    refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
+  };
   $("overwrite").addEventListener("change", previewPacks);
   for (const field of [$("template"), $("pack-template")]) {
     field.addEventListener("input", () => fitTemplate(field));

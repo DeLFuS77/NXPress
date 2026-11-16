@@ -28,8 +28,10 @@ var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
 	"decompress": {".nsz", ".xcz", ".nup"},
 	// the dump folders, by the code of their games
-	"verify":     {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
-	"convert":    {".xci", ".xcz"},
+	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
+	"convert": {".xci", ".xcz"},
+	// Convert the other way round, NSP and NSZ into game cards (#127)
+	"tocard":     {".nsp", ".nsz"},
 	"recompress": {".nsz", ".xcz"},
 	"trim":       {".xci", ".nsp", ".nsz"},
 	"estimate":   {".nsp", ".xci"},
@@ -60,6 +62,7 @@ var checksOutput = map[string]bool{
 	"compress":   true,
 	"decompress": true,
 	"convert":    true,
+	"tocard":     true,
 	"recompress": true,
 	"trim":       true,
 	"fat32":      false,
@@ -178,6 +181,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 					}
 					return safeJob(ctx, action, path, o, threads, out)
 				})
+				// the recovery data of the new file, with --par2, or made again for a file written again
+				if err == nil {
+					note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
+				}
 				// a new file checked as a game before it got its name need not be read again (a
 				// folder a NUP was unpacked into is no file to remember)
 				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
@@ -550,7 +557,7 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		return compress(ctx, path, o, threads, out)
 	case "decompress":
 		return decompress(ctx, path, o, out)
-	case "convert":
+	case "convert", "tocard":
 		return convert(ctx, path, o, out)
 	case "recompress":
 		return recompress(ctx, path, o, threads, out)
@@ -591,6 +598,8 @@ func removeSource(o Options, path string, check switchfs.FileCheck, name string,
 	if err := os.Remove(path); err != nil {
 		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 	}
+	// its recovery data goes with it, or it would be left for a file no longer there
+	removeRecovery(path)
 	return name, note, nil
 }
 

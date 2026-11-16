@@ -469,5 +469,6 @@ func rename(ctx context.Context, path string, o Options, out Output) (string, st
 	if err != nil {
 		return "", "", err
 	}
+	moveRecovery(path, name)
 	return name, "renamed to " + filepath.Base(name), nil
 }
