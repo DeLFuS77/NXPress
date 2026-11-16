@@ -2,9 +2,19 @@
 
 ## Unreleased
 
+### Improvements
+
+- Verify and Details: the notes of the list, such as a newer update in the list or a newer version published, stay under each file after the work too. Thanks to NikoMuffin for the idea (#136)
+- Settings: a Credits section
+- A program that is not an official version of NXPress says so in the side menu ("Unofficial build"), and the report of a work too. The official versions are known by their signed checksums
+- The name and the logo of NXPress are not licensed with the code: a modified version needs its own (TRADEMARKS.md)
+
 ### Fixes
 
 - The settings on the right are dimmed while a work is running, as the side menu is. Thanks to NikoMuffin for reporting it (#133)
+- Measure this PC shows its results in a window again, with every setting tried. Thanks to NikoMuffin for reporting it (#128)
+- Details of thousands of files: the window keeps up with the work, so Cancel stops it when pressed. Thanks to NikoMuffin for reporting it (#135)
+- Combine: the NUP of each dump folder is named by the template, as the SuperNSP of each game are. Thanks to QuickWick for spotting it
 
 ## 1.7.17
 
