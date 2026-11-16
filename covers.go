@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -98,6 +102,60 @@ func (a *App) UseCover(path string, address string, replace bool) (string, error
 	}
 	defer done()
 	return fixNupIcon(a.ctx, path, jobs.Options{NupIconImage: image, NupIconFrom: "the image of the eShop", ReplaceNupIcon: replace})
+}
+
+// EshopCoverImage is the image of a game of the last search, for the NUP a dump folder is
+// combined into (#102): kept in a file, it is cropped and used as an image chosen from the disk.
+func (a *App) EshopCoverImage(address string, title string) (*CoverImage, error) {
+	if !eshop.ImageAddress(address) {
+		return nil, errors.New("not an image of the eShop")
+	}
+	a.coversMutex.Lock()
+	image := a.covers[address]
+	a.coversMutex.Unlock()
+	if image == nil {
+		var err error
+		if image, err = eshop.DownloadImage(a.context(), coverClient, address); err != nil {
+			return nil, err
+		}
+	}
+	return keptCover(image, title)
+}
+
+// PastedCoverImage is an image pasted in the window to search, for the NUP of a dump folder.
+func (a *App) PastedCoverImage(data string) (*CoverImage, error) {
+	image, err := pastedImage(data)
+	if err != nil {
+		return nil, err
+	}
+	return keptCover(image, "")
+}
+
+// keptCover writes an image of the eShop or pasted to a file of the temporary folder, named by
+// its contents, and reads it as an image chosen for a NUP: the NUP is made of that file later.
+func keptCover(image []byte, name string) (*CoverImage, error) {
+	if len(image) > nup.MaxIconFile {
+		return nil, errors.New("the image is too big to be an icon")
+	}
+	folder := filepath.Join(os.TempDir(), "nxpress-covers")
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(image)
+	path := filepath.Join(folder, hex.EncodeToString(sum[:12])+".image")
+	if _, err := os.Stat(path); err != nil {
+		if err := os.WriteFile(path, image, 0o644); err != nil {
+			return nil, err
+		}
+	}
+	cover, err := coverImage(path)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		cover.Name = name
+	}
+	return cover, nil
 }
 
 // PasteNupIcon gives a NUP an image pasted in the window, as the page reads it (an address of
