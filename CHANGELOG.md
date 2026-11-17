@@ -1,22 +1,22 @@
 # Changelog
 
-## Unreleased
+## 1.7.22
 
 ### Improvements
 
-- A review of the whole window: the card of a game opens with a click or the keyboard too and stays, with Copy, Full report and Close; an error of a kind known is told in your language, with what NXPress said under What to do; text read is 12 px at least; the button that takes a file out of the list shows on its row only; the fields of a template and the experimental options of the compression are a click away; the boxes of Combine and Split are round; what reads the files shows for the way chosen only; the column of the state shows once there is one; and the side menu fits a window 800 px high
-- Details tells the kind of package a file is (as published, a game card dump, converted, homebrew, changed by a tool, or incomplete with what it is missing) and what its program may use (main.npdm): a summary in its card, the full list in the full report
-- The card of a NUP in Details shows each package in columns: its kind, its name with its title ID and versions on one line, then its files, its size uncompressed and compressed, each with its name under it. Its icon is changed by clicking it, in place of the button under the card. Thanks to NikoMuffin for the idea (#145)
-- Settings in a new order: your keys first, then how the work goes, how NXPress looks, Windows, updates, help and credits, with an index that marks the section you read, and a notice at the top while there is no prod.keys
-- Settings › Appearance › Side menu: switch off the tools you don't use and they leave the side menu. Thanks to NikoMuffin for the idea (#140)
-- The notice with Undo shows its shortcut, Ctrl+Z. Thanks to NikoMuffin for the idea (#131)
+- A review of the whole window: the card of a game opens with a click or the keyboard too and stays open, with Copy, Full report and Close; errors of a known kind are told in the language of the window; text is 12 px at least; the fields of a template and the experimental options are folded; the boxes of Combine and Split are round; and the side menu fits a window 800 px high
+- Details tells the kind of package of a file (as published, game card dump, converted, homebrew, changed by a tool, or incomplete) and what its program may use (main.npdm)
+- Details: the card of a NUP shows each package in columns, and its icon is changed by clicking it. Thanks to NikoMuffin for the idea (#145)
 - Rename: the title and the image of a NUP can be changed in its row, and the button says Rename with template. Thanks to NikoMuffin for the idea (#144)
+- Settings in a new order, with an index of its sections and a notice at the top while there is no prod.keys
+- Settings › Appearance › Side menu: a tool switched off leaves the side menu. Thanks to NikoMuffin for the idea (#140)
+- The notice with Undo shows its shortcut, Ctrl+Z. Thanks to NikoMuffin for the idea (#131)
 - Combine with dump folders only: the template up top names each NUP, whichever way of Combine was chosen. Thanks to QuickWick for the idea
 - The card of a game no longer opens over the box at the left of its row. Thanks to QuickWick for the idea
 
 ### Fixes
 
-- Cancel answers at once with thousands of files, as in Details: the window gets what the work tells a few times a second, not each file on its own. Thanks to NikoMuffin for reporting it (#135)
+- Cancel answers at once with thousands of files, as in Details. Thanks to NikoMuffin for reporting it (#135)
 - A game of several programs (a collection): Details tells the NCA of every program, and Combine checks that none of them is missing
 
 ## 1.7.21
