@@ -24,10 +24,10 @@ import (
 // other works leave them as they are, and say so.
 
 // NupNotDone is why a NUP given to any other work is left as it is.
-const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
+const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Split (--split) takes out their game, updates or DLC, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "rename": true, "fixmeta": true, "fixicon": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "split": true, "rename": true, "fixmeta": true, "fixicon": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {

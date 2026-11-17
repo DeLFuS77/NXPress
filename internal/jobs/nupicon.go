@@ -174,27 +174,35 @@ func readIconFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// packIcon is the icon a dump folder without one gives its NUP, and the note that tells of it.
-func packIcon(ctx context.Context, dir string, o Options) ([]byte, string) {
+// packIcon is the icon a dump folder without one gives its NUP, or the image chosen for it in
+// Combine, which replaces its own (cover), and the note that tells of it.
+func packIcon(ctx context.Context, dir string, o Options) (icon []byte, cover bool, note string) {
 	summary, err := readDump(dir)
 	if err != nil {
-		return nil, ""
+		return nil, false, ""
 	}
 	main := summary.sources[appSource(summary.sources)]
-	if nup.ControlIcon(main.Control) != nil {
-		return nil, ""
-	}
 	if o.NoNupIcon {
-		return nil, ""
+		return nil, false, ""
 	}
-	if chosen := chosenIcon(o.NupIcons, dir); chosen != "" {
+	chosen := chosenIcon(o.NupIcons, dir)
+	// an image chosen in Combine is used even where the folder has an icon of its own, which it
+	// replaces (the caller makes it the cover); else the icon of the folder stays
+	own := nup.ControlIcon(main.Control) != nil
+	if chosen == "" && own {
+		return nil, false, ""
+	}
+	if chosen != "" {
 		o.NupIcon, o.NupIconImage, o.NupIconCrop = chosen, nil, chosenCrop(o.NupIconCrops, dir)
 	}
 	icon, from, blurry, err := iconOf(ctx, o, main.TitleID)
 	if err != nil {
-		return nil, noIconNote(err)
+		return nil, false, noIconNote(err)
 	}
-	return icon, "its folder has no icon: it carries " + from + ", 256×256" + blurry
+	if own {
+		return icon, true, "it carries " + from + " instead of the icon of its folder, 256×256" + blurry
+	}
+	return icon, chosen != "", "its folder has no icon: it carries " + from + ", 256×256" + blurry
 }
 
 // chosenIcon is the image chosen in Combine for a dump folder, found by its path as the window

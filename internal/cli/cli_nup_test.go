@@ -164,7 +164,7 @@ func TestNupWithoutKeys(t *testing.T) {
 	}
 
 	// no other work takes a NUP: it is told, and is no failure
-	for _, args := range [][]string{{"-C"}, {"--convert"}, {"--recompress"}, {"--trim"}, {"--split"}} {
+	for _, args := range [][]string{{"-C"}, {"--convert"}, {"--recompress"}, {"--trim"}} {
 		code, out = run(append(args, good)...)
 		if code != 0 || !strings.Contains(out, "SKIPPED Made-up Quest.nup (this work leaves NUP files as they are") {
 			t.Errorf("%v: %d\n%s", args, code, out)
@@ -172,6 +172,14 @@ func TestNupWithoutKeys(t *testing.T) {
 		if strings.Contains(out, "no file to") {
 			t.Errorf("%v: told no file too\n%s", args, out)
 		}
+	}
+
+	// --split takes a NUP too, all of it with no parts chosen (#138)
+	splitFolder := t.TempDir()
+	toSplit := filepath.Join(splitFolder, "Made-up Quest.nup")
+	os.WriteFile(toSplit, testnup.Build(nupGame()), 0o644)
+	if code, out = run("--split", toSplit); code != 0 || !strings.Contains(out, "OK Made-up Quest.nup -> Made-up Quest") {
+		t.Errorf("--split: %d\n%s", code, out)
 	}
 
 	// -D turns a NUP into a folder of the same name, and --nup packs the folder again

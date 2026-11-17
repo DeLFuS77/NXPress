@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.20
+
+### Improvements
+
+Brought from the edition of QuickWick. Thanks to QuickWick for them (#151):
+
+- Split takes NUP files, with a box for each part to take out: the game, its updates, its DLC and its icon (#138)
+- Details: the name of a NUP can be changed in its card, where it is (#144)
+- Combine and Split: a box at the left of each file chooses whether the work takes it
+- Combine: the icon of the game data of a dump folder shows, and an image chosen replaces it
+- Details: the full report of a file, to copy or save as .txt, and of every file in Export
+- Images for icons: GIF, AVIF and ICO too
+
+### Fixes
+
+- Combine: an image chosen for a dump folder that has an icon of its own is no longer left out
+
 ## 1.7.19
 
 ### Improvements
@@ -7,7 +24,7 @@
 - Combine: "Search image…" for the NUP of a dump folder too, with the images of the eShop or one pasted, then cropped. Thanks to NikoMuffin for the idea (#102)
 - Settings: with no prod.keys found it says so in red, and its help tells how to choose them. Thanks to NikoMuffin for the idea (#146)
 - Side menu: Combine and Split also say what they do with NUP files ("folder → NUP", "NUP → folder"). Thanks to NikoMuffin for the idea (#141)
-- Optimize for install (experimental): what a game holds more than once is stored once, wherever it is, and the next part is read while the one before is compressed: some games come out about 10 % smaller, and faster. The idea comes from hacBrewPackLZ
+- Optimize for install (experimental): what a game holds more than once is stored once, wherever it is, and the next part is read while the one before is compressed: some games come out about 10 % smaller, and faster
 
 ### Fixes
 

@@ -80,7 +80,7 @@
       </div>
       <table id="files" hidden>
         <!-- a column sorts with a button in its header, for the keyboard too; the button wears the letter and the color of the header -->
-        <thead><tr><th data-sort="name" data-t-title="sortHint" aria-sort="none"><button data-t="file"></button></th><th class="size" data-sort="size" data-t-title="sortHint" aria-sort="none"><button data-t="size"></button></th><th class="state" data-sort="state" data-t-title="sortHint" aria-sort="none"><button data-t="state"></button></th><th></th></tr></thead>
+        <thead><tr><th data-sort="name" data-t-title="sortHint" aria-sort="none"><label class="pick pick-all"><input type="checkbox" id="pick-all" data-t-label="pickAll"></label><button data-t="file"></button></th><th class="size" data-sort="size" data-t-title="sortHint" aria-sort="none"><button data-t="size"></button></th><th class="state" data-sort="state" data-t-title="sortHint" aria-sort="none"><button data-t="state"></button></th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -461,6 +461,11 @@
   <div id="cover-grid" class="cover-grid"></div>
   <p class="cover-paste muted" data-t="coverPasteHere"></p>
   <div class="dialog-actions"><button id="cover-web" class="quiet cover-web" data-t="coverWeb"></button><button id="cover-cancel" data-t="cancel"></button><button id="cover-use" class="primary" data-t="coverUse" disabled></button></div>
+</dialog>
+<dialog id="report-dialog" class="report-dialog" aria-labelledby="report-title">
+  <h2 id="report-title"></h2>
+  <pre id="report-text" class="report-text" tabindex="0"></pre>
+  <div class="dialog-actions"><button id="report-copy" data-t="reportCopy"></button><button id="report-save" data-t="reportSave"></button><button id="report-close" class="primary" data-t="reportClose"></button></div>
 </dialog>
 <dialog id="crop-dialog" class="crop-dialog" aria-labelledby="crop-title">
   <h2 id="crop-title" data-t="cropTitle"></h2>
