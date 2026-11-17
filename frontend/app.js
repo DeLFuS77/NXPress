@@ -1061,54 +1061,6 @@ function applyPalette() {
   if (state.palette === "nxpress") document.documentElement.removeAttribute("data-palette");
   else document.documentElement.dataset.palette = state.palette;
 }
-// ---- Settings: the index of its sections ----
-// A link to each section, beside them (above them on a narrow window); the one read is marked
-// as the page scrolls. A section hidden (Windows, elsewhere) has no link.
-function paintPrefIndex() {
-  const index = $("pref-index");
-  const sections = [...document.querySelectorAll("[data-pref-section]")].filter(section => !section.hidden);
-  index.innerHTML = "";
-  for (const section of sections) {
-    const link = document.createElement("button");
-    link.type = "button";
-    link.className = "pref-link";
-    link.dataset.section = section.id;
-    link.innerHTML = section.querySelector("h2 svg").outerHTML + "<span></span>";
-    link.querySelector("span").textContent = section.querySelector("h2 span").textContent;
-    link.onclick = () => {
-      section.scrollIntoView({ behavior: calm() ? "auto" : "smooth", block: "start" });
-      markPrefSection(section.id);
-    };
-    index.append(link);
-  }
-  markPrefSection(state.prefSection || (sections[0] && sections[0].id));
-}
-function markPrefSection(id) {
-  state.prefSection = id;
-  for (const link of $("pref-index").children) {
-    const on = link.dataset.section === id;
-    link.classList.toggle("on", on);
-    if (on) link.setAttribute("aria-current", "true");
-    else link.removeAttribute("aria-current");
-  }
-}
-// the section read is the last one whose title has gone past the top of the page
-function followPrefScroll() {
-  const page = $("preferences");
-  const top = page.getBoundingClientRect().top + 72;
-  let current = "";
-  for (const section of document.querySelectorAll("[data-pref-section]")) {
-    if (section.hidden) continue;
-    if (!current || section.getBoundingClientRect().top <= top) current = section.id;
-  }
-  // at the bottom the last one is read, short as it is
-  if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) {
-    const shown = [...document.querySelectorAll("[data-pref-section]")].filter(section => !section.hidden);
-    if (shown.length) current = shown[shown.length - 1].id;
-  }
-  if (current && current !== state.prefSection) markPrefSection(current);
-}
-
 // ---- Settings: the tools of the side menu (#140) ----
 // A box for each tool: one switched off leaves the side menu, and comes back when it is switched
 // on. One stays at least; the section shown, switched off, gives way to the first one left.
@@ -2012,7 +1964,6 @@ function render() {
   // with none, said in red, as the side menu says it (#146)
   $("keys-path").textContent = state.keys || t("keysNone");
   $("pref-no-keys").hidden = !!state.keys;
-  paintPrefIndex();
   $("keys-path").classList.toggle("bad", !state.keys);
   paintPublished();
   const page = worklog ? "worklog" : state.mode;
@@ -3814,7 +3765,6 @@ async function main() {
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
   $("keys-choose").onclick = $("keys-change").onclick = $("pref-no-keys-choose").onclick = () => $("keys").click();
-  $("preferences").addEventListener("scroll", followPrefScroll, { passive: true });
   for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("views", { ...load("views", {}), [state.mode]: button.dataset.view }); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause

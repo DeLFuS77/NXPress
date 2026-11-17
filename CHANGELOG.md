@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.23
+
+### Fixes
+
+- Settings are back in two columns, without the index of 1.7.22: the keys, General (with the language) and Appearance on one side; Windows, updates and help on the other; and the credits as a small line at the bottom
+
 ## 1.7.22
 
 ### Improvements
