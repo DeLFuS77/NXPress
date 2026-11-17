@@ -517,7 +517,7 @@ function iconLine(row, replace) {
   search.onclick = () => openCoverSearch(row, replace, search);
   // an image of one's own, cropped before it is given; a crop cancelled gives nothing
   choose.onclick = () => giveNupIcon(row, async () => {
-    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    const cover = await chooseImage();
     if (!cover) return "";
     const crop = await cropImage(cover);
     if (!crop) return "";
@@ -845,7 +845,7 @@ function coverLine(row) {
 async function chooseCover(row, button) {
   button.disabled = true;
   try {
-    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    const cover = await chooseImage();
     if (cover) await cropCover(row, cover, button);
   } catch (error) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
@@ -863,6 +863,30 @@ async function folderCover(row, get) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
     paint(row);
   }
+}
+
+// an image chosen for an icon: the ones NXPress does not read itself (AVIF, ICO) are read by the
+// window and given to it as PNG (brought from the edition of QuickWick, PR #151)
+async function chooseImage() {
+  const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+  if (!cover || !cover.convert) return cover;
+  const made = await app().PastedCoverImage(await asPng(cover.convert));
+  if (made) made.name = cover.name;
+  return made;
+}
+function asPng(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    image.onerror = () => reject(new Error(t("imageUnreadable")));
+    image.src = source;
+  });
 }
 
 // the crop of the image of a folder chosen again, and the icon it makes shown in its row

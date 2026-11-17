@@ -554,7 +554,7 @@ func (a *App) ChooseNupIcon(path string, title string, replace bool) (string, er
 	}
 	image, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title:   title,
-		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp, *.gif)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif"}},
 	})
 	if err != nil || image == "" {
 		return "", err
@@ -604,7 +604,13 @@ type CoverImage struct {
 	Source  string `json:"source"`
 	Width   int    `json:"width"`
 	Height  int    `json:"height"`
+	// an image NXPress does not read itself (AVIF, ICO), as an address of data: the window reads it
+	// and gives it back as PNG (brought from the edition of QuickWick, PR #151)
+	Convert string `json:"convert,omitempty"`
 }
+
+// windowImages are the images the window reads for NXPress, by their extension.
+var windowImages = map[string]string{".avif": "image/avif", ".ico": "image/x-icon"}
 
 // cropSide is the longest side of the image the crop of the window shows.
 const cropSide = 1024
@@ -627,7 +633,7 @@ func readCoverFile(path string) ([]byte, error) {
 func (a *App) ChooseCoverImage(title string) (*CoverImage, error) {
 	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title:   title,
-		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}},
+		Filters: []wailsruntime.FileFilter{{DisplayName: "Image (*.png, *.jpg, *.jpeg, *.webp, *.bmp, *.gif, *.avif, *.ico)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.avif;*.ico"}},
 	})
 	if err != nil || path == "" {
 		return nil, err
@@ -641,6 +647,9 @@ func coverImage(path string) (*CoverImage, error) {
 	data, err := readCoverFile(path)
 	if err != nil {
 		return nil, err
+	}
+	if kind, ok := windowImages[strings.ToLower(filepath.Ext(path))]; ok {
+		return &CoverImage{Name: filepath.Base(path), Convert: "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(data)}, nil
 	}
 	icon, err := nup.MakeIcon(data)
 	if err != nil {
