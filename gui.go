@@ -827,6 +827,8 @@ type Request struct {
 	NupIcons map[string]string `json:"nupIcons"`
 	// and the part of each image chosen in its crop
 	NupIconCrops map[string]nup.Crop `json:"nupIconCrops"`
+	// Split: what to take out of each NUP, by its path (#138); a NUP not named, all of it
+	SplitParts map[string]jobs.SplitParts `json:"splitParts"`
 }
 
 // Start does the work in the background: the page follows it by the events "progress", "done"
@@ -883,6 +885,7 @@ func (a *App) Start(request Request) error {
 		}
 	case "split":
 		o.Split = true
+		o.SplitParts = request.SplitParts
 	case "info":
 		o.Info = true
 		if request.Published {

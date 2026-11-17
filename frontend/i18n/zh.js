@@ -42,7 +42,7 @@ texts.zh = {
   levelHint: l => l === 18 ? "最大压缩，nsz 的默认级别：文件小，速度较慢。最高的 19 级几乎不会更小，而且更慢。" : l === 19 ? "最大压缩，最高级别：文件最小，速度最慢。" : l >= 15 ? "最大压缩：文件最小，速度最慢。" : l >= 7 ? "中等压缩：兼顾速度和体积。" : "轻度压缩：速度快，文件稍大。",
   groupSpace: "空间", groupOrganize: "整理", groupCheck: "检查",
   hintCompress: "NSP → NSZ, XCI → XCZ", hintDecompress: "NSZ → NSP, XCZ → XCI", hintRecompress: "更改等级或类型", hintTrim: "填充和增量",
-  hintPack: "文件 → SuperNSP/XCI", hintSplit: "SuperNSP/XCI → 各标题", hintPackNup: "文件夹 → NUP", hintSplitNup: "NUP → 文件夹", hintConvert: "XCI ↔ NSP, XCZ ↔ NSZ", convertToNsp: "XCI 和 XCZ 转为 NSP 和 NSZ", convertToNspHint: "卡带中的文件原样放入 NSP。", convertToCard: "NSP 和 NSZ 转为 XCI 和 XCZ", convertToCardHint: "文件放入一个由 NXPress 写入头部的卡带（没有任天堂签名），供能读取 XCI 的安装器和模拟器使用。", hintVerify: "哈希和签名", hintInfo: "游戏和文件信息",
+  hintPack: "文件 → SuperNSP/XCI", hintSplit: "SuperNSP/XCI → 各标题", hintPackNup: "文件夹 → NUP", hintSplitNup: "NUP → 文件夹", splitTake: "取出：", splitIcon: "图标", editName: "修改名称…", saveName: "保存", nameChanged: "已修改 NUP 中的名称。", hintConvert: "XCI ↔ NSP, XCZ ↔ NSZ", convertToNsp: "XCI 和 XCZ 转为 NSP 和 NSZ", convertToNspHint: "卡带中的文件原样放入 NSP。", convertToCard: "NSP 和 NSZ 转为 XCI 和 XCZ", convertToCardHint: "文件放入一个由 NXPress 写入头部的卡带（没有任天堂签名），供能读取 XCI 的安装器和模拟器使用。", hintVerify: "哈希和签名", hintInfo: "游戏和文件信息",
   hintFat32: "超过 4 GB 的文件 ↔ 分片", hintRename: "按内容命名",
   target: "用途", forInstallers: "安装器", forInstallersHint: "固实：文件最小。",
   forEmulators: "模拟器和安装器", forEmulatorsHint: "分块：支持 NSZ 的模拟器可直接运行。",

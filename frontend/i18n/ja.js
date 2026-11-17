@@ -42,7 +42,7 @@ texts.ja = {
   levelHint: l => l === 18 ? "最大圧縮。nsz の既定のレベルです。ファイルは小さく、時間がかかります。最高の 19 はわずかに小さくなるだけで、さらに遅くなります。" : l === 19 ? "最大圧縮、最高レベル：ファイルは最も小さく、最も時間がかかります。" : l >= 15 ? "最大圧縮：ファイルは最も小さく、最も時間がかかります。" : l >= 7 ? "標準圧縮：バランスの良い設定です。" : "軽め：速いですが、ファイルは少し大きくなります。",
   groupSpace: "容量", groupOrganize: "整理", groupCheck: "確認",
   hintCompress: "NSP → NSZ, XCI → XCZ", hintDecompress: "NSZ → NSP, XCZ → XCI", hintRecompress: "レベルや種類を変更", hintTrim: "パディングとデルタ",
-  hintPack: "ファイル → SuperNSP/XCI", hintSplit: "SuperNSP/XCI → タイトル", hintPackNup: "フォルダー → NUP", hintSplitNup: "NUP → フォルダー", hintConvert: "XCI ↔ NSP, XCZ ↔ NSZ", convertToNsp: "XCI と XCZ を NSP と NSZ に", convertToNspHint: "ゲームカードのファイルをそのまま NSP に入れます。", convertToCard: "NSP と NSZ を XCI と XCZ に", convertToCardHint: "ファイルを NXPress が書いたヘッダー（Nintendo の署名なし）のゲームカードに入れます。XCI を読めるインストーラーとエミュレーター向けです。", hintVerify: "ハッシュと署名", hintInfo: "ゲームとファイルの情報",
+  hintPack: "ファイル → SuperNSP/XCI", hintSplit: "SuperNSP/XCI → タイトル", hintPackNup: "フォルダー → NUP", hintSplitNup: "NUP → フォルダー", splitTake: "取り出す：", splitIcon: "アイコン", editName: "名前を変更…", saveName: "保存", nameChanged: "NUP の名前を変更しました。", hintConvert: "XCI ↔ NSP, XCZ ↔ NSZ", convertToNsp: "XCI と XCZ を NSP と NSZ に", convertToNspHint: "ゲームカードのファイルをそのまま NSP に入れます。", convertToCard: "NSP と NSZ を XCI と XCZ に", convertToCardHint: "ファイルを NXPress が書いたヘッダー（Nintendo の署名なし）のゲームカードに入れます。XCI を読めるインストーラーとエミュレーター向けです。", hintVerify: "ハッシュと署名", hintInfo: "ゲームとファイルの情報",
   hintFat32: "4 GB 超 ↔ パーツ", hintRename: "中身から名前を付ける",
   target: "用途", forInstallers: "インストーラー", forInstallersHint: "ソリッド：最も小さいファイル。",
   forEmulators: "エミュレーターとインストーラー", forEmulatorsHint: "ブロック：NSZ を読めるエミュレーターはそのまま起動できます。",

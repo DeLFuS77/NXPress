@@ -323,8 +323,66 @@ function splitEmulators(note) {
 // told only where it differs, for the files stored with zstd. Under them, whether Eglantine and
 // Lichii read it well, as the cards of the other files tell what reads them, and in orange what
 // keeps them from it, with a button to write its metadata again when it is counted from 0.
+// the name of the game of a NUP in its card, which can be changed where it is: Edit name opens a
+// field with it, and Save writes it in the NUP (#144, brought from the edition of QuickWick, PR #151)
+function nupNameLine(row) {
+  const line = document.createElement("div");
+  line.className = "nup-name-edit";
+  if (!row.nameEditing) {
+    const edit = document.createElement("button");
+    edit.className = "outline";
+    edit.textContent = t("editName");
+    edit.disabled = state.busy;
+    edit.onclick = () => { row.nameEditing = true; renderCard(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
+    line.append(edit);
+    if (row.nameNote) {
+      const said = document.createElement("span");
+      said.className = "say";
+      said.textContent = row.nameNote;
+      line.append(said);
+    }
+    return line;
+  }
+  line.innerHTML = `<input type="text" maxlength="200" spellcheck="false"><button class="primary small"></button><button class="quiet"></button>`;
+  const [input] = line.querySelectorAll("input");
+  const [save, cancel] = line.querySelectorAll("button");
+  input.value = shownName(row);
+  input.setAttribute("aria-label", t("editName"));
+  save.textContent = t("saveName");
+  cancel.textContent = t("cancel");
+  // why the last try failed, in orange, until another try
+  if (row.nameFailed) {
+    const said = document.createElement("p");
+    said.className = "say warning";
+    said.textContent = row.nameFailed;
+    line.append(said);
+  }
+  const close = () => { row.nameEditing = false; row.nameFailed = ""; renderCard(row); };
+  cancel.onclick = close;
+  input.onkeydown = event => { if (event.key === "Enter") save.click(); if (event.key === "Escape") close(); };
+  save.onclick = async () => {
+    const name = input.value.trim();
+    if (!name || name === shownName(row)) { close(); return; }
+    save.disabled = cancel.disabled = input.disabled = true;
+    try {
+      await app().EditNupTitle(row.item.path, name);
+      row.nameEditing = false;
+      row.nameFailed = "";
+      row.nameNote = t("nameChanged");
+      row.card = await app().Card(row.item.path);
+      row.game = await app().Describe(row.item.path);
+      paint(row);
+    } catch (error) {
+      row.nameFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+    }
+    renderCard(row);
+  };
+  return line;
+}
+
 function renderNupCard(element, card, row) {
   element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div><div class="card-only"></div>`;
+  element.querySelector(".nup-packages").before(nupNameLine(row));
   for (const name of ["Eglantine", "Lichii"]) {
     const tag = document.createElement("i");
     tag.className = card.emulatorsOk ? "yes" : "warn";
@@ -678,6 +736,35 @@ function cropImage(cover) {
     openDialog(dialog);
     stage.focus();
   });
+}
+
+// the line of a NUP in Split with what to take out of it: a box for its game, its updates, its DLC
+// and its icon, the ones it has; all are taken until one is left out (#138, brought from the
+// edition of QuickWick, PR #151)
+function splitPartsLine(row) {
+  const game = row.game;
+  const pick = row.item.splitParts || { base: true, update: true, dlc: true, icon: true };
+  const line = document.createElement("div");
+  line.className = "split-parts";
+  const label = document.createElement("span");
+  label.textContent = t("splitTake");
+  line.append(label);
+  const parts = [["base", game.bases, t("gameKind")("BASE")], ["update", game.updates, t("gameKind")("UPD")], ["dlc", game.dlcs, t("gameKind")("DLC")], ["icon", game.icon ? 1 : 0, t("splitIcon")]];
+  for (const [key, count, name] of parts) {
+    if (!count) continue;
+    const chip = document.createElement("label");
+    chip.className = "split-part";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = pick[key] !== false;
+    box.disabled = state.busy;
+    box.onchange = () => { row.item.splitParts = { ...pick, [key]: box.checked }; paint(row); };
+    const text = document.createElement("span");
+    text.textContent = name + (count > 1 ? ` ×${count}` : "");
+    chip.append(box, text);
+    line.append(chip);
+  }
+  return line;
 }
 
 // the line of a dump folder in Combine where an image is chosen for its NUP: its icon as it will
@@ -2004,6 +2091,9 @@ function paint(row) {
     if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
+  // a NUP in Split: what to take out of it, its game, its updates, its DLC and its icon (#138)
+  row.tr.querySelector(".split-parts")?.remove();
+  if (row.game && row.game.container === "NUP" && !row.status && state.mode === "split") file.after(splitPartsLine(row));
   // a warning of the list shows until the file is worked on; in Verify and Details, which leave
   // the file as it is, it stays after the work too, where it is looked at most (#136)
   let warn = row.tr.querySelector(".list-warn");
@@ -2390,7 +2480,10 @@ async function start(mode, extra) {
     nupIcons[item.path] = item.cover.path;
     if (item.cover.crop) nupIconCrops[item.path] = item.cover.crop;
   }
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, ...(extra || {}) };
+  // what to take out of each NUP in Split (#138)
+  const splitParts = {};
+  if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
