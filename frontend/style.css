@@ -959,3 +959,10 @@ dragged over and the icon lifts: the icon's center is 40px above it (half its 56
 /* with colors other than NXPress, the menu wears them instead of the Mica of Windows 11 */
 html.mica[data-palette] body { background: var(--bg); }
 html.mica[data-palette] nav { background: var(--panel); }
+
+/* Combine and Split: a box at the left of each file chooses whether the work takes it */
+#files .pick { display: none; }
+#files.picking .pick { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 22px; margin-right: 4px; cursor: pointer; }
+#files.picking th .pick-all { margin-right: 6px; vertical-align: middle; }
+#files .pick input { margin: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+#files tr.unpicked td.name .game > :not(.pick), #files tr.unpicked td.size, #files tr.unpicked td.state { opacity: .45; }

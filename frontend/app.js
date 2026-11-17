@@ -71,7 +71,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
-  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), off: {}, paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
@@ -1623,6 +1623,7 @@ function startSoon() {
 
 function render() {
   paintOfficial();
+  paintPicks();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -1870,7 +1871,8 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + (item.size || 0), 0));
+  const picked = pickedItems();
+  text.textContent = t("selected")(picked.length, picked.reduce((sum, item) => sum + (item.size || 0), 0));
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -1926,13 +1928,47 @@ function clearList() {
 
 // add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
 // to work on, so it stays out of the files a work is given
+// ---- Combine and Split: which files of the list are worked on ----
+// Each file has a box at its left there; all are chosen when they come. A file left out stays in
+// the list and is not given to the work. Combine and Split keep their own choice, while NXPress is
+// open (brought from the edition of QuickWick, PR #151).
+const hasPicks = mode => mode === "pack" || mode === "split";
+const offOf = (mode = state.mode) => state.off[mode] || (state.off[mode] = new Set());
+// pickedItems are the files of the list the work will take
+const pickedItems = () => hasPicks(state.mode) ? state.items.filter(item => !offOf().has(item.path)) : state.items;
+function paintPicks() {
+  const on = hasPicks(state.mode);
+  $("files").classList.toggle("picking", on);
+  const off = offOf();
+  let total = 0, chosen = 0;
+  for (const row of state.rows.values()) {
+    const box = row.tr.querySelector(".pick input");
+    const left = on && !!box && off.has(row.item.path);
+    row.tr.classList.toggle("unpicked", left);
+    if (!box) continue;
+    box.checked = !off.has(row.item.path);
+    box.disabled = state.busy;
+    if (!row.tr.classList.contains("find-out")) { total++; if (box.checked) chosen++; }
+  }
+  const all = $("pick-all");
+  all.checked = total > 0 && chosen === total;
+  all.indeterminate = chosen > 0 && chosen < total;
+  all.disabled = state.busy || total === 0;
+}
+// what depends on the files chosen is told again
+function pickChanged() {
+  paintPicks();
+  summary();
+  previewPacks();
+}
+
 function add(item) {
   if (state.rows.has(item.path)) return;
   if (!item.result) state.items.push(item);
   // a file added again is no longer one taken out
   state.removed.delete(item.path);
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  tr.innerHTML = `<td class="name"><div class="game"><label class="pick"><input type="checkbox" checked></label><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file; a dump folder shows a folder
   const kind = item.dump ? "DUMP" : (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
   tr.querySelector(".cover").textContent = item.dump ? "" : kind;
@@ -1940,6 +1976,22 @@ function add(item) {
   tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
+  // the new file of a pack is a result, no file to choose
+  const pick = tr.querySelector(".pick");
+  if (item.result) pick.remove();
+  else {
+    const box = pick.querySelector("input");
+    pick.title = t("pickRow");
+    box.setAttribute("aria-label", t("pickRow"));
+    box.checked = !offOf().has(item.path);
+    tr.classList.toggle("unpicked", hasPicks(state.mode) && !box.checked);
+    pick.addEventListener("click", event => event.stopPropagation());
+    box.addEventListener("change", () => {
+      if (!hasPicks(state.mode)) return;
+      if (box.checked) offOf().delete(item.path); else offOf().add(item.path);
+      pickChanged();
+    });
+  }
   const game = tr.querySelector(".game");
   game.addEventListener("mouseenter", () => {
     clearTimeout(popTimer);
@@ -2261,7 +2313,7 @@ function previewPacks() {
   packTimer = setTimeout(async () => {
     const list = $("pack-plan");
     if (state.mode !== "pack" || !$("pack-games").checked) return;
-    const paths = state.items.map(item => item.path);
+    const paths = pickedItems().map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     // the NUP of each dump folder is named by the same template as the packs of each game
     const dumps = state.items.filter(item => item.dump).map(item => item.path);
@@ -2471,6 +2523,11 @@ async function start(mode, extra) {
   if (measuring) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
+  }
+  // the files left out in Combine and Split are not given to the work
+  if (hasPicks(mode)) {
+    files = files.filter(path => !offOf(mode).has(path));
+    if (!files.length) { setStatus({ key: "pickNone" }); return; }
   }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
   // the image chosen in Combine for each dump folder, which its NUP takes instead of titledb's
@@ -3019,6 +3076,7 @@ function applyListFind() {
     if (found) shown++;
   }
   $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
+  paintPicks();
 }
 
 // a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
@@ -3395,6 +3453,17 @@ async function main() {
   $("space-cancel").onclick = () => $("space-dialog").close();
   // the window to search an image of a NUP in the eShop (#102), and an image pasted (Ctrl+V)
   $("cover-search").onclick = searchCovers;
+  // Combine and Split: all the files shown chosen, or none
+  $("pick-all").addEventListener("click", event => event.stopPropagation());
+  $("pick-all").onchange = () => {
+    if (!hasPicks(state.mode)) return;
+    const off = offOf();
+    for (const row of state.rows.values()) {
+      if (row.tr.classList.contains("find-out") || !row.tr.querySelector(".pick input")) continue;
+      if ($("pick-all").checked) off.delete(row.item.path); else off.add(row.item.path);
+    }
+    pickChanged();
+  };
   $("cover-query").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); searchCovers(); } });
   $("cover-switch2").onchange = searchCovers;
   $("cover-use").onclick = useCover;
