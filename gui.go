@@ -968,7 +968,9 @@ func (a *App) Start(request Request) error {
 				return jobs.WatchJobs(ctx, o, out, jobs.WatchEvery)
 			}
 		}
-		failed := work(ctx, o, &window{ctx: a.ctx, job: ctx, app: a})
+		batch := newWindowBatch(a.ctx)
+		failed := work(ctx, o, &window{ctx: a.ctx, job: ctx, app: a, batch: batch})
+		batch.flush()
 		cancelled := ctx.Err() != nil
 		a.mutex.Lock()
 		a.cancel, a.finished, a.skips = nil, nil, nil
@@ -1354,6 +1356,69 @@ type window struct {
 	// the work, and the app that pauses it
 	job context.Context
 	app *App
+	// the events of a work are sent together (see windowBatch); nil sends each at once
+	batch *windowBatch
+}
+
+// windowEvent is one event of a batch: its name and what it carries.
+type windowEvent struct {
+	Name string `json:"name"`
+	Data any    `json:"data"`
+}
+
+// windowBatchEvery is how long the events of a work wait to go to the page together.
+const windowBatchEvery = 100 * time.Millisecond
+
+// windowBatch gathers the events of a work and sends them to the page together, in their order,
+// a few times a second (#135): every event sent runs on the thread of the window, and thousands of
+// files done in a second (Details) queued so many that a click on Cancel waited a minute behind
+// them.
+type windowBatch struct {
+	ctx    context.Context
+	mutex  sync.Mutex
+	events []windowEvent
+	timer  *time.Timer
+	// held while a batch is sent: the last one of a work is sent before the work is told ended
+	sending sync.Mutex
+}
+
+func newWindowBatch(ctx context.Context) *windowBatch {
+	return &windowBatch{ctx: ctx}
+}
+
+func (b *windowBatch) add(name string, data any) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.events = append(b.events, windowEvent{Name: name, Data: data})
+	if b.timer == nil {
+		b.timer = time.AfterFunc(windowBatchEvery, b.flush)
+	}
+}
+
+// flush sends the events gathered; the last of a work goes before the page is told it ended.
+func (b *windowBatch) flush() {
+	b.sending.Lock()
+	defer b.sending.Unlock()
+	b.mutex.Lock()
+	events := b.events
+	b.events = nil
+	if b.timer != nil {
+		b.timer.Stop()
+		b.timer = nil
+	}
+	b.mutex.Unlock()
+	if len(events) > 0 {
+		emit(b.ctx, "batch", events)
+	}
+}
+
+// send gives an event to the page, with the others of the work when they are gathered.
+func (w *window) send(name string, data any) {
+	if w.batch != nil {
+		w.batch.add(name, data)
+		return
+	}
+	emit(w.ctx, name, data)
 }
 
 // how often the progress of a file is sent at most, unless its percentage changes
@@ -1394,7 +1459,7 @@ func (w *window) Progress(path string, step string) func(done int64, total int64
 		}
 		last, lastShare = now, share
 		mutex.Unlock()
-		emit(w.ctx, "progress", map[string]any{"file": path, "step": step, "done": done, "total": total})
+		w.send("progress", map[string]any{"file": path, "step": step, "done": done, "total": total})
 	}
 }
 
@@ -1415,11 +1480,11 @@ func (w *window) Done(path string, output string, note string, err error) {
 			result["error"] = "cancelled"
 		}
 	}
-	emit(w.ctx, "done", result)
+	w.send("done", result)
 }
 
 func (w *window) Say(format string, args ...any) {
-	emit(w.ctx, "say", fmt.Sprintf(format, args...))
+	w.send("say", fmt.Sprintf(format, args...))
 }
 
 // Measured gives the page what a measure found: the setting chosen, to put in its fields, and

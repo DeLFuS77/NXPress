@@ -2731,18 +2731,23 @@ function report() {
 
 function listen() {
   const events = window.runtime;
+  // the events of a work come together a few times a second (#135): each goes to its own
+  // handler, in their order
+  const handlers = {};
+  const on = (name, handler) => { handlers[name] = handler; events.EventsOn(name, handler); };
+  events.EventsOn("batch", list => { for (const event of list || []) if (handlers[event.name]) handlers[event.name](event.data); });
   // the installation of a new version, as it goes (#91)
   events.EventsOn("update-progress", progress => { state.installing = progress; paintUpdate(); });
   // files the Explorer gave to another NXPress, which sent them here
   events.EventsOn("opened", takeOpened);
-  events.EventsOn("progress", event => {
+  on("progress", event => {
     const row = rowOf(event.file);
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
   });
-  events.EventsOn("done", event => {
+  on("done", event => {
     // the mode of the work, which is not the section shown when only one file is verified
     const run = state.lastRun;
     const mode = run ? run.mode : state.mode;
@@ -2780,7 +2785,7 @@ function listen() {
   // scrolled at each file, a long Details of thousands of files kept the window far behind the
   // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
   // last megabytes.
-  events.EventsOn("say", text => {
+  on("say", text => {
     said += noteText(text) + "\n";
     if (sayFrame) return;
     sayFrame = setTimeout(() => {

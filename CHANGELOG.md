@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- Cancel answers at once with thousands of files, as in Details: the window gets what the work tells a few times a second, not each file on its own. Thanks to NikoMuffin for reporting it (#135)
 - A game of several programs (a collection): Details tells the NCA of every program, and Combine checks that none of them is missing
 
 ## 1.7.21
