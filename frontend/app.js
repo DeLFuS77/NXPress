@@ -71,7 +71,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
-  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), off: {}, paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
@@ -278,6 +278,7 @@ function renderCard(row) {
   element.className = "file-card";
   if (card.packages) {
     renderNupCard(element, card, row);
+    element.append(reportButton(row));
     row.tr.querySelector(".note").after(element);
     return;
   }
@@ -306,7 +307,17 @@ function renderCard(row) {
     warning.textContent = noteText(card.unsignedNote).replace(/^./, (c) => c.toUpperCase()).replace("--rebuild", "‑‑rebuild");
     element.append(warning);
   }
+  element.append(reportButton(row));
   row.tr.querySelector(".note").after(element);
+}
+
+// Full report, at the end of the card of a file in Details
+function reportButton(row) {
+  const button = document.createElement("button");
+  button.className = "outline card-report";
+  button.textContent = t("reportOpen");
+  button.onclick = () => openReport(row, button);
+  return button;
 }
 
 // the part of the note of a NUP that tells what keeps Eglantine and Lichii from opening it, from
@@ -323,8 +334,66 @@ function splitEmulators(note) {
 // told only where it differs, for the files stored with zstd. Under them, whether Eglantine and
 // Lichii read it well, as the cards of the other files tell what reads them, and in orange what
 // keeps them from it, with a button to write its metadata again when it is counted from 0.
+// the name of the game of a NUP in its card, which can be changed where it is: Edit name opens a
+// field with it, and Save writes it in the NUP (#144, brought from the edition of QuickWick, PR #151)
+function nupNameLine(row) {
+  const line = document.createElement("div");
+  line.className = "nup-name-edit";
+  if (!row.nameEditing) {
+    const edit = document.createElement("button");
+    edit.className = "outline";
+    edit.textContent = t("editName");
+    edit.disabled = state.busy;
+    edit.onclick = () => { row.nameEditing = true; renderCard(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
+    line.append(edit);
+    if (row.nameNote) {
+      const said = document.createElement("span");
+      said.className = "say";
+      said.textContent = row.nameNote;
+      line.append(said);
+    }
+    return line;
+  }
+  line.innerHTML = `<input type="text" maxlength="200" spellcheck="false"><button class="primary small"></button><button class="quiet"></button>`;
+  const [input] = line.querySelectorAll("input");
+  const [save, cancel] = line.querySelectorAll("button");
+  input.value = shownName(row);
+  input.setAttribute("aria-label", t("editName"));
+  save.textContent = t("saveName");
+  cancel.textContent = t("cancel");
+  // why the last try failed, in orange, until another try
+  if (row.nameFailed) {
+    const said = document.createElement("p");
+    said.className = "say warning";
+    said.textContent = row.nameFailed;
+    line.append(said);
+  }
+  const close = () => { row.nameEditing = false; row.nameFailed = ""; renderCard(row); };
+  cancel.onclick = close;
+  input.onkeydown = event => { if (event.key === "Enter") save.click(); if (event.key === "Escape") close(); };
+  save.onclick = async () => {
+    const name = input.value.trim();
+    if (!name || name === shownName(row)) { close(); return; }
+    save.disabled = cancel.disabled = input.disabled = true;
+    try {
+      await app().EditNupTitle(row.item.path, name);
+      row.nameEditing = false;
+      row.nameFailed = "";
+      row.nameNote = t("nameChanged");
+      row.card = await app().Card(row.item.path);
+      row.game = await app().Describe(row.item.path);
+      paint(row);
+    } catch (error) {
+      row.nameFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+    }
+    renderCard(row);
+  };
+  return line;
+}
+
 function renderNupCard(element, card, row) {
   element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div><div class="card-only"></div>`;
+  element.querySelector(".nup-packages").before(nupNameLine(row));
   for (const name of ["Eglantine", "Lichii"]) {
     const tag = document.createElement("i");
     tag.className = card.emulatorsOk ? "yes" : "warn";
@@ -448,7 +517,7 @@ function iconLine(row, replace) {
   search.onclick = () => openCoverSearch(row, replace, search);
   // an image of one's own, cropped before it is given; a crop cancelled gives nothing
   choose.onclick = () => giveNupIcon(row, async () => {
-    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    const cover = await chooseImage();
     if (!cover) return "";
     const crop = await cropImage(cover);
     if (!crop) return "";
@@ -680,6 +749,35 @@ function cropImage(cover) {
   });
 }
 
+// the line of a NUP in Split with what to take out of it: a box for its game, its updates, its DLC
+// and its icon, the ones it has; all are taken until one is left out (#138, brought from the
+// edition of QuickWick, PR #151)
+function splitPartsLine(row) {
+  const game = row.game;
+  const pick = row.item.splitParts || { base: true, update: true, dlc: true, icon: true };
+  const line = document.createElement("div");
+  line.className = "split-parts";
+  const label = document.createElement("span");
+  label.textContent = t("splitTake");
+  line.append(label);
+  const parts = [["base", game.bases, t("gameKind")("BASE")], ["update", game.updates, t("gameKind")("UPD")], ["dlc", game.dlcs, t("gameKind")("DLC")], ["icon", game.icon ? 1 : 0, t("splitIcon")]];
+  for (const [key, count, name] of parts) {
+    if (!count) continue;
+    const chip = document.createElement("label");
+    chip.className = "split-part";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = pick[key] !== false;
+    box.disabled = state.busy;
+    box.onchange = () => { row.item.splitParts = { ...pick, [key]: box.checked }; paint(row); };
+    const text = document.createElement("span");
+    text.textContent = name + (count > 1 ? ` ×${count}` : "");
+    chip.append(box, text);
+    line.append(chip);
+  }
+  return line;
+}
+
 // the line of a dump folder in Combine where an image is chosen for its NUP: its icon as it will
 // be, the button, and the formats taken; once chosen, Change and Remove, and its name and size
 function coverLine(row) {
@@ -722,6 +820,17 @@ function coverLine(row) {
     remove.onclick = event => { event.stopPropagation(); row.item.cover = null; row.coverFailed = ""; paint(row); };
     buttons.append(remove);
     hint.textContent = t("coverChosen")(cover.name, cover.width, cover.height);
+  } else if (row.game && row.game.controlIcon) {
+    // the icon its game data carries, which the NUP keeps unless another is chosen (brought from
+    // the edition of QuickWick, PR #151)
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = row.game.controlIcon;
+    thumb.append(image);
+    thumb.classList.add("chosen");
+    choose.textContent = t("coverReplace");
+    hint.textContent = row.coverFailed || t("coverOwn");
+    hint.classList.toggle("warning", !!row.coverFailed);
   } else {
     thumb.textContent = "+";
     choose.textContent = t("coverAdd");
@@ -736,7 +845,7 @@ function coverLine(row) {
 async function chooseCover(row, button) {
   button.disabled = true;
   try {
-    const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+    const cover = await chooseImage();
     if (cover) await cropCover(row, cover, button);
   } catch (error) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
@@ -754,6 +863,30 @@ async function folderCover(row, get) {
     row.coverFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
     paint(row);
   }
+}
+
+// an image chosen for an icon: the ones NXPress does not read itself (AVIF, ICO) are read by the
+// window and given to it as PNG (brought from the edition of QuickWick, PR #151)
+async function chooseImage() {
+  const cover = await app().ChooseCoverImage(t("chooseImageTitle"));
+  if (!cover || !cover.convert) return cover;
+  const made = await app().PastedCoverImage(await asPng(cover.convert));
+  if (made) made.name = cover.name;
+  return made;
+}
+function asPng(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    image.onerror = () => reject(new Error(t("imageUnreadable")));
+    image.src = source;
+  });
 }
 
 // the crop of the image of a folder chosen again, and the icon it makes shown in its row
@@ -1144,9 +1277,12 @@ let menuOpener = null;
 
 // the export of Details and of the log to a spreadsheet (#89): a menu of the two formats under
 // the button, then where to save it
-function exportMenu(button, run) {
+function exportMenu(button, run, report) {
   const box = button.getBoundingClientRect();
-  openMenu([[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]], box.left, box.bottom + 4);
+  const entries = [[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]];
+  // Details: the full report of every file, as text (brought from the edition of QuickWick, PR #151)
+  if (report) entries.push([t("exportReport"), report]);
+  openMenu(entries, box.left, box.bottom + 4);
 }
 const today = () => { const now = new Date(); return [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-"); };
 async function exported(call) {
@@ -1162,6 +1298,24 @@ function exportDetails(format) {
   const header = [t("file"), t("colFormat"), t("colSize"), t("colTitleId"), t("colType"), t("colVersion"), t("colShown"), t("colName"), t("colPublisher"), t("colNewest"), t("colFolder"), t("colProblem")];
   const kinds = Object.fromEntries(["BASE", "UPD", "DLC"].map(kind => [kind, t("gameKind")(kind)]));
   exported(() => app().ExportDetails(paths, format, { sheet: t("info"), file: `NXPress ${t("info")} ${today()}`, header, kinds }));
+}
+// Details: the full report of the files of the list, in its order, in a .txt
+function exportReport() {
+  const byRow = new Map([...state.rows].map(([path, row]) => [row.tr, path]));
+  const paths = [...$("files").tBodies[0].rows].map(tr => byRow.get(tr)).filter(Boolean);
+  exported(() => app().ExportReport(paths, `NXPress ${t("info")} ${today()}`));
+}
+// the full report of one file, in a window of its own: copied, or saved as a .txt
+async function openReport(row, opener) {
+  $("report-title").textContent = t("reportOf")(shownName(row));
+  $("report-text").textContent = t("reportReading");
+  $("report-save").onclick = () => exported(() => app().ExportReport([row.item.path], shownName(row)));
+  openDialog($("report-dialog"), opener);
+  try {
+    $("report-text").textContent = await app().FileReport(row.item.path);
+  } catch (error) {
+    $("report-text").textContent = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+  }
 }
 // the log: a row for each file of the works shown, as they are shown
 function exportLog(format) {
@@ -1536,6 +1690,7 @@ function startSoon() {
 
 function render() {
   paintOfficial();
+  paintPicks();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -1783,7 +1938,8 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + (item.size || 0), 0));
+  const picked = pickedItems();
+  text.textContent = t("selected")(picked.length, picked.reduce((sum, item) => sum + (item.size || 0), 0));
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -1839,13 +1995,47 @@ function clearList() {
 
 // add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
 // to work on, so it stays out of the files a work is given
+// ---- Combine and Split: which files of the list are worked on ----
+// Each file has a box at its left there; all are chosen when they come. A file left out stays in
+// the list and is not given to the work. Combine and Split keep their own choice, while NXPress is
+// open (brought from the edition of QuickWick, PR #151).
+const hasPicks = mode => mode === "pack" || mode === "split";
+const offOf = (mode = state.mode) => state.off[mode] || (state.off[mode] = new Set());
+// pickedItems are the files of the list the work will take
+const pickedItems = () => hasPicks(state.mode) ? state.items.filter(item => !offOf().has(item.path)) : state.items;
+function paintPicks() {
+  const on = hasPicks(state.mode);
+  $("files").classList.toggle("picking", on);
+  const off = offOf();
+  let total = 0, chosen = 0;
+  for (const row of state.rows.values()) {
+    const box = row.tr.querySelector(".pick input");
+    const left = on && !!box && off.has(row.item.path);
+    row.tr.classList.toggle("unpicked", left);
+    if (!box) continue;
+    box.checked = !off.has(row.item.path);
+    box.disabled = state.busy;
+    if (!row.tr.classList.contains("find-out")) { total++; if (box.checked) chosen++; }
+  }
+  const all = $("pick-all");
+  all.checked = total > 0 && chosen === total;
+  all.indeterminate = chosen > 0 && chosen < total;
+  all.disabled = state.busy || total === 0;
+}
+// what depends on the files chosen is told again
+function pickChanged() {
+  paintPicks();
+  summary();
+  previewPacks();
+}
+
 function add(item) {
   if (state.rows.has(item.path)) return;
   if (!item.result) state.items.push(item);
   // a file added again is no longer one taken out
   state.removed.delete(item.path);
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  tr.innerHTML = `<td class="name"><div class="game"><label class="pick"><input type="checkbox" checked></label><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file; a dump folder shows a folder
   const kind = item.dump ? "DUMP" : (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
   tr.querySelector(".cover").textContent = item.dump ? "" : kind;
@@ -1853,6 +2043,22 @@ function add(item) {
   tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
+  // the new file of a pack is a result, no file to choose
+  const pick = tr.querySelector(".pick");
+  if (item.result) pick.remove();
+  else {
+    const box = pick.querySelector("input");
+    pick.title = t("pickRow");
+    box.setAttribute("aria-label", t("pickRow"));
+    box.checked = !offOf().has(item.path);
+    tr.classList.toggle("unpicked", hasPicks(state.mode) && !box.checked);
+    pick.addEventListener("click", event => event.stopPropagation());
+    box.addEventListener("change", () => {
+      if (!hasPicks(state.mode)) return;
+      if (box.checked) offOf().delete(item.path); else offOf().add(item.path);
+      pickChanged();
+    });
+  }
   const game = tr.querySelector(".game");
   game.addEventListener("mouseenter", () => {
     clearTimeout(popTimer);
@@ -2000,10 +2206,13 @@ function paint(row) {
     }
     plan.querySelector("b").textContent = row.game.nupName || "";
     plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
-    // a folder without an icon of its own: an image can be chosen for its NUP, instead of titledb's
+    // an image can be chosen for its NUP: instead of titledb's, or of the icon of its game data
     if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
+  // a NUP in Split: what to take out of it, its game, its updates, its DLC and its icon (#138)
+  row.tr.querySelector(".split-parts")?.remove();
+  if (row.game && row.game.container === "NUP" && !row.status && state.mode === "split") file.after(splitPartsLine(row));
   // a warning of the list shows until the file is worked on; in Verify and Details, which leave
   // the file as it is, it stays after the work too, where it is looked at most (#136)
   let warn = row.tr.querySelector(".list-warn");
@@ -2171,7 +2380,7 @@ function previewPacks() {
   packTimer = setTimeout(async () => {
     const list = $("pack-plan");
     if (state.mode !== "pack" || !$("pack-games").checked) return;
-    const paths = state.items.map(item => item.path);
+    const paths = pickedItems().map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     // the NUP of each dump folder is named by the same template as the packs of each game
     const dumps = state.items.filter(item => item.dump).map(item => item.path);
@@ -2382,6 +2591,11 @@ async function start(mode, extra) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
   }
+  // the files left out in Combine and Split are not given to the work
+  if (hasPicks(mode)) {
+    files = files.filter(path => !offOf(mode).has(path));
+    if (!files.length) { setStatus({ key: "pickNone" }); return; }
+  }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
   // the image chosen in Combine for each dump folder, which its NUP takes instead of titledb's
   const nupIcons = {};
@@ -2390,7 +2604,10 @@ async function start(mode, extra) {
     nupIcons[item.path] = item.cover.path;
     if (item.cover.crop) nupIconCrops[item.path] = item.cover.crop;
   }
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, ...(extra || {}) };
+  // what to take out of each NUP in Split (#138)
+  const splitParts = {};
+  if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -2926,6 +3143,7 @@ function applyListFind() {
     if (found) shown++;
   }
   $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
+  paintPicks();
 }
 
 // a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
@@ -3295,13 +3513,26 @@ async function main() {
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
   $("unofficial").onclick = () => app().OpenURL(repository + "/releases/latest");
-  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
+  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails, exportReport);
+  $("report-copy").onclick = () => { window.runtime.ClipboardSetText($("report-text").textContent); showToast(t("fullReportCopied")); };
+  $("report-close").onclick = () => $("report-dialog").close();
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
   $("space-cancel").onclick = () => $("space-dialog").close();
   // the window to search an image of a NUP in the eShop (#102), and an image pasted (Ctrl+V)
   $("cover-search").onclick = searchCovers;
+  // Combine and Split: all the files shown chosen, or none
+  $("pick-all").addEventListener("click", event => event.stopPropagation());
+  $("pick-all").onchange = () => {
+    if (!hasPicks(state.mode)) return;
+    const off = offOf();
+    for (const row of state.rows.values()) {
+      if (row.tr.classList.contains("find-out") || !row.tr.querySelector(".pick input")) continue;
+      if ($("pick-all").checked) off.delete(row.item.path); else off.add(row.item.path);
+    }
+    pickChanged();
+  };
   $("cover-query").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); searchCovers(); } });
   $("cover-switch2").onchange = searchCovers;
   $("cover-use").onclick = useCover;

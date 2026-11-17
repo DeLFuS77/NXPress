@@ -114,7 +114,9 @@ func TestPackNupTakesTheIconOfTitledb(t *testing.T) {
 }
 
 // The image chosen in Combine for a folder wins over titledb, found by its path even written
-// another way; a folder with none chosen still takes titledb's, and one with its own icon keeps it.
+// another way; a folder with none chosen still takes titledb's, and one with its own icon has it
+// replaced by the image chosen, which is then its one icon (brought from the edition of QuickWick,
+// PR #151).
 func TestPackNupTakesTheImageChosenInCombine(t *testing.T) {
 	asked := 0
 	useLookup(t, func(ctx context.Context, id uint64) ([]byte, error) {
@@ -151,12 +153,21 @@ func TestPackNupTakesTheImageChosenInCombine(t *testing.T) {
 	os.MkdirAll(control, 0o755)
 	os.WriteFile(filepath.Join(control, "icon_AmericanEnglish.dat"), testnup.Jpeg, 0o644)
 	os.Remove(name)
-	name, _, err = packNup(t.Context(), dir, o, 1, &recording{})
+	name, note, err = packNup(t.Context(), dir, o, 1, &recording{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if container, _ := nup.Open(name); container == nil || !bytes.Equal(container.Icon(), testnup.Jpeg) {
-		t.Error("the icon of the folder was not kept")
+	container, err = nup.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(container.Icon(), testnup.Jpeg) || container.GameIcons() || !strings.Contains(note, "instead of the icon of its folder") {
+		t.Errorf("the image chosen did not replace the icon of the folder: %q", note)
+	}
+	if replaced, _, err := image.Decode(bytes.NewReader(container.Icon())); err != nil {
+		t.Fatal(err)
+	} else if r, g, b, _ := replaced.At(128, 128).RGBA(); r>>8 < 200 || g>>8 > 60 || b>>8 > 60 {
+		t.Errorf("the icon is not the image chosen: %d %d %d", r>>8, g>>8, b>>8)
 	}
 }
 

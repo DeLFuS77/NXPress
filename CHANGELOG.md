@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+Brought from the edition of QuickWick. Thanks to QuickWick for them (#151):
+
+- Split takes NUP files, with a box for each part to take out: the game, its updates, its DLC and its icon (#138)
+- Details: the name of a NUP can be changed in its card, where it is (#144)
+- Combine and Split: a box at the left of each file chooses whether the work takes it
+- Combine: the icon of the game data of a dump folder shows, and an image chosen replaces it
+- Details: the full report of a file, to copy or save as .txt, and of every file in Export
+- Images for icons: GIF, AVIF and ICO too
+
+### Fixes
+
+- Combine: an image chosen for a dump folder that has an icon of its own is no longer left out
+
 ## 1.7.19
 
 ### Improvements

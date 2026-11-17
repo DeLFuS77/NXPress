@@ -111,6 +111,8 @@ type Options struct {
 	// the template the NUP of a dump folder is named by, in Combine; none: NupName
 	NupTemplate string
 	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
+	// what Split takes out of each NUP, by its path; a NUP not named: all of it
+	SplitParts map[string]SplitParts
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
 	// file whole into a temporary file each time a game starts to read it

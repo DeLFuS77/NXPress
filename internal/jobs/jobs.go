@@ -39,7 +39,7 @@ var Takes = map[string][]string{
 	"rename":     {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
-	"split": {".nsp", ".nsz", ".xci", ".xcz"},
+	"split": {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	// the NUP files whose metadata is counted from 0
 	"fixmeta": {".nup"},
@@ -539,6 +539,8 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 			return verifyNup(ctx, path, o, out)
 		case "decompress":
 			return unpackNup(ctx, path, o, threads, out)
+		case "split":
+			return splitNup(ctx, path, o, threads, out)
 		case "rename":
 			return rename(ctx, path, o, out)
 		case "fixmeta":

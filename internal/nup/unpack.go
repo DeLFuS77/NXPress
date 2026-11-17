@@ -49,6 +49,14 @@ type UnpackResult struct {
 // several for an SSD), each piece of data once: workers decompress it, hash it and write it into
 // every file that has it. progress is told the bytes read of the ones to read.
 func Unpack(ctx context.Context, path string, dest string, workers int, readers int, progress func(done int64, total int64)) (result UnpackResult, err error) {
+	return UnpackSelected(ctx, path, dest, workers, readers, nil, progress)
+}
+
+// UnpackSelected is Unpack for some of the packages of a NUP, the ones keep tells of by their
+// number (nil: all of them): a package not asked for is not read from the NUP nor written. Split
+// uses it to unpack only the game, the updates or the DLC chosen (#138, brought from the edition
+// of QuickWick, PR #151).
+func UnpackSelected(ctx context.Context, path string, dest string, workers int, readers int, keep func(pkg int) bool, progress func(done int64, total int64)) (result UnpackResult, err error) {
 	source, err := os.Open(path)
 	if err != nil {
 		return UnpackResult{}, err
@@ -68,6 +76,10 @@ func Unpack(ctx context.Context, path string, dest string, workers int, readers 
 	for i, pkg := range container.Packages {
 		if pkg.Kind > KindAddon {
 			return UnpackResult{}, fmt.Errorf("NUP package %d has kind %d, which NUP version 1 keeps for later", i, pkg.Kind)
+		}
+		// the packages not asked for are not read, not written and not counted
+		if keep != nil && !keep(i) {
+			continue
 		}
 		root := filepath.Join(dest, container.PackageFolder(i))
 		folders = append(folders, root)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/gif"
 	_ "image/png"
 	"io"
 	"os"
