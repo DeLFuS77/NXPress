@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.21
+
+### Improvements
+
+- A NUP file given to a work that leaves it as it is now opens a window with the works that take it, and one click goes there with the same files. Thanks to NikoMuffin for the idea (#139)
+- Verify: once files are checked, a choice beside the search leaves in sight the verified, corrupted, failed or skipped ones, with how many there are. Thanks to NikoMuffin for the idea (#134)
+
 ## 1.7.20
 
 ### Improvements

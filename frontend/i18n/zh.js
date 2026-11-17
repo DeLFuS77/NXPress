@@ -65,6 +65,7 @@ texts.zh = {
   worklog: "记录", hintWorklog: "活动列表", aboutWorklog: "NXPress 的每次工作，从最新的开始：每个文件的结果和节省的空间。也会保存到一个文本文件中。",
   worklogFind: "搜索游戏或文件", worklogAll: "全部", worklogProblems: "有问题的", worklogExpandAll: "全部展开", worklogCollapseAll: "全部收起", worklogCount: (w, f) => `${w} 次工作 · ${f} 个文件`,
   listFind: "查找游戏或文件", listFound: (s, n) => "显示 " + s + " / " + n, checkNow: "立即检查", checkNowChecking: "正在检查…", checkNowLatest: (v) => v + " 是最新版本。", checkNowFailed: "无法连接 GitHub。",
+  checkFilter: "显示", nupStay: "留在这里", nupTitle: n => n === 1 ? "这是 NUP 文件" : n + " 个 NUP 文件", nupText: tool => tool + " 不处理 NUP 文件。请在以下之一中打开：", nupWhat: { decompress: "把它变回转储文件夹", split: "取出其中的游戏、更新或 DLC", info: "显示其中的内容", verify: "检查它", rename: "重命名它" },
   worklogKeep: "最多保留", worklogKeepN: n => `${n} 次工作`, worklogNoLimit: "不限", worklogKeepHint: "超出后会删除最早的工作，文本文件中也一样。",
   worklogFile: "文本文件", worklogFileHint: "同样的记录以纯文本保存在 NXPress 的设置文件夹中：可以用任何编辑器打开，或粘贴到 issue 中。",
   worklogClear: "清空记录", worklogClearHint: "删除列表和文本文件；几秒内可用“撤销”恢复。", worklogCleared: "记录已清空",
