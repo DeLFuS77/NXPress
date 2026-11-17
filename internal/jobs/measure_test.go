@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"runtime"
 	"testing"
 
@@ -55,5 +56,18 @@ func TestLz4ThreadsKeepToTheShareOfEachFile(t *testing.T) {
 	}
 	if lz4Threads(Options{Threads: 1, Multi: 1}) != 1 {
 		t.Error("one thread: not one for the LZ4 blocks")
+	}
+}
+
+// A trial cancelled drops its file at once (#149): what zstd still writes goes into nothing.
+func TestDroppableWriterWritesNothingOnceDropped(t *testing.T) {
+	var file bytes.Buffer
+	w := &droppableWriter{to: &file}
+	if n, err := w.Write([]byte("abc")); n != 3 || err != nil || file.String() != "abc" {
+		t.Fatalf("before drop: %d %v %q", n, err, file.String())
+	}
+	w.drop()
+	if n, err := w.Write([]byte("def")); n != 3 || err != nil || file.String() != "abc" {
+		t.Fatalf("after drop: %d %v %q", n, err, file.String())
 	}
 }

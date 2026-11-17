@@ -89,6 +89,9 @@ nav button.on .tile { background: var(--tone); color: var(--tile-on); }
 .side-foot .side-keys { margin-top: 6px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-foot .side-keys::before { content: "●"; margin-right: 6px; color: var(--ok); }
 .side-foot .side-keys.bad { color: var(--bad); }
+.pref-keys.bad { color: var(--bad); font-weight: 600; }
+.side-foot .side-unofficial { display: block; margin-top: 4px; padding: 0; border: 0; background: none; font-size: 12px; color: var(--warn); text-align: left; cursor: pointer; }
+.side-foot .side-unofficial::before { content: "\25B2"; margin-right: 6px; font-size: 9px; }
 .side-foot .side-keys.bad::before { color: var(--bad); }
 .side-item { display: flex; align-items: center; gap: 10px; }
 .side-item b { font-weight: 600; }
@@ -667,7 +670,9 @@ sentence under the title gives its room to the list */
 @keyframes glow { 0% { box-shadow: inset 0 3px 0 var(--ok); } 100% { box-shadow: inset 0 3px 0 transparent; } }
 @keyframes lift { 0%, 100% { transform: none; } 50% { transform: translateY(-6px); } }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-.enter { animation: enter .22s ease-out both; }
+/* the start of the animation only, before it runs (#settings waits a moment): once it ends, what
+   is shown is the style of the element again, so a column the work dims is dimmed (#133) */
+.enter { animation: enter .22s ease-out backwards; }
 #settings.enter { animation-delay: .05s; }
 nav button.chosen .tile { animation: pop .28s ease-out var(--since, 0ms) both; }
 tr.row-in { animation: row-in .22s ease-out both; }
@@ -704,6 +709,10 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 #preferences .pref-group h2 { margin: 0 -16px; padding: 12px 16px 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .pref-item { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
 .pref-group h2 + .pref-item { border-top: 0; }
+.pref-item.credit { gap: 12px; }
+.credit .credit-role { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.credit-badge { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: var(--accent-text); background: var(--accent); }
+.credit-badge.tester { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .pref-item[hidden] { display: none; }
 .pref-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pref-text b { font-weight: 600; font-size: 14px; }
@@ -1000,7 +1009,7 @@ table.grid .nedit-row { padding-bottom: 8px; }
    so the column of the names does not grow */
 .ncover-side { width: 0; min-width: 0; overflow: visible; }
 .ncover-line { flex-wrap: nowrap; white-space: nowrap; }
-.ncover-set, .ncover-accepts { white-space: nowrap; }
+.ncover-set, .ncover-accepts, .ncover-found { white-space: nowrap; }
 /* the menu of the cover button, in the line under it */
 .ncover-menu { display: flex; flex-direction: column; width: max-content; min-width: 240px; margin-top: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 18px rgba(0, 0, 0, .16); white-space: nowrap; }
 .ncover-menu[hidden] { display: none; }
@@ -1192,3 +1201,47 @@ dialog.emu-import-dialog { max-width: 720px; }
 .emu-import-help p:first-child { margin-top: 0; }
 .emu-import-found { min-height: 1.4em; margin: 10px 0 0; }
 .emu-import-found.warning { color: var(--warn); }
+
+/* Combine and Split: the control at the left of each file chooses whether the work takes it; it is
+   level with the icon, and over the cover in the grid */
+.pick { display: none; flex: none; align-items: center; align-self: center; cursor: pointer; }
+.pick input { -webkit-appearance: none; appearance: none; margin: 0; cursor: pointer; flex: none; }
+.pick input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pick input:disabled { opacity: .5; cursor: default; }
+table#files.picking .pick { display: inline-flex; }
+table#files.picking .game > .pick { align-self: stretch; margin-right: -10px; padding-right: 10px; }
+table#files.picking .game:has(.cover svg) > .pick { align-items: flex-start; padding-top: 2px; }
+table#files.picking th .pick { margin: 0 10px 0 0; vertical-align: middle; }
+table.grid .pick, table.grid .game:has(.cover svg) .pick { position: absolute; top: 8px; left: 8px; margin: 0; z-index: 2; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--panel) 85%, transparent); }
+tr.unpicked td.size, tr.unpicked td.state, tr.unpicked td.name > :not(.game), tr.unpicked .game > :not(.pick) { opacity: .45; }
+/* a switch instead of a box */
+.pick input { width: 30px; height: 18px; border-radius: 9px; border: 0; position: relative; background: color-mix(in srgb, var(--muted) 45%, var(--panel)); transition: background .15s; }
+.pick input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+.pick input:checked, .pick input:indeterminate { background: var(--accent); }
+.pick input:checked::after { transform: translateX(12px); }
+.pick input:indeterminate::after { transform: translateX(6px); }
+
+/* the icon the control data of the game has, shown as its cover */
+img.ncover-thumb.found { border-style: solid; cursor: default; }
+.ncover-found { color: var(--ok, #1a7f4b); font-size: 11px; font-weight: 600; line-height: 1.35; }
+
+.segmented button { white-space: nowrap; }
+/* the other style: a round check on the corner of the icon, so the rows keep their look; an unpicked icon goes gray */
+:root[data-pick-style="check"] .pick input { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); background: color-mix(in srgb, var(--panel) 75%, transparent); display: grid; place-content: center; position: static; transition: background .12s, border-color .12s; }
+:root[data-pick-style="check"] .pick input::after { content: ""; position: static; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; border-radius: 0; background: none; box-shadow: none; transform: translateY(-1px) rotate(45deg); opacity: 0; transition: none; }
+:root[data-pick-style="check"] .pick input:checked, :root[data-pick-style="check"] .pick input:indeterminate { background: var(--accent); border-color: var(--accent); }
+:root[data-pick-style="check"] .pick input:checked::after { opacity: 1; transform: translateY(-1px) rotate(45deg); }
+:root[data-pick-style="check"] .pick input:indeterminate::after { opacity: 1; width: 8px; height: 0; border-width: 0 0 2px 0; transform: none; }
+:root[data-pick-style="check"] table#files.picking:not(.grid) .game { position: relative; }
+:root[data-pick-style="check"] table#files.picking:not(.grid) .game:not(:has(.cover svg)) > .pick { position: absolute; left: -6px; top: calc(50% - 26px); margin: 0; padding: 0; align-self: auto; z-index: 2; }
+:root[data-pick-style="check"] table#files.picking:not(.grid) .game:not(:has(.cover svg)) > .pick input { box-shadow: 0 0 0 2px var(--panel); }
+:root[data-pick-style="check"] tr.unpicked .game .icon, :root[data-pick-style="check"] tr.unpicked .game .cover { filter: grayscale(1); }
+
+/* the card of a game: a muted × in the corner nearest its row (top when it is under it, bottom when above) closes it */
+.game-pop .pop-close { position: absolute; top: 2px; left: 2px; display: grid; place-items: center; width: 14px; height: 14px; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; color: var(--muted); font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; transition: color .12s, background .12s; }
+.game-pop.above .pop-close { top: auto; bottom: 2px; }
+.game-pop .pop-close:hover, .game-pop .pop-close:focus-visible { color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, transparent); transform: none; }
+
+/* the × is there only when Settings turns it on */
+.game-pop .pop-close { display: none; }
+:root[data-pop-close="on"] .game-pop .pop-close { display: grid; }

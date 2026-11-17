@@ -16,6 +16,23 @@ import (
 // the headers only (#9); NCA files not signed by it make the file modified, not failed (#42):
 // with both, its data is checked all the same, and only damage makes it fail.
 func verify(ctx context.Context, path string, o Options, out Output) (string, string, error) {
+	output, note, err := verifyOnce(ctx, path, o, out)
+	if err == nil || IsSkipped(err) || ctx.Err() != nil {
+		return output, note, err
+	}
+	// with --repair, a file found damaged is rebuilt with its recovery data and checked again
+	repaired, told := repairWithRecovery(ctx, path, o, out)
+	if !repaired {
+		if told != "" {
+			err = fmt.Errorf("%w (%s)", err, told)
+		}
+		return output, note, err
+	}
+	output, note, err = verifyOnce(ctx, path, o, out)
+	return output, joinNotes(told, note), err
+}
+
+func verifyOnce(ctx context.Context, path string, o Options, out Output) (string, string, error) {
 	signed := ""
 	var unsigned error
 	if o.VerifyLevel == "signature" || o.VerifyLevel == "both" {

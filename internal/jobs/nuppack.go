@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/fs"
 	"os"
@@ -154,7 +155,11 @@ func NupName(dir string) (string, error) {
 
 // dumpTitle is the main title of a dump folder, as ReadTitle gives the one of a game file, with
 // the size of its files.
-func dumpTitle(dir string) (GameTitle, error) {
+func dumpTitle(dir string) (GameTitle, error) { return dumpTitleWith(dir, false) }
+
+// dumpTitleWith is dumpTitle; withIcon adds the icon the control data of the game has, which the
+// window shows as the cover of the folder, so it is known that none needs to be given.
+func dumpTitleWith(dir string, withIcon bool) (GameTitle, error) {
 	summary, err := readDump(dir)
 	if err != nil {
 		return GameTitle{}, err
@@ -187,6 +192,12 @@ func dumpTitle(dir string) (GameTitle, error) {
 	}
 	result.NupName, _ = NupName(dir)
 	result.Size = DumpSize(dir)
+	if withIcon {
+		// the icon a NUP of the folder carries: the one of the package of the game, as nup.Pack picks it
+		if icon := nup.ControlIcon(summary.sources[appSource(summary.sources)].Control); len(icon) > 0 {
+			result.ControlIcon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
+		}
+	}
 	return result, nil
 }
 

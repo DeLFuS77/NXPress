@@ -23,6 +23,8 @@ type Options struct {
 	Verify     bool
 	Info       bool
 	Convert    bool
+	// with Convert, NSP and NSZ into XCI and XCZ (#127)
+	ToCard     bool
 	Recompress bool
 	Trim       bool
 	Estimate   bool
@@ -78,8 +80,8 @@ type Options struct {
 	Origins []string
 	Level   int
 	// whether -l was given: the files of a NUP take zstd at level 3 unless it was
-	LevelGiven  bool
-	Block       bool
+	LevelGiven bool
+	Block      bool
 	// --no-long: the zstd stream keeps the window of its level (8 MiB) instead of the long one of
 	// 128 MiB, for an installer that cannot take it
 	ShortWindow bool
@@ -89,11 +91,15 @@ type Options struct {
 	// with -C and without the extra compression: the update of a game in sparse storage given
 	// with it is left as it is too, so the two stay together
 	SkipSparseUpdates bool
-	Threads     int
-	Multi       int
-	Output      string
-	Overwrite   bool
-	RmSource    bool
+	Threads           int
+	Multi             int
+	Output            string
+	Overwrite         bool
+	RmSource          bool
+	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
+	// rebuilds a damaged file with its .par2
+	Par2   int
+	Repair bool
 	RmDumps     bool // with RmSource, the dump folders whose NUP is checked go too
 	// --nup-zstd-big: the files of a NUP over 256 MiB compressed too. Without it they are stored as
 	// they are, as the packers of Eglantine and Lichii store them: these emulators decompress a big
@@ -142,11 +148,11 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--par2", 0, true, false}, {"--repair", 0, false, false}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
-	{"--convert", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
+	{"--convert", 0, false, false}, {"--to-xci", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
 	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--rebuild", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
@@ -322,6 +328,8 @@ func (o *Options) flag(option optionName) {
 		o.Overwrite = true
 	case "--rm-source":
 		o.RmSource = true
+	case "--repair":
+		o.Repair = true
 	case "--rm-dumps":
 		o.RmDumps = true
 	case "--nup-zstd-big":
@@ -330,6 +338,8 @@ func (o *Options) flag(option optionName) {
 		o.Info = true
 	case "--convert":
 		o.Convert = true
+	case "--to-xci":
+		o.ToCard = true
 	case "--recompress":
 		o.Recompress = true
 	case "--trim":
@@ -418,6 +428,11 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Output = value
 	case "--keys":
 		o.Keys = value
+	case "--par2":
+		o.Par2, err = number(1)
+		if err == nil && o.Par2 > 100 {
+			err = fmt.Errorf("%s takes a percentage from 1 to 100", told)
+		}
 	case "--dat":
 		o.Dat = value
 	case "--rename":
@@ -529,8 +544,17 @@ func (o *Options) Check() error {
 	if o.PackName != "" && !o.PackGames && !o.PackOne && !o.Optimize {
 		o.Notes = append(o.Notes, "--pack-name has no effect without --pack-games, --pack-one or --optimize")
 	}
+	if o.Par2 > 0 && !recoveryActions[o.Action()] {
+		o.Notes = append(o.Notes, "--par2 has no effect without a work that writes new files")
+	}
+	if o.Repair && o.Action() != "verify" {
+		o.Notes = append(o.Notes, "--repair has no effect without -V")
+	}
 	if o.RmDumps && !o.RmSource {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
+	}
+	if o.ToCard && !o.Convert {
+		o.Notes = append(o.Notes, "--to-xci has no effect without --convert")
 	}
 	if o.RmDumps && !o.Nup && o.Pack == "" && !o.PackGames && !o.PackOne {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --nup")
@@ -614,6 +638,9 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
+  --par2 PERCENT      write recovery data next to each new file, "<name>.par2" (PAR 2.0):
+                      it rebuilds damaged parts of the file up to PERCENT of it
+  --repair            with -V, rebuild a damaged file with its .par2, then check it again
   --rm-dumps          with --rm-source, delete each dump folder too once its NUP is read
                       back and checked: the files the NUP holds, then the folders left
                       empty; a file it does not hold, or one changed since, stays
@@ -661,6 +688,8 @@ Usage: nxpress [options] file or folder...
   --version           show the version
 
   --convert           turn XCI and XCZ files into NSP and NSZ
+  --to-xci            with --convert, the other way round: NSP and NSZ files into XCI and
+                      XCZ, with a header of their own (not signed by Nintendo)
   --recompress        write NSZ and XCZ files again, solid (-S) or in blocks (-B), at the
                       level of -l: no NSP in between and no keys needed; a file is replaced
                       once its new copy is checked, unless -o gives another folder. With
@@ -744,6 +773,8 @@ func (o Options) Action() string {
 		return "compress"
 	case o.Decompress:
 		return "decompress"
+	case o.Convert && o.ToCard:
+		return "tocard"
 	case o.Convert:
 		return "convert"
 	case o.Recompress:

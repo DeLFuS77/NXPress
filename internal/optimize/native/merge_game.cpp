@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 DeLFuS77
 #include "merge_game.hpp"
+#include "read_note.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -167,6 +168,26 @@ uint64_t Merger::OnceBound() const {
     return plan.size;
 }
 
+// The steps of a pass, told apart from a read that fails: `halted` when it was asked to stop.
+lz4pack::StepFn Merger::Watched(const lz4pack::StepFn& step, bool& halted) {
+    if (!step) return {};
+    return [&step, &halted](uint64_t done) {
+        const bool go = step(done);
+        if (!go) halted = true;
+        return go;
+    };
+}
+
+// Why a pass did not end: a write, stopped, or a read that failed (and which, from the layers).
+std::string Merger::Failure(bool wrote, bool halted) const {
+    if (!wrote) return "write";
+    if (halted) return "stopped";
+    const std::string where = readnote::Take();
+    std::string error = m_romfs.Damaged() ? "damaged" : "read";
+    if (!where.empty()) error += ": " + where;
+    return error;
+}
+
 bool Merger::Measure(const lz4pack::StepFn& step, std::string& error, const OutFn& data) {
     m_measured = false;
     m_placed = false;
@@ -176,7 +197,8 @@ bool Merger::Measure(const lz4pack::StepFn& step, std::string& error, const OutF
     std::unique_ptr<CtrOut> enc;
     if (data) enc = std::make_unique<CtrOut>(data, m_in.update.ctr, m_in.update.key.data(), m_in.update.fsh.data(), DataPlace());
     uint64_t written = 0;
-    bool wrote = true;
+    bool wrote = true, halted = false;
+    readnote::Take(); // only what fails from here
     const bool packed = PackOnce([&](uint64_t, const uint8_t* d, size_t n) {
             hasher.Feed(d, n);
             if (enc) {
@@ -184,10 +206,10 @@ bool Merger::Measure(const lz4pack::StepFn& step, std::string& error, const OutF
                 wrote = enc->Put(d, n);
             }
             return wrote;
-        }, step, m_packed);
+        }, Watched(step, halted), m_packed);
     if (packed && enc) wrote = enc->Flush(true);
     if (!packed || !wrote) {
-        error = !wrote ? "write" : m_romfs.Damaged() ? "damaged" : "stopped";
+        error = Failure(wrote, halted);
         return false;
     }
     m_table = lz4pack::BuildTable(m_packed.entries, m_romfs.Size());
@@ -309,14 +331,15 @@ bool Merger::WriteNca(const OutFn& out, const lz4pack::StepFn& step, std::string
         }
         lz4pack::BlockHasher check(1u << 14, m_in.hash);
         lz4pack::Packed again;
-        bool wrote = true;
+        bool wrote = true, halted = false;
+        readnote::Take();
         const bool ok = PackOnce([&](uint64_t, const uint8_t* d, size_t n) {
             check.Feed(d, n);
             wrote = enc.Put(d, n);
             return wrote;
-        }, step, again);
+        }, Watched(step, halted), again);
         if (!ok || !wrote) {
-            error = !wrote ? "write" : m_romfs.Damaged() ? "damaged" : "stopped";
+            error = Failure(wrote, halted);
             return false;
         }
         check.Feed(m_table.data(), m_table.size());

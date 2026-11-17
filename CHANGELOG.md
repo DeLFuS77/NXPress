@@ -4,10 +4,14 @@
 
 ### New
 
+- Settings, General: "Combine and Split Style" chooses how the files are picked in Combine and Split: a switch (the default) or a round check on the icon; the card of a game does not show over the control that picks a file, the room around it, or a file left out
+- The card of a game has a small × in the corner nearest its row, at the top when the card is under the row and at the bottom when it is above, that closes it; Settings, General, "Close Button On The Hover Card" turns it on (it is off by default)
+- Combine: when the control data of a dump folder has an icon, it shows in the place of the cover art icon, with "Icon found in the game's data", and the button reads "Replace Icon" (from a file, the Nintendo eShop or SteamGridDB); a folder without one is as before
+- Combine and Split: a box at the left of each folder, file or NUP chooses whether the work takes it; all are chosen each time NXPress starts, a box in the header chooses all or none, and the ones left out stay in the list and are skipped
 - Emulators: the page starts with the section titles only and no emulators; Reset to default goes back to that. Lists already saved are kept
-- The window title reads "NXPress 1.7.16 - WICKED EDITION"
+- The window title reads "NXPress 1.7.19 - WICKED EDITION"
 - Emulators, Import: the paste box says "Paste a code here (Ctrl+V)"
-- Based on the official 1.7.16. Its Add cover art icon in Combine (1.7.11) and its crop of the icon (1.7.12) are not in this version: the cover art icon and the crop of this version replace them
+- Based on the official 1.7.19. Its "Search image…" and crop for the NUP of a dump folder (1.7.19, 1.7.11, 1.7.12) are not in this version: the cover art icon and the crop of this version replace them. Where the official 1.7.17-1.7.19 and this version both made the same change (the NUP of a dump folder named by the template, no prod.keys in red, the NUP text of Combine and Split in the side menu), this version's is the one kept
 - Rename: the blue button reads "Rename based on Template", and the button is as wide as its text
 - Emulators: the note of Orchid, Lichii and Nemyu ends with a period
 - Emulators, editing: drag the three dots to move a section, a category (inside its own section) or an emulator (into any category); the arrows of the keyboard move it one place
@@ -99,6 +103,50 @@
 - Details: **Full details** under each file once it is read: its titles (game, updates, DLC) with ID, version, name, publisher and what each holds, then, for a NUP, the totals NSP Box tells (original bytes, unique stored data, file size, compressed and raw files, unique extents, icon) and what reads it. Select any of it, or copy it all with the button or a right click. In Details, the right click menu of a file has **Copy full details**
 - Details: Export now also writes a text file (**Text (.txt)**) with the full details of every file in the list, one after the other
 - `build-windows.bat`, `build-linux.sh` and `build-macos.sh` build NXPress, and a `settings` folder with a README comes with the source (it makes the build portable)
+
+## 1.7.19
+
+### Improvements
+
+- Combine: "Search image…" for the NUP of a dump folder too, with the images of the eShop or one pasted, then cropped. Thanks to NikoMuffin for the idea (#102)
+- Settings: with no prod.keys found it says so in red, and its help tells how to choose them. Thanks to NikoMuffin for the idea (#146)
+- Side menu: Combine and Split also say what they do with NUP files ("folder → NUP", "NUP → folder"). Thanks to NikoMuffin for the idea (#141)
+- Optimize for install (experimental): what a game holds more than once is stored once, wherever it is, and the next part is read while the one before is compressed: some games come out about 10 % smaller, and faster. The idea comes from hacBrewPackLZ
+
+### Fixes
+
+- Measure this PC: Cancel stops it at once, not about 30 seconds later. Thanks to NikoMuffin for reporting it (#149)
+
+## 1.7.18
+
+### Improvements
+
+- Verify and Details: the notes of the list, such as a newer update in the list or a newer version published, stay under each file after the work too. Thanks to NikoMuffin for the idea (#136)
+- Settings: a Credits section
+- Settings: the shortcut Ctrl+Z tells what it undoes. Thanks to NikoMuffin for asking (#131)
+- Settings: a clearer help for "Play a sound when done". Thanks to NikoMuffin for the text (#130)
+- A program that is not an official version of NXPress says so in the side menu ("Unofficial build"), and the report of a work too. The official versions are known by their signed checksums
+- The name and the logo of NXPress are not licensed with the code: a modified version needs its own (TRADEMARKS.md)
+
+### Fixes
+
+- The settings on the right are dimmed while a work is running, as the side menu is. Thanks to NikoMuffin for reporting it (#133)
+- Measure this PC shows its results in a window again, with every setting tried. Thanks to NikoMuffin for reporting it (#128)
+- Details of thousands of files: the window keeps up with the work, so Cancel stops it when pressed. Thanks to NikoMuffin for reporting it (#135)
+- Combine: the NUP of each dump folder follows the template once it is changed, as the SuperNSP of each game do. Thanks to NikoMuffin for reporting it (#143)
+
+## 1.7.17
+
+### Improvements
+
+- Saved settings: two new ones, "Maximum" (the highest level, for installers) and "Maximum (experimental)" (the same with the extra compression). Thanks to NikoMuffin for the idea (#125)
+- Combine with "Delete originals once checked": the folders the originals leave empty are deleted too, up to the folder given. A folder with any other file in it stays. Thanks to NikoMuffin for the idea (#126)
+- Convert: it now also goes the other way, NSP and NSZ to XCI and XCZ (--convert --to-xci). The game card gets a header written by NXPress, not signed by Nintendo. Thanks to NikoMuffin for the idea (#127)
+- Recovery data: a .par2 next to each new file (--par2 PERCENT) rebuilds the parts damaged on the disk over time, and Verify repairs with it (--repair). par2cmdline and MultiPar read it too. Thanks to TeleTubby666 (GBAtemp) for the idea
+
+### Fixes
+
+- Folders dragged into the window no longer open windows of their own, also when they come from another screen. Thanks to NikoMuffin for reporting it (#120)
 
 ## 1.7.16
 

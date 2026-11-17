@@ -3,6 +3,8 @@
 #include "romfs_lz4.hpp"
 
 #include "lz4nintendo.h"
+#include "read_note.hpp"
+#include "work_thread.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -108,7 +110,12 @@ bool Pack(uint64_t virt_size, int level, uint32_t min_gain, const ReadFn& read, 
     std::vector<std::thread> workers;
     const auto start = [&](std::vector<Job>& jobs, size_t count) {
         if (threads > 1 && count > 1) {
-            for (unsigned t = 0; t < threads && t < count; t++) workers.emplace_back(compress, std::ref(jobs), t, count, threads);
+            for (unsigned t = 0; t < threads && t < count; t++) {
+                workers.emplace_back([&compress, &jobs, t, count, threads] {
+                    nxdock::WorkThread(int(t)); // below the screen, each on its core
+                    compress(jobs, t, count, threads);
+                });
+            }
         } else {
             compress(jobs, 0, count, 1);
         }
@@ -205,22 +212,40 @@ bool Unpack(const std::vector<Entry>& entries, uint64_t virt_end, const ReadFn& 
     std::vector<uint8_t> packed, plain;
     while (size > 0) {
         // the entry holding offset
+        using ull = unsigned long long;
         auto it = std::upper_bound(entries.begin(), entries.end(), offset, [](uint64_t o, const Entry& e) { return o < e.virt; });
-        if (it == entries.begin()) return false;
+        if (it == entries.begin()) {
+            readnote::Note("compression table: nothing at virt %llu", ull(offset));
+            return false;
+        }
         const Entry& e = *(it - 1);
         const uint64_t end = it == entries.end() ? virt_end : it->virt;
-        if (offset >= end) return false;
+        if (offset >= end) {
+            readnote::Note("compression table: virt %llu past its end %llu", ull(offset), ull(end));
+            return false;
+        }
         const size_t n = size_t(std::min<uint64_t>(size, end - offset));
         if (e.type == kNone) {
-            if (!stored(e.phys + (offset - e.virt), out, n)) return false;
+            if (!stored(e.phys + (offset - e.virt), out, n)) {
+                readnote::Add("stored block at virt %llu (at %llu), %zu bytes", ull(offset), ull(e.phys + (offset - e.virt)), n);
+                return false;
+            }
         } else if (e.type == kZeros) {
             std::memset(out, 0, n);
         } else if (e.type == kLz4) {
             packed.resize(e.size);
             plain.resize(size_t(end - e.virt));
-            if (!stored(e.phys, packed.data(), packed.size()) || nx_lz4_decompress(packed.data(), packed.size(), plain.data(), plain.size()) != 0) return false;
+            if (!stored(e.phys, packed.data(), packed.size())) {
+                readnote::Add("LZ4 block at virt %llu (at %llu, %u bytes)", ull(e.virt), ull(e.phys), unsigned(e.size));
+                return false;
+            }
+            if (nx_lz4_decompress(packed.data(), packed.size(), plain.data(), plain.size()) != 0) {
+                readnote::Note("an LZ4 block of the game does not decompress: virt %llu, at %llu, %u bytes", ull(e.virt), ull(e.phys), unsigned(e.size));
+                return false;
+            }
             std::memcpy(out, plain.data() + (offset - e.virt), n);
         } else {
+            readnote::Note("compression table: a block of type %d at virt %llu", int(e.type), ull(e.virt));
             return false;
         }
         out += n;

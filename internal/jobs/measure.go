@@ -52,9 +52,11 @@ type MeasureReport struct {
 	Per10GB time.Duration
 }
 
-// measured is told to the window once a measure chose its setting, to apply and show it.
-type measured interface {
-	measured(report MeasureReport)
+// Measured is told to the window once a measure chose its setting, to apply and show it. Its
+// method is exported: the window is in another package, which could not have an unexported one
+// of this package, and the measure was told to no window (#128).
+type Measured interface {
+	Measured(report MeasureReport)
 }
 
 // measure tries settings of the compression on part of a game, as a compression reads,
@@ -129,8 +131,8 @@ func measure(ctx context.Context, path string, o Options, out Output) (string, s
 	}
 	out.Say("%d processors, level %d (threads × files at once):\n  %s", runtime.NumCPU(), o.Level, strings.Join(lines, "\n  "))
 	per10GB := time.Duration(float64(10<<10) / float64(max(1, best.Speed)) * float64(time.Second))
-	if window, ok := out.(measured); ok {
-		window.measured(MeasureReport{Processors: runtime.NumCPU(), Level: o.Level, Block: o.Block, Trials: trials, Best: best, Faster: fasterTrial(trials, best), Per10GB: per10GB})
+	if window, ok := out.(Measured); ok {
+		window.Measured(MeasureReport{Processors: runtime.NumCPU(), Level: o.Level, Block: o.Block, Trials: trials, Best: best, Faster: fasterTrial(trials, best), Per10GB: per10GB})
 	}
 	return "", fmt.Sprintf("best: -t %d -m %d, %d MB/s, about %s for 10 GB", best.Threads, best.Files, best.Speed, duration(per10GB)), nil
 }
@@ -190,13 +192,59 @@ func NotMeasurable(path string) error {
 
 // measureOne compresses a part of the game for a trial, for about the time given, into a hidden
 // file in folder, and deletes it; where nothing can be written, the measure leaves the writing
-// out.
+// out. Cancelled, it returns at once (#149): the part zstd has taken, tens of MB at the max level
+// with the long window, is compressed to its end behind, into nothing, as its file is deleted
+// right away.
 func measureOne(ctx context.Context, path string, folder string, from float64, options switchfs.CompressOptions, trial time.Duration) (int64, error) {
-	var output io.Writer = io.Discard
-	if file, err := os.CreateTemp(folder, ".nxpress-measure-*"); err == nil {
-		defer os.Remove(file.Name())
-		defer file.Close()
-		output = file
+	output := &droppableWriter{}
+	file, err := os.CreateTemp(folder, ".nxpress-measure-*")
+	if err == nil {
+		output.to = file
 	}
-	return switchfs.MeasureCompression(ctx, path, from, options, trial, output)
+	drop := func() {
+		output.drop()
+		if file != nil {
+			file.Close()
+			os.Remove(file.Name())
+		}
+	}
+	type result struct {
+		done int64
+		err  error
+	}
+	ended := make(chan result, 1)
+	go func() {
+		done, err := switchfs.MeasureCompression(ctx, path, from, options, trial, output)
+		ended <- result{done, err}
+	}()
+	select {
+	case r := <-ended:
+		drop()
+		return r.done, r.err
+	case <-ctx.Done():
+		drop()
+		return 0, ctx.Err()
+	}
+}
+
+// droppableWriter writes to its file until it is dropped, and then into nothing: a write going
+// on ends before drop returns, so the file can be closed and deleted.
+type droppableWriter struct {
+	mutex sync.Mutex
+	to    io.Writer
+}
+
+func (w *droppableWriter) Write(p []byte) (int, error) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if w.to == nil {
+		return len(p), nil
+	}
+	return w.to.Write(p)
+}
+
+func (w *droppableWriter) drop() {
+	w.mutex.Lock()
+	w.to = nil
+	w.mutex.Unlock()
 }

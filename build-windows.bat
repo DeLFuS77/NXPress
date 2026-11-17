@@ -28,7 +28,7 @@ call :step "go test" "go test -tags desktop,production ./..." || goto :failed
 echo.
 echo === Building nxpress.exe
 echo === Building nxpress.exe >> "%LOG%"
-go build -tags desktop,production -trimpath -ldflags "-s -w -X main.version=1.7.16-details" -o nxpress.exe . >> "%LOG%" 2>&1
+go build -tags desktop,production -trimpath -ldflags "-s -w -X main.version=1.7.19-details" -o nxpress.exe . >> "%LOG%" 2>&1
 if errorlevel 1 goto :buildfailed
 echo ok
 

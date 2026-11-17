@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "$0")"
 LOG="$PWD/build-log.txt"
 : > "$LOG"
-VERSION="${NXPRESS_VERSION:-1.7.16-details}"
+VERSION="${NXPRESS_VERSION:-1.7.19-details}"
 
 fail() {
   echo; echo "FAILED: $1"; echo "The full output is in $LOG"; exit 1

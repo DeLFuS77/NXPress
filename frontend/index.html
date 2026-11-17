@@ -23,6 +23,8 @@
     <div class="side-foot">
       <button id="open-preferences" class="side-item" data-t-label="preferences" data-t-title="preferences"><span class="tile tone-neutral"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b data-t="preferences"></b></button>
       <button id="keys" class="side-keys"></button>
+      <!-- a program that is not an official version tells it, and opens the official ones -->
+      <button id="unofficial" class="side-unofficial" hidden></button>
     </div>
   </nav>
 
@@ -78,7 +80,7 @@
       </div>
       <table id="files" hidden>
         <!-- a column sorts with a button in its header, for the keyboard too; the button wears the letter and the color of the header -->
-        <thead><tr><th data-sort="name" data-t-title="sortHint" aria-sort="none"><button data-t="file"></button></th><th class="size" data-sort="size" data-t-title="sortHint" aria-sort="none"><button data-t="size"></button></th><th class="state" data-sort="state" data-t-title="sortHint" aria-sort="none"><button data-t="state"></button></th><th></th></tr></thead>
+        <thead><tr><th data-sort="name" data-t-title="sortHint" aria-sort="none"><label class="pick" data-t-title="pickAll"><input type="checkbox" id="pick-all" data-t-label="pickAll" checked></label><button data-t="file"></button></th><th class="size" data-sort="size" data-t-title="sortHint" aria-sort="none"><button data-t="size"></button></th><th class="state" data-sort="state" data-t-title="sortHint" aria-sort="none"><button data-t="state"></button></th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -193,6 +195,16 @@
       <label class="check"><input id="keep-named" type="checkbox"><span data-t="keepNamed"></span></label>
     </section>
 
+    <!-- Convert goes one way or the other: the list takes the files of the way chosen (#127) -->
+    <section class="block" data-for="convert">
+      <div class="field" role="radiogroup">
+        <label class="choice"><input type="radio" name="convert-way" value="nsp" id="convert-to-nsp">
+          <span><b data-t="convertToNsp"></b><small data-t="convertToNspHint"></small></span></label>
+        <label class="choice"><input type="radio" name="convert-way" value="card" id="convert-to-card">
+          <span><b data-t="convertToCard"></b><small data-t="convertToCardHint"></small></span></label>
+      </div>
+    </section>
+
     <section class="block" data-for="fat32">
       <h2>FAT32</h2>
       <p class="hint" data-t="fat32Hint"></p>
@@ -208,6 +220,8 @@
       <p class="hint" id="verify-level-hint"></p>
       <label class="check"><input id="no-cache" type="checkbox"><span data-t="noCache"></span></label>
       <p class="hint" data-t="noCacheHint"></p>
+      <label class="check"><input id="repair" type="checkbox"><span data-t="repair"></span></label>
+      <p class="hint" data-t="repairHint"></p>
     </section>
 
     <section class="block" data-for="pack">
@@ -250,6 +264,11 @@
       <label class="check sub-check" id="remove-dumps-option" hidden><input id="remove-dumps" type="checkbox"><span data-t="removeDumps"></span></label>
       <p class="hint" data-t="removeDumpsHint"></p>
       <p class="warning" id="remove-warning" hidden></p>
+      <!-- recovery data next to each new file, in the PAR 2.0 format: it rebuilds the parts of
+           the file damaged on the disk over time -->
+      <label class="check" data-for="compress decompress recompress trim convert"><input id="par2" type="checkbox"><span data-t="par2"></span></label>
+      <label class="small-check sub-check" id="par2-amount" data-for="compress decompress recompress trim convert"><span data-t="par2Amount"></span> <select id="par2-percent"><option value="1">1 %</option><option value="3">3 %</option><option value="5">5 %</option><option value="10">10 %</option></select></label>
+      <p class="hint" data-for="compress decompress recompress trim convert" data-t="par2Hint"></p>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim verify">
@@ -314,6 +333,14 @@
         <div class="pref-item">
           <div class="pref-text"><b data-t="theme"></b></div>
           <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="pickStyle"></b><small data-t="pickStyleHint"></small></div>
+          <div class="segmented"><button data-pick-style="switch" data-t="pickStyleSwitch"></button><button data-pick-style="check" data-t="pickStyleCheck"></button></div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><b data-t="popCloseTitle"></b><small data-t="popCloseHint"></small></div>
+          <div class="segmented"><button data-pop-close="on" data-t="popCloseOn"></button><button data-pop-close="off" data-t="popCloseOff"></button></div>
         </div>
         <div class="pref-item pref-stack">
           <div class="pref-text"><b data-t="colors"></b><small data-t="colorsHint"></small></div>
@@ -392,8 +419,23 @@
             <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
             <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
             <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="undo"></dd>
+            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="shortcutUndo"></dd>
           </dl></div>
+        </div>
+      </section>
+      <!-- who makes NXPress, and who helps it most -->
+      <section class="pref-group" id="credits">
+        <h2 data-t="credits"></h2>
+        <div class="pref-item credit">
+          <span class="credit-badge" aria-hidden="true">D</span>
+          <div class="pref-text"><b>DeLFuS77</b><small class="credit-role" data-t="creditAuthor"></small></div>
+        </div>
+        <div class="pref-item credit">
+          <span class="credit-badge tester" aria-hidden="true">N</span>
+          <div class="pref-text"><b>NikoMuffin</b><small class="credit-role" data-t="creditNiko"></small></div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-text"><small data-t="creditThanks"></small></div>
         </div>
       </section>
       </div>

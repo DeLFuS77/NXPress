@@ -47,6 +47,8 @@ type GameTitle struct {
 	NeedsGame int      `json:"needsGame,omitempty"`
 	// the icon of the game, as a data URL, when asked for
 	Icon string `json:"icon,omitempty"`
+	// of a dump folder: the icon its control data has, as a data URL (Combine shows it as the cover)
+	ControlIcon string `json:"controlIcon,omitempty"`
 	// the experimental formats of NXPress its NCZ files are in (NCZSECT2, NCZSECT3), which only
 	// NXPress reads so far: empty for a plain NSZ or XCZ and any other file (#58)
 	Format string `json:"format,omitempty"`
@@ -122,7 +124,7 @@ func ReadTitle(path string, withIcon bool) (GameTitle, error) {
 		return nupTitle(path, withIcon)
 	}
 	if IsDumpFolder(path) {
-		return dumpTitle(path)
+		return dumpTitleWith(path, withIcon)
 	}
 	all, err := ReadTitles(path)
 	if err != nil {
@@ -469,5 +471,6 @@ func rename(ctx context.Context, path string, o Options, out Output) (string, st
 	if err != nil {
 		return "", "", err
 	}
+	moveRecovery(path, name)
 	return name, "renamed to " + filepath.Base(name), nil
 }

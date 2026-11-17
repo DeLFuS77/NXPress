@@ -96,15 +96,18 @@ nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
 nxpress -C --extra game.nsp         compress with the experimental extra compression, NXPress only
 nxpress -C --skip-sparse-updates games  leave the update of a game in sparse storage as NSP, like its game
+nxpress -C --par2 3 games           write recovery data (.par2) for 3 % of each new file
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds
+nxpress -V --repair games           rebuild damaged files with their .par2, then check them again
 nxpress --split super.nsp           split a multi-title file into one file per title
 nxpress --pack super.nsp a.nsp b.nsp  merge into one SuperNSP (with an XCI among them: an XCI with everything)
 nxpress --pack-one a.nsp b.nsp      the same, next to the files and named by --pack-name
 nxpress --pack-games games         a SuperNSP per game of a folder, named by --pack-name
 nxpress --optimize -C game update   the game and its update as one NSZ that takes the least room installed
 nxpress --convert game.xci          turn an XCI into an NSP
+nxpress --convert --to-xci game.nsp turn an NSP into an XCI
 nxpress --recompress -B game.nsz    write an NSZ again in blocks (or -S, solid), no NSP in between
 nxpress --trim game.xci update.nsp  take away the padding of an XCI and the delta fragments of an update
 nxpress --estimate -l 19 game.nsp   tell the size and the time a compression would give
@@ -166,4 +169,6 @@ The [wiki](https://github.com/DeLFuS77/NXPress/wiki) has a guide to each section
 
 ## License
 
-AGPL-3.0
+AGPL-3.0. The name "NXPress" and its logo are not licensed with the code: a modified version needs a name and a logo of its own, and must say it is not NXPress. See [TRADEMARKS.md](TRADEMARKS.md).
+
+Only the versions published here are official: they are built here and signed. Report problems with another build to whoever made it.

@@ -87,7 +87,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
-  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), off: {}, verifyLevel: "full",
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
@@ -819,14 +819,18 @@ function showPop(row, anchor) {
   pop.hidden = false;
   const box = anchor.getBoundingClientRect();
   const width = pop.offsetWidth, height = pop.offsetHeight, margin = 8;
-  let left, top;
+  let left, top, above = false;
   if ($("files").classList.contains("grid")) {
     left = box.right + margin + width < innerWidth ? box.right + margin : box.left - margin - width;
     top = box.top;
   } else {
     left = box.left + 44;
     top = box.bottom + 4 + height < innerHeight - margin ? box.bottom + 4 : box.top - 4 - height;
+    // the close button is at the corner nearest the row: the top one when the card is under it, the
+    // bottom one when it is above
+    above = top < box.top;
   }
+  pop.classList.toggle("above", above);
   pop.style.left = Math.max(margin, Math.min(left, innerWidth - width - margin)) + "px";
   pop.style.top = Math.max(margin, Math.min(top, innerHeight - height - margin)) + "px";
   // the card wears the color of the cover, as soon as it is known
@@ -998,9 +1002,13 @@ function coverControl(row) {
   const box = document.createElement("div");
   box.className = "ncover-row";
   const open = () => (entry ? editCover(row) : chooseCover(row));
-  const thumb = document.createElement(entry ? "img" : "span");
-  thumb.className = "ncover-thumb";
+  // the icon the control data of the game already has, when no cover was chosen: shown in the place
+  // of the cover, and the button offers to replace it
+  const found = !entry && row.game && row.game.controlIcon;
+  const thumb = document.createElement(entry || found ? "img" : "span");
+  thumb.className = "ncover-thumb" + (found ? " found" : "");
   if (entry) { thumb.src = entry.url; thumb.alt = ""; thumb.onclick = open; }
+  if (found) { thumb.src = row.game.controlIcon; thumb.alt = ""; thumb.title = t("ncoverFound"); }
   // an edit button when there is a cover, and one button that opens a menu to get one: from a file, from the
   // Nintendo eShop or from SteamGridDB; under it the formats it takes
   const side = document.createElement("div");
@@ -1018,7 +1026,7 @@ function coverControl(row) {
   pick.className = "ncover-set";
   pick.setAttribute("aria-haspopup", "menu");
   pick.setAttribute("aria-expanded", "false");
-  pick.textContent = t("ncoverMenu") + " ▾";
+  pick.textContent = t(found ? "ncoverReplace" : "ncoverMenu") + " ▾";
   pick.disabled = state.busy;
   const close = () => {
     menu.hidden = true;
@@ -1055,6 +1063,12 @@ function coverControl(row) {
   }
   line.append(pick);
   side.append(line, accepts, menu);
+  if (found) {
+    const note = document.createElement("small");
+    note.className = "ncover-found";
+    note.textContent = "✓ " + t("ncoverFound");
+    side.insertBefore(note, accepts);
+  }
   box.append(thumb, side);
   if (entry) {
     const clear = document.createElement("button");
@@ -2343,7 +2357,7 @@ function paintEmulatorTools() {
     emuForm = null;
     paintEmulatorList();
   });
-  tools.append(make(t("nEmuImport"), () => emuImportOpen()), emuShareMenu(make), make(t("nEmuDone"), toggle, "emu-save"), reset);
+  tools.append(make(t("nEmuImport"), () => emuImportOpen()), emuShareMenu(make), reset, make(t("nEmuDone"), toggle, "emu-save"));
 }
 // the page: each section, with its categories and its emulators
 function paintEmulatorList() {
@@ -2822,6 +2836,15 @@ function wirePop() {
       }
     }
   }).observe($("files").tBodies[0], { childList: true, subtree: true });
+  // a button in the corner of the card closes it
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "pop-close";
+  close.textContent = "×";
+  close.title = t("popClose");
+  close.setAttribute("aria-label", t("popClose"));
+  close.addEventListener("click", event => { event.stopPropagation(); hidePop(); });
+  pop.append(close);
   pop.addEventListener("mouseenter", () => clearTimeout(popLeave));
   pop.addEventListener("mouseleave", hidePop);
   pop.addEventListener("contextmenu", event => {
@@ -2858,7 +2881,7 @@ function helpName(hint) {
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status)");
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
@@ -3304,6 +3327,18 @@ function paintPublished() {
   const date = $("published").checked ? state.versionsDate : null;
   $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
+// the most text the log of a work keeps, its last part (#135)
+const logKept = 4 << 20;
+// what the work told and the log has not shown yet, added ten times a second at most (#135)
+let said = [], sayFrame = 0;
+// clearLog empties the log, with what was still to be shown in it
+function clearLog() {
+  said = [];
+  if (sayFrame) clearTimeout(sayFrame);
+  sayFrame = 0;
+  $("log").textContent = "";
+  $("log").hidden = true;
+}
 let warnTimer = 0;
 function warnSoon() {
   clearTimeout(warnTimer);
@@ -3406,6 +3441,7 @@ function startSoon() {
 }
 
 function render() {
+  paintOfficial();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -3504,7 +3540,7 @@ function render() {
   $("title-tile").innerHTML = icon(page);
   $("about").textContent = t("about" + page[0].toUpperCase() + page.slice(1));
   $("takes").innerHTML = "";
-  for (const entry of (optimizing() ? takesOptimize : takesShown[state.mode]).split(" ")) {
+  for (const entry of (optimizing() ? takesOptimize : toCard() ? "NSP NSZ" : takesShown[state.mode]).split(" ")) {
     // "NSP/NSZ:takesUpdates": the kinds of file, and which of them it works on; ":takesDumps"
     // alone: what it takes besides files
     const [type, which] = entry.split(":");
@@ -3516,10 +3552,13 @@ function render() {
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   paintUpdate();
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  for (const button of document.querySelectorAll("button[data-pick-style]")) button.classList.toggle("on", button.dataset.pickStyle === state.pickStyle);
+  for (const button of document.querySelectorAll("button[data-pop-close]")) button.classList.toggle("on", button.dataset.popClose === state.popClose);
   paintPalettes();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
   const view = viewOf(state.mode);
   $("files").classList.toggle("grid", view === "grid");
+  paintPicks();
   for (const button of document.querySelectorAll("[data-view]")) { button.classList.toggle("on", button.dataset.view === view); button.setAttribute("aria-checked", button.dataset.view === view); }
   // what Verify checks: the button chosen, and a sentence for it
   for (const button of document.querySelectorAll("[data-verify-level]")) {
@@ -3543,14 +3582,15 @@ function render() {
   // Delete originals deletes the files a work was given; the dump folders Combine packs, unless
   // the box under it asks for them too, and the NUP files Decompress unpacks stay as they are
   // (#79): the warning tells it for the list shown
-  const kept = state.items.filter(item => state.mode === "pack" ? item.dump : (state.mode === "decompress" || state.mode === "split") && isNup(item.path)).length;
+  const kept = pickedItems().filter(item => state.mode === "pack" ? item.dump : (state.mode === "decompress" || state.mode === "split") && isNup(item.path)).length;
   const dumps = state.mode === "pack" && kept > 0;
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
   // how their NUP is packed, only for dump folders
   $("nup-block").hidden = !dumps;
   const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
-  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
+  $("remove-warning").textContent = [(kept < pickedItems().length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
+  $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
   // added on their own
   const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
@@ -3655,7 +3695,9 @@ function summary() {
     text.textContent = t("nothing");
     return;
   }
-  text.textContent = t("selected")(state.items.length, state.items.reduce((sum, item) => sum + (item.size || 0), 0));
+  const taken = pickedItems();
+  const bytes = taken.reduce((sum, item) => sum + (item.size || 0), 0);
+  text.textContent = taken.length < state.items.length ? t("pickCount")(taken.length, state.items.length, bytes) : t("selected")(state.items.length, bytes);
   const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
@@ -3761,14 +3803,49 @@ function clearRows() {
   state.rows.clear();
   state.lastRun = null;
   $("files").tBodies[0].innerHTML = "";
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
 }
 function clearList() {
+  state.off = {};
   clearRows();
   state.sources = [];
   state.removed = new Set();
+}
+
+// ---- Combine and Split: which files of the list are worked on ----
+// Each file of the list has a box at its left; all of them are chosen each time NXPress starts. A
+// file left out stays in the list and is not given to the work. The choice is kept for each
+// section (Combine and Split have their own), in memory only.
+const hasPicks = mode => mode === "pack" || mode === "split";
+const offOf = (mode = state.mode) => state.off[mode] || (state.off[mode] = new Set());
+// pickedItems are the files of the list the work will take
+const pickedItems = () => hasPicks(state.mode) ? state.items.filter(item => !offOf().has(item.path)) : state.items;
+function paintPicks() {
+  const on = hasPicks(state.mode);
+  $("files").classList.toggle("picking", on);
+  const off = offOf();
+  let total = 0, chosen = 0;
+  for (const row of state.rows.values()) {
+    const box = row.tr.querySelector(".pick input");
+    const left = on && !!box && off.has(row.item.path);
+    row.tr.classList.toggle("unpicked", left);
+    row.tr.classList.toggle("picked", on && !!box && !left);
+    if (!box) continue;
+    box.checked = !off.has(row.item.path);
+    box.disabled = state.busy;
+    if (!row.tr.classList.contains("find-out")) { total++; if (box.checked) chosen++; }
+  }
+  const all = $("pick-all");
+  all.checked = total > 0 && chosen === total;
+  all.indeterminate = chosen > 0 && chosen < total;
+  all.disabled = state.busy || total === 0;
+}
+// pickChanged: what depends on the files chosen is told again
+function pickChanged() {
+  paintPicks();
+  summary();
+  previewPacks();
 }
 
 // add puts a file in the list; the new file of a pack (item.result) shows in it, but is no file
@@ -3779,7 +3856,7 @@ function add(item) {
   // a file added again is no longer one taken out
   state.removed.delete(item.path);
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td class="name"><div class="game"><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
+  tr.innerHTML = `<td class="name"><div class="game"><label class="pick"><input type="checkbox" checked></label><img class="icon" alt="" hidden><span class="cover" aria-hidden="true"></span><div><div class="title"></div><div class="file"></div></div></div><div class="note"></div></td><td class="size"></td><td class="state"></td><td class="remove"><button class="quiet">✕</button></td>`;
   // until the icon of the game comes, a cover tells the kind of file; a dump folder shows a folder
   const kind = item.dump ? "DUMP" : (item.path.match(/\.(\w+)$/) || ["", ""])[1].toUpperCase();
   tr.querySelector(".cover").textContent = item.dump ? "" : kind;
@@ -3787,12 +3864,41 @@ function add(item) {
   tr.querySelector(".cover").dataset.kind = kind;
   tr.querySelector(".title").textContent = item.name;
   tr.querySelector(".title").title = item.path;
+  // the new file of a pack is a result, no file to choose
+  const pick = tr.querySelector(".pick");
+  if (item.result) pick.remove();
+  else {
+    const box = pick.querySelector("input");
+    pick.title = t("pickRow");
+    box.setAttribute("aria-label", t("pickRow"));
+    box.checked = !offOf().has(item.path);
+    tr.classList.toggle("unpicked", hasPicks(state.mode) && !box.checked);
+    tr.classList.toggle("picked", hasPicks(state.mode) && box.checked);
+    pick.addEventListener("click", event => event.stopPropagation());
+    box.addEventListener("change", () => {
+      if (!hasPicks(state.mode)) return;
+      if (box.checked) offOf().delete(item.path); else offOf().add(item.path);
+      pickChanged();
+    });
+  }
   const game = tr.querySelector(".game");
-  game.addEventListener("mouseenter", () => {
+  // the card of the game comes after the mouse rests on its name; not over the control that chooses
+  // the file, nor the room around it
+  // the card of the game, as it always was: it comes when the mouse enters the name and rests; it
+  // does not come for a file left out of Combine or Split, nor over the control that chooses the
+  // file (the strip it fills), where it goes away and comes back when the mouse leaves it
+  const wait = () => {
     clearTimeout(popTimer);
+    if (tr.classList.contains("unpicked")) return;
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
-  });
+  };
+  game.addEventListener("mouseenter", () => { if (!game.querySelector(".pick:hover")) wait(); });
   game.addEventListener("mouseleave", hidePop);
+  const pickArea = tr.querySelector(".pick");
+  if (pickArea) {
+    pickArea.addEventListener("mouseenter", hidePop);
+    pickArea.addEventListener("mouseleave", () => { if (game.matches(":hover")) wait(); });
+  }
   // an empty file shows its 0 B; a file a work told about, whose size is not known, nothing
   tr.querySelector(".size").textContent = item.size === null ? "" : size(item.size || 0);
   const remove = () => {
@@ -3941,9 +4047,10 @@ function paint(row) {
     plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
     file.after(plan);
   }
-  // a warning of the list shows until the file is worked on
+  // a warning of the list shows until the file is worked on; in Verify and Details, which leave
+  // the file as it is, it stays after the work too, where it is looked at most (#136)
   let warn = row.tr.querySelector(".list-warn");
-  if (row.warn && !row.status) {
+  if (row.warn && (!row.status || ["verify", "info"].includes(state.mode))) {
     if (!warn) {
       warn = document.createElement("div");
       warn.className = "list-warn";
@@ -4101,7 +4208,7 @@ function previewPacks() {
   packTimer = setTimeout(async () => {
     const list = $("pack-plan");
     if (state.mode !== "pack" || !$("pack-games").checked) return;
-    const paths = state.items.map(item => item.path);
+    const paths = pickedItems().map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
@@ -4176,7 +4283,12 @@ function settings() {
     nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
+    // Convert: NSP and NSZ into game cards instead of game cards into NSP and NSZ (#127)
+    toCard: $("convert-to-card").checked,
     lowPriority: $("low-priority").checked,
+    // recovery data (.par2) for the percent chosen of each new file, and Verify repairing with it
+    par2: $("par2").checked ? +$("par2-percent").value : 0, par2Percent: +$("par2-percent").value,
+    repair: $("repair").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
     // Optimize for install, in Compress
@@ -4188,14 +4300,21 @@ function settings() {
 
 // Compress with Optimize for install on: the games with their updates, into one NSZ each
 const optimizing = () => state.mode === "compress" && $("optimize").checked;
-// the files the list takes: Optimize for install takes NSZ and XCZ too
-const expandMode = () => (optimizing() ? "optimize" : state.mode);
+// Convert from NSP and NSZ into game cards
+const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
+// the files the list takes: Optimize for install takes NSZ and XCZ too, and Convert into game
+// cards NSP and NSZ
+const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : state.mode);
 
 // presets: the settings of a compression kept with a name
 const builtinPresets = () => [
   { name: t("presetInstallers"), level: 18, block: false, builtin: true },
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
   { name: t("presetFast"), level: 3, block: false, builtin: true },
+  // the smallest files: the highest level, for installers, and with the extra compression too,
+  // which asks first, as its box does (#125)
+  { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
+  { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
 // the preset chosen is kept by what it is, not by its place in the list, which changes when one
 // is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
@@ -4256,6 +4375,14 @@ function applyPreset() {
   $(preset.block ? "target-block" : "target-solid").checked = true;
   if (preset.threads) $("threads").value = preset.threads;
   if (preset.multi) $("multi").value = preset.multi;
+  // the presets of NXPress say whether the extra compression goes with them: turned on, it asks
+  // first, and stays off if that is not accepted
+  if (preset.extra === false && $("extra").checked) $("extra").checked = false;
+  if (preset.extra === true && !$("extra").checked) {
+    $("extra").checked = true;
+    $("extra").onchange();
+    return;
+  }
   save("settings", settings());
   render();
 }
@@ -4282,6 +4409,11 @@ async function start(mode, extra) {
   if (measuring) {
     files = state.items.filter(item => /\.(nsp|xci)$/i.test(item.path)).map(item => item.path);
     if (!files.length) { setStatus({ key: "measureNeedsGame" }); return; }
+  }
+  // the files left out in Combine and Split are not given to the work
+  if (hasPicks(mode)) {
+    files = files.filter(path => !offOf(mode).has(path));
+    if (!files.length) { setStatus({ key: "pickNone" }); return; }
   }
   // origins: the folders dropped or chosen, which a pack of their files goes next to (#45)
   const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, ...(extra || {}) };
@@ -4310,8 +4442,7 @@ async function start(mode, extra) {
     before.rows.push([row, Object.fromEntries(Object.keys(fresh).map(key => [key, row[key]]))]);
     Object.assign(row, fresh);
   }
-  $("log").textContent = "";
-  $("log").hidden = true;
+  clearLog();
   setStatus();
   resetSpeed();
   state.busy = true;
@@ -4391,7 +4522,7 @@ function report() {
   const run = state.lastRun || {};
   const r = run.request || {};
   const lines = [
-    `NXPress ${state.setup.version} · ${state.setup.platform}`,
+    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
     `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
@@ -4450,27 +4581,39 @@ function listen() {
     trackSpeed();
     summary();
   });
+  // what the work tells goes to the log ten times a second at most, added at its end: written again whole and
+  // scrolled at each file, a long Details of thousands of files kept the window far behind the
+  // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
+  // last megabytes.
   events.EventsOn("say", text => {
     if (state.mode === "info") return; // Details keeps its own cards, no report under the list
-    $("log").hidden = false;
     // a NUP given to a work that does not take it: a hint about Combine (once for the files dropped together), then the
     // file with "->"; the lines wrap under their text, not under their mark
     const hang = line => {
       const div = document.createElement("div");
       div.className = "log-hang";
       div.textContent = line + "\n";
-      $("log").append(div);
+      return div;
     };
     const at = text.indexOf(": this work leaves NUP files as they are");
     if (at >= 0) {
       const now = Date.now();
-      if (now - nupHintAt > 3000) hang("** " + t("nupCombineHint"));
+      if (now - nupHintAt > 3000) said.push(hang("** " + t("nupCombineHint")));
       nupHintAt = now;
-      hang("-> " + text.slice(0, at + 1) + "\n" + noteText(text.slice(at + 2)));
+      said.push(hang("-> " + text.slice(0, at + 1) + "\n" + noteText(text.slice(at + 2))));
     } else {
-      $("log").append(document.createTextNode(noteText(text) + "\n"));
+      said.push(noteText(text) + "\n");
     }
-    $("log").scrollTop = $("log").scrollHeight;
+    if (sayFrame) return;
+    sayFrame = setTimeout(() => {
+      sayFrame = 0;
+      const log = $("log");
+      log.hidden = false;
+      log.append(...said);
+      said = [];
+      while (log.childNodes.length > 1 && log.textContent.length > logKept) log.firstChild.remove();
+      log.scrollTop = log.scrollHeight;
+    }, 100);
   });
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {
@@ -4828,8 +4971,18 @@ function applyListFind() {
   $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
 }
 
+// a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
+// GitHub answers when the window asks for updates
+function paintOfficial() {
+  const unofficial = state.official === "unofficial";
+  $("unofficial").hidden = !unofficial;
+  $("unofficial").textContent = t("unofficialBuild");
+  $("unofficial").title = t("unofficialBuildHint");
+}
+
 async function checkUpdate(asked = false) {
   if (!$("updates").checked && !asked) return;
+  app().Official().then(official => { state.official = official && official.state; paintOfficial(); }).catch(() => {});
   const update = await app().CheckUpdate();
   if (asked) {
     // Check now (#106): the new version again, though it was closed, or that this is the newest
@@ -5012,6 +5165,12 @@ async function main() {
   state.keys = state.setup.keys;
   // the theme: the one of the system, or the one chosen
   state.theme = load("theme", "auto", value => ["auto", "light", "dark"].includes(value));
+  // how the files of Combine and Split are chosen: a switch, or a round check on the icon
+  state.pickStyle = load("pickStyle", "switch", value => ["switch", "check"].includes(value));
+  document.documentElement.dataset.pickStyle = state.pickStyle;
+  // the × that closes the card of a game: off unless the person turns it on
+  state.popClose = load("popClose", "off", value => ["on", "off"].includes(value));
+  document.documentElement.dataset.popClose = state.popClose;
   // on Windows 11 the menu shows the Mica of the system, in the theme chosen
   document.documentElement.classList.toggle("mica", !!state.setup.mica);
   const theme = () => {
@@ -5027,6 +5186,8 @@ async function main() {
   // the colors: NXPress's own, or the ones chosen in Settings
   state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
   applyPalette();
+  for (const button of document.querySelectorAll("button[data-pop-close]")) button.onclick = () => { state.popClose = button.dataset.popClose; save("popClose", state.popClose); document.documentElement.dataset.popClose = state.popClose; render(); };
+  for (const button of document.querySelectorAll("button[data-pick-style]")) button.onclick = () => { state.pickStyle = button.dataset.pickStyle; save("pickStyle", state.pickStyle); document.documentElement.dataset.pickStyle = state.pickStyle; render(); };
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
   // the language: the one chosen, else the one chosen in the installer of Windows, else the one
   // of the system when NXPress has it
@@ -5064,6 +5225,10 @@ async function main() {
   $("nup-raw-big").checked = chosen.nupRawBig !== false;
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
+  $("par2").checked = chosen.par2 > 0;
+  $("par2-percent").value = String([1, 3, 5, 10].includes(chosen.par2Percent) ? chosen.par2Percent : 3);
+  // Verify repairs with the recovery data unless it was turned off
+  $("repair").checked = chosen.repair !== false;
   state.verifyLevel = ["full", "signature", "both"].includes(chosen.verifyLevel) ? chosen.verifyLevel : "full";
   $("keep-named").checked = !!chosen.keepNamed;
   $("low-priority").checked = !!chosen.lowPriority;
@@ -5083,6 +5248,8 @@ async function main() {
   $("template").value = state.template;
   // a pack per game unless one file with everything was chosen last
   $(chosen.packGames === false ? "pack-one" : "pack-games").checked = true;
+  // Convert into NSP and NSZ unless into game cards was chosen last
+  $(chosen.toCard === true ? "convert-to-card" : "convert-to-nsp").checked = true;
   state.packTemplate = migratedPackTemplate(text(chosen.packTemplate)) || await app().DefaultPackTemplate();
   $("pack-template").value = state.packTemplate;
 
@@ -5126,7 +5293,7 @@ async function main() {
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
-  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = render;
+  $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;
   $("skip-sparse-updates").onchange = () => save("settings", settings());
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
@@ -5180,6 +5347,7 @@ async function main() {
   $("star-yes").onclick = () => { save("starAsked", true); $("done-star").hidden = true; app().OpenURL(repository); };
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
+  $("unofficial").onclick = () => app().OpenURL(repository + "/releases/latest");
   $("export").onclick = event => exportMenu(event.currentTarget, exportDetails, true);
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
@@ -5229,6 +5397,11 @@ async function main() {
   $("choose-dat").onclick = async () => { const path = await app().ChooseDat(); if (path) state.dat = path; save("settings", settings()); render(); };
   $("reset-dat").onclick = () => { state.dat = ""; save("settings", settings()); render(); };
   for (const radio of [$("pack-games"), $("pack-one")]) radio.onchange = () => { save("settings", settings()); render(); previewPacks(); };
+  // the list is made again for the files of the way chosen, as for Optimize for install
+  for (const radio of [$("convert-to-nsp"), $("convert-to-card")]) radio.onchange = () => {
+    save("settings", settings());
+    refill(state.sources.length ? state.sources : state.items.map(item => item.path), true, true);
+  };
   $("overwrite").addEventListener("change", previewPacks);
   for (const field of [$("template"), $("pack-template")]) {
     field.addEventListener("input", () => fitTemplate(field));
@@ -5296,6 +5469,13 @@ async function main() {
     state.sort = key !== th.dataset.sort ? { key: th.dataset.sort, dir: 1 } : dir > 0 ? { key, dir: -1 } : { key: "", dir: 1 };
     save("sort", state.sort);
     sortRows();
+  };
+  // the box of the header chooses all the files shown, or none; it does not sort the column
+  $("pick-all").parentElement.onclick = event => event.stopPropagation();
+  $("pick-all").onchange = () => {
+    const off = offOf(), left = !$("pick-all").checked;
+    for (const row of state.rows.values()) if (!row.item.result && !row.tr.classList.contains("find-out")) { if (left) off.add(row.item.path); else off.delete(row.item.path); }
+    pickChanged();
   };
   $("start").onclick = start;
   $("estimate").onclick = () => start("estimate");

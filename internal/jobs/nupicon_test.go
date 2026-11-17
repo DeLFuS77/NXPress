@@ -3,6 +3,7 @@ package jobs
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"image"
 	"image/color"
@@ -275,5 +276,25 @@ func TestImageSizeNote(t *testing.T) {
 		if size != c.size || blurry != c.blurry {
 			t.Errorf("%d×%d: %q %q", c.width, c.height, size, blurry)
 		}
+	}
+}
+
+// The window shows the icon the control data of a dump folder has as its cover, so it is known that
+// none needs to be given; a folder without one tells none, and the list is read without it asked for.
+func TestDumpTitleTellsTheIconOfTheFolder(t *testing.T) {
+	dir := writeDump(t, "MR2 ROM")
+	if title, err := ReadTitle(dir, true); err != nil || title.ControlIcon != "" {
+		t.Fatalf("without an icon: %q %v", title.ControlIcon, err)
+	}
+	control := filepath.Join(dir, "base", "control")
+	os.MkdirAll(control, 0o755)
+	os.WriteFile(filepath.Join(control, "icon_AmericanEnglish.dat"), testnup.Jpeg, 0o644)
+	title, err := ReadTitle(dir, true)
+	want := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(testnup.Jpeg)
+	if err != nil || title.ControlIcon != want {
+		t.Errorf("with an icon: %q %v", title.ControlIcon, err)
+	}
+	if title, _ := ReadTitle(dir, false); title.ControlIcon != "" {
+		t.Error("the icon was given when not asked for")
 	}
 }

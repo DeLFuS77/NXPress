@@ -248,8 +248,8 @@ func (w *WatchOutput) WaitWhilePaused() {
 	}
 }
 
-func (w *WatchOutput) measured(report MeasureReport) {
-	if window, ok := w.Output.(measured); ok {
-		window.measured(report)
+func (w *WatchOutput) Measured(report MeasureReport) {
+	if window, ok := w.Output.(Measured); ok {
+		window.Measured(report)
 	}
 }
