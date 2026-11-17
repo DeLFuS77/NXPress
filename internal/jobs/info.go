@@ -47,6 +47,12 @@ func info(path string, versions *titledb.Versions, out Output) (string, error) {
 		lines = append(lines, titleDetails(title)...)
 	}
 	lines = append(lines, describe(path)...)
+	if origin, ok := ReadOrigin(path); ok {
+		lines = append(lines, "package: "+OriginLine(origin))
+	}
+	if npdm, ok := ReadPermissions(path); ok {
+		lines = append(lines, PermissionsLine(npdm)+"; "+acidNote)
+	}
 	out.Say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	if len(titles) == 1 {
 		return "1 title", nil

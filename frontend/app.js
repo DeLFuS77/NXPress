@@ -307,8 +307,52 @@ function renderCard(row) {
     warning.textContent = noteText(card.unsignedNote).replace(/^./, (c) => c.toUpperCase()).replace("--rebuild", "‑‑rebuild");
     element.append(warning);
   }
+  const facts = cardFacts(card);
+  if (facts) element.append(facts);
   element.append(reportButton(row));
   row.tr.querySelector(".note").after(element);
+}
+
+// the kind of package a file is, by what it holds, and what its program may use (main.npdm), each
+// with its help on the ⓘ of its name; an incomplete one in orange, with what it is missing
+let cardFactHelps = 0;
+function cardFacts(card) {
+  if (!card.origin && !card.permissions) return null;
+  const list = document.createElement("dl");
+  list.className = "card-facts";
+  const add = (name, value, help, warn) => {
+    const term = document.createElement("dt");
+    const label = document.createElement("span");
+    const hint = document.createElement("span");
+    label.textContent = name;
+    hint.className = "help-text";
+    hint.id = "card-fact-help-" + ++cardFactHelps;
+    hint.textContent = help;
+    label.classList.add("has-help");
+    label.dataset.help = hint.id;
+    label.tabIndex = 0;
+    label.setAttribute("aria-describedby", hint.id);
+    helpOwners.set(label, label);
+    term.append(label, hint);
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    if (warn) detail.className = "warn";
+    list.append(term, detail);
+  };
+  if (card.origin) {
+    const origin = card.origin;
+    const missing = (origin.missing || []).map(content => t("missingNca")(content.kind, content.title)).concat((origin.missingTickets || []).map(id => t("missingTicket")(id)));
+    const value = (t("originKinds")[origin.kind] || origin.kind) + (missing.length ? " · " + t("originMissing")(missing.join(", ")) : "");
+    add(t("cardOrigin"), value, t("originHelps")[origin.kind] || "", origin.kind === "incomplete");
+  }
+  if (card.permissions) {
+    const npdm = card.permissions, kernel = npdm.kernel || {};
+    const parts = [t("permissionsLine")((npdm.services || []).length, (kernel.systemCalls || []).length, kernel.minCore || 0, kernel.maxCore || 0)];
+    if ((npdm.hosts || []).length) parts.push(t("permissionsOffers")(npdm.hosts.length));
+    if (kernel.allowDebug || kernel.forceDebug) parts.push(t("permissionsDebug"));
+    add(t("cardPermissions"), parts.join(" · "), t("permissionsHelp"), false);
+  }
+  return list;
 }
 
 // Full report, at the end of the card of a file in Details

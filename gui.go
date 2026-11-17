@@ -494,6 +494,9 @@ type FileCard struct {
 	// its NCA files not signed by Nintendo (rewritten by a tool), told with what that needs
 	Unsigned     int    `json:"unsigned,omitempty"`
 	UnsignedNote string `json:"unsignedNote,omitempty"`
+	// the kind of package it is by what it holds, and the permissions of its program (main.npdm)
+	Origin      *jobs.Origin `json:"origin,omitempty"`
+	Permissions *jobs.Npdm   `json:"permissions,omitempty"`
 }
 
 // Card tells how a file is stored, for its card in Info.
@@ -518,6 +521,12 @@ func (a *App) Card(path string) (FileCard, error) {
 	card := FileCard{Kind: facts.Kind, Size: facts.Size, Decompressed: facts.DecompressedSize, Solid: facts.Solid, Blocks: facts.Blocks, Trimmable: facts.Padding + facts.DeltaFragments, Format: jobs.FormatOf(facts)}
 	if card.Unsigned = jobs.UnsignedNcas(path); card.Unsigned > 0 {
 		card.UnsignedNote = jobs.UnsignedNote(card.Unsigned)
+	}
+	if origin, ok := jobs.ReadOrigin(path); ok {
+		card.Origin = &origin
+	}
+	if npdm, ok := jobs.ReadPermissions(path); ok {
+		card.Permissions = &npdm
 	}
 	return card, nil
 }

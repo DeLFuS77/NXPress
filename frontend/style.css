@@ -541,6 +541,11 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .card-bar div { height: 100%; border-radius: 4px; background: var(--ok); animation: card-in .6s cubic-bezier(.2, .8, .2, 1); }
 @keyframes card-in { from { width: 0; } }
 .file-card .tags { margin-top: 6px; }
+/* the kind of package and the permissions of its program: a name with its help, then what it is */
+.card-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 8px 0 0; font-size: 12px; }
+.card-facts dt { color: var(--muted); white-space: nowrap; }
+.card-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.card-facts dd.warn { color: var(--warn); }
 /* the packages of a NUP in its card: a line each, with its kind, who it is and its files */
 .nup-packages { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .nup-packages li { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
