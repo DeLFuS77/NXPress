@@ -433,6 +433,7 @@ table.grid .game.refill { transition: none; }
 /* 4: a notice with Undo */
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: var(--radius); background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
 .toast button.link { margin: 0; color: var(--bg); text-decoration: underline; }
+.toast-key { margin-left: 6px; padding: 1px 5px; font-size: 11px; font-weight: 600; line-height: 1.4; border: 1px solid color-mix(in srgb, var(--bg) 45%, transparent); border-radius: 4px; text-decoration: none; display: inline-block; opacity: .8; }
 .toast.enter { animation: toast-in .2s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
 
@@ -991,3 +992,37 @@ html.mica[data-palette] nav { background: var(--panel); }
 .nup-work .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .nup-work b { display: block; font-size: 13px; }
 .nup-work small { display: block; font-size: 12px; color: var(--muted); }
+
+/* Settings: the tools of the side menu, each switched on or off (#140) */
+.tool-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; width: 100%; }
+.tool-group { display: flex; flex-direction: column; gap: 6px; }
+.tool-group > b { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.tool-choice { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.tool-choice .tile { width: 24px; height: 24px; border-radius: 7px; }
+.tool-choice .tile .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tool-choice input:not(:checked) ~ .tile, .tool-choice input:not(:checked) ~ span { opacity: .45; }
+
+/* Settings: one column in the order things matter, with an index beside it that marks the
+   section read; above it, as a row, on a narrow window */
+.pref-indexed { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 28px; align-items: start; max-width: 980px; }
+.pref-index { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.pref-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
+.pref-link:hover { background: var(--hover); color: var(--text); }
+.pref-link.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.pref-link .pref-icon { width: 16px; height: 16px; }
+.pref-sections { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 720px; }
+.pref-sections .pref-group { scroll-margin-top: 12px; }
+.pref-icon { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#preferences .pref-group h2 { display: flex; align-items: center; gap: 8px; }
+#preferences .pref-group h2 .pref-icon { color: var(--accent); }
+/* without keys almost nothing works: said first, with the button to choose them */
+.pref-alert { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); background: color-mix(in srgb, var(--bad) 10%, var(--panel)); color: var(--text); font-size: 13px; }
+.pref-alert .pref-icon { color: var(--bad); width: 18px; height: 18px; }
+.pref-alert span { flex: 1; }
+.pref-alert[hidden] { display: none; }
+@media (max-width: 860px) {
+  .pref-indexed { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .pref-index { flex-direction: row; overflow-x: auto; gap: 4px; padding: 4px 0 8px; background: var(--bg); z-index: 2; scrollbar-width: none; }
+  .pref-link { width: auto; flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
+  .pref-link.on { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+}

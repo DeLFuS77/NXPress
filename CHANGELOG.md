@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Improvements
+
+- Settings in a new order: your keys first, then how the work goes, how NXPress looks, Windows, updates, help and credits, with an index that marks the section you read, and a notice at the top while there is no prod.keys
+- Settings › Appearance › Side menu: switch off the tools you don't use and they leave the side menu. Thanks to NikoMuffin for the idea (#140)
+- The notice with Undo shows its shortcut, Ctrl+Z. Thanks to NikoMuffin for the idea (#131)
+
 ### Fixes
 
 - Cancel answers at once with thousands of files, as in Details: the window gets what the work tells a few times a second, not each file on its own. Thanks to NikoMuffin for reporting it (#135)
