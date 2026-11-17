@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- Details tells the kind of package a file is (as published, a game card dump, converted, homebrew, changed by a tool, or incomplete with what it is missing) and what its program may use (main.npdm): a summary in its card, the full list in the full report
+
 ### Fixes
 
 - Cancel answers at once with thousands of files, as in Details: the window gets what the work tells a few times a second, not each file on its own. Thanks to NikoMuffin for reporting it (#135)
