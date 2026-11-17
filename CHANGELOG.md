@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.7.23
 
-### Improvements
+### Fixes
 
-- Settings without the index: two columns on a wide window (the keys, General and Appearance; Windows, updates and help), the language under General, and the credits as a small line at the bottom
+- Settings are back in two columns, without the index of 1.7.22: the keys, General (with the language) and Appearance on one side; Windows, updates and help on the other; and the credits as a small line at the bottom
 
 ## 1.7.22
 
