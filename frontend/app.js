@@ -21,6 +21,11 @@ const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="t
 // whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
 // dump folders only
 // Recompress needs them only with the extra compression, which goes through an NSP (#92)
+// Combine with dump folders only: each becomes a NUP of its own, so the choice between a SuperNSP
+// per game and one file with everything does not apply, and the template names each NUP
+const onlyDumps = () => state.mode === "pack" && state.items.length > 0 && state.items.every(item => item.dump);
+// the template names a file per game: a SuperNSP per game, or the NUP of each dump folder
+const packEach = () => $("pack-games").checked || onlyDumps();
 const needsKeys = mode => (mode === "recompress" ? $("extra").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
@@ -382,15 +387,15 @@ function splitEmulators(note) {
 // keeps them from it, with a button to write its metadata again when it is counted from 0.
 // the name of the game of a NUP in its card, which can be changed where it is: Edit name opens a
 // field with it, and Save writes it in the NUP (#144, brought from the edition of QuickWick, PR #151)
-function nupNameLine(row) {
+function nupNameLine(row, label = "editName") {
   const line = document.createElement("div");
   line.className = "nup-name-edit";
   if (!row.nameEditing) {
     const edit = document.createElement("button");
     edit.className = "outline";
-    edit.textContent = t("editName");
+    edit.textContent = t(label);
     edit.disabled = state.busy;
-    edit.onclick = () => { row.nameEditing = true; renderCard(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
+    edit.onclick = () => { row.nameEditing = true; refreshNup(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
     line.append(edit);
     if (row.nameNote) {
       const said = document.createElement("span");
@@ -403,7 +408,8 @@ function nupNameLine(row) {
   line.innerHTML = `<input type="text" maxlength="200" spellcheck="false"><button class="primary small"></button><button class="quiet"></button>`;
   const [input] = line.querySelectorAll("input");
   const [save, cancel] = line.querySelectorAll("button");
-  input.value = shownName(row);
+  input.value = row.nameDraft ?? shownName(row);
+  input.oninput = () => { row.nameDraft = input.value; };
   input.setAttribute("aria-label", t("editName"));
   save.textContent = t("saveName");
   cancel.textContent = t("cancel");
@@ -414,7 +420,7 @@ function nupNameLine(row) {
     said.textContent = row.nameFailed;
     line.append(said);
   }
-  const close = () => { row.nameEditing = false; row.nameFailed = ""; renderCard(row); };
+  const close = () => { row.nameEditing = false; row.nameFailed = ""; row.nameDraft = undefined; refreshNup(row); };
   cancel.onclick = close;
   input.onkeydown = event => { if (event.key === "Enter") save.click(); if (event.key === "Escape") close(); };
   save.onclick = async () => {
@@ -425,16 +431,62 @@ function nupNameLine(row) {
       await app().EditNupTitle(row.item.path, name);
       row.nameEditing = false;
       row.nameFailed = "";
+      row.nameDraft = undefined;
       row.nameNote = t("nameChanged");
       row.card = await app().Card(row.item.path);
       row.game = await app().Describe(row.item.path);
       paint(row);
+      // in Rename, the new name of the file comes from the new title
+      if (state.mode === "rename") previewNames();
     } catch (error) {
       row.nameFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
     }
-    renderCard(row);
+    refreshNup(row);
   };
   return line;
+}
+
+// the card of a NUP in Details, or its row in Rename, drawn again once its title or image changed
+function refreshNup(row) {
+  if (state.mode === "info") renderCard(row);
+  else paint(row);
+}
+
+// a NUP in Rename: its title and its image changed where its name is made, as the new name of the
+// file comes from them (#144); the same as in its card in Details. The icons a game carries itself,
+// in each language, are kept.
+function nupEditLine(row) {
+  const box = document.createElement("div");
+  box.className = "nup-edit";
+  const names = nupNameLine(row, "editTitle");
+  box.append(names);
+  const card = row.card;
+  if (!row.nameEditing && !(card && card.gameIcons)) {
+    const image = document.createElement("button");
+    image.className = "outline";
+    image.textContent = t("changeImage");
+    image.disabled = state.busy;
+    image.setAttribute("aria-expanded", row.iconChanging ? "true" : "false");
+    image.onclick = async () => {
+      image.disabled = true;
+      if (!row.card) row.card = await app().Card(row.item.path).catch(() => null);
+      const own = !!(row.card && row.card.gameIcons);
+      row.iconChanging = !row.iconChanging && !own;
+      row.iconFailed = "";
+      row.iconNote = own ? t("nupGameIcons") : "";
+      paint(row);
+      row.tr.querySelector(".nup-edit .nup-no-icon button")?.focus();
+    };
+    names.querySelector("button").after(image);
+  }
+  if (row.iconNote && !row.iconChanging) {
+    const said = document.createElement("p");
+    said.className = "say";
+    said.textContent = row.iconNote;
+    box.append(said);
+  }
+  if (row.iconChanging) box.append(iconLine(row, !!(card ? card.icon : row.game.icon)));
+  return box;
 }
 
 function renderNupCard(element, card, row) {
@@ -561,7 +613,7 @@ function iconLine(row, replace) {
     close.onclick = () => {
       row.iconChanging = false;
       row.iconFailed = "";
-      renderCard(row);
+      refreshNup(row);
     };
     line.querySelector(".paste-hint").before(close);
     buttons.push(close);
@@ -972,13 +1024,13 @@ async function giveNupIcon(row, give) {
     row.iconChanging = false;
     row.iconNote = capitalize(noteText(note));
     row.card = await app().Card(row.item.path);
-    renderCard(row);
+    refreshNup(row);
     // the cover of its row, in the list and in the grid, is the new icon at once (#107)
     row.game = await app().Describe(row.item.path);
     paint(row);
   } catch (error) {
     row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
-    renderCard(row);
+    refreshNup(row);
   }
 }
 
@@ -1158,6 +1210,9 @@ let popTimer = 0;
 // the card opened by a click or the keyboard stays, with Copy, Full report and Close, until it is
 // closed, Escape is pressed or the click goes elsewhere; the card of the mouse only shows
 let popPinned = false, popRow = null;
+// the game the card of the mouse is coming or shown for, so moving over its cover and its name
+// does not start it again
+let popFor = null;
 function pinPop(row, anchor) {
   clearTimeout(popTimer);
   if (popPinned && popRow === row) { hidePop(); return; }
@@ -1251,6 +1306,7 @@ document.addEventListener("nx-tone", event => {
 });
 function hidePop() {
   clearTimeout(popTimer);
+  popFor = null;
   const pop = $("game-pop");
   const wasPinned = popPinned;
   pop.hidden = true;
@@ -2039,7 +2095,7 @@ function render() {
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
   $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
   // one file with everything goes next to the files, in the folder of the first one
-  const nextTo = t(state.mode === "pack" && !$("pack-games").checked ? "nextToFiles" : "nextTo");
+  const nextTo = t(state.mode === "pack" && !packEach() ? "nextToFiles" : "nextTo");
   $("output").textContent = state.output ? ltr(state.output) : nextTo;
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
@@ -2048,8 +2104,9 @@ function render() {
   $("reset-output").title = nextTo;
   $("reset-output").setAttribute("aria-label", nextTo);
   // a SuperNSP per game, or one file with everything: both named by a template
-  $("pack-template-title").textContent = t($("pack-games").checked ? "packTemplate" : "packOneName");
-  $("pack-games-fields").hidden = !$("pack-games").checked;
+  $("pack-kind").hidden = onlyDumps();
+  $("pack-template-title").textContent = t(onlyDumps() ? "nupTemplate" : $("pack-games").checked ? "packTemplate" : "packOneName");
+  $("pack-games-fields").hidden = !$("pack-games").checked || onlyDumps();
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
   $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
   $("dat").title = state.dat;
@@ -2244,9 +2301,14 @@ function add(item) {
     });
   }
   const game = tr.querySelector(".game");
-  game.addEventListener("mouseenter", () => {
+  // the card comes over the cover and the name of the game, not over its box, which is ticked
+  // down the list without a card in the way
+  game.addEventListener("pointerover", event => {
     if (popPinned) return;
+    if (event.target.closest(".pick")) { if (popFor === game) hidePop(); return; }
+    if (popFor === game) return;
     clearTimeout(popTimer);
+    popFor = game;
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
   });
   game.addEventListener("mouseleave", () => { if (!popPinned) hidePop(); });
@@ -2402,6 +2464,13 @@ function paint(row) {
   }
   // a NUP in Split: what to take out of it, its game, its updates, its DLC and its icon (#138)
   row.tr.querySelector(".split-parts")?.remove();
+  // a NUP in Rename: its title and its image (#144)
+  // kept as it is while its title is written
+  const nupEdit = row.tr.querySelector(".nup-edit");
+  if (!(nupEdit && row.nameEditing && nupEdit.contains(document.activeElement))) {
+    nupEdit?.remove();
+    if (row.game && row.game.container === "NUP" && !row.status && state.mode === "rename") file.after(nupEditLine(row));
+  }
   if (row.game && row.game.container === "NUP" && !row.status && state.mode === "split") file.after(splitPartsLine(row));
   // a warning of the list shows until the file is worked on; in Verify and Details, which leave
   // the file as it is, it stays after the work too, where it is looked at most (#136)
@@ -2573,18 +2642,20 @@ function previewPacks() {
   clearTimeout(packTimer);
   packTimer = setTimeout(async () => {
     const list = $("pack-plan");
-    if (state.mode !== "pack" || !$("pack-games").checked) return;
-    const paths = pickedItems().map(item => item.path);
-    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
-    // the NUP of each dump folder is named by the same template as the packs of each game
+    if (state.mode !== "pack") return;
+    // the NUP of each dump folder is named by the same template as the packs of each game, and by
+    // it with dump folders only; with one file of the others, by the name of its game
     const dumps = state.items.filter(item => item.dump).map(item => item.path);
     if (dumps.length) {
-      const names = await app().NupNames(dumps, state.packTemplate) || {};
+      const names = await app().NupNames(dumps, packEach() ? state.packTemplate : "") || {};
       for (const path of dumps) {
         const row = state.rows.get(path);
         if (row && row.game && names[path] && row.game.nupName !== names[path]) { row.game.nupName = names[path]; paint(row); }
       }
     }
+    if (!$("pack-games").checked || onlyDumps()) return;
+    const paths = pickedItems().map(item => item.path);
+    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
@@ -2802,6 +2873,8 @@ async function start(mode, extra) {
   const splitParts = {};
   if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
   const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
+  // dump folders only: each NUP is named by the template, whichever way of Combine was left chosen
+  if (mode === "pack" && onlyDumps()) request.packGames = true;
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;

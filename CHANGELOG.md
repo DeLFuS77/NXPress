@@ -10,6 +10,9 @@
 - Settings in a new order: your keys first, then how the work goes, how NXPress looks, Windows, updates, help and credits, with an index that marks the section you read, and a notice at the top while there is no prod.keys
 - Settings › Appearance › Side menu: switch off the tools you don't use and they leave the side menu. Thanks to NikoMuffin for the idea (#140)
 - The notice with Undo shows its shortcut, Ctrl+Z. Thanks to NikoMuffin for the idea (#131)
+- Rename: the title and the image of a NUP can be changed in its row, and the button says Rename with template. Thanks to NikoMuffin for the idea (#144)
+- Combine with dump folders only: the template up top names each NUP, whichever way of Combine was chosen. Thanks to QuickWick for the idea
+- The card of a game no longer opens over the box at the left of its row. Thanks to QuickWick for the idea
 
 ### Fixes
 
