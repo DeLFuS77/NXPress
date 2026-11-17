@@ -77,6 +77,16 @@ func catchEvents(t *testing.T) *pageEvents {
 	emit = func(ctx context.Context, name string, data ...any) {
 		caught.mutex.Lock()
 		defer caught.mutex.Unlock()
+		// the events of a work come together: each is kept as if it came alone
+		if name == "batch" && len(data) == 1 {
+			if batch, ok := data[0].([]windowEvent); ok {
+				for _, event := range batch {
+					caught.events = append(caught.events, event.Name)
+					caught.data = append(caught.data, []any{event.Data})
+				}
+				return
+			}
+		}
 		caught.events = append(caught.events, name)
 		caught.data = append(caught.data, data)
 	}
@@ -540,3 +550,41 @@ func TestCloseAskedByThePage(t *testing.T) {
 
 // The window is told what a measure found: it has the method the measure looks for (#128).
 var _ jobs.Measured = (*window)(nil)
+
+// The events of a work go to the page together, in their order: a thousand files done at once
+// are a few events for the window, not a thousand (#135).
+func TestWindowBatchSendsTogether(t *testing.T) {
+	var (
+		mutex   sync.Mutex
+		batches int
+		names   []string
+	)
+	sent := emit
+	emit = func(ctx context.Context, name string, data ...any) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		if name != "batch" {
+			t.Errorf("an event alone: %s", name)
+			return
+		}
+		batches++
+		for _, event := range data[0].([]windowEvent) {
+			names = append(names, event.Name)
+		}
+	}
+	t.Cleanup(func() { emit = sent })
+	w := &window{job: context.Background(), batch: newWindowBatch(context.Background())}
+	for i := 0; i < 1000; i++ {
+		w.Say("file %d", i)
+		w.Done("file", "", "", nil)
+	}
+	w.batch.flush()
+	mutex.Lock()
+	defer mutex.Unlock()
+	if len(names) != 2000 || names[0] != "say" || names[1] != "done" || names[1999] != "done" {
+		t.Fatalf("the events: %d, %v", len(names), names[:4])
+	}
+	if batches > 5 {
+		t.Fatalf("%d batches for events sent at once", batches)
+	}
+}
