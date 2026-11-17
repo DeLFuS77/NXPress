@@ -128,7 +128,7 @@ dialog.update-dialog { max-width: 560px; }
 .update-version { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; }
 .update-notes { max-height: 240px; overflow: auto; margin-top: 10px; padding: 6px 14px 8px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--bg); font-size: 13px; user-select: text; -webkit-user-select: text; }
 .update-notes:empty { display: none; }
-.update-notes h3 { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.update-notes h3 { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .update-notes ul { margin: 0; padding-left: 18px; }
 .update-notes li { margin: 3px 0; }
 .update-notes p { margin: 6px 0; }
@@ -244,7 +244,7 @@ input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: va
 .worklog-count { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 /* the room of the scrollbar is kept: a work opened that makes the list scroll does not narrow it,
    which would make every row jump (and cross the narrow layout below) as it opens (#78) */
-.worklog-list { flex: 1; overflow: auto; scrollbar-gutter: stable; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); container-type: inline-size; }
+.worklog-list { flex: 1; overflow: auto; scrollbar-gutter: stable; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .worklog-day { position: sticky; top: 0; z-index: 1; padding: 8px 14px 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); }
 .worklog-work { border-bottom: 1px solid var(--line); }
 .worklog-work:last-child { border-bottom: 0; }
@@ -329,7 +329,7 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 .label { font-weight: 600; margin-bottom: 6px; }
 .level-head { display: flex; justify-content: space-between; font-weight: 600; }
 .level-head b { color: var(--text); font-size: 16px; font-variant-numeric: tabular-nums; }
-.ends { display: flex; justify-content: space-between; font-size: 11px; }
+.ends { display: flex; justify-content: space-between; font-size: 12px; }
 .segmented { display: flex; margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius-small); overflow: hidden; }
 .segmented button { flex: 1; border: none; border-radius: 0; font-size: 12px; padding: 5px; background: transparent; }
 .segmented button + button { border-left: 1px solid var(--line); }
@@ -337,7 +337,7 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 /* the focus ring inside the button, where the rounded group does not cut it */
 .segmented button:focus-visible { outline-offset: -3px; border-radius: 4px; }
 /* the levels each button covers, under its name */
-.segmented.levels small { display: block; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.segmented.levels small { display: block; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .field.row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 10px 0 0; }
@@ -375,7 +375,7 @@ table.fields td { vertical-align: top; padding: 5px 8px 5px 0; border-bottom: 1p
 table.fields tr:last-child td { border-bottom: 0; }
 table.fields td:first-child { white-space: nowrap; }
 table.fields code { font: 12px "Cascadia Mono", Consolas, monospace; color: var(--text); }
-table.fields small { display: block; font: 11px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
+table.fields small { display: block; font: 12px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
@@ -433,6 +433,7 @@ table.grid .game.refill { transition: none; }
 /* 4: a notice with Undo */
 .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: var(--radius); background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
 .toast button.link { margin: 0; color: var(--bg); text-decoration: underline; }
+.toast-key { margin-left: 6px; padding: 1px 5px; font-size: 11px; font-weight: 600; line-height: 1.4; border: 1px solid color-mix(in srgb, var(--bg) 45%, transparent); border-radius: 4px; text-decoration: none; display: inline-block; opacity: .8; }
 .toast.enter { animation: toast-in .2s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
 
@@ -534,21 +535,30 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 
 /* the card of a file in Info */
 .file-card { margin-top: 8px; max-width: 520px; }
-.file-card:has(.nup-packages) { max-width: 560px; }
+.file-card:has(.nup-packages) { max-width: 660px; }
 .card-sizes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .card-sizes .kind { font-weight: 700; color: var(--accent); min-width: 34px; }
 .card-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
 .card-bar div { height: 100%; border-radius: 4px; background: var(--ok); animation: card-in .6s cubic-bezier(.2, .8, .2, 1); }
 @keyframes card-in { from { width: 0; } }
 .file-card .tags { margin-top: 6px; }
+/* the kind of package and the permissions of its program: a name with its help, then what it is */
+.card-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 8px 0 0; font-size: 12px; }
+.card-facts dt { color: var(--muted); white-space: nowrap; }
+.card-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.card-facts dd.warn { color: var(--warn); }
 /* the packages of a NUP in its card: a line each, with its kind, who it is and its files */
 .nup-packages { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.nup-packages li { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
-.nup-packages .k { font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
-.nup-packages .who { min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+.nup-packages li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
+.nup-packages .k { flex: none; width: 96px; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
+.nup-packages .who { flex: 1 1 170px; min-width: 0; display: flex; flex-direction: column; color: var(--muted); overflow-wrap: break-word; }
+.nup-packages .who small, .nup-packages .stat small { font-size: 12px; color: var(--muted); }
+.nup-packages .who b, .nup-packages .who small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nup-packages .stats { flex: none; display: flex; gap: 14px; margin-left: auto; }
+/* the files, the size uncompressed and as stored of a package: a figure with its name under it (#145) */
+.nup-packages .stat { display: flex; flex-direction: column; align-items: center; min-width: 64px; text-align: center; white-space: nowrap; }
+.nup-packages .stat b { font-weight: 600; color: var(--text); }
 .nup-packages .who b { color: var(--text); font-weight: 600; }
-.nup-packages .num { color: var(--muted); text-align: right; white-space: nowrap; }
-.file-card .card-only { margin-top: 6px; font-size: 12px; color: var(--muted); }
 /* the warning of a NUP the emulators do not read well, and the button that writes it again */
 .card-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .card-fix .warning { flex: 1 1 260px; margin: 0; }
@@ -561,7 +571,13 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .nup-no-icon .say.warning { color: var(--warn); }
 .file-card .nup-icon-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .nup-no-icon .paste-hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
-.file-card .nup-icon-change { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+/* the icon of a NUP is what changes it (#145): a pencil on its corner tells it */
+.file-card button.nup-icon-change { position: relative; padding: 0; border: 0; overflow: visible; cursor: pointer; }
+.file-card button.nup-icon-change img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; transition: filter .15s; }
+.file-card button.nup-icon-change::after { content: "✎"; position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; color: var(--accent-text); background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
+.file-card button.nup-icon-change:hover:not(:disabled) img, .file-card button.nup-icon-change:focus-visible img { filter: brightness(1.12); }
+.file-card button.nup-icon-change:disabled { cursor: default; opacity: 1; }
+.file-card button.nup-icon-change:disabled::after { display: none; }
 /* the window to search an image in the eShop (#102): the name, then the games in a grid */
 dialog.cover-dialog { max-width: 680px; }
 /* the crop of an image chosen for an icon: a square fixed at the middle, the image moved and
@@ -593,7 +609,7 @@ dialog.crop-dialog { max-width: 640px; }
 .cover-tile[aria-pressed="true"] { border-color: var(--accent); }
 .cover-tile img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--bar); }
 .cover-name { font-size: 12px; padding: 4px 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cover-system { font-size: 11px; color: var(--muted); padding: 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cover-system { font-size: 12px; color: var(--muted); padding: 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cover-paste { margin: 10px 0 0; font-size: 12px; }
 .cover-dialog .dialog-actions .cover-web { margin-right: auto; }
 /* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
@@ -991,3 +1007,94 @@ html.mica[data-palette] nav { background: var(--panel); }
 .nup-work .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .nup-work b { display: block; font-size: 13px; }
 .nup-work small { display: block; font-size: 12px; color: var(--muted); }
+
+/* Settings: the tools of the side menu, each switched on or off (#140) */
+.tool-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; width: 100%; }
+.tool-group { display: flex; flex-direction: column; gap: 6px; }
+.tool-group > b { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.tool-choice { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.tool-choice .tile { width: 24px; height: 24px; border-radius: 7px; }
+.tool-choice .tile .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tool-choice input:not(:checked) ~ .tile, .tool-choice input:not(:checked) ~ span { opacity: .45; }
+
+/* Settings: one column in the order things matter, with an index beside it that marks the
+   section read; above it, as a row, on a narrow window */
+.pref-indexed { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 28px; align-items: start; max-width: 980px; }
+.pref-index { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.pref-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
+.pref-link:hover { background: var(--hover); color: var(--text); }
+.pref-link.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.pref-link .pref-icon { width: 16px; height: 16px; }
+.pref-sections { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 720px; }
+.pref-sections .pref-group { scroll-margin-top: 12px; }
+.pref-icon { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#preferences .pref-group h2 { display: flex; align-items: center; gap: 8px; }
+#preferences .pref-group h2 .pref-icon { color: var(--accent); }
+/* without keys almost nothing works: said first, with the button to choose them */
+.pref-alert { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); background: color-mix(in srgb, var(--bad) 10%, var(--panel)); color: var(--text); font-size: 13px; }
+.pref-alert .pref-icon { color: var(--bad); width: 18px; height: 18px; }
+.pref-alert span { flex: 1; }
+.pref-alert[hidden] { display: none; }
+@media (max-width: 860px) {
+  .pref-indexed { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .pref-index { flex-direction: row; overflow-x: auto; gap: 4px; padding: 4px 0 8px; background: var(--bg); z-index: 2; scrollbar-width: none; }
+  .pref-link { width: auto; flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
+  .pref-link.on { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+}
+
+/* ---- the review of the interface (17/11) ---- */
+/* the card of a game, kept open by a click or the keyboard: its actions and a close button */
+.game-pop .pop-actions, .game-pop .pop-close { display: none; }
+.game-pop.pinned { pointer-events: auto; }
+.game-pop.pinned .pop-actions { display: flex; gap: 14px; margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--pop-tone) 25%, var(--line)); }
+.game-pop.pinned .pop-close { display: grid; place-items: center; position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; }
+.game-pop .pop-hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.game-pop.pinned .pop-hint { display: none; }
+#files .game { cursor: pointer; border-radius: 8px; }
+#files .game:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* an error of a kind known: what NXPress said, in its own words, under What to do */
+.error-more .error-raw { display: block; margin: 4px 0 6px; padding: 6px 8px; border-radius: 6px; background: var(--hover); color: var(--muted); font: 12px "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
+/* the button that takes a file out of the list shows on its row: under the mouse or the keyboard */
+#files td.remove button { opacity: 0; transition: opacity .12s; }
+#files tr:hover td.remove button, #files tr:focus-within td.remove button, #files td.remove button:focus-visible { opacity: 1; }
+/* the fields of a template, a click away */
+.fields-more { margin-top: 6px; }
+.fields-more > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+.fields-more > summary::-webkit-details-marker { display: none; }
+.fields-more > summary::before { content: "▸"; transition: transform .15s; }
+.fields-more[open] > summary::before { transform: rotate(90deg); }
+/* the boxes that choose the files of Combine and Split, round, in the colour of NXPress */
+#files .pick input, #files #pick-all { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 0; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 70%, transparent); background: transparent; display: inline-grid; place-items: center; cursor: pointer; transition: background .12s, border-color .12s; }
+#files .pick input::after, #files #pick-all::after { content: ""; width: 8px; height: 4px; border: 2px solid var(--tile-on, #fff); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); opacity: 0; transition: opacity .12s; }
+#files .pick input:checked, #files #pick-all:checked { background: var(--accent); border-color: var(--accent); }
+#files .pick input:checked::after, #files #pick-all:checked::after { opacity: 1; }
+#files #pick-all:indeterminate { background: var(--accent); border-color: var(--accent); }
+#files #pick-all:indeterminate::after { width: 8px; height: 0; border-left: 0; border-bottom: 2px solid var(--tile-on, #fff); transform: none; opacity: 1; }
+#files .pick input:focus-visible, #files #pick-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* what reads the files made: told for the way chosen only */
+label.choice:not(:has(input:checked)) .tags { display: none; }
+/* the experimental options of the compression, a click away */
+.more-options { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.more-options > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); list-style: none; display: flex; align-items: center; gap: 6px; }
+.more-options > summary::-webkit-details-marker { display: none; }
+.more-options > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+.more-options[open] > summary::before { transform: rotate(90deg); }
+.more-options[open] > summary { margin-bottom: 6px; }
+
+/* the side menu fits a window 800 px high: a little less room around each tool, and on a low
+   window the second line of Combine and Split (what they do with NUP files) is left out */
+nav button { padding-top: 4px; padding-bottom: 4px; }
+nav button small { line-height: 1.3; }
+@media (max-height: 860px) { nav button small + small { display: none; } }
+
+/* the column of the state, empty before any work, is left out until a file has one */
+#files.no-state th.state, #files.no-state td.state { display: none; }
+
+/* Rename: the title and the image of a NUP, changed in its row (#144) */
+.nup-edit { margin-top: 6px; }
+.nup-edit .nup-name-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.nup-edit .nup-name-edit button { padding: 3px 10px; font-size: 12px; }
+.nup-edit .nup-name-edit input { flex: 1 1 220px; min-width: 0; }
+.nup-edit .say { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.nup-edit .say.warning { flex-basis: 100%; color: var(--warn); }

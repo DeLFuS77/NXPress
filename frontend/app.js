@@ -21,6 +21,11 @@ const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="t
 // whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
 // dump folders only
 // Recompress needs them only with the extra compression, which goes through an NSP (#92)
+// Combine with dump folders only: each becomes a NUP of its own, so the choice between a SuperNSP
+// per game and one file with everything does not apply, and the template names each NUP
+const onlyDumps = () => state.mode === "pack" && state.items.length > 0 && state.items.every(item => item.dump);
+// the template names a file per game: a SuperNSP per game, or the NUP of each dump folder
+const packEach = () => $("pack-games").checked || onlyDumps();
 const needsKeys = mode => (mode === "recompress" ? $("extra").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
@@ -87,6 +92,8 @@ const state = {
   // a new version installed from NXPress (#91): its step and bytes while it goes, what kept it
   // from installing it, the version installed, and whether the restart waits for the work
   installing: null, installError: "", installed: "", restartAfterWork: false,
+  // the tools left out of the side menu in Settings (#140)
+  hiddenTools: new Set(),
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -307,8 +314,52 @@ function renderCard(row) {
     warning.textContent = noteText(card.unsignedNote).replace(/^./, (c) => c.toUpperCase()).replace("--rebuild", "‑‑rebuild");
     element.append(warning);
   }
+  const facts = cardFacts(card);
+  if (facts) element.append(facts);
   element.append(reportButton(row));
   row.tr.querySelector(".note").after(element);
+}
+
+// the kind of package a file is, by what it holds, and what its program may use (main.npdm), each
+// with its help on the ⓘ of its name; an incomplete one in orange, with what it is missing
+let cardFactHelps = 0;
+function cardFacts(card) {
+  if (!card.origin && !card.permissions) return null;
+  const list = document.createElement("dl");
+  list.className = "card-facts";
+  const add = (name, value, help, warn) => {
+    const term = document.createElement("dt");
+    const label = document.createElement("span");
+    const hint = document.createElement("span");
+    label.textContent = name;
+    hint.className = "help-text";
+    hint.id = "card-fact-help-" + ++cardFactHelps;
+    hint.textContent = help;
+    label.classList.add("has-help");
+    label.dataset.help = hint.id;
+    label.tabIndex = 0;
+    label.setAttribute("aria-describedby", hint.id);
+    helpOwners.set(label, label);
+    term.append(label, hint);
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    if (warn) detail.className = "warn";
+    list.append(term, detail);
+  };
+  if (card.origin) {
+    const origin = card.origin;
+    const missing = (origin.missing || []).map(content => t("missingNca")(content.kind, content.title)).concat((origin.missingTickets || []).map(id => t("missingTicket")(id)));
+    const value = (t("originKinds")[origin.kind] || origin.kind) + (missing.length ? " · " + t("originMissing")(missing.join(", ")) : "");
+    add(t("cardOrigin"), value, t("originHelps")[origin.kind] || "", origin.kind === "incomplete");
+  }
+  if (card.permissions) {
+    const npdm = card.permissions, kernel = npdm.kernel || {};
+    const parts = [t("permissionsLine")((npdm.services || []).length, (kernel.systemCalls || []).length, kernel.minCore || 0, kernel.maxCore || 0)];
+    if ((npdm.hosts || []).length) parts.push(t("permissionsOffers")(npdm.hosts.length));
+    if (kernel.allowDebug || kernel.forceDebug) parts.push(t("permissionsDebug"));
+    add(t("cardPermissions"), parts.join(" · "), t("permissionsHelp"), false);
+  }
+  return list;
 }
 
 // Full report, at the end of the card of a file in Details
@@ -336,15 +387,15 @@ function splitEmulators(note) {
 // keeps them from it, with a button to write its metadata again when it is counted from 0.
 // the name of the game of a NUP in its card, which can be changed where it is: Edit name opens a
 // field with it, and Save writes it in the NUP (#144, brought from the edition of QuickWick, PR #151)
-function nupNameLine(row) {
+function nupNameLine(row, label = "editName") {
   const line = document.createElement("div");
   line.className = "nup-name-edit";
   if (!row.nameEditing) {
     const edit = document.createElement("button");
     edit.className = "outline";
-    edit.textContent = t("editName");
+    edit.textContent = t(label);
     edit.disabled = state.busy;
-    edit.onclick = () => { row.nameEditing = true; renderCard(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
+    edit.onclick = () => { row.nameEditing = true; refreshNup(row); row.tr.querySelector(".nup-name-edit input")?.focus(); };
     line.append(edit);
     if (row.nameNote) {
       const said = document.createElement("span");
@@ -357,7 +408,8 @@ function nupNameLine(row) {
   line.innerHTML = `<input type="text" maxlength="200" spellcheck="false"><button class="primary small"></button><button class="quiet"></button>`;
   const [input] = line.querySelectorAll("input");
   const [save, cancel] = line.querySelectorAll("button");
-  input.value = shownName(row);
+  input.value = row.nameDraft ?? shownName(row);
+  input.oninput = () => { row.nameDraft = input.value; };
   input.setAttribute("aria-label", t("editName"));
   save.textContent = t("saveName");
   cancel.textContent = t("cancel");
@@ -368,7 +420,7 @@ function nupNameLine(row) {
     said.textContent = row.nameFailed;
     line.append(said);
   }
-  const close = () => { row.nameEditing = false; row.nameFailed = ""; renderCard(row); };
+  const close = () => { row.nameEditing = false; row.nameFailed = ""; row.nameDraft = undefined; refreshNup(row); };
   cancel.onclick = close;
   input.onkeydown = event => { if (event.key === "Enter") save.click(); if (event.key === "Escape") close(); };
   save.onclick = async () => {
@@ -379,20 +431,66 @@ function nupNameLine(row) {
       await app().EditNupTitle(row.item.path, name);
       row.nameEditing = false;
       row.nameFailed = "";
+      row.nameDraft = undefined;
       row.nameNote = t("nameChanged");
       row.card = await app().Card(row.item.path);
       row.game = await app().Describe(row.item.path);
       paint(row);
+      // in Rename, the new name of the file comes from the new title
+      if (state.mode === "rename") previewNames();
     } catch (error) {
       row.nameFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
     }
-    renderCard(row);
+    refreshNup(row);
   };
   return line;
 }
 
+// the card of a NUP in Details, or its row in Rename, drawn again once its title or image changed
+function refreshNup(row) {
+  if (state.mode === "info") renderCard(row);
+  else paint(row);
+}
+
+// a NUP in Rename: its title and its image changed where its name is made, as the new name of the
+// file comes from them (#144); the same as in its card in Details. The icons a game carries itself,
+// in each language, are kept.
+function nupEditLine(row) {
+  const box = document.createElement("div");
+  box.className = "nup-edit";
+  const names = nupNameLine(row, "editTitle");
+  box.append(names);
+  const card = row.card;
+  if (!row.nameEditing && !(card && card.gameIcons)) {
+    const image = document.createElement("button");
+    image.className = "outline";
+    image.textContent = t("changeImage");
+    image.disabled = state.busy;
+    image.setAttribute("aria-expanded", row.iconChanging ? "true" : "false");
+    image.onclick = async () => {
+      image.disabled = true;
+      if (!row.card) row.card = await app().Card(row.item.path).catch(() => null);
+      const own = !!(row.card && row.card.gameIcons);
+      row.iconChanging = !row.iconChanging && !own;
+      row.iconFailed = "";
+      row.iconNote = own ? t("nupGameIcons") : "";
+      paint(row);
+      row.tr.querySelector(".nup-edit .nup-no-icon button")?.focus();
+    };
+    names.querySelector("button").after(image);
+  }
+  if (row.iconNote && !row.iconChanging) {
+    const said = document.createElement("p");
+    said.className = "say";
+    said.textContent = row.iconNote;
+    box.append(said);
+  }
+  if (row.iconChanging) box.append(iconLine(row, !!(card ? card.icon : row.game.icon)));
+  return box;
+}
+
 function renderNupCard(element, card, row) {
-  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div><div class="card-only"></div>`;
+  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div>`;
   element.querySelector(".nup-packages").before(nupNameLine(row));
   for (const name of ["Eglantine", "Lichii"]) {
     const tag = document.createElement("i");
@@ -421,17 +519,22 @@ function renderNupCard(element, card, row) {
   element.querySelector("small").textContent = t("cardNup")(size(card.size), size(card.decompressed));
   for (const pkg of card.packages) {
     const line = document.createElement("li");
-    line.innerHTML = `<span class="k"></span><span class="who"><b></b><span></span></span><span class="num"></span>`;
+    // its kind, who it is (its name, then its title ID and versions), then its files,
+    // its size uncompressed and as stored, each a figure with its name under it (#145)
+    line.innerHTML = `<span class="k"></span><span class="who"><b></b><small></small></span><span class="stats">` + `<span class="stat"><b></b><small></small></span>`.repeat(3) + `</span>`;
     line.querySelector(".k").textContent = t("gameKind")(pkg.type);
-    line.querySelector("b").textContent = pkg.name || "";
-    line.querySelector("b").hidden = !pkg.name;
-    const facts = [pkg.publisher, pkg.titleId, `v${pkg.version}` + (pkg.shown ? ` (${pkg.shown})` : "")].filter(Boolean).join(" · ");
-    line.querySelector(".who span").textContent = (pkg.name ? " · " : "") + facts;
-    const stored = size(pkg.stored) !== size(pkg.size) ? size(pkg.stored) : "";
-    line.querySelector(".num").textContent = t("nupFiles")(pkg.files, size(pkg.size), stored);
+    line.querySelector(".who b").textContent = pkg.name || "";
+    line.querySelector(".who b").hidden = !pkg.name;
+    // the publisher is in the full report: the line stays one line (#145)
+    line.querySelector(".who small").textContent = [pkg.titleId, `v${pkg.version}`, pkg.shown].filter(Boolean).join(" · ");
+    line.querySelector(".who").title = [pkg.name, pkg.publisher].filter(Boolean).join(" · ");
+    const stats = [[pkg.files.toLocaleString(state.language), t("nupColFiles")], [size(pkg.size), t("nupColUncompressed")], [size(pkg.stored), t("nupColCompressed")]];
+    line.querySelectorAll(".stat").forEach((stat, i) => {
+      stat.querySelector("b").textContent = stats[i][0];
+      stat.querySelector("small").textContent = stats[i][1];
+    });
     element.querySelector(".nup-packages").append(line);
   }
-  element.querySelector(".card-only").textContent = t("nupOnly");
   renderNupIcon(element, card, row);
 }
 
@@ -442,10 +545,26 @@ function renderNupCard(element, card, row) {
 let nupIconHelps = 0;
 function renderNupIcon(element, card, row) {
   if (card.icon) {
-    const icon = document.createElement("img");
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = card.icon;
+    // the icon itself is what changes it, in place of a button under the card (#145); not the
+    // icons the game carries itself, which are kept
+    const icon = card.gameIcons ? image : document.createElement("button");
     icon.className = "nup-icon";
-    icon.alt = "";
-    icon.src = card.icon;
+    if (!card.gameIcons) {
+      icon.classList.add("nup-icon-change");
+      icon.title = t("changeImage");
+      icon.setAttribute("aria-label", t("changeImage"));
+      icon.disabled = state.busy;
+      icon.append(image);
+      icon.onclick = () => {
+        row.iconChanging = !row.iconChanging;
+        row.iconFailed = "";
+        renderCard(row);
+        row.tr.querySelector(".nup-no-icon button")?.focus();
+      };
+    }
     element.classList.add("has-icon");
     element.prepend(icon);
     // what was just done to give it: where the icon comes from, and the size of an image chosen
@@ -457,20 +576,7 @@ function renderNupIcon(element, card, row) {
       last.after(said);
       last = said;
     }
-    if (card.gameIcons) return;
-    if (!row.iconChanging) {
-      const change = document.createElement("button");
-      change.className = "nup-icon-change";
-      change.textContent = t("changeImage");
-      change.disabled = state.busy;
-      change.onclick = () => {
-        row.iconChanging = true;
-        renderCard(row);
-        row.tr.querySelector(".nup-no-icon button")?.focus();
-      };
-      last.after(change);
-      return;
-    }
+    if (card.gameIcons || !row.iconChanging) return;
     last.after(iconLine(row, true));
     return;
   }
@@ -507,7 +613,7 @@ function iconLine(row, replace) {
     close.onclick = () => {
       row.iconChanging = false;
       row.iconFailed = "";
-      renderCard(row);
+      refreshNup(row);
     };
     line.querySelector(".paste-hint").before(close);
     buttons.push(close);
@@ -918,13 +1024,13 @@ async function giveNupIcon(row, give) {
     row.iconChanging = false;
     row.iconNote = capitalize(noteText(note));
     row.card = await app().Card(row.item.path);
-    renderCard(row);
+    refreshNup(row);
     // the cover of its row, in the list and in the grid, is the new icon at once (#107)
     row.game = await app().Describe(row.item.path);
     paint(row);
   } catch (error) {
     row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
-    renderCard(row);
+    refreshNup(row);
   }
 }
 
@@ -955,6 +1061,88 @@ function applyPalette() {
   if (state.palette === "nxpress") document.documentElement.removeAttribute("data-palette");
   else document.documentElement.dataset.palette = state.palette;
 }
+// ---- Settings: the index of its sections ----
+// A link to each section, beside them (above them on a narrow window); the one read is marked
+// as the page scrolls. A section hidden (Windows, elsewhere) has no link.
+function paintPrefIndex() {
+  const index = $("pref-index");
+  const sections = [...document.querySelectorAll("[data-pref-section]")].filter(section => !section.hidden);
+  index.innerHTML = "";
+  for (const section of sections) {
+    const link = document.createElement("button");
+    link.type = "button";
+    link.className = "pref-link";
+    link.dataset.section = section.id;
+    link.innerHTML = section.querySelector("h2 svg").outerHTML + "<span></span>";
+    link.querySelector("span").textContent = section.querySelector("h2 span").textContent;
+    link.onclick = () => {
+      section.scrollIntoView({ behavior: calm() ? "auto" : "smooth", block: "start" });
+      markPrefSection(section.id);
+    };
+    index.append(link);
+  }
+  markPrefSection(state.prefSection || (sections[0] && sections[0].id));
+}
+function markPrefSection(id) {
+  state.prefSection = id;
+  for (const link of $("pref-index").children) {
+    const on = link.dataset.section === id;
+    link.classList.toggle("on", on);
+    if (on) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
+  }
+}
+// the section read is the last one whose title has gone past the top of the page
+function followPrefScroll() {
+  const page = $("preferences");
+  const top = page.getBoundingClientRect().top + 72;
+  let current = "";
+  for (const section of document.querySelectorAll("[data-pref-section]")) {
+    if (section.hidden) continue;
+    if (!current || section.getBoundingClientRect().top <= top) current = section.id;
+  }
+  // at the bottom the last one is read, short as it is
+  if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) {
+    const shown = [...document.querySelectorAll("[data-pref-section]")].filter(section => !section.hidden);
+    if (shown.length) current = shown[shown.length - 1].id;
+  }
+  if (current && current !== state.prefSection) markPrefSection(current);
+}
+
+// ---- Settings: the tools of the side menu (#140) ----
+// A box for each tool: one switched off leaves the side menu, and comes back when it is switched
+// on. One stays at least; the section shown, switched off, gives way to the first one left.
+function paintToolChoices() {
+  const box = $("tool-choices");
+  box.innerHTML = "";
+  for (const [group, members] of groups) {
+    const column = document.createElement("div");
+    column.className = "tool-group";
+    const title = document.createElement("b");
+    title.textContent = t(group);
+    column.append(title);
+    for (const mode of members) {
+      const label = document.createElement("label");
+      label.className = "tool-choice";
+      label.innerHTML = '<input type="checkbox">' + tile(mode, group) + '<span class="tool-name"></span>';
+      const input = label.querySelector("input");
+      input.checked = !state.hiddenTools.has(mode);
+      // the last tool shown cannot go
+      input.disabled = input.checked && modes.filter(other => !state.hiddenTools.has(other)).length === 1;
+      label.querySelector(".tool-name").textContent = t(mode);
+      input.onchange = () => {
+        if (input.checked) state.hiddenTools.delete(mode);
+        else state.hiddenTools.add(mode);
+        save("hiddenTools", [...state.hiddenTools]);
+        if (state.hiddenTools.has(state.mode)) setMode(modes.find(other => !state.hiddenTools.has(other)));
+        render();
+      };
+      column.append(label);
+    }
+    box.append(column);
+  }
+}
+
 // the swatches of the colors, in the theme shown, the one chosen marked
 function paintPalettes() {
   const box = $("palettes");
@@ -1019,6 +1207,26 @@ function coverTone(game) {
 // version, the titles of each kind, the game of an update or a DLC, the version of its game a
 // DLC needs, the firmware it needs and its languages
 let popTimer = 0;
+// the card opened by a click or the keyboard stays, with Copy, Full report and Close, until it is
+// closed, Escape is pressed or the click goes elsewhere; the card of the mouse only shows
+let popPinned = false, popRow = null;
+// the game the card of the mouse is coming or shown for, so moving over its cover and its name
+// does not start it again
+let popFor = null;
+function pinPop(row, anchor) {
+  clearTimeout(popTimer);
+  if (popPinned && popRow === row) { hidePop(); return; }
+  showPop(row, anchor);
+  if ($("game-pop").hidden) return;
+  popPinned = true;
+  popRow = row;
+  const pop = $("game-pop");
+  pop.classList.add("pinned");
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-label", shownName(row));
+  pop.removeAttribute("aria-hidden");
+  $("pop-close").focus({ preventScroll: true });
+}
 function showPop(row, anchor) {
   const game = row.game;
   if (!game || !game.titleId || !anchor.isConnected) return;
@@ -1034,7 +1242,7 @@ function showPop(row, anchor) {
     [t("popVersion"), (game.versionTxt ? game.versionTxt + " · " : "") + "v" + game.latest],
   ];
   if (game.titles > 1) facts.push([t("popHolds"), t("popTitles")(game.bases, game.updates, game.dlcs)]);
-  if (game.gameId) facts.push([t("popGame"), game.gameId]);
+  if (game.gameId && game.gameId !== game.titleId) facts.push([t("popGame"), game.gameId]);
   if (game.needsGame) facts.push([t("popNeedsGame"), "v" + game.needsGame]);
   if (game.firmware) facts.push([t("popFirmware"), game.firmware]);
   // the newest version published, in blue when the list does not have it
@@ -1098,7 +1306,27 @@ document.addEventListener("nx-tone", event => {
 });
 function hidePop() {
   clearTimeout(popTimer);
-  $("game-pop").hidden = true;
+  popFor = null;
+  const pop = $("game-pop");
+  const wasPinned = popPinned;
+  pop.hidden = true;
+  pop.classList.remove("pinned");
+  pop.removeAttribute("role");
+  pop.setAttribute("aria-hidden", "true");
+  popPinned = false;
+  // the keyboard goes back to the game the card was of
+  if (wasPinned && popRow && popRow.tr.isConnected && pop.contains(document.activeElement)) popRow.tr.querySelector(".game")?.focus({ preventScroll: true });
+  popRow = null;
+}
+// what the card tells, as text to paste
+function popText() {
+  const pop = $("game-pop");
+  const lines = [pop.querySelector(".pop-name").textContent, pop.querySelector(".pop-publisher").textContent].filter(Boolean);
+  const terms = pop.querySelectorAll("dl dt");
+  for (const term of terms) lines.push(term.textContent + ": " + term.nextElementSibling.textContent);
+  const languages = [...pop.querySelectorAll(".pop-languages i")].map(chip => chip.textContent).join(" ");
+  if (languages) lines.push(languages);
+  return lines.join("\n");
 }
 
 // the help of the options (#67): the text that tells what an option does is out of the way, and
@@ -1689,6 +1917,10 @@ function startSoon() {
 }
 
 function render() {
+  // the column of the state shows once a file of the list has one, or while files are at work
+  $("files").classList.toggle("no-state", !state.busy && ![...state.rows.values()].some(row => row.status));
+  // the experimental options open by themselves when one of them is on
+  if (["extra", "skip-sparse-updates", "optimize"].some(id => $(id) && $(id).checked)) $("extra-options").open = true;
   paintOfficial();
   paintPicks();
   paintCheckFilter();
@@ -1714,11 +1946,13 @@ function render() {
   const focused = $("modes").contains(document.activeElement) ? document.activeElement.dataset.mode : "";
   $("modes").innerHTML = "";
   for (const [group, members] of groups) {
+    const shown = members.filter(mode => !state.hiddenTools.has(mode));
+    if (!shown.length && group !== "groupCheck") continue;
     const title = document.createElement("div");
     title.className = "group";
     title.textContent = t(group);
     $("modes").append(title);
-    for (const mode of members) {
+    for (const mode of shown) {
       const button = document.createElement("button");
       button.innerHTML = tile(mode, group) + "<span><b></b><small></small></span>";
       button.dataset.mode = mode;
@@ -1777,6 +2011,8 @@ function render() {
   $("open-preferences").classList.toggle("on", preferences);
   // with none, said in red, as the side menu says it (#146)
   $("keys-path").textContent = state.keys || t("keysNone");
+  $("pref-no-keys").hidden = !!state.keys;
+  paintPrefIndex();
   $("keys-path").classList.toggle("bad", !state.keys);
   paintPublished();
   const page = worklog ? "worklog" : state.mode;
@@ -1800,6 +2036,7 @@ function render() {
   paintUpdate();
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
   paintPalettes();
+  paintToolChoices();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
   const view = viewOf(state.mode);
   $("files").classList.toggle("grid", view === "grid");
@@ -1858,7 +2095,7 @@ function render() {
   $("gauge-size").style.width = (100 - (level - 1) * 1.6) + "%";
   $("gauge-speed").style.width = Math.max(8, 100 - (level - 1) * 5.1) + "%";
   // one file with everything goes next to the files, in the folder of the first one
-  const nextTo = t(state.mode === "pack" && !$("pack-games").checked ? "nextToFiles" : "nextTo");
+  const nextTo = t(state.mode === "pack" && !packEach() ? "nextToFiles" : "nextTo");
   $("output").textContent = state.output ? ltr(state.output) : nextTo;
   $("output").title = state.output;
   // a path is cut at its start, to show its end; the sentence shown when there is none is read whole
@@ -1867,8 +2104,9 @@ function render() {
   $("reset-output").title = nextTo;
   $("reset-output").setAttribute("aria-label", nextTo);
   // a SuperNSP per game, or one file with everything: both named by a template
-  $("pack-template-title").textContent = t($("pack-games").checked ? "packTemplate" : "packOneName");
-  $("pack-games-fields").hidden = !$("pack-games").checked;
+  $("pack-kind").hidden = onlyDumps();
+  $("pack-template-title").textContent = t(onlyDumps() ? "nupTemplate" : $("pack-games").checked ? "packTemplate" : "packOneName");
+  $("pack-games-fields").hidden = !$("pack-games").checked || onlyDumps();
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
   $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
   $("dat").title = state.dat;
@@ -2063,11 +2301,22 @@ function add(item) {
     });
   }
   const game = tr.querySelector(".game");
-  game.addEventListener("mouseenter", () => {
+  // the card comes over the cover and the name of the game, not over its box, which is ticked
+  // down the list without a card in the way
+  game.addEventListener("pointerover", event => {
+    if (popPinned) return;
+    if (event.target.closest(".pick")) { if (popFor === game) hidePop(); return; }
+    if (popFor === game) return;
     clearTimeout(popTimer);
+    popFor = game;
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
   });
-  game.addEventListener("mouseleave", hidePop);
+  game.addEventListener("mouseleave", () => { if (!popPinned) hidePop(); });
+  // a click on the game, or Enter on it, opens its card and keeps it open
+  game.tabIndex = 0;
+  const pin = () => { const row = state.rows.get(item.path); if (row && row.game && row.game.titleId) pinPop(row, game); };
+  game.addEventListener("click", event => { if (!event.target.closest("button, input, label, a")) pin(); });
+  game.addEventListener("keydown", event => { if ((event.key === "Enter" || event.key === " ") && event.target === game) { event.preventDefault(); pin(); } });
   // an empty file shows its 0 B; a file a work told about, whose size is not known, nothing
   tr.querySelector(".size").textContent = item.size === null ? "" : size(item.size || 0);
   const remove = () => {
@@ -2215,6 +2464,13 @@ function paint(row) {
   }
   // a NUP in Split: what to take out of it, its game, its updates, its DLC and its icon (#138)
   row.tr.querySelector(".split-parts")?.remove();
+  // a NUP in Rename: its title and its image (#144)
+  // kept as it is while its title is written
+  const nupEdit = row.tr.querySelector(".nup-edit");
+  if (!(nupEdit && row.nameEditing && nupEdit.contains(document.activeElement))) {
+    nupEdit?.remove();
+    if (row.game && row.game.container === "NUP" && !row.status && state.mode === "rename") file.after(nupEditLine(row));
+  }
   if (row.game && row.game.container === "NUP" && !row.status && state.mode === "split") file.after(splitPartsLine(row));
   // a warning of the list shows until the file is worked on; in Verify and Details, which leave
   // the file as it is, it stays after the work too, where it is looked at most (#136)
@@ -2314,6 +2570,9 @@ function paint(row) {
   }
   note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" || row.status === "modified" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
+  // an error of a kind known is told in the words of the window; what NXPress said, under What to do
+  const kind = row.status === "failed" && row.error && row.error !== "cancelled" ? adviceFor(row.error) : "";
+  if (kind && kind !== "adviceGeneric" && t(kind + "Short")) note.textContent = t(kind + "Short");
   // what keeps Eglantine and Lichii from opening a NUP checked whole, from starting its game or
   // from showing it right goes on a line of its own, in orange: the note stays grey, as the file
   // is whole
@@ -2337,9 +2596,10 @@ function paint(row) {
     more.className = "error-more";
     more.open = !!row.open;
     more.ontoggle = () => { row.open = more.open; };
-    more.innerHTML = `<summary></summary><p></p><button class="link small-link"></button>`;
+    more.innerHTML = `<summary></summary><p></p><code class="error-raw"></code><button class="link small-link"></button>`;
     more.querySelector("summary").textContent = t("errorWhat");
     more.querySelector("p").textContent = t(adviceFor(detail));
+    more.querySelector(".error-raw").textContent = noteText(detail);
     more.querySelector("button").textContent = t("copyDetail");
     more.querySelector("button").onclick = () => { window.runtime.ClipboardSetText(`${row.item.path}\n${detail}`); showToast(t("detailCopied")); };
     note.after(more);
@@ -2382,18 +2642,20 @@ function previewPacks() {
   clearTimeout(packTimer);
   packTimer = setTimeout(async () => {
     const list = $("pack-plan");
-    if (state.mode !== "pack" || !$("pack-games").checked) return;
-    const paths = pickedItems().map(item => item.path);
-    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
-    // the NUP of each dump folder is named by the same template as the packs of each game
+    if (state.mode !== "pack") return;
+    // the NUP of each dump folder is named by the same template as the packs of each game, and by
+    // it with dump folders only; with one file of the others, by the name of its game
     const dumps = state.items.filter(item => item.dump).map(item => item.path);
     if (dumps.length) {
-      const names = await app().NupNames(dumps, state.packTemplate) || {};
+      const names = await app().NupNames(dumps, packEach() ? state.packTemplate : "") || {};
       for (const path of dumps) {
         const row = state.rows.get(path);
         if (row && row.game && names[path] && row.game.nupName !== names[path]) { row.game.nupName = names[path]; paint(row); }
       }
     }
+    if (!$("pack-games").checked || onlyDumps()) return;
+    const paths = pickedItems().map(item => item.path);
+    const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {
@@ -2611,6 +2873,8 @@ async function start(mode, extra) {
   const splitParts = {};
   if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
   const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
+  // dump folders only: each NUP is named by the template, whichever way of Combine was left chosen
+  if (mode === "pack" && onlyDumps()) request.packGames = true;
   files = request.files;
   // Verify only this asks for no watch, whatever the box says
   const watch = !!request.watch;
@@ -2731,18 +2995,23 @@ function report() {
 
 function listen() {
   const events = window.runtime;
+  // the events of a work come together a few times a second (#135): each goes to its own
+  // handler, in their order
+  const handlers = {};
+  const on = (name, handler) => { handlers[name] = handler; events.EventsOn(name, handler); };
+  events.EventsOn("batch", list => { for (const event of list || []) if (handlers[event.name]) handlers[event.name](event.data); });
   // the installation of a new version, as it goes (#91)
   events.EventsOn("update-progress", progress => { state.installing = progress; paintUpdate(); });
   // files the Explorer gave to another NXPress, which sent them here
   events.EventsOn("opened", takeOpened);
-  events.EventsOn("progress", event => {
+  on("progress", event => {
     const row = rowOf(event.file);
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
   });
-  events.EventsOn("done", event => {
+  on("done", event => {
     // the mode of the work, which is not the section shown when only one file is verified
     const run = state.lastRun;
     const mode = run ? run.mode : state.mode;
@@ -2780,7 +3049,7 @@ function listen() {
   // scrolled at each file, a long Details of thousands of files kept the window far behind the
   // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
   // last megabytes.
-  events.EventsOn("say", text => {
+  on("say", text => {
     said += noteText(text) + "\n";
     if (sayFrame) return;
     sayFrame = setTimeout(() => {
@@ -3450,7 +3719,11 @@ async function main() {
   for (const [code, name] of languages) if (texts[code]) $("language-select").append(new Option(name, code));
   // another language tells again what is shown: the new version and the games to combine too
   $("language-select").onchange = () => { state.language = $("language-select").value; save("language", state.language); render(); previewPacks(); };
+  state.hiddenTools = new Set(load("hiddenTools", []).filter(mode => modes.includes(mode)));
+  if (state.hiddenTools.size >= modes.length) state.hiddenTools.clear();
   state.mode = modes.includes(load("mode", "")) ? load("mode", "") : "compress";
+  // a section left out of the menu is not the one the window opens in
+  if (state.hiddenTools.has(state.mode)) state.mode = modes.find(mode => !state.hiddenTools.has(mode));
   const chosen = load("settings", {});
   // a field of the settings kept is taken only when it is of its kind
   const number = value => Number.isInteger(value) && value > 0 ? value : 0;
@@ -3540,7 +3813,8 @@ async function main() {
   };
   $("add-files").onclick = $("empty-files").onclick = addFiles;
   $("add-folder").onclick = $("empty-folder").onclick = addFolder;
-  $("keys-choose").onclick = $("keys-change").onclick = () => $("keys").click();
+  $("keys-choose").onclick = $("keys-change").onclick = $("pref-no-keys-choose").onclick = () => $("keys").click();
+  $("preferences").addEventListener("scroll", followPrefScroll, { passive: true });
   for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("views", { ...load("views", {}), [state.mode]: button.dataset.view }); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
@@ -3602,6 +3876,13 @@ async function main() {
   $("export").onclick = event => exportMenu(event.currentTarget, exportDetails, exportReport);
   $("report-copy").onclick = () => { window.runtime.ClipboardSetText($("report-text").textContent); showToast(t("fullReportCopied")); };
   $("report-close").onclick = () => $("report-dialog").close();
+  $("pop-close").onclick = () => hidePop();
+  $("pop-copy").onclick = () => { window.runtime.ClipboardSetText(popText()); showToast(t("detailCopied")); };
+  $("pop-report").onclick = () => { const row = popRow; hidePop(); if (row) openReport(row, row.tr.querySelector(".game")); };
+  // a click anywhere else closes the card kept open
+  document.addEventListener("pointerdown", event => {
+    if (popPinned && !$("game-pop").contains(event.target) && !(popRow && popRow.tr.contains(event.target))) hidePop();
+  });
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
