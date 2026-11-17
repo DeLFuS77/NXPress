@@ -60,3 +60,17 @@ func TestPublishedLine(t *testing.T) {
 		}
 	}
 }
+
+// A game of several programs tells every program, the first one first, and the others by their
+// ID offset, in the order of their kinds.
+func TestContentKeysOfSeveralPrograms(t *testing.T) {
+	title := &switchfs.ContentMetaAttributes{Contents: map[string]switchfs.Content{
+		"Program#10": {ID: "c"}, "Control": {ID: "d"}, "Program": {ID: "a"}, "Program#2": {ID: "b"}, "Meta": {ID: "m"}, "Odd": {ID: "x"}}}
+	got := strings.Join(contentKeys(title), ",")
+	if got != "Meta,Program,Program#2,Program#10,Control" {
+		t.Fatalf("the order: %s", got)
+	}
+	if contentName("Program#2") != "Program (program 2)" || contentName("Control") != "Control" {
+		t.Fatalf("the names: %s %s", contentName("Program#2"), contentName("Control"))
+	}
+}

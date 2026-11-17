@@ -112,6 +112,45 @@ func printable(text string) string {
 // contentOrder is the order the NCA files of a title are told in.
 var contentOrder = []string{"Meta", "Program", "Control", "Data", "HtmlDocument", "LegalInformation", "DeltaFragment"}
 
+// contentKeys are the contents of a title in the order they are told in: by kind, and in a game of
+// several programs (a collection) the first program's, then each other's by its ID offset, which
+// the library writes after the kind ("Program#1").
+func contentKeys(title *switchfs.ContentMetaAttributes) []string {
+	rank := map[string]int{}
+	for i, kind := range contentOrder {
+		rank[kind] = i
+	}
+	keys := []string{}
+	for key := range title.Contents {
+		if kind, _, _ := strings.Cut(key, "#"); kind != "" {
+			if _, known := rank[kind]; known {
+				keys = append(keys, key)
+			}
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		a, aOffset, _ := strings.Cut(keys[i], "#")
+		b, bOffset, _ := strings.Cut(keys[j], "#")
+		if rank[a] != rank[b] {
+			return rank[a] < rank[b]
+		}
+		if len(aOffset) != len(bOffset) {
+			return len(aOffset) < len(bOffset)
+		}
+		return aOffset < bOffset
+	})
+	return keys
+}
+
+// contentName is a content as it is told: its kind, and the program it is of past the first.
+func contentName(key string) string {
+	kind, offset, ok := strings.Cut(key, "#")
+	if !ok {
+		return kind
+	}
+	return kind + " (program " + offset + ")"
+}
+
 // titleDetails tells what a title needs, the firmware of the console for a game or an update
 // and the version of its game for a DLC, and the NCA files it is made of (#20).
 func titleDetails(title *switchfs.ContentMetaAttributes) []string {
@@ -122,9 +161,9 @@ func titleDetails(title *switchfs.ContentMetaAttributes) []string {
 	case title.RequiredTitleVersion > 0:
 		lines = append(lines, "  needs firmware "+firmware(uint32(title.RequiredTitleVersion)))
 	}
-	for _, kind := range contentOrder {
-		if content, ok := title.Contents[kind]; ok && content.ID != "" {
-			lines = append(lines, fmt.Sprintf("  %s NCA %s", kind, content.ID))
+	for _, key := range contentKeys(title) {
+		if content := title.Contents[key]; content.ID != "" {
+			lines = append(lines, fmt.Sprintf("  %s NCA %s", contentName(key), content.ID))
 		}
 	}
 	return lines
