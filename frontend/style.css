@@ -244,7 +244,7 @@ input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: va
 .worklog-count { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 /* the room of the scrollbar is kept: a work opened that makes the list scroll does not narrow it,
    which would make every row jump (and cross the narrow layout below) as it opens (#78) */
-.worklog-list { flex: 1; overflow: auto; scrollbar-gutter: stable; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); container-type: inline-size; }
+.worklog-list { flex: 1; overflow: auto; scrollbar-gutter: stable; margin: 12px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .worklog-day { position: sticky; top: 0; z-index: 1; padding: 8px 14px 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); }
 .worklog-work { border-bottom: 1px solid var(--line); }
 .worklog-work:last-child { border-bottom: 0; }
@@ -534,7 +534,7 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 
 /* the card of a file in Info */
 .file-card { margin-top: 8px; max-width: 520px; }
-.file-card:has(.nup-packages) { max-width: 560px; }
+.file-card:has(.nup-packages) { max-width: 660px; }
 .card-sizes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .card-sizes .kind { font-weight: 700; color: var(--accent); min-width: 34px; }
 .card-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--bar); overflow: hidden; }
@@ -548,12 +548,16 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .card-facts dd.warn { color: var(--warn); }
 /* the packages of a NUP in its card: a line each, with its kind, who it is and its files */
 .nup-packages { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.nup-packages li { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
-.nup-packages .k { font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
-.nup-packages .who { min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+.nup-packages li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
+.nup-packages .k { flex: none; width: 96px; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
+.nup-packages .who { flex: 1 1 170px; min-width: 0; display: flex; flex-direction: column; color: var(--muted); overflow-wrap: break-word; }
+.nup-packages .who small, .nup-packages .stat small { font-size: 11px; color: var(--muted); }
+.nup-packages .who b, .nup-packages .who small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nup-packages .stats { flex: none; display: flex; gap: 14px; margin-left: auto; }
+/* the files, the size uncompressed and as stored of a package: a figure with its name under it (#145) */
+.nup-packages .stat { display: flex; flex-direction: column; align-items: center; min-width: 64px; text-align: center; white-space: nowrap; }
+.nup-packages .stat b { font-weight: 600; color: var(--text); }
 .nup-packages .who b { color: var(--text); font-weight: 600; }
-.nup-packages .num { color: var(--muted); text-align: right; white-space: nowrap; }
-.file-card .card-only { margin-top: 6px; font-size: 12px; color: var(--muted); }
 /* the warning of a NUP the emulators do not read well, and the button that writes it again */
 .card-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .card-fix .warning { flex: 1 1 260px; margin: 0; }
@@ -566,7 +570,13 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .nup-no-icon .say.warning { color: var(--warn); }
 .file-card .nup-icon-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .nup-no-icon .paste-hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
-.file-card .nup-icon-change { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+/* the icon of a NUP is what changes it (#145): a pencil on its corner tells it */
+.file-card button.nup-icon-change { position: relative; padding: 0; border: 0; overflow: visible; cursor: pointer; }
+.file-card button.nup-icon-change img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; transition: filter .15s; }
+.file-card button.nup-icon-change::after { content: "✎"; position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; color: var(--accent-text); background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
+.file-card button.nup-icon-change:hover:not(:disabled) img, .file-card button.nup-icon-change:focus-visible img { filter: brightness(1.12); }
+.file-card button.nup-icon-change:disabled { cursor: default; opacity: 1; }
+.file-card button.nup-icon-change:disabled::after { display: none; }
 /* the window to search an image in the eShop (#102): the name, then the games in a grid */
 dialog.cover-dialog { max-width: 680px; }
 /* the crop of an image chosen for an icon: a square fixed at the middle, the image moved and

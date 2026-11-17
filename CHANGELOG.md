@@ -5,6 +5,7 @@
 ### Improvements
 
 - Details tells the kind of package a file is (as published, a game card dump, converted, homebrew, changed by a tool, or incomplete with what it is missing) and what its program may use (main.npdm): a summary in its card, the full list in the full report
+- The card of a NUP in Details shows each package in columns: its kind, its name with its title ID and versions on one line, then its files, its size uncompressed and compressed, each with its name under it. Its icon is changed by clicking it, in place of the button under the card. Thanks to NikoMuffin for the idea (#145)
 
 ### Fixes
 

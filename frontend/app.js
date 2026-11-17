@@ -436,7 +436,7 @@ function nupNameLine(row) {
 }
 
 function renderNupCard(element, card, row) {
-  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div><div class="card-only"></div>`;
+  element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div>`;
   element.querySelector(".nup-packages").before(nupNameLine(row));
   for (const name of ["Eglantine", "Lichii"]) {
     const tag = document.createElement("i");
@@ -465,17 +465,22 @@ function renderNupCard(element, card, row) {
   element.querySelector("small").textContent = t("cardNup")(size(card.size), size(card.decompressed));
   for (const pkg of card.packages) {
     const line = document.createElement("li");
-    line.innerHTML = `<span class="k"></span><span class="who"><b></b><span></span></span><span class="num"></span>`;
+    // its kind, who it is (its name, then its title ID and versions), then its files,
+    // its size uncompressed and as stored, each a figure with its name under it (#145)
+    line.innerHTML = `<span class="k"></span><span class="who"><b></b><small></small></span><span class="stats">` + `<span class="stat"><b></b><small></small></span>`.repeat(3) + `</span>`;
     line.querySelector(".k").textContent = t("gameKind")(pkg.type);
-    line.querySelector("b").textContent = pkg.name || "";
-    line.querySelector("b").hidden = !pkg.name;
-    const facts = [pkg.publisher, pkg.titleId, `v${pkg.version}` + (pkg.shown ? ` (${pkg.shown})` : "")].filter(Boolean).join(" · ");
-    line.querySelector(".who span").textContent = (pkg.name ? " · " : "") + facts;
-    const stored = size(pkg.stored) !== size(pkg.size) ? size(pkg.stored) : "";
-    line.querySelector(".num").textContent = t("nupFiles")(pkg.files, size(pkg.size), stored);
+    line.querySelector(".who b").textContent = pkg.name || "";
+    line.querySelector(".who b").hidden = !pkg.name;
+    // the publisher is in the full report: the line stays one line (#145)
+    line.querySelector(".who small").textContent = [pkg.titleId, `v${pkg.version}`, pkg.shown].filter(Boolean).join(" · ");
+    line.querySelector(".who").title = [pkg.name, pkg.publisher].filter(Boolean).join(" · ");
+    const stats = [[pkg.files.toLocaleString(state.language), t("nupColFiles")], [size(pkg.size), t("nupColUncompressed")], [size(pkg.stored), t("nupColCompressed")]];
+    line.querySelectorAll(".stat").forEach((stat, i) => {
+      stat.querySelector("b").textContent = stats[i][0];
+      stat.querySelector("small").textContent = stats[i][1];
+    });
     element.querySelector(".nup-packages").append(line);
   }
-  element.querySelector(".card-only").textContent = t("nupOnly");
   renderNupIcon(element, card, row);
 }
 
@@ -486,10 +491,26 @@ function renderNupCard(element, card, row) {
 let nupIconHelps = 0;
 function renderNupIcon(element, card, row) {
   if (card.icon) {
-    const icon = document.createElement("img");
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = card.icon;
+    // the icon itself is what changes it, in place of a button under the card (#145); not the
+    // icons the game carries itself, which are kept
+    const icon = card.gameIcons ? image : document.createElement("button");
     icon.className = "nup-icon";
-    icon.alt = "";
-    icon.src = card.icon;
+    if (!card.gameIcons) {
+      icon.classList.add("nup-icon-change");
+      icon.title = t("changeImage");
+      icon.setAttribute("aria-label", t("changeImage"));
+      icon.disabled = state.busy;
+      icon.append(image);
+      icon.onclick = () => {
+        row.iconChanging = !row.iconChanging;
+        row.iconFailed = "";
+        renderCard(row);
+        row.tr.querySelector(".nup-no-icon button")?.focus();
+      };
+    }
     element.classList.add("has-icon");
     element.prepend(icon);
     // what was just done to give it: where the icon comes from, and the size of an image chosen
@@ -501,20 +522,7 @@ function renderNupIcon(element, card, row) {
       last.after(said);
       last = said;
     }
-    if (card.gameIcons) return;
-    if (!row.iconChanging) {
-      const change = document.createElement("button");
-      change.className = "nup-icon-change";
-      change.textContent = t("changeImage");
-      change.disabled = state.busy;
-      change.onclick = () => {
-        row.iconChanging = true;
-        renderCard(row);
-        row.tr.querySelector(".nup-no-icon button")?.focus();
-      };
-      last.after(change);
-      return;
-    }
+    if (card.gameIcons || !row.iconChanging) return;
     last.after(iconLine(row, true));
     return;
   }
