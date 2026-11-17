@@ -740,9 +740,11 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 
 /* the Settings page: groups of rows, what each does on the left and its control on the right (#60) */
 .pref-page { display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 760px; }
-.pref-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; max-width: 1180px; }
+/* two columns on a wide window, one under the other on a narrow one */
+#preferences .pref-page { max-width: 1120px; }
+.pref-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .pref-column { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-@media (max-width: 1100px) { .pref-columns { grid-template-columns: minmax(0, 1fr); max-width: 760px; } }
+@media (max-width: 1100px) { #preferences .pref-page { max-width: 760px; } .pref-columns { grid-template-columns: minmax(0, 1fr); } }
 #preferences .pref-group { max-width: none; width: 100%; display: block; padding: 0 16px; gap: 0; }
 #preferences .pref-group h2 { margin: 0 -16px; padding: 12px 16px 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .pref-item { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
@@ -1017,16 +1019,7 @@ html.mica[data-palette] nav { background: var(--panel); }
 .tool-choice .tile .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .tool-choice input:not(:checked) ~ .tile, .tool-choice input:not(:checked) ~ span { opacity: .45; }
 
-/* Settings: one column in the order things matter, with an index beside it that marks the
-   section read; above it, as a row, on a narrow window */
-.pref-indexed { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 28px; align-items: start; max-width: 980px; }
-.pref-index { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
-.pref-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
-.pref-link:hover { background: var(--hover); color: var(--text); }
-.pref-link.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.pref-link .pref-icon { width: 16px; height: 16px; }
-.pref-sections { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 720px; }
-.pref-sections .pref-group { scroll-margin-top: 12px; }
+/* Settings: the icons of the titles of its groups */
 .pref-icon { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 #preferences .pref-group h2 { display: flex; align-items: center; gap: 8px; }
 #preferences .pref-group h2 .pref-icon { color: var(--accent); }
@@ -1035,12 +1028,6 @@ html.mica[data-palette] nav { background: var(--panel); }
 .pref-alert .pref-icon { color: var(--bad); width: 18px; height: 18px; }
 .pref-alert span { flex: 1; }
 .pref-alert[hidden] { display: none; }
-@media (max-width: 860px) {
-  .pref-indexed { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .pref-index { flex-direction: row; overflow-x: auto; gap: 4px; padding: 4px 0 8px; background: var(--bg); z-index: 2; scrollbar-width: none; }
-  .pref-link { width: auto; flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
-  .pref-link.on { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-}
 
 /* ---- the review of the interface (17/11) ---- */
 /* the card of a game, kept open by a click or the keyboard: its actions and a close button */
@@ -1098,3 +1085,11 @@ nav button small { line-height: 1.3; }
 .nup-edit .nup-name-edit input { flex: 1 1 220px; min-width: 0; }
 .nup-edit .say { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .nup-edit .say.warning { flex-basis: 100%; color: var(--warn); }
+
+/* Settings: who makes it, small, under everything */
+.pref-credits { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 12px 2px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.pref-credits .credit-title { font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.pref-credits .credit-mini { display: inline-flex; align-items: center; gap: 6px; }
+.pref-credits .credit-mini b { color: var(--text); font-weight: 600; }
+.pref-credits .credit-badge { width: 20px; height: 20px; font-size: 11px; }
+.pref-credits .credit-thanks { flex-basis: 100%; }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Settings without the index: two columns on a wide window (the keys, General and Appearance; Windows, updates and help), the language under General, and the credits as a small line at the bottom
+
 ## 1.7.22
 
 ### Improvements

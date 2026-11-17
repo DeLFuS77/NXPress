@@ -329,113 +329,108 @@
     <div class="page-head">
       <h1 data-t="preferences"></h1>
     </div>
-    <!-- Settings in the order they matter (#140 and the review of 17/11): the keys first, as
-         almost nothing works without them, then how the work goes, how NXPress looks, Windows,
-         updates, help and who makes it. An index beside them (above them on a narrow window)
-         goes to each and marks the one read. -->
-    <div class="pref-page pref-indexed">
-      <div class="pref-index" id="pref-index" role="navigation" data-t-label="preferences"></div>
-      <div class="pref-sections">
+    <!-- Settings in two columns on a wide window, one under the other on a narrow one: on the
+         left the keys, which almost nothing works without, and how NXPress works and looks; on the
+         right Windows, updates, help and who makes it. No index: it all fits in sight. -->
+    <div class="pref-page">
       <div class="pref-alert" id="pref-no-keys" hidden><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a4 4 0 1 0-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 0 15 7z"/><circle cx="15.5" cy="6.5" r="1"/></svg><span data-t="prefNoKeys"></span><button class="primary small" id="pref-no-keys-choose" data-t="prefChange"></button></div>
-      <section class="pref-group" id="pref-keys" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a4 4 0 1 0-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 0 15 7z"/><circle cx="15.5" cy="6.5" r="1"/></svg><span data-t="prefKeys"></span></h2>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="prefKeysFile"></b><small class="pref-keys" id="keys-path"></small><small data-t="prefKeysHelp"></small></div>
-          <button id="keys-change" data-t="prefChange"></button>
+      <div class="pref-columns">
+        <div class="pref-column">
+          <section class="pref-group" id="pref-keys">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a4 4 0 1 0-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 0 15 7z"/><circle cx="15.5" cy="6.5" r="1"/></svg><span data-t="prefKeys"></span></h2>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="prefKeysFile"></b><small class="pref-keys" id="keys-path"></small><small data-t="prefKeysHelp"></small></div>
+              <button id="keys-change" data-t="prefChange"></button>
+            </div>
+          </section>
+          <section class="pref-group" id="pref-general">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M4.2 7.5l2.6 1.5M17.2 15l2.6 1.5M4.2 16.5l2.6-1.5M17.2 9l2.6-1.5"/><circle cx="12" cy="12" r="3.5"/></svg><span data-t="prefGeneral"></span></h2>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="language"></b></div>
+              <select id="language-select"></select>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="lowPriority"></b><small data-t="lowPriorityHint"></small></div>
+              <input id="low-priority" type="checkbox" class="switch" role="switch">
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="soundWhenDone"></b><small data-t="soundHint"></small><span class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></span></div>
+              <input id="sound" type="checkbox" class="switch" role="switch">
+            </div>
+          </section>
+          <section class="pref-group" id="pref-look">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.4-9-7.4z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/></svg><span data-t="prefAppearance"></span></h2>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="theme"></b></div>
+              <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
+            </div>
+            <div class="pref-item pref-stack">
+              <div class="pref-text"><b data-t="colors"></b><small data-t="colorsHint"></small></div>
+              <div class="palettes" id="palettes" role="radiogroup" data-t-label="colors"></div>
+            </div>
+            <div class="pref-item pref-stack">
+              <div class="pref-text"><b data-t="prefMenu"></b><small data-t="prefMenuHint"></small></div>
+              <div class="tool-choices" id="tool-choices"></div>
+            </div>
+          </section>
         </div>
-      </section>
-      <section class="pref-group" id="pref-work" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M4.2 7.5l2.6 1.5M17.2 15l2.6 1.5M4.2 16.5l2.6-1.5M17.2 9l2.6-1.5"/><circle cx="12" cy="12" r="3.5"/></svg><span data-t="prefWork"></span></h2>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="lowPriority"></b><small data-t="lowPriorityHint"></small></div>
-          <input id="low-priority" type="checkbox" class="switch" role="switch">
+        <div class="pref-column">
+          <section class="pref-group" id="explorer-group">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.5v7H3zM12.5 4.2 21 3v8.5h-8.5zM3 12.5h7.5v7L3 18.5zM12.5 12.5H21V21l-8.5-1.2z"/></svg><span data-t="prefExplorer"></span></h2>
+            <div class="pref-item" id="send-to-row">
+              <div class="pref-text"><b data-t="sendToTitle"></b><small data-t="sendToHint"></small></div>
+              <button id="send-to"></button>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="menuTitle"></b><small data-t="menuHint"></small><small class="pref-status" id="menu-status"></small></div>
+              <button id="explorer-menu"></button>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="filesTitle"></b><small data-t="filesHint"></small><small class="pref-status" id="files-status"></small><small class="pref-status warn" id="files-others"></small>
+                <label class="check small-check" id="open-start-row"><input id="open-start" type="checkbox"><span data-t="openStart"></span></label></div>
+              <button id="explorer-files"></button>
+            </div>
+          </section>
+          <section class="pref-group" id="pref-updates">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/></svg><span data-t="prefUpdates"></span></h2>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small><div class="check-now"><button class="link small-link" id="check-now" data-t="checkNow"></button><span class="pref-status" id="check-now-status" aria-live="polite"></span></div></div>
+              <input id="updates" type="checkbox" class="switch" role="switch">
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="published"></b><small data-t="publishedHint"></small><small class="pref-status" id="published-status"></small></div>
+              <input id="published" type="checkbox" class="switch" role="switch">
+            </div>
+          </section>
+          <section class="pref-group" id="pref-help">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/></svg><span data-t="prefHelp"></span></h2>
+            <div class="pref-item pref-list">
+              <div class="pref-text"><b data-t="shortcuts"></b><dl class="keys">
+                <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
+                <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
+                <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
+                <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
+                <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="shortcutUndo"></dd>
+              </dl></div>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="discordLink"></b><small data-t="discordHint"></small></div>
+              <button id="discord-link" class="brand-button"><svg class="discord-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span data-t="prefOpen"></span></button>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="starLink"></b><small data-t="starHint"></small></div>
+              <button id="star-link"><span aria-hidden="true">★ </span><span data-t="prefOpen"></span></button>
+            </div>
+          </section>
         </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="soundWhenDone"></b><small data-t="soundHint"></small><span class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></span></div>
-          <input id="sound" type="checkbox" class="switch" role="switch">
-        </div>
-      </section>
-      <section class="pref-group" id="pref-look" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.4-9-7.4z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/></svg><span data-t="prefAppearance"></span></h2>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="language"></b></div>
-          <select id="language-select"></select>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="theme"></b></div>
-          <div class="segmented"><button data-theme="auto" data-t="themeAuto"></button><button data-theme="light" data-t="themeLight"></button><button data-theme="dark" data-t="themeDark"></button></div>
-        </div>
-        <div class="pref-item pref-stack">
-          <div class="pref-text"><b data-t="colors"></b><small data-t="colorsHint"></small></div>
-          <div class="palettes" id="palettes" role="radiogroup" data-t-label="colors"></div>
-        </div>
-        <div class="pref-item pref-stack">
-          <div class="pref-text"><b data-t="prefMenu"></b><small data-t="prefMenuHint"></small></div>
-          <div class="tool-choices" id="tool-choices"></div>
-        </div>
-      </section>
-      <section class="pref-group" id="explorer-group" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.5v7H3zM12.5 4.2 21 3v8.5h-8.5zM3 12.5h7.5v7L3 18.5zM12.5 12.5H21V21l-8.5-1.2z"/></svg><span data-t="prefExplorer"></span></h2>
-        <div class="pref-item" id="send-to-row">
-          <div class="pref-text"><b data-t="sendToTitle"></b><small data-t="sendToHint"></small></div>
-          <button id="send-to"></button>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="menuTitle"></b><small data-t="menuHint"></small><small class="pref-status" id="menu-status"></small></div>
-          <button id="explorer-menu"></button>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="filesTitle"></b><small data-t="filesHint"></small><small class="pref-status" id="files-status"></small><small class="pref-status warn" id="files-others"></small>
-            <label class="check small-check" id="open-start-row"><input id="open-start" type="checkbox"><span data-t="openStart"></span></label></div>
-          <button id="explorer-files"></button>
-        </div>
-      </section>
-      <section class="pref-group" id="pref-updates" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/></svg><span data-t="prefUpdates"></span></h2>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="updates"></b><small data-t="updatesHint"></small><div class="check-now"><button class="link small-link" id="check-now" data-t="checkNow"></button><span class="pref-status" id="check-now-status" aria-live="polite"></span></div></div>
-          <input id="updates" type="checkbox" class="switch" role="switch">
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="published"></b><small data-t="publishedHint"></small><small class="pref-status" id="published-status"></small></div>
-          <input id="published" type="checkbox" class="switch" role="switch">
-        </div>
-      </section>
-      <section class="pref-group" id="pref-help" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01"/></svg><span data-t="prefHelp"></span></h2>
-        <div class="pref-item pref-list">
-          <div class="pref-text"><b data-t="shortcuts"></b><dl class="keys">
-            <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd data-t="addFiles"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>O</kbd></dt><dd data-t="addFolder"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd data-t="shortStart"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd data-t="preferences"></dd>
-            <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd data-t="shortcutUndo"></dd>
-          </dl></div>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="discordLink"></b><small data-t="discordHint"></small></div>
-          <button id="discord-link" class="brand-button"><svg class="discord-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span data-t="prefOpen"></span></button>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><b data-t="starLink"></b><small data-t="starHint"></small></div>
-          <button id="star-link"><span aria-hidden="true">★ </span><span data-t="prefOpen"></span></button>
-        </div>
-      </section>
-      <section class="pref-group" id="credits" data-pref-section>
-        <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg><span data-t="credits"></span></h2>
-        <div class="pref-item credit">
-          <span class="credit-badge" aria-hidden="true">D</span>
-          <div class="pref-text"><b>DeLFuS77</b><small class="credit-role" data-t="creditAuthor"></small></div>
-        </div>
-        <div class="pref-item credit">
-          <span class="credit-badge tester" aria-hidden="true">N</span>
-          <div class="pref-text"><b>NikoMuffin</b><small class="credit-role" data-t="creditNiko"></small></div>
-        </div>
-        <div class="pref-item">
-          <div class="pref-text"><small data-t="creditThanks"></small></div>
-        </div>
-      </section>
       </div>
+      <!-- who makes it, small, under everything -->
+      <footer class="pref-credits" id="credits">
+        <span class="credit-title" data-t="credits"></span>
+        <span class="credit-mini"><span class="credit-badge" aria-hidden="true">D</span><b>DeLFuS77</b><span data-t="creditAuthor"></span></span>
+        <span class="credit-mini"><span class="credit-badge tester" aria-hidden="true">N</span><b>NikoMuffin</b><span data-t="creditNiko"></span></span>
+        <span class="credit-thanks" data-t="creditThanks"></span>
+      </footer>
     </div>
   </section>
       </div>
