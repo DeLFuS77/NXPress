@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- A game of several programs (a collection): Details tells the NCA of every program, and Combine checks that none of them is missing
+
 ## 1.7.21
 
 ### Improvements

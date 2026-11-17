@@ -179,9 +179,9 @@ func packLacks(pack string, sources []string) ([]string, error) {
 	lacks := []string{}
 	for _, title := range titles {
 		id := strings.ToLower(title.TitleId)
-		for _, kind := range contentOrder {
-			content, ok := title.Contents[kind]
-			if !ok || content.ID == "" || kind == "DeltaFragment" {
+		for _, key := range contentKeys(title) {
+			content, kind := title.Contents[key], contentName(key)
+			if content.ID == "" || strings.HasPrefix(key, "DeltaFragment") {
 				continue
 			}
 			nca := strings.ToLower(content.ID)
