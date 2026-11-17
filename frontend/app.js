@@ -1155,6 +1155,23 @@ function coverTone(game) {
 // version, the titles of each kind, the game of an update or a DLC, the version of its game a
 // DLC needs, the firmware it needs and its languages
 let popTimer = 0;
+// the card opened by a click or the keyboard stays, with Copy, Full report and Close, until it is
+// closed, Escape is pressed or the click goes elsewhere; the card of the mouse only shows
+let popPinned = false, popRow = null;
+function pinPop(row, anchor) {
+  clearTimeout(popTimer);
+  if (popPinned && popRow === row) { hidePop(); return; }
+  showPop(row, anchor);
+  if ($("game-pop").hidden) return;
+  popPinned = true;
+  popRow = row;
+  const pop = $("game-pop");
+  pop.classList.add("pinned");
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-label", shownName(row));
+  pop.removeAttribute("aria-hidden");
+  $("pop-close").focus({ preventScroll: true });
+}
 function showPop(row, anchor) {
   const game = row.game;
   if (!game || !game.titleId || !anchor.isConnected) return;
@@ -1170,7 +1187,7 @@ function showPop(row, anchor) {
     [t("popVersion"), (game.versionTxt ? game.versionTxt + " · " : "") + "v" + game.latest],
   ];
   if (game.titles > 1) facts.push([t("popHolds"), t("popTitles")(game.bases, game.updates, game.dlcs)]);
-  if (game.gameId) facts.push([t("popGame"), game.gameId]);
+  if (game.gameId && game.gameId !== game.titleId) facts.push([t("popGame"), game.gameId]);
   if (game.needsGame) facts.push([t("popNeedsGame"), "v" + game.needsGame]);
   if (game.firmware) facts.push([t("popFirmware"), game.firmware]);
   // the newest version published, in blue when the list does not have it
@@ -1234,7 +1251,26 @@ document.addEventListener("nx-tone", event => {
 });
 function hidePop() {
   clearTimeout(popTimer);
-  $("game-pop").hidden = true;
+  const pop = $("game-pop");
+  const wasPinned = popPinned;
+  pop.hidden = true;
+  pop.classList.remove("pinned");
+  pop.removeAttribute("role");
+  pop.setAttribute("aria-hidden", "true");
+  popPinned = false;
+  // the keyboard goes back to the game the card was of
+  if (wasPinned && popRow && popRow.tr.isConnected && pop.contains(document.activeElement)) popRow.tr.querySelector(".game")?.focus({ preventScroll: true });
+  popRow = null;
+}
+// what the card tells, as text to paste
+function popText() {
+  const pop = $("game-pop");
+  const lines = [pop.querySelector(".pop-name").textContent, pop.querySelector(".pop-publisher").textContent].filter(Boolean);
+  const terms = pop.querySelectorAll("dl dt");
+  for (const term of terms) lines.push(term.textContent + ": " + term.nextElementSibling.textContent);
+  const languages = [...pop.querySelectorAll(".pop-languages i")].map(chip => chip.textContent).join(" ");
+  if (languages) lines.push(languages);
+  return lines.join("\n");
 }
 
 // the help of the options (#67): the text that tells what an option does is out of the way, and
@@ -1825,6 +1861,10 @@ function startSoon() {
 }
 
 function render() {
+  // the column of the state shows once a file of the list has one, or while files are at work
+  $("files").classList.toggle("no-state", !state.busy && ![...state.rows.values()].some(row => row.status));
+  // the experimental options open by themselves when one of them is on
+  if (["extra", "skip-sparse-updates", "optimize"].some(id => $(id) && $(id).checked)) $("extra-options").open = true;
   paintOfficial();
   paintPicks();
   paintCheckFilter();
@@ -2205,10 +2245,16 @@ function add(item) {
   }
   const game = tr.querySelector(".game");
   game.addEventListener("mouseenter", () => {
+    if (popPinned) return;
     clearTimeout(popTimer);
     popTimer = setTimeout(() => { const row = state.rows.get(item.path); if (row) showPop(row, game); }, 450);
   });
-  game.addEventListener("mouseleave", hidePop);
+  game.addEventListener("mouseleave", () => { if (!popPinned) hidePop(); });
+  // a click on the game, or Enter on it, opens its card and keeps it open
+  game.tabIndex = 0;
+  const pin = () => { const row = state.rows.get(item.path); if (row && row.game && row.game.titleId) pinPop(row, game); };
+  game.addEventListener("click", event => { if (!event.target.closest("button, input, label, a")) pin(); });
+  game.addEventListener("keydown", event => { if ((event.key === "Enter" || event.key === " ") && event.target === game) { event.preventDefault(); pin(); } });
   // an empty file shows its 0 B; a file a work told about, whose size is not known, nothing
   tr.querySelector(".size").textContent = item.size === null ? "" : size(item.size || 0);
   const remove = () => {
@@ -2455,6 +2501,9 @@ function paint(row) {
   }
   note.className = "note" + (row.status === "failed" ? " bad" : row.status === "skipped" || row.status === "modified" ? " warn" : "");
   note.textContent = noteText(row.status === "failed" ? (row.error === "cancelled" ? "" : row.error) : row.note);
+  // an error of a kind known is told in the words of the window; what NXPress said, under What to do
+  const kind = row.status === "failed" && row.error && row.error !== "cancelled" ? adviceFor(row.error) : "";
+  if (kind && kind !== "adviceGeneric" && t(kind + "Short")) note.textContent = t(kind + "Short");
   // what keeps Eglantine and Lichii from opening a NUP checked whole, from starting its game or
   // from showing it right goes on a line of its own, in orange: the note stays grey, as the file
   // is whole
@@ -2478,9 +2527,10 @@ function paint(row) {
     more.className = "error-more";
     more.open = !!row.open;
     more.ontoggle = () => { row.open = more.open; };
-    more.innerHTML = `<summary></summary><p></p><button class="link small-link"></button>`;
+    more.innerHTML = `<summary></summary><p></p><code class="error-raw"></code><button class="link small-link"></button>`;
     more.querySelector("summary").textContent = t("errorWhat");
     more.querySelector("p").textContent = t(adviceFor(detail));
+    more.querySelector(".error-raw").textContent = noteText(detail);
     more.querySelector("button").textContent = t("copyDetail");
     more.querySelector("button").onclick = () => { window.runtime.ClipboardSetText(`${row.item.path}\n${detail}`); showToast(t("detailCopied")); };
     note.after(more);
@@ -3753,6 +3803,13 @@ async function main() {
   $("export").onclick = event => exportMenu(event.currentTarget, exportDetails, exportReport);
   $("report-copy").onclick = () => { window.runtime.ClipboardSetText($("report-text").textContent); showToast(t("fullReportCopied")); };
   $("report-close").onclick = () => $("report-dialog").close();
+  $("pop-close").onclick = () => hidePop();
+  $("pop-copy").onclick = () => { window.runtime.ClipboardSetText(popText()); showToast(t("detailCopied")); };
+  $("pop-report").onclick = () => { const row = popRow; hidePop(); if (row) openReport(row, row.tr.querySelector(".game")); };
+  // a click anywhere else closes the card kept open
+  document.addEventListener("pointerdown", event => {
+    if (popPinned && !$("game-pop").contains(event.target) && !(popRow && popRow.tr.contains(event.target))) hidePop();
+  });
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
