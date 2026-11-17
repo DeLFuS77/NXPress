@@ -6,6 +6,9 @@
 
 - Details tells the kind of package a file is (as published, a game card dump, converted, homebrew, changed by a tool, or incomplete with what it is missing) and what its program may use (main.npdm): a summary in its card, the full list in the full report
 - The card of a NUP in Details shows each package in columns: its kind, its name with its title ID and versions on one line, then its files, its size uncompressed and compressed, each with its name under it. Its icon is changed by clicking it, in place of the button under the card. Thanks to NikoMuffin for the idea (#145)
+- Settings in a new order: your keys first, then how the work goes, how NXPress looks, Windows, updates, help and credits, with an index that marks the section you read, and a notice at the top while there is no prod.keys
+- Settings › Appearance › Side menu: switch off the tools you don't use and they leave the side menu. Thanks to NikoMuffin for the idea (#140)
+- The notice with Undo shows its shortcut, Ctrl+Z. Thanks to NikoMuffin for the idea (#131)
 
 ### Fixes
 
