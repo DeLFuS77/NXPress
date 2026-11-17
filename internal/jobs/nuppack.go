@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/fs"
 	"os"
@@ -170,6 +171,13 @@ func NupNameWith(dir string, template string) (string, error) {
 // dumpTitle is the main title of a dump folder, as ReadTitle gives the one of a game file, with
 // the size of its files.
 func dumpTitle(dir string) (GameTitle, error) {
+	return dumpTitleWith(dir, false)
+}
+
+// dumpTitleWith is dumpTitle, with the icon the control data of the folder has when withIcon: the
+// window of Combine shows it, and the image chosen there replaces it (brought from the edition of
+// QuickWick, PR #151).
+func dumpTitleWith(dir string, withIcon bool) (GameTitle, error) {
 	summary, err := readDump(dir)
 	if err != nil {
 		return GameTitle{}, err
@@ -202,6 +210,11 @@ func dumpTitle(dir string) (GameTitle, error) {
 	}
 	result.NupName, _ = NupName(dir)
 	result.Size = DumpSize(dir)
+	if withIcon {
+		if icon := nup.ControlIcon(summary.sources[appSource(summary.sources)].Control); len(icon) > 0 {
+			result.ControlIcon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
+		}
+	}
 	return result, nil
 }
 
@@ -259,8 +272,12 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	// a file of the folder changed after this is not the one packed: --rm-dumps leaves it
 	started := time.Now()
 	packing := nup.PackOptions{Level: level, Workers: workers, Readers: readers, Name: dumpGameName(dir)}
-	icon, iconNote := packIcon(ctx, dir, o)
-	packing.Icon = icon
+	icon, cover, iconNote := packIcon(ctx, dir, o)
+	if cover {
+		packing.Cover = icon
+	} else {
+		packing.Icon = icon
+	}
 	if !o.NupZstdBig {
 		packing.RawOver = nup.RawBig
 	}

@@ -809,6 +809,17 @@ function coverLine(row) {
     remove.onclick = event => { event.stopPropagation(); row.item.cover = null; row.coverFailed = ""; paint(row); };
     buttons.append(remove);
     hint.textContent = t("coverChosen")(cover.name, cover.width, cover.height);
+  } else if (row.game && row.game.controlIcon) {
+    // the icon its game data carries, which the NUP keeps unless another is chosen (brought from
+    // the edition of QuickWick, PR #151)
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = row.game.controlIcon;
+    thumb.append(image);
+    thumb.classList.add("chosen");
+    choose.textContent = t("coverReplace");
+    hint.textContent = row.coverFailed || t("coverOwn");
+    hint.classList.toggle("warning", !!row.coverFailed);
   } else {
     thumb.textContent = "+";
     choose.textContent = t("coverAdd");
@@ -2139,7 +2150,7 @@ function paint(row) {
     }
     plan.querySelector("b").textContent = row.game.nupName || "";
     plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
-    // a folder without an icon of its own: an image can be chosen for its NUP, instead of titledb's
+    // an image can be chosen for its NUP: instead of titledb's, or of the icon of its game data
     if (!row.game.icon) plan.append(coverLine(row));
     file.after(plan);
   }
