@@ -971,3 +971,23 @@ html.mica[data-palette] nav { background: var(--panel); }
 .report-dialog { width: min(760px, calc(100vw - 48px)); }
 .report-text { max-height: min(60vh, 560px); overflow: auto; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-small, 8px); background: var(--raised); font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; user-select: text; }
 .file-card .card-report { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+
+/* Verify: the files of the list by how their check ended, beside the search (#134) */
+#toolbar .check-filter { margin-top: 0; flex: none; }
+.check-filter button { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; white-space: nowrap; }
+.check-filter b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.check-filter button.on b { color: inherit; }
+.check-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.check-filter button:first-child .check-dot { display: none; }
+.check-ok .check-dot { background: var(--ok); }
+.check-corrupted .check-dot, .check-failed .check-dot { background: var(--bad); }
+.check-modified .check-dot, .check-skipped .check-dot { background: var(--warn); }
+
+/* a NUP given to a work that leaves it as it is: the works that take it (#139) */
+.nup-dialog { max-width: 460px; }
+.nup-works { display: grid; gap: 6px; margin: 14px 0 4px; }
+.nup-work { display: flex; align-items: center; gap: 12px; text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-small); background: transparent; }
+.nup-work:hover { background: var(--hover); }
+.nup-work .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.nup-work b { display: block; font-size: 13px; }
+.nup-work small { display: block; font-size: 12px; color: var(--muted); }

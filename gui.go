@@ -419,6 +419,16 @@ func (a *App) Expand(paths []string, mode string) []Item {
 	return items
 }
 
+// NupFiles are the NUP files the paths hold, so a NUP given to a work that leaves it as it is is
+// told where it goes (#139).
+func (a *App) NupFiles(paths []string) []string {
+	files := jobs.NupFiles(paths)
+	if files == nil {
+		return []string{}
+	}
+	return files
+}
+
 // ChooseFiles asks for files of the mode.
 func (a *App) ChooseFiles(mode string) ([]Item, error) {
 	patterns := []string{}

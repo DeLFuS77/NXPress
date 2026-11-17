@@ -1691,6 +1691,7 @@ function startSoon() {
 function render() {
   paintOfficial();
   paintPicks();
+  paintCheckFilter();
   warnSoon();
   document.documentElement.lang = state.language;
   // the question asked as the window closes with files at work, in this language too
@@ -1969,6 +1970,7 @@ async function refill(paths, replace, sameOrigins) {
   if (replace && sameOrigins) clearRows();
   else if (replace) clearList();
   addOrigins(paths);
+  if (!sameOrigins) tellNupElsewhere(paths);
   for (const item of items) if (!sameOrigins || !state.removed.has(item.path)) add(item);
   if (state.mode === "rename") previewNames();
   previewPacks();
@@ -1980,6 +1982,7 @@ function addOrigins(paths) {
 
 // clearRows empties the list; clearList also forgets where its files came from
 function clearRows() {
+  state.checkShown = "";
   state.items = [];
   state.rows.clear();
   state.lastRun = null;
@@ -2768,6 +2771,7 @@ function listen() {
       save("pending", pending.request.files.length ? pending : null);
     }
     paint(row);
+    if (mode === "verify") paintCheckFilter();
     if (mode === "info" && !event.error) app().Card(row.item.path).then(card => { row.card = card; renderCard(row); }).catch(() => { });
     trackSpeed();
     summary();
@@ -3130,6 +3134,87 @@ function keepOn() {
   hideShutdown();
 }
 
+// ---- NUP files given to a work that leaves them as they are (#139) ----
+// A NUP dropped or added where the work does not take it is said in a window, with the works that
+// take it: one click goes there, with the same files.
+const nupWorks = ["decompress", "split", "info", "verify", "rename"];
+async function tellNupElsewhere(paths) {
+  if (nupWorks.includes(state.mode) || !paths.length) return;
+  const nups = await app().NupFiles(paths) || [];
+  if (!nups.length || state.busy) return;
+  const dialog = $("nup-dialog");
+  $("nup-title").textContent = t("nupTitle")(nups.length);
+  $("nup-text").textContent = t("nupText")(t(state.mode));
+  const list = $("nup-works");
+  list.innerHTML = "";
+  for (const mode of nupWorks) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "nup-work";
+    button.innerHTML = workTile(mode) + "<span><b></b><small></small></span>";
+    button.querySelector("b").textContent = t(mode);
+    button.querySelector("small").textContent = t("nupWhat")[mode];
+    button.onclick = () => { dialog.close(); setMode(mode); };
+    list.append(button);
+  }
+  if (!dialog.open) dialog.showModal();
+}
+
+// ---- Verify: the files of the list by how their check ended (#134) ----
+// Once files are checked, a choice beside the search leaves in sight the ones verified, corrupted,
+// failed, repaired, skipped or cancelled, with how many there are; All shows them all again. A
+// choice with no file any more goes back to All.
+const checkKinds = ["ok", "corrupted", "failed", "modified", "skipped", "cancelled"];
+function checkKind(row) {
+  if (!["ok", "failed", "modified", "skipped"].includes(row.status)) return "";
+  if (row.status === "failed" && row.error === "cancelled") return "cancelled";
+  if (damaged(row.status, row.error)) return "corrupted";
+  return row.status;
+}
+const checkShown = () => state.mode === "verify" && !!state.checkShown;
+let checkFilterTimer = 0;
+// paintCheckFilter is asked for often while a check runs: it is drawn once in a while
+function paintCheckFilter() {
+  if (!checkFilterTimer) checkFilterTimer = setTimeout(drawCheckFilter, 150);
+}
+function drawCheckFilter() {
+  checkFilterTimer = 0;
+  const box = $("check-filter");
+  const counts = {};
+  let ended = 0;
+  if (state.mode === "verify") {
+    for (const row of state.rows.values()) {
+      const kind = checkKind(row);
+      if (kind) { counts[kind] = (counts[kind] || 0) + 1; ended++; }
+    }
+  }
+  const was = state.checkShown || "";
+  if (!ended || (state.checkShown && !counts[state.checkShown])) state.checkShown = "";
+  box.hidden = !ended;
+  box.innerHTML = "";
+  if (ended) {
+    const add = (kind, label, count) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", String((state.checkShown || "") === kind));
+      button.dataset.kind = kind;
+      if (kind) button.className = "check-" + kind;
+      button.classList.toggle("on", (state.checkShown || "") === kind);
+      button.innerHTML = '<span class="check-dot" aria-hidden="true"></span><span></span><b></b>';
+      button.children[1].textContent = label;
+      button.children[2].textContent = count;
+      box.append(button);
+    };
+    add("", t("worklogAll"), state.rows.size);
+    for (const kind of checkKinds) {
+      if (!counts[kind]) continue;
+      add(kind, kind === "corrupted" ? t("corrupted") : kind === "cancelled" ? t("cancelled") : stateWord(kind, "verify"), counts[kind]);
+    }
+  }
+  if (was !== (state.checkShown || "") || checkShown()) applyListFind();
+}
+
 // the files of the list that have what is looked for in their name, the name of their game, their
 // title ID, their folder or their note (#105); the others are left out of sight, not of the work
 function applyListFind() {
@@ -3138,11 +3223,11 @@ function applyListFind() {
   for (const row of state.rows.values()) {
     const game = row.game || {};
     const text = [shownName(row), row.item.name, row.item.path, game.titleId || "", game.gameId || "", row.tr.querySelector(".note")?.textContent || ""].join(" ").toLowerCase();
-    const found = !find || text.includes(find);
+    const found = (!find || text.includes(find)) && (!checkShown() || checkKind(row) === state.checkShown);
     row.tr.classList.toggle("find-out", !found);
     if (found) shown++;
   }
-  $("list-found").textContent = find ? t("listFound")(shown, state.rows.size) : "";
+  $("list-found").textContent = find || checkShown() ? t("listFound")(shown, state.rows.size) : "";
   paintPicks();
 }
 
@@ -3447,6 +3532,7 @@ async function main() {
     if (!folder) return;
     const items = await app().Expand([folder], expandMode()) || [];
     addOrigins([folder]);
+    tellNupElsewhere([folder]);
     for (const item of items) add(item);
     if (state.mode === "rename") previewNames();
     previewPacks();
@@ -3610,6 +3696,14 @@ async function main() {
     }
   };
   $("list-find").oninput = applyListFind;
+  $("check-filter").onclick = event => {
+    const button = event.target.closest("button[data-kind]");
+    if (!button) return;
+    state.checkShown = button.dataset.kind;
+    applyListFind();
+    drawCheckFilter();
+  };
+  $("nup-stay").onclick = () => $("nup-dialog").close();
   $("updates").onchange = () => { save("updates", $("updates").checked); if ($("updates").checked) checkUpdate(); render(); };
   // a new version (#91): its window, which installs it, and what it offers then
   $("update-install").onclick = installUpdate;

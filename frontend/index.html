@@ -55,6 +55,8 @@
     <div class="toolbar" id="toolbar" hidden>
       <!-- the files of the list looked for as one types, as in the log (#105) -->
       <input id="list-find" type="search" data-t-placeholder="listFind" data-t-label="listFind"><span class="list-found" id="list-found" aria-live="polite"></span>
+      <!-- Verify: the files of the list by how their check ended (#134) -->
+      <div class="segmented check-filter" id="check-filter" role="radiogroup" data-t-label="checkFilter" hidden></div>
       <button id="add-files" data-t="addFiles"></button>
       <button id="add-folder" data-t="addFolder"></button>
       <button id="clear" class="quiet" data-t="clear"></button>
@@ -528,6 +530,13 @@
     <button id="update-later" data-t="updateLater" hidden></button>
     <button id="update-restart" class="primary" hidden></button>
   </div>
+</dialog>
+<!-- NUP files given to a work that leaves them as they are: where they go (#139) -->
+<dialog id="nup-dialog" class="nup-dialog" aria-labelledby="nup-title" aria-describedby="nup-text">
+  <h2 id="nup-title"></h2>
+  <p class="muted" id="nup-text"></p>
+  <div class="nup-works" id="nup-works"></div>
+  <div class="dialog-actions"><button id="nup-stay" class="primary" data-t="nupStay" autofocus></button></div>
 </dialog>
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>
