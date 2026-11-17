@@ -613,6 +613,18 @@ type PackGame struct {
 // made before when there is one where its pack would go (output, or next to the files or to the
 // folder given they came in), or among the files given under the name its pack would get, as the
 // work then tells it. origins are the files and folders the list came from.
+// NupNames are the names the NUP of the dump folders given get in Combine with a template, by
+// folder (the NUP follows the template of the packs of each game).
+func (a *App) NupNames(dirs []string, template string) map[string]string {
+	names := map[string]string{}
+	for _, dir := range dirs {
+		if name, err := jobs.NupNameWith(dir, template); err == nil {
+			names[dir] = name
+		}
+	}
+	return names
+}
+
 func (a *App) PackPlan(files []string, origins []string, output string, template string) []PackGame {
 	sources, _ := jobs.Inputs(files, []string{".nsp", ".nsz", ".xci", ".xcz"})
 	order, groups, _ := jobs.GameGroups(sources)

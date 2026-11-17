@@ -552,15 +552,20 @@ async function pasteIcon(event) {
     return;
   }
   if (dialog.open) dialog.close();
+  if (target.folder) {
+    folderCover(target.row, () => app().PastedCoverImage(data));
+    return;
+  }
   giveNupIcon(target.row, () => app().PasteNupIcon(target.row.item.path, data, target.replace));
 }
 
 // the window to search an image in the eShop, for one NUP (#102): the name it searches is the one
 // of the game, which can be changed, as file names and title IDs are often wrong
-const cover = { target: null, chosen: null, round: 0 };
-function openCoverSearch(row, replace, opener) {
-  cover.target = { row, replace };
+const cover = { target: null, chosen: null, chosenTitle: "", round: 0 };
+function openCoverSearch(row, replace, opener, folder = false) {
+  cover.target = { row, replace, folder };
   cover.chosen = null;
+  cover.chosenTitle = "";
   // the name without the marks of file names: [title ID], [v0], (EU) and the extension
   const shown = shownName(row);
   const name = shown.replace(/\.(nup|nsp|nsz|xci|xcz)$/i, "").replace(/(\s*[\[(][^\])]*[\])])+/g, " ").replace(/\s+/g, " ").trim() || shown;
@@ -604,10 +609,12 @@ async function searchCovers() {
         for (const other of $("cover-grid").children) other.setAttribute("aria-pressed", "false");
         tile.setAttribute("aria-pressed", "true");
         cover.chosen = found.address;
+        cover.chosenTitle = found.title;
         $("cover-use").disabled = false;
       };
       tile.ondblclick = () => {
         cover.chosen = found.address;
+        cover.chosenTitle = found.title;
         useCover();
       };
       $("cover-grid").append(tile);
@@ -626,6 +633,10 @@ function useCover() {
   const address = cover.chosen;
   if (!target || !address) return;
   $("cover-dialog").close();
+  if (target.folder) {
+    folderCover(target.row, () => app().EshopCoverImage(address, cover.chosenTitle));
+    return;
+  }
   giveNupIcon(target.row, () => app().UseCover(target.row.item.path, address, target.replace));
 }
 
@@ -3478,6 +3489,13 @@ function render() {
       // the menu keeps its tiles only on a narrow window: the name shows on hover
       button.title = t(mode);
       button.querySelector("small").textContent = t("hint" + mode[0].toUpperCase() + mode.slice(1));
+      // Combine and Split say what they do with NUP files too, on a line of its own (#141)
+      const nup = t("hint" + mode[0].toUpperCase() + mode.slice(1) + "Nup");
+      if (nup) {
+        const line = document.createElement("small");
+        line.textContent = nup;
+        button.querySelector("small").after(line);
+      }
       button.className = mode === state.mode && !state.view ? "on" : "";
       // the tile chosen pops; the menu is drawn again while it does, and the pop goes on where it was
       const since = performance.now() - (state.chosenAt || 0);
@@ -4210,6 +4228,15 @@ function previewPacks() {
     if (state.mode !== "pack" || !$("pack-games").checked) return;
     const paths = pickedItems().map(item => item.path);
     const plan = paths.length && state.keys ? await app().PackPlan(paths, state.sources, state.output, state.packTemplate) || [] : [];
+    // the NUP of each dump folder is named by the same template as the packs of each game
+    const dumps = state.items.filter(item => item.dump).map(item => item.path);
+    if (dumps.length) {
+      const names = await app().NupNames(dumps, state.packTemplate) || {};
+      for (const path of dumps) {
+        const row = state.rows.get(path);
+        if (row && row.game && names[path] && row.game.nupName !== names[path]) { row.game.nupName = names[path]; paint(row); }
+      }
+    }
     list.innerHTML = "";
     $("pack-plan-empty").hidden = plan.length > 0;
     plan.forEach((game, i) => {

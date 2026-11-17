@@ -98,6 +98,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		if len(dumps) > 0 {
 			nupWork := o
 			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, true
+			// a NUP per game is named by the template of the packs of each game, as they are
+			if o.PackGames {
+				nupWork.NupTemplate = o.PackName
+			}
 			failedDumps = RunJobs(ctx, nupWork, out)
 			if len(o.Files) == 0 {
 				return failedDumps
