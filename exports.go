@@ -206,3 +206,29 @@ func newestPublished(id string, kind string, versions *titledb.Versions) (titled
 	}
 	return versions.Newest(number)
 }
+
+// FileReport is the full report of a file Details tells, as plain text (brought from the edition
+// of QuickWick, PR #151).
+func (a *App) FileReport(path string) (string, error) {
+	return jobs.Report(path, a.versions.Load())
+}
+
+// ExportReport asks where to save the full reports of the files given as a .txt file, one after
+// the other, and writes it; it gives the file written, "" when none was chosen.
+func (a *App) ExportReport(paths []string, name string) (string, error) {
+	path, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		DefaultFilename: safeName(name) + ".txt", Filters: []wailsruntime.FileFilter{{DisplayName: "Text (*.txt)", Pattern: "*.txt"}}, CanCreateDirectories: true,
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+	if !strings.EqualFold(filepath.Ext(path), ".txt") {
+		path += ".txt"
+	}
+	done, err := a.chore(true)
+	if err != nil {
+		return "", err
+	}
+	defer done()
+	return path, os.WriteFile(path, []byte(jobs.ReportFiles(paths, a.versions.Load())), 0o644)
+}

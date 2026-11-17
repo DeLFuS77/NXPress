@@ -278,6 +278,7 @@ function renderCard(row) {
   element.className = "file-card";
   if (card.packages) {
     renderNupCard(element, card, row);
+    element.append(reportButton(row));
     row.tr.querySelector(".note").after(element);
     return;
   }
@@ -306,7 +307,17 @@ function renderCard(row) {
     warning.textContent = noteText(card.unsignedNote).replace(/^./, (c) => c.toUpperCase()).replace("--rebuild", "‑‑rebuild");
     element.append(warning);
   }
+  element.append(reportButton(row));
   row.tr.querySelector(".note").after(element);
+}
+
+// Full report, at the end of the card of a file in Details
+function reportButton(row) {
+  const button = document.createElement("button");
+  button.className = "outline card-report";
+  button.textContent = t("reportOpen");
+  button.onclick = () => openReport(row, button);
+  return button;
 }
 
 // the part of the note of a NUP that tells what keeps Eglantine and Lichii from opening it, from
@@ -1242,9 +1253,12 @@ let menuOpener = null;
 
 // the export of Details and of the log to a spreadsheet (#89): a menu of the two formats under
 // the button, then where to save it
-function exportMenu(button, run) {
+function exportMenu(button, run, report) {
   const box = button.getBoundingClientRect();
-  openMenu([[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]], box.left, box.bottom + 4);
+  const entries = [[t("exportXlsx"), () => run("xlsx")], [t("exportCsv"), () => run("csv")]];
+  // Details: the full report of every file, as text (brought from the edition of QuickWick, PR #151)
+  if (report) entries.push([t("exportReport"), report]);
+  openMenu(entries, box.left, box.bottom + 4);
 }
 const today = () => { const now = new Date(); return [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-"); };
 async function exported(call) {
@@ -1260,6 +1274,24 @@ function exportDetails(format) {
   const header = [t("file"), t("colFormat"), t("colSize"), t("colTitleId"), t("colType"), t("colVersion"), t("colShown"), t("colName"), t("colPublisher"), t("colNewest"), t("colFolder"), t("colProblem")];
   const kinds = Object.fromEntries(["BASE", "UPD", "DLC"].map(kind => [kind, t("gameKind")(kind)]));
   exported(() => app().ExportDetails(paths, format, { sheet: t("info"), file: `NXPress ${t("info")} ${today()}`, header, kinds }));
+}
+// Details: the full report of the files of the list, in its order, in a .txt
+function exportReport() {
+  const byRow = new Map([...state.rows].map(([path, row]) => [row.tr, path]));
+  const paths = [...$("files").tBodies[0].rows].map(tr => byRow.get(tr)).filter(Boolean);
+  exported(() => app().ExportReport(paths, `NXPress ${t("info")} ${today()}`));
+}
+// the full report of one file, in a window of its own: copied, or saved as a .txt
+async function openReport(row, opener) {
+  $("report-title").textContent = t("reportOf")(shownName(row));
+  $("report-text").textContent = t("reportReading");
+  $("report-save").onclick = () => exported(() => app().ExportReport([row.item.path], shownName(row)));
+  openDialog($("report-dialog"), opener);
+  try {
+    $("report-text").textContent = await app().FileReport(row.item.path);
+  } catch (error) {
+    $("report-text").textContent = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
+  }
 }
 // the log: a row for each file of the works shown, as they are shown
 function exportLog(format) {
@@ -3457,7 +3489,9 @@ async function main() {
   $("star-no").onclick = () => { save("starAsked", true); $("done-star").hidden = true; };
   $("star-link").onclick = () => app().OpenURL(repository);
   $("unofficial").onclick = () => app().OpenURL(repository + "/releases/latest");
-  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails);
+  $("export").onclick = event => exportMenu(event.currentTarget, exportDetails, exportReport);
+  $("report-copy").onclick = () => { window.runtime.ClipboardSetText($("report-text").textContent); showToast(t("fullReportCopied")); };
+  $("report-close").onclick = () => $("report-dialog").close();
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");

@@ -966,3 +966,8 @@ html.mica[data-palette] nav { background: var(--panel); }
 #files.picking th .pick-all { margin-right: 6px; vertical-align: middle; }
 #files .pick input { margin: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 #files tr.unpicked td.name .game > :not(.pick), #files tr.unpicked td.size, #files tr.unpicked td.state { opacity: .45; }
+
+/* Details: the full report of a file (brought from the edition of QuickWick, PR #151) */
+.report-dialog { width: min(760px, calc(100vw - 48px)); }
+.report-text { max-height: min(60vh, 560px); overflow: auto; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-small, 8px); background: var(--raised); font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; user-select: text; }
+.file-card .card-report { justify-self: start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
