@@ -128,7 +128,7 @@ dialog.update-dialog { max-width: 560px; }
 .update-version { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; }
 .update-notes { max-height: 240px; overflow: auto; margin-top: 10px; padding: 6px 14px 8px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--bg); font-size: 13px; user-select: text; -webkit-user-select: text; }
 .update-notes:empty { display: none; }
-.update-notes h3 { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.update-notes h3 { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .update-notes ul { margin: 0; padding-left: 18px; }
 .update-notes li { margin: 3px 0; }
 .update-notes p { margin: 6px 0; }
@@ -329,7 +329,7 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 .label { font-weight: 600; margin-bottom: 6px; }
 .level-head { display: flex; justify-content: space-between; font-weight: 600; }
 .level-head b { color: var(--text); font-size: 16px; font-variant-numeric: tabular-nums; }
-.ends { display: flex; justify-content: space-between; font-size: 11px; }
+.ends { display: flex; justify-content: space-between; font-size: 12px; }
 .segmented { display: flex; margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius-small); overflow: hidden; }
 .segmented button { flex: 1; border: none; border-radius: 0; font-size: 12px; padding: 5px; background: transparent; }
 .segmented button + button { border-left: 1px solid var(--line); }
@@ -337,7 +337,7 @@ aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 2
 /* the focus ring inside the button, where the rounded group does not cut it */
 .segmented button:focus-visible { outline-offset: -3px; border-radius: 4px; }
 /* the levels each button covers, under its name */
-.segmented.levels small { display: block; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.segmented.levels small { display: block; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .field.row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 10px 0 0; }
@@ -375,7 +375,7 @@ table.fields td { vertical-align: top; padding: 5px 8px 5px 0; border-bottom: 1p
 table.fields tr:last-child td { border-bottom: 0; }
 table.fields td:first-child { white-space: nowrap; }
 table.fields code { font: 12px "Cascadia Mono", Consolas, monospace; color: var(--text); }
-table.fields small { display: block; font: 11px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
+table.fields small { display: block; font: 12px "Cascadia Mono", Consolas, monospace; color: var(--muted); margin-top: 1px; }
 select, input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 button.link { background: none; border: none; padding: 0; margin-top: 10px; color: var(--accent); font-weight: 600; text-align: left; }
 button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
@@ -552,7 +552,7 @@ kbd { font: 600 11px/1 "Segoe UI", system-ui, sans-serif; padding: 3px 6px; bord
 .nup-packages li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); font-size: 12px; }
 .nup-packages .k { flex: none; width: 96px; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: 700; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 999px; white-space: nowrap; color: var(--tone-check); background: color-mix(in srgb, var(--tone-check) 14%, transparent); }
 .nup-packages .who { flex: 1 1 170px; min-width: 0; display: flex; flex-direction: column; color: var(--muted); overflow-wrap: break-word; }
-.nup-packages .who small, .nup-packages .stat small { font-size: 11px; color: var(--muted); }
+.nup-packages .who small, .nup-packages .stat small { font-size: 12px; color: var(--muted); }
 .nup-packages .who b, .nup-packages .who small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nup-packages .stats { flex: none; display: flex; gap: 14px; margin-left: auto; }
 /* the files, the size uncompressed and as stored of a package: a figure with its name under it (#145) */
@@ -609,7 +609,7 @@ dialog.crop-dialog { max-width: 640px; }
 .cover-tile[aria-pressed="true"] { border-color: var(--accent); }
 .cover-tile img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--bar); }
 .cover-name { font-size: 12px; padding: 4px 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cover-system { font-size: 11px; color: var(--muted); padding: 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cover-system { font-size: 12px; color: var(--muted); padding: 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cover-paste { margin: 10px 0 0; font-size: 12px; }
 .cover-dialog .dialog-actions .cover-web { margin-right: auto; }
 /* a dump folder in Combine: a folder on its cover, what it holds and the name of its NUP */
@@ -1041,3 +1041,52 @@ html.mica[data-palette] nav { background: var(--panel); }
   .pref-link { width: auto; flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
   .pref-link.on { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 }
+
+/* ---- the review of the interface (17/11) ---- */
+/* the card of a game, kept open by a click or the keyboard: its actions and a close button */
+.game-pop .pop-actions, .game-pop .pop-close { display: none; }
+.game-pop.pinned { pointer-events: auto; }
+.game-pop.pinned .pop-actions { display: flex; gap: 14px; margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--pop-tone) 25%, var(--line)); }
+.game-pop.pinned .pop-close { display: grid; place-items: center; position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; }
+.game-pop .pop-hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.game-pop.pinned .pop-hint { display: none; }
+#files .game { cursor: pointer; border-radius: 8px; }
+#files .game:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* an error of a kind known: what NXPress said, in its own words, under What to do */
+.error-more .error-raw { display: block; margin: 4px 0 6px; padding: 6px 8px; border-radius: 6px; background: var(--hover); color: var(--muted); font: 12px "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
+/* the button that takes a file out of the list shows on its row: under the mouse or the keyboard */
+#files td.remove button { opacity: 0; transition: opacity .12s; }
+#files tr:hover td.remove button, #files tr:focus-within td.remove button, #files td.remove button:focus-visible { opacity: 1; }
+/* the fields of a template, a click away */
+.fields-more { margin-top: 6px; }
+.fields-more > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+.fields-more > summary::-webkit-details-marker { display: none; }
+.fields-more > summary::before { content: "▸"; transition: transform .15s; }
+.fields-more[open] > summary::before { transform: rotate(90deg); }
+/* the boxes that choose the files of Combine and Split, round, in the colour of NXPress */
+#files .pick input, #files #pick-all { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 0; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 70%, transparent); background: transparent; display: inline-grid; place-items: center; cursor: pointer; transition: background .12s, border-color .12s; }
+#files .pick input::after, #files #pick-all::after { content: ""; width: 8px; height: 4px; border: 2px solid var(--tile-on, #fff); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); opacity: 0; transition: opacity .12s; }
+#files .pick input:checked, #files #pick-all:checked { background: var(--accent); border-color: var(--accent); }
+#files .pick input:checked::after, #files #pick-all:checked::after { opacity: 1; }
+#files #pick-all:indeterminate { background: var(--accent); border-color: var(--accent); }
+#files #pick-all:indeterminate::after { width: 8px; height: 0; border-left: 0; border-bottom: 2px solid var(--tile-on, #fff); transform: none; opacity: 1; }
+#files .pick input:focus-visible, #files #pick-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* what reads the files made: told for the way chosen only */
+label.choice:not(:has(input:checked)) .tags { display: none; }
+/* the experimental options of the compression, a click away */
+.more-options { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.more-options > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); list-style: none; display: flex; align-items: center; gap: 6px; }
+.more-options > summary::-webkit-details-marker { display: none; }
+.more-options > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+.more-options[open] > summary::before { transform: rotate(90deg); }
+.more-options[open] > summary { margin-bottom: 6px; }
+
+/* the side menu fits a window 800 px high: a little less room around each tool, and on a low
+   window the second line of Combine and Split (what they do with NUP files) is left out */
+nav button { padding-top: 4px; padding-bottom: 4px; }
+nav button small { line-height: 1.3; }
+@media (max-height: 860px) { nav button small + small { display: none; } }
+
+/* the column of the state, empty before any work, is left out until a file has one */
+#files.no-state th.state, #files.no-state td.state { display: none; }

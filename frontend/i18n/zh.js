@@ -70,6 +70,8 @@ texts.zh = {
   worklog: "记录", hintWorklog: "活动列表", aboutWorklog: "NXPress 的每次工作，从最新的开始：每个文件的结果和节省的空间。也会保存到一个文本文件中。",
   worklogFind: "搜索游戏或文件", worklogAll: "全部", worklogProblems: "有问题的", worklogExpandAll: "全部展开", worklogCollapseAll: "全部收起", worklogCount: (w, f) => `${w} 次工作 · ${f} 个文件`,
   listFind: "查找游戏或文件", listFound: (s, n) => "显示 " + s + " / " + n, checkNow: "立即检查", checkNowChecking: "正在检查…", checkNowLatest: (v) => v + " 是最新版本。", checkNowFailed: "无法连接 GitHub。",
+  extraOptions: "实验性选项", convertTo: "转换为",
+  adviceDamagedShort: "文件已损坏：数据不一致。", adviceUnsignedShort: "有工具改写了此文件的一部分。", adviceKeysShort: "缺少密钥。", adviceSpaceShort: "磁盘已满。", adviceAccessShort: "文件正在使用或无法写入。", popHint: "点击查看更多", fieldsShow: "可用字段",
   prefAppearance: "外观", prefUpdates: "更新", prefNoKeys: "没有你的 prod.keys，NXPress 的大多数工具都无法工作。请选择从你自己的主机导出的文件。",
   prefMenu: "侧边菜单", prefMenuHint: "关闭你不用的工具，它们会从侧边菜单中消失；重新打开即可恢复。",
   checkFilter: "显示", nupStay: "留在这里", nupTitle: n => n === 1 ? "这是 NUP 文件" : n + " 个 NUP 文件", nupText: tool => tool + " 不处理 NUP 文件。请在以下之一中打开：", nupWhat: { decompress: "把它变回转储文件夹", split: "取出其中的游戏、更新或 DLC", info: "显示其中的内容", verify: "检查它", rename: "重命名它" },

@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- A review of the whole window: the card of a game opens with a click or the keyboard too and stays, with Copy, Full report and Close; an error of a kind known is told in your language, with what NXPress said under What to do; text read is 12 px at least; the button that takes a file out of the list shows on its row only; the fields of a template and the experimental options of the compression are a click away; the boxes of Combine and Split are round; what reads the files shows for the way chosen only; the column of the state shows once there is one; and the side menu fits a window 800 px high
 - Details tells the kind of package a file is (as published, a game card dump, converted, homebrew, changed by a tool, or incomplete with what it is missing) and what its program may use (main.npdm): a summary in its card, the full list in the full report
 - The card of a NUP in Details shows each package in columns: its kind, its name with its title ID and versions on one line, then its files, its size uncompressed and compressed, each with its name under it. Its icon is changed by clicking it, in place of the button under the card. Thanks to NikoMuffin for the idea (#145)
 - Settings in a new order: your keys first, then how the work goes, how NXPress looks, Windows, updates, help and credits, with an index that marks the section you read, and a notice at the top while there is no prod.keys

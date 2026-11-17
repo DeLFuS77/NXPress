@@ -70,6 +70,8 @@ texts.ko = {
   worklog: "기록", hintWorklog: "작업 목록", aboutWorklog: "NXPress가 한 작업을 최신순으로 보여줘요. 파일마다 어떻게 끝났는지, 얼마나 절약했는지도 나와요. 텍스트 파일로도 저장돼요.",
   worklogFind: "게임이나 파일 찾기", worklogAll: "전체", worklogProblems: "문제 있는 것", worklogExpandAll: "모두 펼치기", worklogCollapseAll: "모두 접기", worklogCount: (w, f) => `작업 ${w}개 · 파일 ${f}개`,
   listFind: "게임이나 파일 찾기", listFound: (s, n) => n + "개 중 " + s + "개 표시", checkNow: "지금 확인", checkNowChecking: "확인 중…", checkNowLatest: (v) => v + "이(가) 최신 버전입니다.", checkNowFailed: "GitHub에 연결할 수 없습니다.",
+  extraOptions: "실험적 옵션", convertTo: "변환 형식",
+  adviceDamagedShort: "파일이 손상되었습니다: 데이터가 맞지 않습니다.", adviceUnsignedShort: "도구가 이 파일의 일부를 다시 썼습니다.", adviceKeysShort: "키가 없습니다.", adviceSpaceShort: "디스크가 가득 찼습니다.", adviceAccessShort: "파일이 사용 중이거나 쓸 수 없습니다.", popHint: "클릭해서 더 보기", fieldsShow: "사용할 수 있는 필드",
   prefAppearance: "모양", prefUpdates: "업데이트", prefNoKeys: "prod.keys가 없으면 NXPress의 도구 대부분을 쓸 수 없습니다. 본체에서 추출한 파일을 고르세요.",
   prefMenu: "사이드 메뉴", prefMenuHint: "쓰지 않는 도구를 끄면 사이드 메뉴에서 사라지고, 켜면 다시 나타납니다.",
   checkFilter: "표시", nupStay: "여기 있기", nupTitle: n => n === 1 ? "NUP 파일입니다" : "NUP 파일 " + n + "개", nupText: tool => tool + "은(는) NUP 파일을 그대로 둡니다. 다음 중 하나에서 여세요:", nupWhat: { decompress: "덤프 폴더로 되돌립니다", split: "게임, 업데이트, DLC를 꺼냅니다", info: "들어 있는 내용을 보여 줍니다", verify: "검사합니다", rename: "이름을 바꿉니다" },

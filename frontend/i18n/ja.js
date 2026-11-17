@@ -70,6 +70,8 @@ texts.ja = {
   worklog: "履歴", hintWorklog: "作業の一覧", aboutWorklog: "NXPress の作業を新しい順に表示します。ファイルごとの結果と節約できた容量もわかります。テキストファイルにも保存されます。",
   worklogFind: "ゲームやファイルを検索", worklogAll: "すべて", worklogProblems: "問題あり", worklogExpandAll: "すべて開く", worklogCollapseAll: "すべて閉じる", worklogCount: (w, f) => `${w} 件の作業 · ${f} ファイル`,
   listFind: "ゲームやファイルを検索", listFound: (s, n) => n + " 件中 " + s + " 件を表示", checkNow: "今すぐ確認", checkNowChecking: "確認中…", checkNowLatest: (v) => v + " が最新バージョンです。", checkNowFailed: "GitHub に接続できません。",
+  extraOptions: "実験的なオプション", convertTo: "変換先",
+  adviceDamagedShort: "ファイルが破損しています：データが一致しません。", adviceUnsignedShort: "ツールがこのファイルの一部を書き換えました。", adviceKeysShort: "キーが不足しています。", adviceSpaceShort: "ディスクがいっぱいです。", adviceAccessShort: "ファイルが使用中か、書き込めません。", popHint: "クリックして詳しく見る", fieldsShow: "使えるフィールド",
   prefAppearance: "外観", prefUpdates: "アップデート", prefNoKeys: "prod.keys がないと、NXPress のほとんどのツールは使えません。自分の本体から取り出したものを選んでください。",
   prefMenu: "サイドメニュー", prefMenuHint: "使わないツールをオフにすると、サイドメニューから消えます。オンにすると戻ります。",
   checkFilter: "表示", nupStay: "このまま", nupTitle: n => n === 1 ? "NUP ファイルです" : "NUP ファイル " + n + " 個", nupText: tool => tool + " は NUP ファイルをそのままにします。次のいずれかで開いてください：", nupWhat: { decompress: "ダンプフォルダーに戻します", split: "ゲーム、アップデート、DLC を取り出します", info: "中身を表示します", verify: "検証します", rename: "名前を変更します" },
