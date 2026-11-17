@@ -170,6 +170,16 @@ func titlesReport(path string, versions *titledb.Versions) (string, error) {
 			fmt.Fprintf(&out, "   %s\n", detail)
 		}
 	}
+	if origin, ok := ReadOrigin(path); ok {
+		out.WriteString("\nPackage:\n")
+		fmt.Fprintf(&out, "   %s\n", OriginLine(origin))
+	}
+	if npdm, ok := ReadPermissions(path); ok {
+		out.WriteString("\nPermissions (main.npdm):\n")
+		for _, line := range permissionsReport(npdm) {
+			fmt.Fprintf(&out, "   %s\n", line)
+		}
+	}
 	return out.String(), nil
 }
 
