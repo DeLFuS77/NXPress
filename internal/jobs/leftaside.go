@@ -96,7 +96,7 @@ func moveLeft(ctx context.Context, o Options, files []string, left map[string]st
 		}
 	}
 	if moved > 0 {
-		out.Say("%d files left as they are moved to %s", moved, folder)
+		out.Say("files left as they are moved to %s: %d", folder, moved)
 	}
 	return rest
 }

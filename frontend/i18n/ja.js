@@ -120,11 +120,20 @@ texts.ja = {
   finished: (n, f, s, k) => `${n} 個中 ${n - f - (k || 0)} 個完了` + (k ? `、${k} 個スキップ` : "") + (f ? `、${f} 個失敗` : "") + `（${time(s)}）。`,
   stopped: "キャンセルしました。",
   modesLabel: "機能",
-  steps: { Measuring: "測定中", Reading: "読み込み中", Optimizing: "最適化中", Checking: "確認中",
+  // Compress: what is left as it is, and the folder it goes to before the work starts
+  leftAsIs: "そのままにするもの", skipDlc: "DLC をスキップ", skipDlcHint: "DLC は NSP のままにし、ゲームとアップデートを圧縮します。",
+  moveSkipped: "スキップしたものの移動先", moveSkippedNone: "移動せず、元の場所のまま",
+  moveSkippedHint: "作業を始める前に、そのままにするものをこのフォルダーへ移動します: sparse storage のゲームと、スキップする場合はそのアップデートと DLC。既にあるファイルは置き換えません。別のドライブへはコピーして確認してから元のファイルを削除します。",
+  // while a work goes on: the threads of each file and the files at once, from the next file
+  liveTitle: "作業中", liveFewer: "減らす", liveMore: "増やす",
+  livePending: (threads, multi, all) => "次のファイルから: " + (all ? `ファイルごとのスレッド ${threads} · ` : "") + `同時に処理するファイル ${multi}`,
+  liveChanged: (threads, multi, all) => "次のファイルから変更: " + (all ? `ファイルごとのスレッド ${threads} · ` : "") + `同時に処理するファイル ${multi}`,
+  steps: { Moving: "移動中", Measuring: "測定中", Reading: "読み込み中", Optimizing: "最適化中", Checking: "確認中",
     Comparing: "照合中", Estimating: "見積もり中", Trimming: "スリム化中", Recompressing: "再圧縮中", Compressing: "圧縮中",
     Packaging: "パック中", Unpacking: "展開中", Verifying: "検証中", Decompressing: "展開中", Converting: "変換中", Packing: "まとめ中", Splitting: "分割中", Joining: "結合中",
   },
   notes: {
+    dlcSkip: "DLC です: DLC はそのままにします", movedTo: "。移動先: ", staysWhere: "。元の場所のままです: ", nameThere: "同じ名前のファイルが既にあります", copiedNotDeleted: "コピーしましたが、元のファイルを削除できませんでした: ", copyDiffers: "コピーを読み直すと一致しませんでした", movedCount: "そのままにしたファイルを $1 へ移動: $2", moveFolderUnusable: "そのままにするものは元の場所のままです: $1 は使えません (",
     notePackage: "パッケージ: ", notePublished: "配信されたまま: Nintendo の署名付きダウンロード、チケット付き", noteCard: "ゲームカードのダンプ: ゲームカードのファイルを持つ XCI", noteFromCard: "変換: ゲームカードから作った NSP", noteToCard: "変換: ダウンロードから作った XCI", noteHomebrew: "自作ソフト: Nintendo の署名も rights ID もなし", noteModified: "ツールで変更: ファイルの書き換えまたはチケットの除去", noteIncomplete: "不完全: 不足 ", noteMissingNca: "$2 の $1 NCA", noteMissingTicket: "$1 のチケット", notePermissions: "権限: サービス $1、システムコール $2、コア $3-$4", noteOffers: "、独自サービス $1", noteDebug: "、デバッグ可能", noteAcid: "; ACID の署名は未確認 (NXPress が持たない Nintendo の鍵が必要)",
     sparseNote: "スパースストレージの NCA $1 個を実験的形式 NCZSECT2 で圧縮: インストールするには NXPress で展開してください", sparseNoPlain: "スパースストレージのゲームを含みます。これを圧縮できるのは追加圧縮 (NCZSECT2) だけで、インストーラーが読める NSZ はないため、そのままにします。展開すると NSP になります", throughKeys: "展開したコピーを経由して形式を変えるため、prod.keys が必要です", plainAgain: "インストーラーが読める通常の NSZ に戻りました", worksSparse: "対応: NXPress と NXDock のみ(スパースストレージ用の実験的形式 NCZSECT2): ほかのインストーラーで入れるには NXPress で展開してください",
     archiveNote: "Nintendo の LZ4 ブロック $1 個を実験的なアーカイブ形式 NCZSECT3 で展開したまま保存: インストールするには NXPress で展開してください", lz4Unread: "NCA $1 個は LZ4 ブロックをそのまま保存: 圧縮ストレージを読み取れませんでした", worksArchive: "対応: NXPress と NXDock のみ、実験的なアーカイブ形式 NCZSECT3: ほかのインストーラーで入れるには NXPress で展開してください",

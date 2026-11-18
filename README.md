@@ -96,6 +96,7 @@ nxpress -C game.nsp                 compress to game.nsz
 nxpress -C -l 19 -t 8 -o out games  compress every NSP and XCI of a folder at level 19 into out
 nxpress -C --extra game.nsp         compress with the experimental extra compression, NXPress only
 nxpress -C --skip-sparse-updates games  leave the update of a game in sparse storage as NSP, like its game
+nxpress -C --skip-dlc --move-skipped left games  leave the DLC as NSP, and move what is left as it is into left first
 nxpress -C --par2 3 games           write recovery data (.par2) for 3 % of each new file
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file

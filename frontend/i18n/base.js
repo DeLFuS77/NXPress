@@ -14,10 +14,19 @@ const languages = [
 // A part a language has no text for is left in English.
 const noteRules = [
   [/ is already there \(use -w to replace it\)/g, "alreadyThere"],
-  [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Made for, or use --extra$/, "sparseSkip"],
+  [/^this game uses sparse storage: to compress it with the experimental format of NXPress \(NCZSECT2\), turn on Extra compression under Made for, or use --extra(?=$|; )/, "sparseSkip"],
   [/^nothing in it can be compressed, it is left as it is$/, "notCompressible"],
   [/^skipped by hand: left as it is$/, "skippedByHand"],
-  [/^its game uses sparse storage and is left as it is: the update is left with it$/, "sparseUpdateSkip"],
+  [/^its game uses sparse storage and is left as it is: the update is left with it(?=$|; )/, "sparseUpdateSkip"],
+  // Compress: the DLC left as they are, and what is left as it is moved before the work starts
+  [/^a DLC: DLC are left as they are(?=$|; )/, "dlcSkip"],
+  [/; moved to /, "movedTo"],
+  [/; it stays where it is: /, "staysWhere"],
+  [/a file of its name is there already/g, "nameThere"],
+  [/it was copied, but the original could not be deleted: /g, "copiedNotDeleted"],
+  [/its copy did not read back the same/g, "copyDiffers"],
+  [/^files left as they are moved to (.+): (\d+)$/, "movedCount"],
+  [/^the files left as they are stay where they are: (.+?) cannot be used \(/, "moveFolderUnusable"],
   [/^nothing in it can be compressed, it is left as it is(?=: )/, "notCompressibleWhy"],
   [/it uses sparse storage, which only the experimental format NCZSECT2 compresses/g, "sparseWhy"],
   [/its sections use an encryption the app does not read/g, "encryptionWhy"],

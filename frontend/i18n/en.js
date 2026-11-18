@@ -121,6 +121,14 @@ texts.en = {
   finished: (n, f, s, k) => `${n - f - (k || 0)} of ${n} done` + (k ? `, ${k} skipped` : "") + (f ? `, ${f} failed` : "") + ` in ${time(s)}.`,
   stopped: "Cancelled.",
   modesLabel: "Sections",
+  // Compress: what is left as it is, and the folder it goes to before the work starts
+  leftAsIs: "What is left as it is", skipDlc: "Skip DLC", skipDlcHint: "DLC are left as they are, as NSP; games and updates are compressed.",
+  moveSkipped: "Move what is skipped to", moveSkippedNone: "Not moved, it stays where it is",
+  moveSkippedHint: "Before the work starts, what is left as it is goes to this folder: games in sparse storage, and their updates and the DLC when they are skipped. A file already there is never replaced; on another drive it is copied and checked before the original is deleted.",
+  // while a work goes on: the threads of each file and the files at once, from the next file
+  liveTitle: "While it works", liveFewer: "Fewer", liveMore: "More",
+  livePending: (threads, multi, all) => "From the next file: " + (all ? `threads per file ${threads} · ` : "") + `files at once ${multi}`,
+  liveChanged: (threads, multi, all) => "Changed from the next file on: " + (all ? `threads per file ${threads} · ` : "") + `files at once ${multi}`,
   steps: { Measuring: "Measuring",},
   notes: {
     sparseNote: "$1 NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", sparseNoPlain: "it holds a game in sparse storage, which only the extra compression (NCZSECT2) compresses: there is no NSZ of it that installers read, so it stays as it is; Decompress makes an NSP of it", throughKeys: "it changes format through a decompressed copy, which needs prod.keys", plainAgain: "a plain NSZ again, which installers read", worksSparse: "works with: NXPress and NXDock only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it with another installer",
