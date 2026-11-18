@@ -35,12 +35,6 @@ import (
 //go:embed all:frontend
 var frontend embed.FS
 
-// the icon of the window on Linux; Windows takes it from the resources of the program, macOS
-// from its app
-//
-//go:embed build/appicon.png
-var appIcon []byte
-
 // singleWindow is the lock that keeps NXPress to one window on Windows: the files the Explorer
 // gives to another NXPress go to the one open (#87, #88).
 const singleWindow = "nxpress-window-1"
@@ -71,7 +65,7 @@ func runWindow(start launch) int {
 		backdrop = windows.Mica
 	}
 	err := wails.Run(&wailsoptions.App{
-		Title:              "NXPress " + version,
+		Title:              brandName + " " + version,
 		Width:              place.Width,
 		Height:             place.Height,
 		MinWidth:           windowplace.WindowMinWidth,
@@ -204,6 +198,9 @@ type Setup struct {
 	Hibernate bool `json:"hibernate"`
 	// the language chosen in the installer of Windows, for the page until one is chosen in it
 	Language string `json:"language"`
+	// built by the workflow of the repository, with the name and the logo of NXPress: a program
+	// built from the code without it tells it is not an official version (TRADEMARKS.md)
+	OfficialBuild bool `json:"officialBuild"`
 }
 
 func (a *App) Setup() Setup {
@@ -212,7 +209,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
-		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), Language: system.InstallerLanguage(),
+		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), Language: system.InstallerLanguage(), OfficialBuild: officialBuild,
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {

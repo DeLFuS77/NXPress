@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -81,5 +84,24 @@ func TestOfficial(t *testing.T) {
 	}
 	if got := checkOfficial(context.Background(), "1.7.16", program("another"), keys, get); got.State != want {
 		t.Errorf("before the list: %s, want %s", got.State, want)
+	}
+}
+
+// A program built from the code without the tag "official" does not carry the name and the logo of
+// NXPress (TRADEMARKS.md): its window says it is an unofficial build, its icon is the plain one,
+// and the page is told so.
+func TestBuildWithoutTheOfficialTag(t *testing.T) {
+	if officialBuild {
+		t.Skip("built with the tag official")
+	}
+	if brandName != "NXPress (unofficial build)" {
+		t.Errorf("name: %q", brandName)
+	}
+	plain, err := os.ReadFile(filepath.Join("build", "unofficial.png"))
+	if err != nil || !bytes.Equal(appIcon, plain) {
+		t.Errorf("the icon is not the plain one: %v", err)
+	}
+	if (&App{}).Setup().OfficialBuild {
+		t.Error("the page is told it is an official build")
 	}
 }

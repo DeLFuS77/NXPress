@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Settings › Help › Code and license tells who makes NXPress, its license and that it has no warranty, with buttons to the license and the code
+- A program built from the code outside the workflow of this repository is called "NXPress (unofficial build)", has a plain icon and says so in the side menu; TRADEMARKS.md asks a modified version to keep the notice of who makes NXPress
+
 ## 1.7.25
 
 ### Improvements
