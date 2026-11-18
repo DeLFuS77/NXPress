@@ -120,10 +120,10 @@ texts.ko = {
   finished: (n, f, s, k) => `${n}개 중 ${n - f - (k || 0)}개 완료` + (k ? `, ${k}개 건너뜀` : "") + (f ? `, ${f}개 실패` : "") + ` (${time(s)}).`,
   stopped: "취소했습니다.",
   modesLabel: "기능",
-  // Compress: what is left as it is, and the folder it goes to before the work starts
+  // Compress: what is left as it is, and the folder it goes to as its turn comes
   leftAsIs: "그대로 두는 것", skipDlc: "DLC 건너뛰기", skipDlcHint: "DLC는 NSP 그대로 두고 게임과 업데이트를 압축합니다.",
   moveSkipped: "건너뛴 파일을 옮길 폴더", moveSkippedNone: "옮기지 않고 그 자리에 둡니다",
-  moveSkippedHint: "작업을 시작하기 전에 그대로 두는 것을 이 폴더로 옮깁니다: sparse storage 게임, 그리고 건너뛸 때는 그 업데이트와 DLC. 이미 있는 파일은 바꾸지 않으며, 다른 드라이브로는 복사하고 확인한 뒤 원본을 지웁니다.",
+  moveSkippedHint: "차례가 온 파일 중 그대로 두는 것을 이 폴더로 옮깁니다: sparse storage 게임, 그리고 건너뛸 때는 그 업데이트와 DLC. 이미 있는 파일은 바꾸지 않으며, 다른 드라이브로는 복사하고 확인한 뒤 원본을 지웁니다.",
   // while a work goes on: the threads of each file and the files at once, from the next file
   liveTitle: "작업 중", liveFewer: "줄이기", liveMore: "늘리기",
   livePending: (threads, multi, all) => "다음 파일부터: " + (all ? `파일당 스레드 ${threads} · ` : "") + `동시에 처리할 파일 ${multi}`,
@@ -133,7 +133,7 @@ texts.ko = {
     Packaging: "패키징 중", Unpacking: "풀기 중", Verifying: "검증 중", Decompressing: "압축 해제 중", Converting: "변환 중", Packing: "합치는 중", Splitting: "나누는 중", Joining: "합치는 중",
   },
   notes: {
-    dlcSkip: "DLC입니다: DLC는 그대로 둡니다", movedTo: "; 옮긴 곳: ", staysWhere: "; 그 자리에 둡니다: ", nameThere: "같은 이름의 파일이 이미 있습니다", copiedNotDeleted: "복사했지만 원본을 지우지 못했습니다: ", copyDiffers: "복사본을 다시 읽었을 때 같지 않았습니다", movedCount: "그대로 둔 파일을 $1(으)로 옮김: $2", moveFolderUnusable: "그대로 두는 것은 그 자리에 둡니다: $1 폴더를 쓸 수 없습니다 (",
+    dlcSkip: "DLC입니다: DLC는 그대로 둡니다", movedTo: "; 옮긴 곳: ", staysWhere: "; 그 자리에 둡니다: ", nameThere: "같은 이름의 파일이 이미 있습니다", copiedNotDeleted: "복사했지만 원본을 지우지 못했습니다: ", copyDiffers: "복사본을 다시 읽었을 때 같지 않았습니다", movedCount: "그대로 둔 파일을 $1(으)로 옮김: $2",
     notePackage: "패키지: ", notePublished: "배포된 그대로: Nintendo가 서명한 다운로드, 티켓 포함", noteCard: "게임 카드 덤프: 게임 카드의 파일이 든 XCI", noteFromCard: "변환됨: 게임 카드로 만든 NSP", noteToCard: "변환됨: 다운로드로 만든 XCI", noteHomebrew: "홈브루: Nintendo 서명 없음, rights ID 없음", noteModified: "도구로 변경됨: 파일을 다시 썼거나 티켓을 뺌", noteIncomplete: "불완전: 없음 ", noteMissingNca: "$2의 $1 NCA", noteMissingTicket: "$1의 티켓", notePermissions: "권한: 서비스 $1, 시스템 호출 $2, 코어 $3-$4", noteOffers: ", 자체 서비스 $1", noteDebug: ", 디버그 가능", noteAcid: "; ACID 서명은 확인하지 않음 (NXPress에 없는 Nintendo 키가 필요)",
     sparseNote: "스파스 스토리지 NCA $1개를 실험적 형식 NCZSECT2로 압축: 설치하려면 NXPress로 압축을 푸세요", sparseNoPlain: "스파스 스토리지 게임이 들어 있습니다. 이것은 추가 압축(NCZSECT2)만 압축할 수 있어 설치 프로그램이 읽는 NSZ가 없으므로 그대로 둡니다. 압축을 풀면 NSP가 됩니다", throughKeys: "압축을 푼 사본을 거쳐 형식을 바꾸므로 prod.keys가 필요합니다", plainAgain: "설치 프로그램이 읽는 일반 NSZ로 다시 만들었습니다", worksSparse: "지원: NXPress와 NXDock만, 스파스 스토리지용 실험적 형식 NCZSECT2: 다른 설치 프로그램으로 설치하려면 NXPress로 압축을 푸세요",
     archiveNote: "Nintendo의 LZ4 블록 $1개를 실험적 보관 형식 NCZSECT3로 압축 해제한 채 저장: 설치하려면 NXPress로 압축을 푸세요", lz4Unread: "NCA $1개는 LZ4 블록을 그대로 저장: 압축 스토리지를 읽을 수 없습니다", worksArchive: "지원: NXPress와 NXDock만, 실험적 보관 형식 NCZSECT3: 다른 설치 프로그램으로 설치하려면 NXPress로 압축을 푸세요",

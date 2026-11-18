@@ -120,10 +120,10 @@ texts.zh = {
   finished: (n, f, s, k) => `已完成 ${n - f - (k || 0)}/${n}` + (k ? `,${k} 个已跳过` : "") + (f ? `，${f} 个失败` : "") + `，用时 ${time(s)}。`,
   stopped: "已取消。",
   modesLabel: "功能",
-  // Compress: what is left as it is, and the folder it goes to before the work starts
+  // Compress: what is left as it is, and the folder it goes to as its turn comes
   leftAsIs: "保持原样的内容", skipDlc: "跳过 DLC", skipDlcHint: "DLC 保持原样（NSP），游戏和更新照常压缩。",
   moveSkipped: "将跳过的文件移动到", moveSkippedNone: "不移动，留在原处",
-  moveSkippedHint: "开始工作前，把保持原样的内容移动到此文件夹：sparse storage 游戏，以及被跳过时它们的更新和 DLC。不会替换已在那里的文件；移动到其他驱动器时会先复制并检查，再删除原文件。",
+  moveSkippedHint: "轮到某个文件时，若它保持原样，就移动到此文件夹：sparse storage 游戏，以及被跳过时它们的更新和 DLC。不会替换已在那里的文件；移动到其他驱动器时会先复制并检查，再删除原文件。",
   // while a work goes on: the threads of each file and the files at once, from the next file
   liveTitle: "工作时", liveFewer: "减少", liveMore: "增加",
   livePending: (threads, multi, all) => "从下一个文件起：" + (all ? `每个文件的线程 ${threads} · ` : "") + `同时处理的文件 ${multi}`,
@@ -133,7 +133,7 @@ texts.zh = {
     Packaging: "打包中", Unpacking: "解包中", Verifying: "校验中", Decompressing: "解压中", Converting: "转换中", Packing: "合并中", Splitting: "分片中", Joining: "合并分片中",
   },
   notes: {
-    dlcSkip: "这是 DLC：DLC 保持原样", movedTo: "；已移动到 ", staysWhere: "；留在原处：", nameThere: "那里已有同名文件", copiedNotDeleted: "已复制，但无法删除原文件：", copyDiffers: "副本读回时不一致", movedCount: "保持原样的文件已移动到 $1：$2", moveFolderUnusable: "保持原样的内容留在原处：无法使用 $1 (",
+    dlcSkip: "这是 DLC：DLC 保持原样", movedTo: "；已移动到 ", staysWhere: "；留在原处：", nameThere: "那里已有同名文件", copiedNotDeleted: "已复制，但无法删除原文件：", copyDiffers: "副本读回时不一致", movedCount: "保持原样的文件已移动到 $1：$2",
     notePackage: "包类型：", notePublished: "原版发布：Nintendo 签名的下载版，带 ticket", noteCard: "卡带转储：包含卡带文件的 XCI", noteFromCard: "已转换：由卡带制作的 NSP", noteToCard: "已转换：由下载版制作的 XCI", noteHomebrew: "自制软件：无 Nintendo 签名，无 rights ID", noteModified: "被工具修改：文件被重写或 ticket 被移除", noteIncomplete: "不完整：缺少 ", noteMissingNca: "$2 的 $1 NCA", noteMissingTicket: "$1 的 ticket", notePermissions: "权限：$1 个服务，$2 个系统调用，核心 $3-$4", noteOffers: "，自身提供 $1 个", noteDebug: "，可调试", noteAcid: "；ACID 签名未检查（需要 NXPress 没有的 Nintendo 密钥）",
     sparseNote: "稀疏存储的 NCA $1 个,采用实验性格式 NCZSECT2:安装前请用 NXPress 解压", sparseNoPlain: "包含使用稀疏存储的游戏，只有额外压缩（NCZSECT2）能压缩它：没有安装器能读取的 NSZ，因此保持原样；解压可得到 NSP", throughKeys: "要经过一份解压后的副本来转换格式，需要 prod.keys", plainAgain: "重新成为安装器可读的普通 NSZ", worksSparse: "支持:仅 NXPress 和 NXDock,稀疏存储的实验性格式 NCZSECT2:要用其他安装器安装，请先用 NXPress 解压",
     archiveNote: "$1 个 Nintendo LZ4 块以实验性存档格式 NCZSECT3 解压保存：安装前请用 NXPress 解压", lz4Unread: "$1 个 NCA 的 LZ4 块保持原样：无法读取其压缩存储", worksArchive: "支持：仅 NXPress 和 NXDock，实验性存档格式 NCZSECT3：要用其他安装器安装，请先用 NXPress 解压",

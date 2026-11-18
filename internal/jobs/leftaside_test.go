@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -46,10 +47,24 @@ func TestSkipDlcLeavesTheDlc(t *testing.T) {
 	}
 }
 
-// With --move-skipped what is left as it is goes to its folder before the work starts: the game in
-// sparse storage, its update with --skip-sparse-updates and the DLC with --skip-dlc, each with its
-// name and its recovery data, told as skipped with where it went. Nothing of it is compressed.
-func TestSkippedFilesAreMovedBeforeTheWork(t *testing.T) {
+// movedAtDone keeps, as each file is told done, whether it was in its new place already, in order.
+type movedAtDone struct {
+	testkit.Results
+	folder string
+	order  []string
+}
+
+func (m *movedAtDone) Done(path string, output string, note string, err error) {
+	m.Results.Done(path, output, note, err)
+	there := testkit.Exists(filepath.Join(m.folder, filepath.Base(path)))
+	m.order = append(m.order, fmt.Sprintf("%s:%v:%v", filepath.Base(path), there, output == filepath.Join(m.folder, filepath.Base(path))))
+}
+
+// With --move-skipped what is left as it is goes to its folder as its turn comes in the work, one
+// file after the other (asked by ItsmeAJ on GBAtemp): the game in sparse storage, its update with
+// --skip-sparse-updates and the DLC with --skip-dlc, each with its name and its recovery data,
+// told as skipped with where it went once it is there. Nothing of it is compressed.
+func TestSkippedFilesAreMovedAsTheirTurnComes(t *testing.T) {
 	testkit.Isolate(t)
 	folder := t.TempDir()
 	base, update, dlc := sparseGame(t, folder)
@@ -58,13 +73,16 @@ func TestSkippedFilesAreMovedBeforeTheWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	aside := filepath.Join(t.TempDir(), "left as they are")
-	out := &testkit.Results{}
+	out := &movedAtDone{folder: aside}
 	o := Options{Compress: true, Level: 3, Threads: 1, Multi: 1, Files: []string{update, dlc, base}, SkipSparseUpdates: true, SkipDlc: true, MoveSkipped: aside}
 	if failed := RunJobs(context.Background(), o, out); failed != 0 {
-		t.Fatalf("%d failed: %v", failed, out.Results)
+		t.Fatalf("%d failed: %v", failed, out.Results.Results)
+	}
+	if got := strings.Join(out.order, " "); got != "update.nsp:true:true dlc.nsp:true:true base.nsp:true:true" {
+		t.Errorf("as each was told done: %s", got)
 	}
 	for path, reason := range map[string]string{base: sparseSkipped, update: sparseUpdateSkipped, dlc: dlcSkipped} {
-		err := out.Results[path].Err
+		err := out.Results.Results[path].Err
 		if !IsSkipped(err) || err.Error() != reason+"; moved to "+aside {
 			t.Errorf("%s: %v", filepath.Base(path), err)
 		}
@@ -106,12 +124,20 @@ func TestOnlyWhatIsLeftIsMoved(t *testing.T) {
 			t.Errorf("%s was not compressed where it is", filepath.Base(path))
 		}
 	}
+}
 
-	extra := t.TempDir()
-	base, _, _ = sparseGame(t, extra)
-	o = Options{Compress: true, Sparse: true, Level: 3, Threads: 1, Multi: 1, Files: []string{base}, MoveSkipped: aside}
-	if left := leftAsTheyAre(context.Background(), o, "compress", o.Files); len(left) != 0 {
-		t.Errorf("with the extra compression: %v", left)
+// A file of DLC only is a DLC; a game, a game with its DLC, and a file that cannot be read are not.
+func TestDlcOnly(t *testing.T) {
+	testkit.Isolate(t)
+	folder := t.TempDir()
+	base, update, dlc := testkit.Game(t, folder)
+	if !dlcOnly(dlc) || dlcOnly(base) || dlcOnly(update) || dlcOnly(filepath.Join(folder, "missing.nsp")) {
+		t.Error("a DLC is not told apart")
+	}
+	pack := filepath.Join(folder, "pack.nsp")
+	o := Options{Pack: pack, Files: []string{base, dlc}}
+	if failed := RunJobs(context.Background(), o, testkit.Quiet{}); failed != 0 || dlcOnly(pack) {
+		t.Error("a game with its DLC is taken for a DLC")
 	}
 }
 

@@ -843,8 +843,8 @@ type Request struct {
 	Sparse       bool     `json:"sparse"`
 	// Compress: the update of a game in sparse storage left as it is with its game
 	SkipSparseUpdates bool `json:"skipSparseUpdates"`
-	// Compress: the DLC left as they are, and the folder what is left as it is goes to before the
-	// work starts (none: it stays where it is)
+	// Compress: the DLC left as they are, and the folder what is left as it is goes to as its
+	// turn comes (none: it stays where it is)
 	SkipDlc     bool   `json:"skipDlc"`
 	MoveSkipped string `json:"moveSkipped"`
 	Archive     bool   `json:"archive"`

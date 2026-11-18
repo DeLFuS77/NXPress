@@ -15,90 +15,51 @@ import (
 	"github.com/DeLFuS77/NXPress/internal/system"
 
 	"github.com/dtrunk90/switch-library-manager-web/par2"
-	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
 // dlcSkipped is why a DLC is left as it is with --skip-dlc.
 const dlcSkipped = "a DLC: DLC are left as they are"
 
-// leftAsTheyAre gives, for -C, the files of the work left as they are before it starts, with
-// why: with --skip-sparse-updates the updates whose game in sparse storage is given with them
-// (sparsePairs), with --skip-dlc the files of DLC only, and, with --move-skipped, the games in
-// sparse storage too (without the extra compression nothing of them is compressed), so they are
-// moved before the work starts instead of being found as their turn comes.
-func leftAsTheyAre(ctx context.Context, o Options, action string, files []string) map[string]string {
-	left := sparsePairs(ctx, o, action, files)
-	if action != "compress" || (!o.SkipDlc && o.MoveSkipped == "") {
-		return left
+// dlcOnly tells whether a file holds DLC only, which --skip-dlc leaves as they are; one that
+// cannot be read is not, and its work tells why.
+func dlcOnly(path string) bool {
+	titles, err := ReadTitles(path)
+	if err != nil {
+		return false
 	}
-	for _, file := range files {
-		if ctx.Err() != nil {
-			break
-		}
-		if _, ok := left[file]; ok {
-			continue
-		}
-		titles, err := ReadTitles(file)
-		if err != nil {
-			// the work tells why when its turn comes
-			continue
-		}
-		kinds := map[string]bool{}
-		for _, title := range titles {
-			kinds[title.Type] = true
-		}
-		if o.SkipDlc && len(kinds) == 1 && kinds["DLC"] {
-			left[file] = dlcSkipped
-			continue
-		}
-		if o.MoveSkipped != "" && !o.Sparse && kinds["BASE"] && errors.Is(switchfs.NotCompressible(file), switchfs.ErrSparseStorage) {
-			left[file] = sparseSkipped
+	for _, title := range titles {
+		if title.Type != "DLC" {
+			return false
 		}
 	}
-	return left
+	return len(titles) > 0
 }
 
-// moveLeft moves, with --move-skipped, the files left as they are into its folder before the
-// work starts, and gives the files left to work on. Each file moved is told as skipped, with why
-// and where it went; one that cannot be moved stays where it is, told as skipped with why too.
-func moveLeft(ctx context.Context, o Options, files []string, left map[string]string, out Output) []string {
-	if o.MoveSkipped == "" || len(left) == 0 || ctx.Err() != nil {
-		return files
+// leaveAsItIs leaves a file as it is, with why. With --move-skipped it is moved into its folder
+// first, as its turn comes in the work (asked by ItsmeAJ on GBAtemp): the note tells where it
+// went, or why it stays where it is. A file in that folder already stays there.
+func leaveAsItIs(ctx context.Context, o Options, path string, reason string, out Output) (string, string, error) {
+	if o.MoveSkipped == "" {
+		return "", "", Skipped(reason)
 	}
 	folder, err := filepath.Abs(o.MoveSkipped)
 	if err == nil {
 		err = os.MkdirAll(folder, 0o755)
 	}
-	if err != nil {
-		out.Say("the files left as they are stay where they are: %s cannot be used (%v)", o.MoveSkipped, err)
-		return files
+	to := ""
+	if err == nil {
+		to, err = moveInto(ctx, path, folder, out)
 	}
-	rest := []string{}
-	moved := 0
-	for _, path := range files {
-		reason, ok := left[path]
-		if !ok || ctx.Err() != nil {
-			rest = append(rest, path)
-			continue
-		}
-		to, err := moveInto(ctx, path, folder, out)
-		switch {
-		case errors.Is(err, context.Canceled):
-			// the work was cancelled while it moved: the file stays, and the work tells it
-			rest = append(rest, path)
-		case err != nil:
-			out.Done(path, "", "", Skipped(fmt.Sprintf("%s; it stays where it is: %v", reason, err)))
-		case to == path:
-			out.Done(path, "", "", Skipped(reason))
-		default:
-			moved++
-			out.Done(path, to, "", Skipped(fmt.Sprintf("%s; moved to %s", reason, folder)))
-		}
+	switch {
+	case errors.Is(err, context.Canceled):
+		// the work, or this file, was stopped while it moved: it stays whole where it was
+		return "", "", err
+	case err != nil:
+		return "", "", Skipped(fmt.Sprintf("%s; it stays where it is: %v", reason, err))
+	case to == path:
+		return "", "", Skipped(reason)
 	}
-	if moved > 0 {
-		out.Say("files left as they are moved to %s: %d", folder, moved)
-	}
-	return rest
+	return to, "", Skipped(fmt.Sprintf("%s; moved to %s", reason, folder))
 }
 
 // ErrMovedThere is told for a file that has a file of its name in the folder it would be moved to.

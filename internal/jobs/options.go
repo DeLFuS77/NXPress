@@ -102,8 +102,8 @@ type Options struct {
 	// --skip-dlc: with -C, a file of DLC only is left as it is
 	SkipDlc bool
 	// --move-skipped: with -C, the files left as they are (the games in sparse storage, their
-	// updates with SkipSparseUpdates, the DLC with SkipDlc) are moved into this folder before the
-	// work starts
+	// updates with SkipSparseUpdates, the DLC with SkipDlc) are moved into this folder as their
+	// turn comes in the work
 	MoveSkipped string
 	Threads     int
 	Multi       int
@@ -656,7 +656,7 @@ Usage: nxpress [options] file or folder...
                       as it is, and so is its update among the files given: the two stay
                       together as NSP
   --skip-dlc          with -C, leave the DLC as they are (a file that holds DLC only)
-  --move-skipped DIR  with -C, move what is left as it is into DIR before the work starts: the
+  --move-skipped DIR  with -C, move what is left as it is into DIR as its turn comes: the
                       base games in sparse storage (without --extra), their updates with
                       --skip-sparse-updates and the DLC with --skip-dlc. A file keeps its name
                       and never replaces one there (it stays where it is then); on another

@@ -159,14 +159,13 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		o.datFile = loaded
 	}
 	ctx = withDestinations(ctx, files)
-	// the files left as they are before the work starts, with why: the updates whose game in
-	// sparse storage is left as it is, left with it, and the DLC with --skip-dlc; with
-	// --move-skipped they go to its folder now, and the rest is worked on
-	left := leftAsTheyAre(ctx, o, action, files)
-	files = moveLeft(ctx, o, files, left, out)
+	// the updates whose game in sparse storage is left as it is, left as they are with it
+	pairs := sparsePairs(ctx, o, action, files)
 	var (
 		mutex  sync.Mutex
 		failed = len(missing)
+		// the files left as they are moved to the folder of --move-skipped
+		moved = 0
 	)
 	// a file is started only while the work is not paused: renaming, -i and the files checked
 	// before have no progress of their own to pause in. Each file takes the threads and the
@@ -176,10 +175,20 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		// its LZ4 blocks keep to its share of the processors among the files at once now
 		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
 		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
-			if reason, ok := left[path]; ok {
-				return "", "", Skipped(reason)
+			// what Compress leaves as it is goes to the folder of --move-skipped as its turn comes:
+			// the updates of a game in sparse storage, the DLC with --skip-dlc, and the game itself,
+			// found as it is compressed
+			if reason, ok := pairs[path]; ok {
+				return leaveAsItIs(ctx, o, path, reason, out)
 			}
-			return safeJob(ctx, action, path, o, threads, out)
+			if action == "compress" && o.SkipDlc && dlcOnly(path) {
+				return leaveAsItIs(ctx, o, path, dlcSkipped, out)
+			}
+			output, note, err := safeJob(ctx, action, path, o, threads, out)
+			if action == "compress" && IsSkipped(err) && err.Error() == sparseSkipped {
+				return leaveAsItIs(ctx, o, path, sparseSkipped, out)
+			}
+			return output, note, err
 		})
 		// the recovery data of the new file, with --par2, or made again for a file written again
 		if err == nil {
@@ -195,12 +204,19 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 			}
 		}
 		out.Done(path, output, note, shown(err))
+		mutex.Lock()
 		if isFailure(err) {
-			mutex.Lock()
 			failed++
-			mutex.Unlock()
 		}
+		if IsSkipped(err) && output != "" {
+			moved++
+		}
+		mutex.Unlock()
 	})
+	if moved > 0 {
+		folder, _ := filepath.Abs(o.MoveSkipped)
+		out.Say("files left as they are moved to %s: %d", folder, moved)
+	}
 	return failed
 }
 

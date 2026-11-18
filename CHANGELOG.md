@@ -5,7 +5,7 @@
 ### Improvements
 
 - Threads per file and Files at once can change while a work runs, in a row under its buttons: the file at work keeps its threads until it is done, and the change applies from the next file. Low priority now applies at once, also while a work runs. Thanks to ItsmeAJ (GBAtemp) for the idea
-- Compress: "Skip DLC" leaves the DLC as NSP, and "Move what is skipped to" moves what is left as it is (games in sparse storage, and their updates and the DLC when skipped) into a folder before the work starts (--skip-dlc, --move-skipped). Thanks to ItsmeAJ (GBAtemp) for the idea
+- Compress: "Skip DLC" leaves the DLC as NSP, and "Move what is skipped to" moves what is left as it is (games in sparse storage, and their updates and the DLC when skipped) into a folder as each one's turn comes in the work (--skip-dlc, --move-skipped). Thanks to ItsmeAJ (GBAtemp) for the idea
 
 ## 1.7.23
 

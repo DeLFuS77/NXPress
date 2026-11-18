@@ -94,7 +94,7 @@ const state = {
   installing: null, installError: "", installed: "", restartAfterWork: false,
   // the tools left out of the side menu in Settings (#140)
   hiddenTools: new Set(),
-  // Compress: the folder what is left as it is goes to before the work ("" : it stays), and the
+  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), and the
   // threads and files at once changed while a work goes on, until a file starts with them
   moveSkipped: "", livePending: null,
 };
@@ -2766,7 +2766,7 @@ function settings() {
     optimize: $("optimize").checked,
     // the update of a game in sparse storage left as it is with it, in Compress
     skipSparseUpdates: $("skip-sparse-updates").checked,
-    // Compress: the DLC left as they are, and the folder what is left goes to before the work
+    // Compress: the DLC left as they are, and the folder what is left goes to as its turn comes
     skipDlc: $("skip-dlc").checked, moveSkipped: state.moveSkipped,
   };
 }
@@ -3842,7 +3842,7 @@ async function main() {
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;
   $("skip-sparse-updates").onchange = $("skip-dlc").onchange = () => save("settings", settings());
-  // the folder what Compress leaves as it is goes to before the work starts; none: it stays
+  // the folder what Compress leaves as it is goes to as its turn comes; none: it stays
   $("choose-move-skipped").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.moveSkipped = path; save("settings", settings()); render(); };
   $("reset-move-skipped").onclick = () => { state.moveSkipped = ""; save("settings", settings()); render(); };
   // while a work goes on (see paintLive)

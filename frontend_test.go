@@ -203,7 +203,6 @@ const samples = [
   ["a DLC: DLC are left as they are; it stays where it is: it was copied, but the original could not be deleted: access denied", "was copied"],
   ["a DLC: DLC are left as they are; it stays where it is: its copy did not read back the same", "read back"],
   ["files left as they are moved to D:\Switch\Left: 3", "files left"],
-  ["the files left as they are stay where they are: D:\Left cannot be used (access denied)", "cannot be used"],
 ];
 // in English too: what the window says in its own words
 const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];
