@@ -181,7 +181,9 @@ int nxo_merger_open(nxo_merger* m, const nxo_section* base, const nxo_section* u
                     int level, unsigned threads, char* err, size_t errlen) {
     try {
         mergegame::Input in;
-        in.base = Section(m->handle, *base);
+        // no base: a game alone, `update` its own program
+        if (base) in.base = Section(m->handle, *base);
+        in.alone = base == nullptr;
         in.update = Section(m->handle, *update);
         in.update_index = update_index;
         in.update_header.assign(update_header, update_header + 0xC00);
@@ -334,28 +336,30 @@ int nxo_merged_meta(uintptr_t, const uint8_t* base_header, const uint8_t* base_s
                     char* err, size_t errlen) {
     try {
         std::string error;
+        // no update: a game alone, its own CNMT made again
+        const bool alone = update_header == nullptr;
         mergemeta::Cnmt bc, uc, mc;
-        if (!ReadCnmt(base_header, base_section, base_len, bc, error) || !ReadCnmt(update_header, update_section, update_len, uc, error)) {
+        if (!ReadCnmt(base_header, base_section, base_len, bc, error) || (!alone && !ReadCnmt(update_header, update_section, update_len, uc, error))) {
             SetError(err, errlen, error);
             return 0;
         }
         mergemeta::Content prog;
         bool found = false;
-        for (const auto& c : uc.contents) {
+        for (const auto& c : (alone ? bc : uc).contents) {
             if (c.type == mergemeta::kContentProgram && c.id_offset == program->id_offset) {
                 prog = c;
                 found = true;
             }
         }
         if (!found) {
-            SetError(err, errlen, "the update has no program");
+            SetError(err, errlen, alone ? "the game has no program" : "the update has no program");
             return 0;
         }
         std::memcpy(prog.hash.data(), program->hash, 32);
         std::memcpy(prog.id.data(), program->id, 16);
         prog.size = program->size;
-        if (!mergemeta::MergedCnmt(bc, uc, prog, mc)) {
-            SetError(err, errlen, "not a game and its update");
+        if (alone ? !mergemeta::GameCnmt(bc, prog, mc) : !mergemeta::MergedCnmt(bc, uc, prog, mc)) {
+            SetError(err, errlen, alone ? "not a whole game (a base cut down needs its update)" : "not a game and its update");
             return 0;
         }
         std::vector<uint8_t> header, section;

@@ -61,6 +61,11 @@ std::vector<uint8_t> WriteCnmt(const Cnmt& c);
 // The CNMT of the merged game from the CNMT of the base (Application) and of the update (Patch),
 // with the merged program (`program`) in place of the program of the update.
 bool MergedCnmt(const Cnmt& base, const Cnmt& update, const Content& program, Cnmt& out);
+// The CNMT of a game made again alone (merged already, or with no update; mergegame::Input::alone):
+// its own, with `program` in place of its program and the firmware of the LZ4 layer at least. False
+// for anything but an Application, and for a base Nintendo cut down (Compacted), whole only with
+// its update.
+bool GameCnmt(const Cnmt& game, const Content& program, Cnmt& out);
 // The .cnmt in the decrypted meta section (HierarchicalSha256 over a PFS0), from its FS header.
 bool CnmtFromSection(const std::vector<uint8_t>& section, const uint8_t* fsh, std::vector<uint8_t>& cnmt);
 

@@ -43,10 +43,20 @@ struct Plan {
     uint64_t size = 0;
 };
 
+// Where the first section of an NCA starts at the earliest, as Nintendo lays them out. An NSZ or
+// XCZ keeps the first 0x4000 bytes of an NCA as they are, encrypted, and some of their readers
+// (Eden) read whatever section starts there as if it were decrypted; tools such as hacBrewPack put
+// the first section at 0xC00.
+constexpr uint64_t kFirstSection = 0x4000;
+// How far the sections of this decrypted header (0xC00) move for the first of them to start at
+// kFirstSection: 0 for an NCA laid out by Nintendo.
+uint64_t FirstShift(const uint8_t* header);
+
 // The new NCA from the decrypted header (0xC00) of the program NCA of the update, the index of its
 // RomFS section, the size of the new RomFS section (from the start of its levels to the end of the
 // table, rounded up here to 0x4000) and its FS header. False when the header is not one this
-// handles. `hash` makes the SHA-256 of the FS headers kept in the NCA header.
+// handles. `hash` makes the SHA-256 of the FS headers kept in the NCA header. The sections keep
+// their places, moved by FirstShift when the first one starts before kFirstSection.
 bool PlanNca(const uint8_t* update_header, int romfs_index, uint64_t romfs_size, const std::array<uint8_t, 0x200>& romfs_fsh,
              const lz4pack::HashFn& hash, Plan& out);
 

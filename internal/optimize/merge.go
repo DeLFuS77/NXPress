@@ -76,7 +76,8 @@ func romfsHash(ctx context.Context, r *native.Romfs, step string, progress func(
 
 // Run optimizes the game and its newest update among the files given (NSP, NSZ, XCI or XCZ, a
 // SuperNSP too) into one NSP at target, checked whole before it is told done: on an error, target
-// is removed.
+// is removed. A game alone, with no update newer than it (one merged already, by this or by
+// hacBrewPackLZ, or one never updated), is made again the same way from its own program.
 func Run(ctx context.Context, files []string, target string, o Options) (res Result, err error) {
 	o, err = o.checked()
 	if err != nil {
@@ -121,13 +122,24 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	if err != nil {
 		return res, ErrNotPair{err.Error()}
 	}
+	// a game alone (merged already, or with no update newer than it) is made again from its own
+	// program, laid out as Nintendo lays it out
+	alone := update == nil
+	res.Alone = alone
+	// what the new game is made of: the update's contents, or the game's own
+	from, of := update, "the update"
+	if alone {
+		from, of = base, "the game"
+	}
 	bprog, bn, err := g.program(base, 0)
 	if err != nil {
 		return res, ErrNotPair{err.Error()}
 	}
-	uprog, un, err := g.program(update, 0)
-	if err != nil {
-		return res, ErrNotPair{err.Error()}
+	uprog, un := bprog, 0
+	if !alone {
+		if uprog, un, err = g.program(update, 0); err != nil {
+			return res, ErrNotPair{err.Error()}
+		}
 	}
 	if bn > 1 || un > 1 {
 		return res, ErrNotPair{"a game of more than one program is not optimized yet"}
@@ -139,16 +151,23 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	if err := bprog.unlock(k, titleKeys); err != nil {
 		return res, err
 	}
-	if err := uprog.unlock(k, titleKeys); err != nil {
-		return res, err
+	if !alone {
+		if err := uprog.unlock(k, titleKeys); err != nil {
+			return res, err
+		}
 	}
 	bi, ui := bprog.romfsIndex(), uprog.romfsIndex()
 	if bi < 0 || ui < 0 {
 		return res, ErrNotPair{"the program of the game or of its update has no RomFS"}
 	}
-	res.TitleID, res.Version, res.BaseVersion = base.titleID, update.version, base.version
-	res.ProgramBefore = bprog.size + uprog.size
-	for _, m := range []*meta{base, update} {
+	res.TitleID, res.Version, res.BaseVersion = base.titleID, from.version, base.version
+	res.ProgramBefore = bprog.size
+	metas := []*meta{base}
+	if !alone {
+		res.ProgramBefore += uprog.size
+		metas = append(metas, update)
+	}
+	for _, m := range metas {
 		res.InputSize += m.nca.size
 		for _, c := range m.contents {
 			if n := g.ncas[c.id]; n != nil {
@@ -171,9 +190,18 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	}
 	bsec, usec := sectionOf(0, bprog, bi), sectionOf(1, uprog, ui)
 
-	// 1. the RomFS of the game with its update, as the game reads it: what the new one must give
-	r, err := native.OpenRomfs(job, bsec, &usec)
+	// 1. the RomFS of the game with its update (or alone), as the game reads it: what the new one
+	// must give
+	var r *native.Romfs
+	if alone {
+		r, err = native.OpenRomfs(job, bsec, nil)
+	} else {
+		r, err = native.OpenRomfs(job, bsec, &usec)
+	}
 	if err != nil {
+		if alone {
+			return res, ErrNotPair{"the RomFS of the game is not read: " + err.Error()}
+		}
 		return res, ErrNotPair{"the update does not read over this base game: " + err.Error()}
 	}
 	want, err := romfsHash(ctx, r, "Reading", o.Progress)
@@ -183,22 +211,27 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	}
 
 	// 2. the merged program, written as it is packed (one pass), or measured and written again
-	m, err := native.Open(job, bsec, usec, ui, uprog.header, o.Level, o.Threads)
+	var m *native.Merger
+	if alone {
+		m, err = native.OpenAlone(job, bsec, bi, bprog.header, o.Level, o.Threads)
+	} else {
+		m, err = native.Open(job, bsec, usec, ui, uprog.header, o.Level, o.Threads)
+	}
 	if err != nil {
 		return res, ErrNotPair{err.Error()}
 	}
 	defer m.Close()
 
-	// the files of the NSP: the merged program, the other contents of the update (no delta
-	// fragments), the meta NCA, and the tickets of what has a rights ID
+	// the files of the NSP: the merged program, the other contents of the update (or of the game
+	// alone; no delta fragments), the meta NCA, and the tickets of what has a rights ID
 	others := []*nca{}
-	for _, c := range update.contents {
+	for _, c := range from.contents {
 		if c.typ == 1 || c.typ == 6 {
 			continue
 		}
 		n := g.ncas[c.id]
 		if n == nil {
-			return res, fmt.Errorf("%s.nca of the update is not among the files given", c.id)
+			return res, fmt.Errorf("%s.nca of %s is not among the files given", c.id, of)
 		}
 		others = append(others, n)
 	}
@@ -214,7 +247,7 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 		}
 		seen[r] = true
 		if g.tickets[r] == nil {
-			return res, fmt.Errorf("the update has no ticket for %s (a title key of title.keys is not enough for an NSP to install)", n.name)
+			return res, fmt.Errorf("%s has no ticket for %s (a title key of title.keys is not enough for an NSP to install)", of, n.name)
 		}
 		rights = append(rights, r)
 	}
@@ -273,7 +306,12 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	}
 
 	// the meta NCA: made from the one of the base, its section encrypted with its key at 0xC00
-	mm, err := native.MakeMergedMeta(base.nca.header, base.section, update.nca.header, update.section, program)
+	var mm native.MergedMeta
+	if alone {
+		mm, err = native.MakeMergedMeta(base.nca.header, base.section, nil, nil, program)
+	} else {
+		mm, err = native.MakeMergedMeta(base.nca.header, base.section, update.nca.header, update.section, program)
+	}
 	if err != nil {
 		return res, err
 	}

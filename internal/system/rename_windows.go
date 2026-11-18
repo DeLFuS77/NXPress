@@ -3,6 +3,7 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,4 +40,10 @@ func LongPath(path string) string {
 		return `\\?\UNC\` + path[2:]
 	}
 	return `\\?\` + path
+}
+
+// OtherDrive tells whether a rename failed because its new name is on another drive, where a
+// file is moved by a copy.
+func OtherDrive(err error) bool {
+	return errors.Is(err, windows.ERROR_NOT_SAME_DEVICE)
 }

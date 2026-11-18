@@ -94,6 +94,9 @@ const state = {
   installing: null, installError: "", installed: "", restartAfterWork: false,
   // the tools left out of the side menu in Settings (#140)
   hiddenTools: new Set(),
+  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), and the
+  // threads and files at once changed while a work goes on, until a file starts with them
+  moveSkipped: "", livePending: null,
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -1767,6 +1770,70 @@ function clearLog() {
   $("log").textContent = "";
   $("log").hidden = true;
 }
+// addLog adds a line to the log of the work, with the others told in the same tenth of a second
+function addLog(line) {
+  said += line + "\n";
+  if (sayFrame) return;
+  sayFrame = setTimeout(() => {
+    sayFrame = 0;
+    const log = $("log");
+    log.hidden = false;
+    log.append(said);
+    said = "";
+    while (log.childNodes.length > 1 && log.textContent.length > logKept) log.firstChild.remove();
+    log.scrollTop = log.scrollHeight;
+  }, 100);
+}
+
+// the works whose files at once change while they go on, and the ones whose threads do too
+const liveFiles = ["compress", "decompress", "recompress", "trim", "verify", "convert", "split", "fat32"];
+const liveThreads = ["compress", "recompress"];
+// paintLive shows, while a work goes on, its threads of each file and files at once (the fields
+// of Advanced), which NXPress takes from the next file on, and Low priority, which it takes at
+// once; a change waits in a mark until a file starts with it (asked by ItsmeAJ on GBAtemp)
+function paintLive() {
+  const run = state.lastRun;
+  const mode = run ? run.mode : "";
+  const files = state.busy && liveFiles.includes(mode) && !(run.request && run.request.optimize);
+  const threads = files && liveThreads.includes(mode);
+  $("live").hidden = !state.busy || mode === "measure" || mode === "estimate";
+  $("live-multi-field").hidden = !files;
+  $("live-threads-field").hidden = !threads;
+  for (const id of ["threads", "multi"]) {
+    const field = $(id);
+    $("live-" + id).textContent = field.value;
+    $("live-" + id + "-down").disabled = +field.value <= 1;
+    $("live-" + id + "-up").disabled = +field.value >= +field.max;
+  }
+  $("live-low-priority").checked = $("low-priority").checked;
+  const pending = state.livePending;
+  $("live-pending").hidden = !pending || !files;
+  if (pending) $("live-pending").textContent = t("livePending")(pending.threads, pending.multi, pending.withThreads);
+}
+// changeLive moves the threads of each file or the files at once of the work going on by step:
+// the field of Advanced too, so the next work takes them as they were left; the log tells the
+// change once the clicks stop
+let liveTimer = 0;
+function changeLive(id, step) {
+  const field = $(id);
+  const value = Math.max(1, Math.min(+field.max || 64, (+field.value || 1) + step));
+  if (value === +field.value) return;
+  field.value = value;
+  save("settings", settings());
+  const threads = +$("threads").value, multi = +$("multi").value;
+  const withThreads = !!state.lastRun && liveThreads.includes(state.lastRun.mode);
+  app().SetLive(threads, multi);
+  state.livePending = { threads, multi, withThreads };
+  clearTimeout(liveTimer);
+  liveTimer = setTimeout(() => addLog(t("liveChanged")(threads, multi, withThreads)), 1200);
+  paintLive();
+}
+// setLowPriority puts NXPress below the other programs, or back, at once: also while it works
+function setLowPriority(low) {
+  $("low-priority").checked = $("live-low-priority").checked = low;
+  save("settings", settings());
+  app().SetLowPriority(low);
+}
 let warnTimer = 0;
 function warnSoon() {
   clearTimeout(warnTimer);
@@ -1872,7 +1939,7 @@ function render() {
   // the column of the state shows once a file of the list has one, or while files are at work
   $("files").classList.toggle("no-state", !state.busy && ![...state.rows.values()].some(row => row.status));
   // the experimental options open by themselves when one of them is on
-  if (["extra", "skip-sparse-updates", "optimize"].some(id => $(id) && $(id).checked)) $("extra-options").open = true;
+  if (["extra", "optimize"].some(id => $(id) && $(id).checked)) $("extra-options").open = true;
   paintOfficial();
   paintPicks();
   paintCheckFilter();
@@ -2035,6 +2102,12 @@ function render() {
   // with the extra compression the game in sparse storage is compressed, and Optimize for install
   // takes the two together: the box has nothing to do then
   $("skip-sparse-updates").disabled = $("extra").checked || $("optimize").checked;
+  // Optimize for install leaves the DLC as they are already, and moves nothing
+  $("skip-dlc").disabled = $("choose-move-skipped").disabled = $("optimize").checked;
+  $("move-skipped").textContent = state.moveSkipped ? ltr(state.moveSkipped) : t("moveSkippedNone");
+  $("move-skipped").title = state.moveSkipped;
+  $("move-skipped").classList.toggle("empty", !state.moveSkipped);
+  $("reset-move-skipped").hidden = !state.moveSkipped;
   $("keys").textContent = t("keys")(state.keys);
   $("keys").title = state.keys;
   $("keys").className = "side-keys" + (state.keys ? "" : " bad");
@@ -2076,6 +2149,7 @@ function render() {
   const system = (state.setup.platform || "").split("/")[0];
   $("measure").textContent = t(system === "darwin" ? "measureMac" : system === "windows" ? "measurePc" : "measureComputer");
   $("pause").hidden = !state.busy;
+  paintLive();
   $("pause").textContent = state.paused ? t("resume") : t("pause");
   $("report").hidden = state.busy || !state.lastRun || ![...state.rows.values()].some(row => ["ok", "failed", "modified", "skipped"].includes(row.status));
   $("shutdown-option").hidden = watching || state.mode === "rename" || state.mode === "info";
@@ -2692,6 +2766,8 @@ function settings() {
     optimize: $("optimize").checked,
     // the update of a game in sparse storage left as it is with it, in Compress
     skipSparseUpdates: $("skip-sparse-updates").checked,
+    // Compress: the DLC left as they are, and the folder what is left goes to as its turn comes
+    skipDlc: $("skip-dlc").checked, moveSkipped: state.moveSkipped,
   };
 }
 
@@ -2957,6 +3033,8 @@ function listen() {
   events.EventsOn("opened", takeOpened);
   on("progress", event => {
     const row = rowOf(event.file);
+    // a file that starts takes the threads and the files at once changed while it waited
+    if (row.status !== "work" && state.livePending) { state.livePending = null; paintLive(); }
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
@@ -2976,8 +3054,9 @@ function listen() {
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0, mode: state.lastRun ? state.lastRun.mode : state.mode });
-    // a file renamed keeps its row, under its new name and path
-    if (mode === "rename" && row.output && !event.error) {
+    // a file renamed keeps its row, under its new name and path; so does a file left as it is and
+    // moved to the folder of what is skipped, at its new place
+    if ((mode === "rename" || event.skipped) && row.output && !event.error) {
       const old = row.item.path;
       row.item.name = row.output.split(/[\\/]/).pop();
       row.item.path = row.output;
@@ -3000,19 +3079,7 @@ function listen() {
   // scrolled at each file, a long Details of thousands of files kept the window far behind the
   // work, which had ended long before, so Cancel seemed to do nothing (#135). The log keeps its
   // last megabytes.
-  on("say", text => {
-    said += noteText(text) + "\n";
-    if (sayFrame) return;
-    sayFrame = setTimeout(() => {
-      sayFrame = 0;
-      const log = $("log");
-      log.hidden = false;
-      log.append(said);
-      said = "";
-      while (log.childNodes.length > 1 && log.textContent.length > logKept) log.firstChild.remove();
-      log.scrollTop = log.scrollHeight;
-    }, 100);
-  });
+  on("say", text => addLog(noteText(text)));
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {
     $("threads").value = event.threads;
@@ -3032,6 +3099,8 @@ function listen() {
   events.EventsOn("finished", event => {
     state.busy = false;
     state.paused = false;
+    state.livePending = null;
+    clearTimeout(liveTimer);
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const single = onePack(state.lastRun);
     const total = single || (state.lastRun && state.lastRun.mode === "measure") ? 1 : state.lastRun && !state.lastRun.watch ? state.lastRun.request.files.length : state.items.length;
@@ -3712,6 +3781,8 @@ async function main() {
   // experimental too, and not with the extra compression
   $("optimize").checked = !!chosen.optimize && !$("extra").checked;
   $("skip-sparse-updates").checked = !!chosen.skipSparseUpdates;
+  $("skip-dlc").checked = !!chosen.skipDlc;
+  state.moveSkipped = text(chosen.moveSkipped);
   $("updates").checked = load("updates", true);
   $("published").checked = load("published", true);
   $("sound").checked = load("sound", false);
@@ -3770,7 +3841,16 @@ async function main() {
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;
-  $("skip-sparse-updates").onchange = () => save("settings", settings());
+  $("skip-sparse-updates").onchange = $("skip-dlc").onchange = () => save("settings", settings());
+  // the folder what Compress leaves as it is goes to as its turn comes; none: it stays
+  $("choose-move-skipped").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.moveSkipped = path; save("settings", settings()); render(); };
+  $("reset-move-skipped").onclick = () => { state.moveSkipped = ""; save("settings", settings()); render(); };
+  // while a work goes on (see paintLive)
+  $("live-threads-down").onclick = () => changeLive("threads", -1);
+  $("live-threads-up").onclick = () => changeLive("threads", 1);
+  $("live-multi-down").onclick = () => changeLive("multi", -1);
+  $("live-multi-up").onclick = () => changeLive("multi", 1);
+  $("live-low-priority").onchange = () => setLowPriority($("live-low-priority").checked);
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
   $("extra").onchange = () => {
@@ -3960,8 +4040,8 @@ async function main() {
     }
   };
   $("sound").onchange = () => { save("sound", $("sound").checked); renderSound(); };
-  // Low priority is in Settings, out of the side panel that saves itself (#60)
-  $("low-priority").onchange = () => save("settings", settings());
+  // Low priority is in Settings, out of the side panel that saves itself (#60); it changes at once
+  $("low-priority").onchange = () => setLowPriority($("low-priority").checked);
   $("sound-choose").onclick = async () => { const path = await app().ChooseSound(); if (path) { save("soundFile", path); renderSound(); playSound(); } };
   $("sound-play").onclick = playSound;
   $("sound-default").onclick = () => { save("soundFile", ""); renderSound(); chime(); };

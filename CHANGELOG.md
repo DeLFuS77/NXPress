@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.24
+
+### Improvements
+
+- Threads per file and Files at once can change while a work runs, in a row under its buttons: the file at work keeps its threads until it is done, and the change applies from the next file. Low priority now applies at once, also while a work runs. Thanks to ItsmeAJ (GBAtemp) for the idea
+- Compress: "Skip DLC" leaves the DLC as NSP, and "Move what is skipped to" moves what is left as it is (games in sparse storage, and their updates and the DLC when skipped) into a folder as each one's turn comes in the work (--skip-dlc, --move-skipped). Thanks to ItsmeAJ (GBAtemp) for the idea
+- Optimize for install also takes one file that holds a game and its update already (optimized before, or merged by another tool) and makes it again, laid out as Nintendo lays it out, so its NSZ starts in Eden too. Thanks to easyonme (GBAtemp) for reporting it
+
 ## 1.7.23
 
 ### Fixes

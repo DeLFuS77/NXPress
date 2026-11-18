@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DeLFuS77/NXPress/internal/optimize/native"
@@ -68,8 +69,12 @@ func TestRunTellsWhatIsNoPair(t *testing.T) {
 	if left := testkit.List(folder); len(left) != 3 {
 		t.Fatalf("left: %v", left)
 	}
-	if _, err := Run(context.Background(), []string{base}, target, Options{}); !errors.As(err, &notPair) {
-		t.Fatalf("a game without its update: %v", err)
+	// a game alone is made again from its own program: the synthetic one has no RomFS to make
+	if _, err := Run(context.Background(), []string{base}, target, Options{}); !errors.As(err, &notPair) || !strings.Contains(err.Error(), "no RomFS") {
+		t.Fatalf("a game alone with no RomFS: %v", err)
+	}
+	if _, err := os.Stat(target); err == nil {
+		t.Fatal("the NSP was left")
 	}
 }
 

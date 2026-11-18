@@ -115,6 +115,17 @@ type Merger struct {
 // Open opens the RomFS sections of the base program and of the update program over it: an error
 // when they are not a pair NXDock reads (the base of another version, a damaged one).
 func Open(job *Job, base Section, update Section, updateIndex int, updateHeader []byte, level int, threads int) (*Merger, error) {
+	return open(job, &base, update, updateIndex, updateHeader, level, threads)
+}
+
+// OpenAlone opens the RomFS section of the program of a game alone (merged already, or with no
+// update), to make it again as Open makes a merged one: an error for an update or a base cut down
+// to what its update replaces (sparse storage).
+func OpenAlone(job *Job, program Section, index int, header []byte, level int, threads int) (*Merger, error) {
+	return open(job, nil, program, index, header, level, threads)
+}
+
+func open(job *Job, base *Section, update Section, updateIndex int, updateHeader []byte, level int, threads int) (*Merger, error) {
 	if len(updateHeader) < 0xC00 {
 		return nil, errors.New("not an NCA header")
 	}
@@ -124,11 +135,16 @@ func Open(job *Job, base Section, update Section, updateIndex int, updateHeader 
 		m.handle.Delete()
 		return nil, errors.New("out of memory")
 	}
-	cb, cu := cSection(base), cSection(update)
+	var cb *C.nxo_section
+	if base != nil {
+		b := cSection(*base)
+		cb = &b
+	}
+	cu := cSection(update)
 	header := C.CBytes(updateHeader[:0xC00])
 	defer C.free(header)
 	cerr := make([]byte, errLen)
-	if C.nxo_merger_open(m.m, &cb, &cu, C.int(updateIndex), (*C.uint8_t)(header), C.int(level), C.unsigned(threads),
+	if C.nxo_merger_open(m.m, cb, &cu, C.int(updateIndex), (*C.uint8_t)(header), C.int(level), C.unsigned(threads),
 		(*C.char)(unsafe.Pointer(&cerr[0])), errLen) == 0 {
 		err := job.err(cerr)
 		m.Close()
@@ -391,17 +407,23 @@ type MergedMeta struct {
 
 // MakeMergedMeta makes the CNMT of the merged game (the base's, with the version and the contents
 // of the update, the merged program in place of its program, no delta fragments and no required
-// version) and its meta NCA, from the meta NCAs of the base and the update.
+// version) and its meta NCA, from the meta NCAs of the base and the update. With no update
+// (updateHeader nil), the meta NCA of a game alone made again: its own CNMT, the new program in
+// place of its program.
 func MakeMergedMeta(baseHeader, baseSection, updateHeader, updateSection []byte, program Content) (MergedMeta, error) {
-	if len(baseHeader) < 0xC00 || len(updateHeader) < 0xC00 || len(baseSection) == 0 || len(updateSection) == 0 {
+	alone := updateHeader == nil
+	if len(baseHeader) < 0xC00 || len(baseSection) == 0 || !alone && (len(updateHeader) < 0xC00 || len(updateSection) == 0) {
 		return MergedMeta{}, errors.New("not meta NCAs")
 	}
 	bh, bs := C.CBytes(baseHeader[:0xC00]), C.CBytes(baseSection)
-	uh, us := C.CBytes(updateHeader[:0xC00]), C.CBytes(updateSection)
 	defer C.free(bh)
 	defer C.free(bs)
-	defer C.free(uh)
-	defer C.free(us)
+	var uh, us unsafe.Pointer
+	if !alone {
+		uh, us = C.CBytes(updateHeader[:0xC00]), C.CBytes(updateSection)
+		defer C.free(uh)
+		defer C.free(us)
+	}
 	var p C.nxo_content
 	for i := range program.ID {
 		p.id[i] = C.uint8_t(program.ID[i])

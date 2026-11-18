@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"syscall"
 )
 
 // RenameNew gives a file or folder a new name only when nothing has that name yet: it never
@@ -25,4 +26,10 @@ func RenameNew(from string, to string) error {
 		return &os.LinkError{Op: "rename", Old: from, New: to, Err: fs.ErrExist}
 	}
 	return os.Rename(from, to)
+}
+
+// OtherDrive tells whether a rename failed because its new name is on another file system, where
+// a file is moved by a copy.
+func OtherDrive(err error) bool {
+	return errors.Is(err, syscall.EXDEV)
 }

@@ -13,6 +13,8 @@
 // Or in one pass: the place of the data level in the new NCA is known before it is packed (its IVFC
 // is laid out for the RomFS as the game reads it), so Measure writes what it stores there as it
 // packs it, and WriteAround writes the rest around it; the NCA is the same, byte for byte.
+// A game alone (Input::alone: merged already, or with no update) is made again the same way from
+// its own program NCA.
 //
 // Plain C++: AES-CTR, the AES-XTS of the header and the reads are given to it, so it is tested on
 // the computer, with real games.
@@ -41,6 +43,10 @@ struct Input {
     int update_index = 1;                // which section of it that is
     std::vector<uint8_t> update_header;  // its header, decrypted (0xC00)
     patchview::RawRead update_raw;       // the program NCA of the update, as stored
+    // a game alone, with no update to read over it (merged already, or never updated): `update`,
+    // `update_index`, `update_header` and `update_raw` are its program NCA, its RomFS section read
+    // as it is (AES-CTR or not encrypted, with or without the LZ4 layer); `base` is not read
+    bool alone = false;
     lz4pack::HashFn hash;                // SHA-256
     HeaderFn encrypt_header;
     int level = 9;
@@ -93,7 +99,8 @@ private:
     static lz4pack::StepFn Watched(const lz4pack::StepFn& step, bool& halted);
     std::string Failure(bool wrote, bool halted) const;
     bool PackOnce(const lz4pack::WriteFn& write, const lz4pack::StepFn& step, lz4pack::Packed& out);
-    // the RomFS section in the header of the update: where it starts (it keeps its place)
+    // the RomFS section in the new NCA: where it starts (its place in the header of the update,
+    // moved by mergenca::FirstShift)
     uint64_t RomfsStart() const;
     // the NCA from its start (two passes), or around the data level (`begin` given, one pass)
     bool WriteNca(const OutFn& out, const lz4pack::StepFn& step, std::string& error, const std::function<bool(uint64_t)>* begin);
