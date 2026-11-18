@@ -1,6 +1,7 @@
 package optimize
 
 import (
+	"cmp"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
@@ -207,6 +209,7 @@ type readCnmtFn func(header, section []byte) (titleID uint64, typ uint8, version
 const (
 	metaApplication = 0x80
 	metaPatch       = 0x81
+	metaAddOn       = 0x82
 )
 
 // readGame reads the NCAs, the tickets and the CNMTs of the packages.
@@ -315,6 +318,42 @@ func (g *game) pair() (*meta, *meta, error) {
 		}
 	}
 	return base, update, nil
+}
+
+// dlcs are the DLC of the game base among the CNMTs read (in the files of the game: a file that
+// holds the game with its DLC, as tools that merge games write it), the newest version of each,
+// in the order of their title IDs, with the NCAs each lists: they go into the optimized NSP as they
+// are. An NCA a DLC lists that is not among the files given is an error.
+func (g *game) dlcs(base *meta) ([]*meta, error) {
+	newest := map[uint64]*meta{}
+	for _, m := range g.metas {
+		if m.typ != metaAddOn || m.titleID&^0xFFF != base.titleID&^0xFFF+0x1000 {
+			continue
+		}
+		if old := newest[m.titleID]; old == nil || m.version > old.version {
+			newest[m.titleID] = m
+		}
+	}
+	out := make([]*meta, 0, len(newest))
+	for _, m := range newest {
+		for _, c := range m.contents {
+			if g.ncas[c.id] == nil {
+				return nil, fmt.Errorf("%s.nca of the DLC %016X is not among the files given", c.id, m.titleID)
+			}
+		}
+		out = append(out, m)
+	}
+	slices.SortFunc(out, func(a, b *meta) int { return cmp.Compare(a.titleID, b.titleID) })
+	return out, nil
+}
+
+// dlcContents are the NCAs a DLC lists, in its order (all among the files given: see dlcs).
+func dlcContents(g *game, d *meta) []*nca {
+	out := make([]*nca, 0, len(d.contents))
+	for _, c := range d.contents {
+		out = append(out, g.ncas[c.id])
+	}
+	return out
 }
 
 // copyN copies n bytes of r from off to w.

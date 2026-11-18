@@ -35,7 +35,7 @@ type Result struct {
 	TitleID       uint64
 	Version       uint32 // of the update, now of the one Application
 	BaseVersion   uint32
-	InputSize     int64 // the base and the update as given (NSP)
+	InputSize     int64 // the base and the update as given (NSP), and the DLC kept in it
 	OutputSize    int64 // the new NSP
 	ProgramBefore int64 // the program NCAs of the base and the update
 	ProgramAfter  int64 // the merged program NCA
@@ -47,6 +47,7 @@ type Result struct {
 	ProgramHash   string // its SHA-256
 	OnePass       bool   // the merged program written as it was packed, not packed twice
 	Alone         bool   // a game alone (merged already, or with no update) made again
+	Dlcs          int    // the DLC in the files of the game, kept in it as they were
 }
 
 // ErrNotBuilt is told when NXPress is built without cgo, which the code of NXDock needs.

@@ -55,9 +55,13 @@ func TestRealGames(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("%016X v%d: program %.1f MB (merged NCA %d bytes, sha256 %s), base and update installed %.1f MB, NSP %.1f MB; RomFS %.1f MB, runs again %.1f MB, blocks again %.1f MB; %.0f s",
+			t.Logf("%016X v%d: program %.1f MB (merged NCA %d bytes, sha256 %s), base and update installed %.1f MB, NSP %.1f MB; RomFS %.1f MB, runs again %.1f MB, blocks again %.1f MB; alone %v, %d DLC kept; %.0f s",
 				res.TitleID, res.Version, float64(res.ProgramAfter)/1e6, res.ProgramAfter, res.ProgramHash, float64(res.InputSize)/1e6, float64(res.OutputSize)/1e6,
-				float64(res.RomfsSize)/1e6, float64(res.RunsAgain)/1e6, float64(res.BlocksAgain)/1e6, time.Since(start).Seconds())
+				float64(res.RomfsSize)/1e6, float64(res.RunsAgain)/1e6, float64(res.BlocksAgain)/1e6, res.Alone, res.Dlcs, time.Since(start).Seconds())
+			// NXPRESS_OPTIMIZE_DLCS: how many DLC each game given holds in its files
+			if want := os.Getenv("NXPRESS_OPTIMIZE_DLCS"); want != "" && want != fmt.Sprint(res.Dlcs) {
+				t.Fatalf("%d DLC kept, not %s", res.Dlcs, want)
+			}
 			if os.Getenv("NXPRESS_OPTIMIZE_KEEP") == "" {
 				os.Remove(target)
 			}

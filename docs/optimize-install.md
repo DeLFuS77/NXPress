@@ -23,7 +23,7 @@ which takes the same room as the NSP once installed.
 - **The signature of Nintendo.** The program and the metadata are made again, so sigpatches and firmware 12.0.0 or newer are needed. DBI marks them as Fake when it installs them.
 - **Going back to version 1.0 just like that.** The optimized game is already at the version of the update; to go back, install the original again.
 - **Time and room on the computer.** Optimizing takes from seconds to about a minute per game in the tests. While it works it needs room for the new file and, for an NSZ or XCZ, for the decompressed NSP too.
-- **DLC save nothing.** They stay as they are.
+- **DLC save nothing.** They stay as they are: DLC files are left apart, and the DLC inside the file of a game are copied into the optimized file as they were.
 
 What you do not lose: the saves, the DLC installed and the game itself. What the game reads is the same as with its update, byte for byte, and that is checked before the file gets its name.
 
@@ -53,8 +53,8 @@ holding the game and its update works too). For each game with its base and an u
 update is taken. A game that holds its update already (its version is that of an update: optimized
 before, or merged by another tool) is made again alone, from its own program and contents, the same
 way. Any other game without its update (of version 0, also one Nintendo ships compressed: an update
-must still read over it), an update without its game and the DLC are left as they are, each told
-why. The NSP holds:
+must still read over it), an update without its game and the DLC files are left as they are, each
+told why. The NSP holds:
 
 | File | What it is |
 |---|---|
@@ -62,6 +62,7 @@ why. The NSP holds:
 | the other contents of the update | Its control NCA, legal information, HTML documents..., copied as they are. Its delta fragments are left out. |
 | `<id>.cnmt.nca` | A new meta NCA (below). |
 | `<rights ID>.tik`, `.cert` | The ticket and certificate of the update, for the NCAs that have a rights ID. |
+| the DLC inside the files of the game | Their NCAs, meta NCA, tickets and certificates, copied as they are (a file that holds the game with its DLC, as tools that merge games write it). The newest version of each; the check makes sure each is whole and the same, byte for byte. |
 
 It is named by `--pack-name` (the fields of `--rename`), by default
 `{name} [{id}][v{version}] (optimized)`: the title ID of the game at the version of the update.

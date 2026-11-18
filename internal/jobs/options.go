@@ -787,7 +787,8 @@ Usage: nxpress [options] file or folder...
                       after deleting the update of the game from the console: left there, it
                       is read over the optimized game and the game closes with an error. Do
                       not install official updates over it: keep the game and its update, and
-                      optimize them again with the newer update. DLC are left as they are.
+                      optimize them again with the newer update. DLC files are left as they
+                      are; the DLC inside the file of a game are kept in it as they were.
                       Named by --pack-name (default "{name} [{id}][v{version}] (optimized)").
                       docs/optimize-install.md tells the format
   --rebuild           each package given (a game, an update or a DLC; NSP, NSZ, XCI or XCZ)

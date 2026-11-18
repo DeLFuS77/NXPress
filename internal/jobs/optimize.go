@@ -230,6 +230,12 @@ func optimizeGame(ctx context.Context, o Options, files []string, next string, o
 	}
 	note := fmt.Sprintf("experimental: v%d, one Application; installed, %s %s, now %s (%s); install it with NXDock or DBI, with sigpatches, after deleting the update of the game from the console, and do not install official updates over it",
 		res.Version, took, size(res.InputSize), size(res.OutputSize), change)
+	switch {
+	case res.Dlcs == 1:
+		note += "; 1 DLC kept in it as it was"
+	case res.Dlcs > 1:
+		note += fmt.Sprintf("; %d DLC kept in it as they were", res.Dlcs)
+	}
 	if o.Compress {
 		note += fmt.Sprintf("; the NSZ is %s", size(packed))
 	}
