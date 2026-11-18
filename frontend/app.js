@@ -1303,7 +1303,7 @@ function helpName(hint) {
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role)");
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role):not(.pref-legal)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
@@ -3011,7 +3011,7 @@ function report() {
   const run = state.lastRun || {};
   const r = run.request || {};
   const lines = [
-    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
+    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" || (!state.setup.officialBuild && state.official !== "dev") ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
     `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
@@ -3525,9 +3525,10 @@ function applyListFind() {
 }
 
 // a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
-// GitHub answers when the window asks for updates
+// GitHub answers when the window asks for updates; one built from the code without the workflow
+// of the repository tells it at once
 function paintOfficial() {
-  const unofficial = state.official === "unofficial";
+  const unofficial = state.official === "unofficial" || !state.setup.officialBuild;
   $("unofficial").hidden = !unofficial;
   $("unofficial").textContent = t("unofficialBuild");
   $("unofficial").title = t("unofficialBuildHint");
@@ -3920,6 +3921,8 @@ async function main() {
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
+  $("license-link").onclick = () => app().OpenURL(repository + "/blob/main/LICENSE");
+  $("code-link").onclick = () => app().OpenURL(repository);
   $("space-cancel").onclick = () => $("space-dialog").close();
   // the window to search an image of a NUP in the eShop (#102), and an image pasted (Ctrl+V)
   $("cover-search").onclick = searchCovers;

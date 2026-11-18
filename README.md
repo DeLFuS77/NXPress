@@ -148,9 +148,11 @@ The other works leave NUP files as they are, and say where they are made, unpack
 NXPress needs Go and a C compiler (for zstd). The window uses [Wails](https://wails.io): WebView2 on Windows, WebKitGTK on Linux.
 
 ```
-go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres/winres.json --arch amd64   # Windows: icon and manifest
-go build -tags desktop,production -ldflags "-s -w" .                                # add webkit2_41 to the tags on Linux
+go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres-unofficial/winres.json --arch amd64   # Windows: icon and manifest
+go build -tags desktop,production -ldflags "-s -w" .                                          # add webkit2_41 to the tags on Linux
 ```
+
+A program built this way is an unofficial build: it has a plain icon and says so in its window. The name and the logo of NXPress (the tag `official` and `build/winres`) are for the versions published here, built by the workflow of this repository ([TRADEMARKS.md](TRADEMARKS.md)).
 
 The screenshots show made-up games.
 
