@@ -159,62 +159,48 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		o.datFile = loaded
 	}
 	ctx = withDestinations(ctx, files)
-	threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
-	// the updates whose game in sparse storage is left as it is, left as they are with it
-	pairs := sparsePairs(ctx, o, action, files)
+	// the files left as they are before the work starts, with why: the updates whose game in
+	// sparse storage is left as it is, left with it, and the DLC with --skip-dlc; with
+	// --move-skipped they go to its folder now, and the rest is worked on
+	left := leftAsTheyAre(ctx, o, action, files)
+	files = moveLeft(ctx, o, files, left, out)
 	var (
 		mutex  sync.Mutex
 		failed = len(missing)
-		wait   sync.WaitGroup
 	)
-	work := make(chan string)
-	for worker := 0; worker < min(o.Multi, len(files)); worker++ {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
-			for path := range work {
-				// a file is taken only while the work is not paused: renaming, -i and the files
-				// checked before have no progress of their own to pause in
-				waitWhilePaused(out)
-				if ctx.Err() != nil {
-					continue
-				}
-				output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
-					if reason, ok := pairs[path]; ok {
-						return "", "", Skipped(reason)
-					}
-					return safeJob(ctx, action, path, o, threads, out)
-				})
-				// the recovery data of the new file, with --par2, or made again for a file written again
-				if err == nil {
-					note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
-				}
-				// a new file checked as a game before it got its name need not be read again (a
-				// folder a NUP was unpacked into is no file to remember)
-				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
-					if isNup(output) {
-						cache.Checked.KeepChecked(output, "", nupChecker)
-					} else {
-						cache.Checked.Keep(output, "")
-					}
-				}
-				out.Done(path, output, note, shown(err))
-				if isFailure(err) {
-					mutex.Lock()
-					failed++
-					mutex.Unlock()
-				}
+	// a file is started only while the work is not paused: renaming, -i and the files checked
+	// before have no progress of their own to pause in. Each file takes the threads and the
+	// files at once set as it starts, which the window may change while the work goes on.
+	eachFile(ctx, o, files, out, func(path string, o Options) {
+		threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		// its LZ4 blocks keep to its share of the processors among the files at once now
+		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
+		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
+			if reason, ok := left[path]; ok {
+				return "", "", Skipped(reason)
 			}
-		}()
-	}
-	for _, path := range files {
-		if ctx.Err() != nil {
-			break
+			return safeJob(ctx, action, path, o, threads, out)
+		})
+		// the recovery data of the new file, with --par2, or made again for a file written again
+		if err == nil {
+			note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
 		}
-		work <- path
-	}
-	close(work)
-	wait.Wait()
+		// a new file checked as a game before it got its name need not be read again (a
+		// folder a NUP was unpacked into is no file to remember)
+		if err == nil && output != "" && checksOutput[action] && !isDir(output) {
+			if isNup(output) {
+				cache.Checked.KeepChecked(output, "", nupChecker)
+			} else {
+				cache.Checked.Keep(output, "")
+			}
+		}
+		out.Done(path, output, note, shown(err))
+		if isFailure(err) {
+			mutex.Lock()
+			failed++
+			mutex.Unlock()
+		}
+	})
 	return failed
 }
 
