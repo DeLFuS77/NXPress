@@ -52,6 +52,12 @@
       <button id="shutdown-cancel" class="primary small" data-t="shutdownCancel"></button>
     </div>
 
+    <!-- both saves of a game changed in Eden and in the library: chosen in Settings -->
+    <div id="eden-banner" class="banner warn" hidden>
+      <span id="eden-banner-text"></span>
+      <button id="eden-banner-go" class="primary small" data-t="choose"></button>
+    </div>
+
     <div class="toolbar" id="toolbar" hidden>
       <!-- the files of the list looked for as one types, as in the log (#105) -->
       <input id="list-find" type="search" data-t-placeholder="listFind" data-t-label="listFind"><span class="list-found" id="list-found" aria-live="polite"></span>
@@ -423,6 +429,42 @@
             <div class="pref-item">
               <div class="pref-text"><b data-t="published"></b><small data-t="publishedHint"></small><small class="pref-status" id="published-status"></small></div>
               <input id="published" type="checkbox" class="switch" role="switch">
+            </div>
+          </section>
+          <!-- the saves of Eden kept in step with Switch Library Manager Web while NXPress is
+               open: the library paired with a code, the folder of the emulator, its profiles and
+               what each game waits for; a conflict is chosen here or in the library -->
+          <section class="pref-group" id="pref-eden">
+            <h2><svg class="pref-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h13m0 0-3.5-3.5M16 7l-3.5 3.5M21 17H8m0 0 3.5-3.5M8 17l3.5 3.5"/></svg><span data-t="prefEden"></span></h2>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="edenTitle"></b><small data-t="edenHint"></small><small class="pref-status" id="eden-status" aria-live="polite"></small><small class="pref-status" id="eden-error" aria-live="polite"></small></div>
+              <input id="eden-on" type="checkbox" class="switch" role="switch" data-t-label="edenTitle">
+            </div>
+            <div class="pref-item pref-stack" id="eden-library-row">
+              <div class="pref-text"><b data-t="edenLibrary"></b><small data-t="edenLibraryHint"></small><small class="pref-status" id="eden-library-status" aria-live="polite"></small></div>
+              <div class="eden-box" id="eden-unpaired">
+                <div class="eden-row"><button id="eden-find" data-t="edenFind"></button></div>
+                <ul class="eden-found" id="eden-found" hidden></ul>
+                <div class="eden-row"><input id="eden-address" type="text" spellcheck="false" autocomplete="off" data-t-placeholder="edenAddress" data-t-label="edenAddress"><button id="eden-pair" data-t="edenPair"></button></div>
+              </div>
+              <div class="eden-box" id="eden-pairing" hidden>
+                <span class="eden-pairing-text" id="eden-pairing-text"></span>
+                <div class="eden-row"><span class="eden-code" id="eden-code"></span><button id="eden-pair-cancel" data-t="cancel"></button></div>
+              </div>
+              <button id="eden-forget" data-t="edenForget" hidden></button>
+            </div>
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="edenFolder"></b><small data-t="edenFolderHint"></small><small class="pref-status" id="eden-folder-status" aria-live="polite"></small><small class="pref-keys" id="eden-folder-path"></small></div>
+              <div class="pref-buttons"><button id="eden-folder-auto" data-t="edenFolderAuto" hidden></button><button id="eden-folder-choose" data-t="prefChange"></button></div>
+            </div>
+            <div class="pref-item pref-stack" id="eden-profiles-row" hidden>
+              <div class="pref-text"><b data-t="edenProfiles"></b><small data-t="edenProfilesHint"></small><small class="pref-status" id="eden-profiles-status" aria-live="polite"></small></div>
+              <div class="eden-profiles" id="eden-profiles"></div>
+            </div>
+            <div class="pref-item pref-stack" id="eden-games-row" hidden>
+              <div class="pref-text"><b data-t="edenGames"></b><small class="pref-status" id="eden-games-status" aria-live="polite"></small></div>
+              <div class="eden-conflicts" id="eden-conflicts"></div>
+              <ul class="eden-games" id="eden-games"></ul>
             </div>
           </section>
           <section class="pref-group" id="pref-help">

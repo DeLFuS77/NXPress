@@ -1759,6 +1759,257 @@ function paintPublished() {
   const date = $("published").checked ? state.versionsDate : null;
   $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
+
+// The saves of Eden kept in step with Switch Library Manager Web while NXPress is open (Settings,
+// see eden.go): NXPress tells their status as it changes; the page finds and pairs the library,
+// chooses the folder and the profiles, and the save of a conflict. found: the libraries found on
+// the network (null before a search); said: what the last action of each part answered.
+const eden = { status: null, found: null, searching: false, said: {}, looked: false, profiles: "", conflicts: "" };
+// a time as long ago, as the language says it (5 min ago)
+function edenAgo(seconds) {
+  const gone = Math.max(0, Date.now() / 1000 - seconds);
+  try {
+    const format = new Intl.RelativeTimeFormat(state.language, { numeric: "auto", style: "short" });
+    if (gone < 60) return format.format(-Math.round(gone), "second");
+    if (gone < 3600) return format.format(-Math.round(gone / 60), "minute");
+    if (gone < 86400) return format.format(-Math.round(gone / 3600), "hour");
+    return format.format(-Math.round(gone / 86400), "day");
+  } catch { return time(Math.round(gone)); }
+}
+// a day and its hour, as the language writes them
+function edenWhen(seconds) {
+  try { return new Intl.DateTimeFormat(state.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(seconds * 1000)); } catch { return new Date(seconds * 1000).toLocaleString(); }
+}
+// what an action answered, in words: "" for done; [text, tone]
+function edenSaid(answer) {
+  if (!answer || answer === "gone") return ["", ""];
+  const known = { notLibrary: "edenNotLibrary", notEden: "edenNotEden", keepOld: "edenKeepOld", key: "edenKeyRefused", netOff: "edenNetOff" }[answer];
+  if (known) return [t(known), answer === "notEden" || answer === "keepOld" ? "warn" : "bad"];
+  return [t("failed") + ": " + answer.replace(/^other: /, ""), "bad"];
+}
+// the last error of the passes, in words; [text, tone]; red for errors, orange for what waits
+function edenErrorText(status, emulator) {
+  switch (status.errorKind) {
+    case "": case undefined: case "folder": return ["", ""];
+    case "offline": return [t("edenOffline"), "warn"];
+    case "profiles": return [t("edenNoProfiles")(emulator), "warn"];
+    case "key": return [t("edenKeyRefused"), "bad"];
+    case "netOff": return [t("edenNetOff"), "bad"];
+    case "games": return [t("edenGamesFailed") + " " + status.error, "bad"];
+  }
+  return [t("failed") + ": " + status.error, "bad"];
+}
+// a line of status: its text and its tone (ok, warn, bad, work)
+function edenLine(id, text, tone) {
+  const line = $(id);
+  line.textContent = text || "";
+  line.className = "pref-status" + (tone ? " " + tone : "");
+}
+// an action of a part of the section: what it answered stays under it until the next one
+async function edenAct(part, call) {
+  eden.said[part] = null;
+  paintEden();
+  const answer = await call().catch(error => "other: " + String(error));
+  const [text, tone] = edenSaid(answer);
+  eden.said[part] = text ? { text, tone } : null;
+  paintEden();
+  return answer;
+}
+function paintEden() {
+  const status = eden.status;
+  if (!status) return;
+  const emulator = status.emulator || "Eden";
+  const said = part => eden.said[part];
+  // the switch, and how the passes go
+  $("eden-on").checked = status.on;
+  $("eden-on").disabled = !status.paired;
+  if (!status.paired) edenLine("eden-status", t("edenPairFirst"));
+  else if (!status.on) edenLine("eden-status", t("edenOff"));
+  else if (status.working) edenLine("eden-status", t("edenWorking"), "work");
+  else if (status.running) edenLine("eden-status", t("edenRunning")(emulator), "work");
+  else edenLine("eden-status", status.lastPass ? t("edenLast")(edenAgo(status.lastPass), status.uploaded, status.brought) : t("edenNever"));
+  const [error, errorTone] = said("on") ? [said("on").text, said("on").tone] : status.paired ? edenErrorText(status, emulator) : ["", ""];
+  edenLine("eden-error", error, errorTone);
+
+  // the library: found or typed and paired with a code, or the one paired
+  const pairing = status.pairing;
+  $("eden-unpaired").hidden = status.paired || !!pairing;
+  $("eden-pairing").hidden = !pairing;
+  $("eden-forget").hidden = !status.paired;
+  $("eden-library-row").classList.toggle("pref-stack", !status.paired);
+  $("eden-find").disabled = eden.searching;
+  $("eden-pair").disabled = eden.searching;
+  const pairError = { rejected: "edenRejected", expired: "edenExpired", notLibrary: "edenNotLibrary" }[status.pairError];
+  if (status.paired) edenLine("eden-library-status", t("edenPaired")(status.library, status.user), "ok");
+  else if (eden.searching) edenLine("eden-library-status", t("edenSearching"), "work");
+  else if (said("library")) edenLine("eden-library-status", said("library").text, said("library").tone);
+  else if (status.pairError && !pairing) edenLine("eden-library-status", pairError ? t(pairError) : t("failed") + ": " + status.pairError, "warn");
+  else if (eden.found && !eden.found.length) edenLine("eden-library-status", t("edenNoneFound"), "warn");
+  else edenLine("eden-library-status", "");
+  if (pairing) {
+    $("eden-pairing-text").textContent = t("edenPairWait")(pairing.name);
+    $("eden-code").textContent = pairing.code;
+  }
+  const list = $("eden-found");
+  list.hidden = status.paired || !!pairing || !eden.found || !eden.found.length;
+  list.innerHTML = "";
+  for (const found of eden.found || []) {
+    const row = document.createElement("li");
+    const name = document.createElement("span");
+    const host = document.createElement("small");
+    name.textContent = found.name || "Switch Library Manager";
+    host.textContent = found.url.replace(/^https?:\/\//, "") + (found.version ? " · " + found.version : "");
+    name.append(host);
+    const pair = document.createElement("button");
+    pair.textContent = t("edenPair");
+    pair.disabled = eden.searching;
+    pair.onclick = () => edenAct("library", () => app().EdenPair(found.url));
+    row.append(name, pair);
+    list.append(row);
+  }
+
+  // the folder of the emulator: found by itself, or chosen
+  if (said("folder")) edenLine("eden-folder-status", said("folder").text, said("folder").tone);
+  else if (status.folder) edenLine("eden-folder-status", t(status.chosen ? "edenFolderChosen" : "edenFolderFound")(emulator, status.portable), "ok");
+  else edenLine("eden-folder-status", t("edenFolderMissing"), "warn");
+  $("eden-folder-path").textContent = status.folder ? ltr(status.folder) : "";
+  $("eden-folder-auto").hidden = !status.chosen;
+
+  // each profile of the emulator with a user of the console; drawn again only when they change,
+  // so a list open stays open
+  $("eden-profiles-row").hidden = !status.paired || !status.folder;
+  const profiles = JSON.stringify([status.profiles, status.accounts, state.language]);
+  if (profiles !== eden.profiles && !$("eden-profiles").contains(document.activeElement)) {
+    eden.profiles = profiles;
+    $("eden-profiles").innerHTML = "";
+    for (const profile of status.profiles) {
+      const row = document.createElement("label");
+      row.className = "eden-profile";
+      const name = document.createElement("span");
+      name.textContent = profile.name;
+      const arrow = document.createElement("span");
+      arrow.textContent = "⇄";
+      arrow.setAttribute("aria-hidden", "true");
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", t("edenProfileLabel")(profile.name));
+      select.append(new Option(t("edenNoAccount"), ""));
+      for (const account of [...new Set([...status.accounts, profile.account].filter(Boolean))]) select.append(new Option(account, account));
+      select.value = profile.account || "";
+      select.onchange = () => edenAct("profiles", () => app().EdenSetProfile(profile.id, select.value));
+      row.append(name, arrow, select);
+      $("eden-profiles").append(row);
+    }
+  }
+  if (said("profiles")) edenLine("eden-profiles-status", said("profiles").text, said("profiles").tone);
+  else if (!status.profiles.length) edenLine("eden-profiles-status", status.lastPass || status.errorKind === "profiles" ? t("edenNoProfiles")(emulator) : "", "warn");
+  else if (!status.accounts.length) edenLine("eden-profiles-status", t("edenNoAccounts"), "warn");
+  else edenLine("eden-profiles-status", "");
+
+  // the conflicts, in orange, each save with where it comes from, its day and its size; then the
+  // games with what each waits for
+  $("eden-games-row").hidden = !status.paired || !status.folder;
+  const conflicts = JSON.stringify([status.conflicts, state.language]);
+  if (conflicts !== eden.conflicts && !$("eden-conflicts").contains(document.activeElement)) {
+    eden.conflicts = conflicts;
+    $("eden-conflicts").innerHTML = "";
+    for (const conflict of status.conflicts) {
+      const card = document.createElement("div");
+      card.className = "eden-conflict";
+      card.setAttribute("role", "group");
+      const title = document.createElement("b");
+      title.textContent = t("edenConflictTitle")(conflict.name || conflict.titleId) + (status.profiles.length > 1 ? " · " + conflict.profile : "");
+      card.append(title);
+      for (const save of conflict.saves) {
+        const line = document.createElement("div");
+        line.className = "eden-conflict-save";
+        const what = document.createElement("span");
+        what.textContent = save.found ? [save.source, edenWhen(save.when), size(save.size)].join(" · ") : save.source || "—";
+        const keep = document.createElement("button");
+        keep.textContent = t("edenKeep");
+        keep.setAttribute("aria-label", t("edenKeep") + ": " + what.textContent);
+        keep.disabled = !save.found;
+        keep.onclick = () => edenAct("conflicts", () => app().EdenKeep(conflict.id, save.keep));
+        line.append(what, keep);
+        card.append(line);
+      }
+      const both = document.createElement("small");
+      both.textContent = t("edenBothStay");
+      card.append(both);
+      $("eden-conflicts").append(card);
+    }
+  }
+  if (said("conflicts")) edenLine("eden-games-status", said("conflicts").text, said("conflicts").tone);
+  else edenLine("eden-games-status", status.games.length || status.conflicts.length ? "" : t("edenNoGames"));
+  const states = {
+    inStep: ["gameInStep", "in-step"], consoleNewer: ["gameConsoleNewer", "moves"], otherNewer: ["gameOtherNewer", "moves"],
+    edenNewer: ["gameEdenNewer", "moves"], openOnce: ["gameOpenOnce", ""], conflict: ["gameConflict", "conflict"],
+  };
+  $("eden-games").innerHTML = "";
+  for (const game of status.games) {
+    const row = document.createElement("li");
+    const name = document.createElement("b");
+    name.textContent = (game.name || game.titleId) + (status.profiles.length > 1 ? " · " + game.profile : "");
+    const line = document.createElement("small");
+    const times = [game.eden && `${emulator}: ${edenAgo(game.eden)}`, game.console && t("edenWhenConsole")(edenAgo(game.console)), game.other && t("edenWhenOther")(edenAgo(game.other))].filter(Boolean);
+    const [key, tone] = states[game.state] || ["gameInStep", ""];
+    const word = document.createElement("span");
+    const text = t(key);
+    word.textContent = typeof text === "function" ? text(emulator) : text;
+    if (tone) word.className = tone;
+    line.append(times.length ? times.join(" · ") + " · " : "", word);
+    row.append(name, line);
+    $("eden-games").append(row);
+  }
+  paintEdenBanner();
+}
+// both saves of games changed: said in orange over the section shown, with the way to Settings
+function paintEdenBanner() {
+  const conflicts = eden.status && eden.status.paired ? eden.status.conflicts.length : 0;
+  $("eden-banner").hidden = !conflicts || state.view === "preferences";
+  if (conflicts) $("eden-banner-text").textContent = t("edenBanner")(conflicts);
+  $("eden-banner-go").disabled = state.busy || state.starting;
+}
+// what a pass did, by a notice of the system: once a pass, the conflicts first
+function edenNotice(notice) {
+  const emulator = (eden.status && eden.status.emulator) || "Eden";
+  const lines = [];
+  if (notice.conflicts && notice.conflicts.length) lines.push(t("edenNoticeConflict")(notice.conflicts.length, notice.conflicts.join(", ")));
+  if (notice.brought && notice.brought.length) lines.push(t("edenNoticeBrought")(notice.brought.length, notice.brought.join(", "), emulator));
+  if (lines.length) app().Notify("NXPress", lines.join("\n"));
+}
+function setupEden() {
+  $("eden-on").onchange = () => edenAct("on", () => app().EdenSetOn($("eden-on").checked));
+  $("eden-find").onclick = async () => {
+    eden.searching = true;
+    eden.found = null;
+    eden.said.library = null;
+    paintEden();
+    eden.found = await app().EdenFind().catch(() => []) || [];
+    eden.searching = false;
+    paintEden();
+    // the first one found is the one to pair, from the keyboard too
+    $("eden-found").querySelector("button")?.focus();
+  };
+  const pairTyped = () => {
+    const address = $("eden-address").value.trim();
+    if (!address) { $("eden-address").focus(); return; }
+    edenAct("library", () => app().EdenPair(address));
+  };
+  $("eden-pair").onclick = pairTyped;
+  $("eden-address").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); pairTyped(); } });
+  $("eden-pair-cancel").onclick = () => app().EdenCancelPairing();
+  $("eden-forget").onclick = () => { eden.found = null; edenAct("library", () => app().EdenForget()); };
+  $("eden-folder-choose").onclick = () => edenAct("folder", () => app().EdenChooseFolder(t("edenFolderTitle")));
+  $("eden-folder-auto").onclick = () => edenAct("folder", () => app().EdenFindFolder());
+  $("eden-banner-go").onclick = () => {
+    if (state.busy || state.starting) return;
+    if (state.view !== "preferences") { state.view = "preferences"; render(); }
+    $("pref-eden").scrollIntoView({ block: "start", behavior: calm() ? "auto" : "smooth" });
+    $("eden-conflicts").querySelector("button:not(:disabled)")?.focus({ preventScroll: true });
+  };
+  // the times said as long ago follow the clock while Settings is shown
+  setInterval(() => { if (state.view === "preferences") paintEden(); }, 30000);
+}
 // the most text the log of a work keeps, its last part (#135)
 const logKept = 4 << 20;
 // what the work told and the log has not shown yet, added ten times a second at most (#135)
@@ -2035,6 +2286,10 @@ function render() {
   $("pref-no-keys").hidden = !!state.keys;
   $("keys-path").classList.toggle("bad", !state.keys);
   paintPublished();
+  // the saves of Eden are looked at again each time Settings opens
+  if (preferences && !eden.looked) app().EdenRefresh();
+  eden.looked = preferences;
+  paintEden();
   const page = worklog ? "worklog" : state.mode;
   $("title").textContent = t(page);
   // the section in the color of its group, its tile beside its title
@@ -3035,6 +3290,9 @@ function listen() {
   events.EventsOn("update-progress", progress => { state.installing = progress; paintUpdate(); });
   // files the Explorer gave to another NXPress, which sent them here
   events.EventsOn("opened", takeOpened);
+  // the saves of Eden: their status as it changes, and what a pass brought or found
+  events.EventsOn("edenSaves", status => { eden.status = status; paintEden(); });
+  events.EventsOn("edenNotice", edenNotice);
   on("progress", event => {
     const row = rowOf(event.file);
     // a file that starts takes the threads and the files at once changed while it waited
@@ -4136,6 +4394,9 @@ async function main() {
   $("template-reset").onclick = async () => { state.template = await app().DefaultTemplate(); $("template").value = state.template; save("settings", settings()); previewNames(); };
   listen();
   setupHelp();
+  // the saves of Eden with the library, as NXPress has them now; the passes run in NXPress
+  setupEden();
+  eden.status = await app().EdenSaves().catch(() => null);
 
   // the files left unfinished last time
   const pending = load("pending", null, isPending);
