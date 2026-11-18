@@ -12,7 +12,67 @@ import (
 
 	"github.com/DeLFuS77/NXPress/internal/optimize/native"
 	"github.com/DeLFuS77/NXPress/internal/testkit"
+
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
+
+// The DLC of the game among the files given are found with every NCA they list, the newest of
+// each: they go into the optimized NSP as they are. A DLC of another game is not one of them, and a
+// DLC whose NCA is not given is told.
+func TestFindsTheDlcOfTheGame(t *testing.T) {
+	testkit.Isolate(t)
+	folder := t.TempDir()
+	base, update, dlc := testkit.Game(t, folder)
+	older := testkit.TitleNsp(t, filepath.Join(folder, "older.nsp"), testkit.DlcID, 0, switchfs.ContentMetaType_AddOnContent, 5, nil)
+	newer := testkit.TitleNsp(t, filepath.Join(folder, "newer.nsp"), testkit.DlcID, 65536, switchfs.ContentMetaType_AddOnContent, 6, nil)
+	other := testkit.TitleNsp(t, filepath.Join(folder, "other.nsp"), testkit.BaseID+0x11001, 0, switchfs.ContentMetaType_AddOnContent, 4, nil)
+	k, err := loadKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func(paths ...string) *game {
+		pkgs := []*pkgFile{}
+		for _, path := range paths {
+			p, err := openNsp(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { p.Close() })
+			pkgs = append(pkgs, p)
+		}
+		g, err := readGame(k, pkgs, readCnmt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return g
+	}
+	g := read(base, update, dlc, other)
+	b, _, err := g.pair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dlcs, err := g.dlcs(b)
+	if err != nil || len(dlcs) != 1 || dlcs[0].titleID != testkit.DlcID {
+		t.Fatalf("DLC of the game: %v, %d", err, len(dlcs))
+	}
+	if files := dlcContents(g, dlcs[0]); len(files) != len(dlcs[0].contents) || len(files) == 0 {
+		t.Fatalf("its NCAs: %d", len(files))
+	}
+	// two versions of it: the newest
+	g = read(base, older, newer)
+	b, _, _ = g.pair()
+	if dlcs, err := g.dlcs(b); err != nil || len(dlcs) != 1 || dlcs[0].version != 65536 {
+		t.Fatalf("the newest DLC: %v, %v", err, dlcs)
+	}
+	// an NCA it lists, not given
+	g = read(base, dlc)
+	b, _, _ = g.pair()
+	dlcs, _ = g.dlcs(b)
+	delete(g.ncas, dlcs[0].contents[0].id)
+	if _, err := g.dlcs(b); err == nil || !strings.Contains(err.Error(), "is not among the files given") {
+		t.Fatalf("a DLC without its NCA: %v", err)
+	}
+}
 
 // The synthetic game of the tests read as a merge reads it: the headers decrypted with the
 // header key, the meta NCAs by their key area, their CNMT read by the code of NXDock, and the game
