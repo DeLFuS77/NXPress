@@ -231,6 +231,10 @@ func TestSkipOptions(t *testing.T) {
 	if err := o.Check(); err != nil || len(o.Notes) != 2 {
 		t.Fatalf("%v, notes %v", err, o.Notes)
 	}
+	o, _ = ParseOptions([]string{"--recompress", "--skip-dlc", "--skip-sparse-updates", "--move-skipped", "aside", "game.nsz"})
+	if err := o.Check(); err != nil || len(o.Notes) != 0 {
+		t.Fatalf("recompress: %v, notes %v", err, o.Notes)
+	}
 	if _, err := ParseOptions([]string{"-C", "--move-skipped"}); err == nil {
 		t.Fatal("--move-skipped without a folder")
 	}

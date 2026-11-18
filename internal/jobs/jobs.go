@@ -175,18 +175,18 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		// its LZ4 blocks keep to its share of the processors among the files at once now
 		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
 		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
-			// what Compress leaves as it is goes to the folder of --move-skipped as its turn comes:
-			// the updates of a game in sparse storage, the DLC with --skip-dlc, and the game itself,
-			// found as it is compressed
+			// what Compress and Recompress leave as it is goes to the folder of --move-skipped as
+			// its turn comes: the updates of a game in sparse storage, the DLC with --skip-dlc, and
+			// the game itself, found as it is compressed (#132)
 			if reason, ok := pairs[path]; ok {
 				return leaveAsItIs(ctx, o, path, reason, out)
 			}
-			if action == "compress" && o.SkipDlc && dlcOnly(path) {
+			if (action == "compress" || action == "recompress") && o.SkipDlc && dlcOnly(path) {
 				return leaveAsItIs(ctx, o, path, dlcSkipped, out)
 			}
 			output, note, err := safeJob(ctx, action, path, o, threads, out)
-			if action == "compress" && IsSkipped(err) && err.Error() == sparseSkipped {
-				return leaveAsItIs(ctx, o, path, sparseSkipped, out)
+			if IsSkipped(err) && ((action == "compress" && err.Error() == sparseSkipped) || (action == "recompress" && err.Error() == sparseNoPlain)) {
+				return leaveAsItIs(ctx, o, path, err.Error(), out)
 			}
 			return output, note, err
 		})

@@ -157,8 +157,12 @@ func sameOrNewFile(ctx context.Context, o Options, path string) (name string, in
 // a file with the one of NCZSECT3 without it, it goes through a copy decompressed first (see
 // recompressThrough); a game in sparse storage, which only the extra compression compresses, is
 // left as it is without it: there is no NSZ installers read of it (#92).
+// describeFile reads what an NSZ or XCZ is made of; the tests stand in for it, to have a game in
+// sparse storage kept in the extra compression
+var describeFile = switchfs.DescribeFile
+
 func recompress(ctx context.Context, path string, o Options, threads int, out Output) (string, string, error) {
-	if facts, err := switchfs.DescribeFile(path); err == nil {
+	if facts, err := describeFile(path); err == nil {
 		extra := o.Sparse || o.Archive
 		if facts.Sparse > 0 && !extra {
 			return "", "", Skipped(sparseNoPlain)
