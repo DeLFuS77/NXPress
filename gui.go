@@ -848,7 +848,7 @@ type Request struct {
 	SkipDlc     bool   `json:"skipDlc"`
 	MoveSkipped string `json:"moveSkipped"`
 	Archive     bool   `json:"archive"`
-	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
+	// Optimize for install (experimental), in Compress and Recompress: each game with its update into one NSZ
 	Optimize bool `json:"optimize"`
 	// Convert: NSP and NSZ into XCI and XCZ (#127)
 	ToCard bool `json:"toCard"`
@@ -880,8 +880,10 @@ func (a *App) requestOptions(request Request) jobs.Options {
 	o.NoCache = request.NoCache
 	o.Levels = request.Levels
 	o.Sparse = request.Sparse
-	o.SkipSparseUpdates = request.SkipSparseUpdates && request.Mode == "compress"
-	if request.Mode == "compress" {
+	// what Compress leaves as it is, Recompress leaves too (#132)
+	leaves := request.Mode == "compress" || request.Mode == "recompress"
+	o.SkipSparseUpdates = request.SkipSparseUpdates && leaves
+	if leaves {
 		o.SkipDlc, o.MoveSkipped = request.SkipDlc, request.MoveSkipped
 	}
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
@@ -907,6 +909,13 @@ func (a *App) requestOptions(request Request) jobs.Options {
 		o.Convert, o.ToCard = true, request.ToCard
 	case "recompress":
 		o.Recompress = true
+		// Optimize for install in Recompress too (#132): the same work as in Compress, through
+		// an NSP, so with the keys
+		if request.Optimize {
+			o.Recompress, o.Compress = false, true
+			o.Optimize, o.Sparse, o.Archive, o.RmSource, o.Watch = true, false, false, false, false
+			o.SkipDlc, o.MoveSkipped = false, ""
+		}
 	case "trim":
 		o.Trim = true
 	case "estimate":

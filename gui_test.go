@@ -679,3 +679,18 @@ func TestRequestOfTheFilesLeftAsTheyAre(t *testing.T) {
 		t.Fatalf("decompress: %+v", o)
 	}
 }
+
+// Recompress leaves as it is what Compress does (#132), and with Optimize for install it is the
+// same work as in Compress: the games with their updates, through an NSP.
+func TestRequestOfRecompressLeavesAndOptimizes(t *testing.T) {
+	asked := Request{Mode: "recompress", SkipDlc: true, SkipSparseUpdates: true, MoveSkipped: `D:\left`}
+	o := (&App{}).requestOptions(asked)
+	if !o.Recompress || !o.SkipDlc || !o.SkipSparseUpdates || o.MoveSkipped != `D:\left` {
+		t.Fatalf("recompress: %+v", o)
+	}
+	asked.Optimize = true
+	o = (&App{}).requestOptions(asked)
+	if !o.Optimize || o.Recompress || o.SkipDlc || o.MoveSkipped != "" || o.Action() != "optimize" {
+		t.Fatalf("recompress with optimize: %+v", o)
+	}
+}

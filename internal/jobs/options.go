@@ -96,12 +96,12 @@ type Options struct {
 	LowPriority bool
 	Sparse      bool // experimental, NXPress only: base games in sparse storage (NCZSECT2)
 	Archive     bool // experimental, NXPress only: the LZ4 blocks of Nintendo kept decompressed (NCZSECT3)
-	// with -C and without the extra compression: the update of a game in sparse storage given
-	// with it is left as it is too, so the two stay together
+	// with -C or --recompress and without the extra compression: the update of a game in sparse
+	// storage given with it is left as it is too, so the two stay together
 	SkipSparseUpdates bool
-	// --skip-dlc: with -C, a file of DLC only is left as it is
+	// --skip-dlc: with -C or --recompress, a file of DLC only is left as it is
 	SkipDlc bool
-	// --move-skipped: with -C, the files left as they are (the games in sparse storage, their
+	// --move-skipped: with -C or --recompress, the files left as they are (the games in sparse storage, their
 	// updates with SkipSparseUpdates, the DLC with SkipDlc) are moved into this folder as their
 	// turn comes in the work
 	MoveSkipped string
@@ -592,11 +592,11 @@ func (o *Options) Check() error {
 	}
 	// what is left as it is is told before a compression starts; an optimized game leaves its DLC
 	// as they are already
-	if o.SkipDlc && (!o.Compress || o.Optimize || o.Rebuild) {
-		o.Notes = append(o.Notes, "--skip-dlc has no effect without -C, nor with --optimize or --rebuild")
+	if o.SkipDlc && ((!o.Compress && !o.Recompress) || o.Optimize || o.Rebuild) {
+		o.Notes = append(o.Notes, "--skip-dlc has no effect without -C or --recompress, nor with --optimize or --rebuild")
 	}
-	if o.MoveSkipped != "" && (!o.Compress || o.Optimize || o.Rebuild) {
-		o.Notes = append(o.Notes, "--move-skipped has no effect without -C, nor with --optimize or --rebuild")
+	if o.MoveSkipped != "" && ((!o.Compress && !o.Recompress) || o.Optimize || o.Rebuild) {
+		o.Notes = append(o.Notes, "--move-skipped has no effect without -C or --recompress, nor with --optimize or --rebuild")
 	}
 	if (o.Sparse || o.Archive) && !o.Optimize && !o.Compress && !o.Recompress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C or --recompress")
@@ -652,15 +652,17 @@ Usage: nxpress [options] file or folder...
                       gets what it needs; one that needs neither stays a plain NSZ. Installers
                       do not read the rest yet: decompress such a file with NXPress to install
                       it. --sparse and --archive turn on one half each
-  --skip-sparse-updates  with -C and without --extra, a base game in sparse storage is left
-                      as it is, and so is its update among the files given: the two stay
-                      together as NSP
-  --skip-dlc          with -C, leave the DLC as they are (a file that holds DLC only)
-  --move-skipped DIR  with -C, move what is left as it is into DIR as its turn comes: the
-                      base games in sparse storage (without --extra), their updates with
-                      --skip-sparse-updates and the DLC with --skip-dlc. A file keeps its name
-                      and never replaces one there (it stays where it is then); on another
-                      drive it is copied, read back and compared before the original goes
+  --skip-sparse-updates  with -C or --recompress and without --extra, a base game in sparse
+                      storage is left as it is, and so is its update among the files
+                      given: the two stay together
+  --skip-dlc          with -C or --recompress, leave the DLC as they are (a file that
+                      holds DLC only)
+  --move-skipped DIR  with -C or --recompress, move what is left as it is into DIR as its
+                      turn comes: the base games in sparse storage (without --extra), their
+                      updates with --skip-sparse-updates and the DLC with --skip-dlc. A file
+                      keeps its name and never replaces one there (it stays where it is
+                      then); on another drive it is copied, read back and compared before
+                      the original goes
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)

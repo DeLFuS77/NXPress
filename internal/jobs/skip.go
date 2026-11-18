@@ -98,12 +98,13 @@ func runSkippable(ctx context.Context, path string, job func(context.Context) (s
 // sparseUpdateSkipped is why the update of a game in sparse storage is left as it is with it.
 const sparseUpdateSkipped = "its game uses sparse storage and is left as it is: the update is left with it"
 
-// sparsePairs gives, with -C, --skip-sparse-updates and without the extra compression, the
-// updates among files whose game, among files too, is in sparse storage and so left as it is:
-// they are left as they are with it, whatever comes first in the list. DLC are compressed.
+// sparsePairs gives, with -C or --recompress, --skip-sparse-updates and without the extra
+// compression, the updates among files whose game, among files too, is in sparse storage and so
+// left as it is: they are left as they are with it, whatever comes first in the list. DLC are
+// compressed. In Recompress the game is an NSZ or XCZ that holds it in NCZSECT2 (#132).
 func sparsePairs(ctx context.Context, o Options, action string, files []string) map[string]string {
 	pairs := map[string]string{}
-	if action != "compress" || !o.SkipSparseUpdates || o.Sparse {
+	if (action != "compress" && action != "recompress") || !o.SkipSparseUpdates || o.Sparse {
 		return pairs
 	}
 	order, groups, _ := groupGames(ctx, files)
@@ -124,7 +125,7 @@ func sparsePairs(ctx context.Context, o Options, action string, files []string) 
 				kinds[file][title.Type] = true
 			}
 			if kinds[file]["BASE"] && !sparse && ctx.Err() == nil {
-				sparse = errors.Is(switchfs.NotCompressible(file), switchfs.ErrSparseStorage)
+				sparse = inSparseStorage(action, file)
 			}
 		}
 		if !sparse {
@@ -137,4 +138,15 @@ func sparsePairs(ctx context.Context, o Options, action string, files []string) 
 		}
 	}
 	return pairs
+}
+
+// inSparseStorage tells whether a file holds a game in sparse storage, which the action leaves as
+// it is without the extra compression: in Compress an NSP or XCI no compressor shrinks, in
+// Recompress an NSZ or XCZ that holds it in the extra compression (NCZSECT2).
+func inSparseStorage(action string, path string) bool {
+	if action == "recompress" {
+		facts, err := describeFile(path)
+		return err == nil && facts.Sparse > 0
+	}
+	return errors.Is(switchfs.NotCompressible(path), switchfs.ErrSparseStorage)
 }
