@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/DeLFuS77/NXPress/internal/edensaves"
 	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/portable"
@@ -158,6 +159,11 @@ type App struct {
 	// again (see covers.go)
 	coversMutex sync.Mutex
 	covers      map[string][]byte
+	// the saves of Eden kept in step with the library while the window is open (see eden.go),
+	// and what stops their passes
+	edenOnce sync.Once
+	eden     *edensaves.Service
+	edenStop context.CancelFunc
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -172,6 +178,7 @@ func (a *App) startup(ctx context.Context) {
 	if path, err := jobs.LoadKeys(""); err == nil {
 		a.keys = path
 	}
+	a.startEden(ctx)
 }
 
 // Setup is what the page shows before anything is chosen.
@@ -1203,6 +1210,8 @@ func (a *App) closeQuestion() (question string, yes string, no string) {
 // closed stops the files at work as NXPress closes, and waits for them to remove what they had
 // half written: NXPress ends right after, and its work with it.
 func (a *App) closed(context.Context) {
+	// the saves of Eden stop with the window; a pass going on is a chore waited for below
+	a.stopEden()
 	a.mutex.Lock()
 	finished := a.finished
 	a.mutex.Unlock()

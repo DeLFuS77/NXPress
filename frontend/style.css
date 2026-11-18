@@ -773,7 +773,43 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 /* a place in the Explorer: green when it is there, orange when it needs a look (#87, #88) */
 .pref-text .pref-status.ok { color: var(--ok); font-style: normal; opacity: 1; }
 .pref-text .pref-status.warn { color: var(--warn); font-style: normal; opacity: 1; }
+/* red only for what went wrong, blue for what is going on */
+.pref-text .pref-status.bad { color: var(--bad); font-style: normal; opacity: 1; }
+.pref-text .pref-status.work { color: var(--accent); font-style: normal; opacity: 1; }
 .pref-text label.check.small-check { margin-top: 6px; white-space: normal; }
+/* the saves of Eden: the libraries found, the code to check in the library, the profiles, the
+   conflicts in orange and the games with what each waits for */
+.eden-box { display: flex; flex-direction: column; gap: 8px; }
+.eden-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.eden-row input[type=text] { flex: 1 1 220px; }
+.eden-found { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.eden-found li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); }
+.eden-found li span { flex: 1; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.eden-found li small { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.eden-pairing-text { font-size: 13px; }
+.eden-code { font: 600 22px/1.2 "Cascadia Mono", Consolas, ui-monospace, monospace; letter-spacing: .12em; color: var(--accent); user-select: text; -webkit-user-select: text; }
+.eden-profiles { display: flex; flex-direction: column; gap: 6px; }
+.eden-profile { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.eden-profile > span:first-child { flex: 0 1 140px; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eden-profile > span[aria-hidden] { color: var(--muted); }
+.eden-profile select { flex: 0 1 220px; }
+.eden-conflicts { display: flex; flex-direction: column; gap: 8px; }
+.eden-conflicts:empty { display: none; }
+.eden-conflict { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius-small); background: color-mix(in srgb, var(--warn) 9%, transparent); }
+.eden-conflict > b { font-size: 13px; color: var(--warn); }
+.eden-conflict > b::before { content: "⚠ "; }
+.eden-conflict-save { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.eden-conflict-save > span { flex: 1; min-width: 0; }
+.eden-conflict > small { font-size: 12px; color: var(--muted); }
+.eden-games { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; }
+.eden-games:empty { display: none; }
+.eden-games li { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-top: 1px solid var(--line); }
+.eden-games li:first-child { border-top: 0; }
+.eden-games li b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.eden-games li small { font-size: 12px; color: var(--muted); }
+.eden-games .in-step { color: var(--ok); }
+.eden-games .moves { color: var(--accent); }
+.eden-games .conflict { color: var(--warn); }
 .pref-item > select { min-width: 180px; }
 /* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
 .brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
