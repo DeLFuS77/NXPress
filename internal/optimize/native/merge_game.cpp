@@ -95,13 +95,28 @@ bool Merger::Open(Input in, std::string& error) {
         return false;
     }
     m_base.reset();
-    m_base_ptr = m_in.base_section;
-    if (!m_base_ptr) {
-        m_base = patchview::OpenBase(m_in.base, error);
-        if (!m_base) return false;
-        m_base_ptr = m_base.get();
+    m_base_ptr = nullptr;
+    if (m_in.alone) {
+        // a game alone: its RomFS section as it is; an update or a base cut down to what its update
+        // replaces is no whole game
+        if (patchview::IsPatch(m_in.update.fsh.data())) {
+            error = "an update alone, without its game";
+            return false;
+        }
+        if (patchview::IsSparse(m_in.update.fsh.data())) {
+            error = "a game in sparse storage, whole only with its update";
+            return false;
+        }
+        m_patched = patchview::OpenBase(m_in.update, error);
+    } else {
+        m_base_ptr = m_in.base_section;
+        if (!m_base_ptr) {
+            m_base = patchview::OpenBase(m_in.base, error);
+            if (!m_base) return false;
+            m_base_ptr = m_base.get();
+        }
+        m_patched = patchview::OpenPatched(m_in.update, m_base_ptr, error);
     }
-    m_patched = patchview::OpenPatched(m_in.update, m_base_ptr, error);
     if (!m_patched) return false;
     if (!m_romfs.Open(m_patched.get(), m_in.update.fsh.data(), m_in.hash, error)) return false;
     {
@@ -110,9 +125,10 @@ bool Merger::Open(Input in, std::string& error) {
         m_data_offset = layers >= 2 && layers <= 7 ? Get64(h + 0x10 + (layers - 2) * 0x18) : 0;
     }
     // the runs of the update, when its data level is not compressed (then the runs are places of
-    // the RomFS itself): what it reads more than once from the base is stored once
+    // the RomFS itself): what it reads more than once from the base is stored once. A game alone
+    // is one run.
     m_runs.clear();
-    if (!m_romfs.Compressed()) {
+    if (!m_in.alone && !m_romfs.Compressed()) {
         std::vector<patchview::IndirectEntry> ie;
         uint64_t end = 0;
         if (!patchview::IndirectEntries(*m_patched, ie, end)) {
@@ -150,7 +166,7 @@ bool Merger::PackOnce(const lz4pack::WriteFn& write, const lz4pack::StepFn& step
 uint64_t Merger::RomfsStart() const {
     uint32_t s = 0;
     std::memcpy(&s, m_in.update_header.data() + 0x240 + m_in.update_index * 0x10, 4);
-    return uint64_t(s) * 0x200;
+    return uint64_t(s) * 0x200 + mergenca::FirstShift(m_in.update_header.data());
 }
 
 uint64_t Merger::DataPlace() const {

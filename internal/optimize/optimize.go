@@ -3,8 +3,10 @@
 // update: its program NCA merged with the update, its RomFS with the LZ4 layer of the NCA (the LZ4
 // HC of Nintendo at level 9, what is held again stored once, of each block the smaller of
 // Nintendo's and the new one), a CNMT made again, the control and legal information of the update,
-// and the tickets. The merge is the code of NXDock (internal/optimize/native), run on the
-// computer; see docs/optimize-install.md.
+// and the tickets. A game alone (merged already, or never updated) is made again the same way from
+// its own program, its sections from 0x4000 as Nintendo lays them out, so its NSZ reads in every
+// reader. The merge is the code of NXDock (internal/optimize/native), run on the computer; see
+// docs/optimize-install.md.
 package optimize
 
 import (
@@ -44,12 +46,13 @@ type Result struct {
 	ProgramID     string // the content ID of the merged program
 	ProgramHash   string // its SHA-256
 	OnePass       bool   // the merged program written as it was packed, not packed twice
+	Alone         bool   // a game alone (merged already, or with no update) made again
 }
 
 // ErrNotBuilt is told when NXPress is built without cgo, which the code of NXDock needs.
 var ErrNotBuilt = errors.New("this build of NXPress has no Optimize for install: it needs the C++ code built in (cgo)")
 
-// ErrNotPair is told when the files are not one game and its update.
+// ErrNotPair is told when the files are not one game (with its update, or alone) this optimizes.
 type ErrNotPair struct{ Why string }
 
 func (e ErrNotPair) Error() string { return e.Why }

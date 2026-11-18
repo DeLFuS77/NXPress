@@ -70,6 +70,15 @@ std::array<uint8_t, 0x200> RomfsHeader(const uint8_t* update_fsh, const std::vec
     return f;
 }
 
+uint64_t FirstShift(const uint8_t* header) {
+    uint64_t first = UINT64_MAX;
+    for (int i = 0; i < 4; i++) {
+        const uint32_t s = Get32(header + 0x240 + i * 0x10), e = Get32(header + 0x240 + i * 0x10 + 4);
+        if (e > s) first = std::min(first, uint64_t(s) * 0x200);
+    }
+    return first < kFirstSection ? kFirstSection - first : 0;
+}
+
 bool PlanNca(const uint8_t* update_header, int romfs_index, uint64_t romfs_size, const std::array<uint8_t, 0x200>& romfs_fsh,
              const lz4pack::HashFn& hash, Plan& out) {
     out = Plan{};
@@ -84,8 +93,9 @@ bool PlanNca(const uint8_t* update_header, int romfs_index, uint64_t romfs_size,
     }
     std::sort(out.sections.begin(), out.sections.end(), [](const Placed& a, const Placed& b) { return a.old_start < b.old_start; });
     if (std::none_of(out.sections.begin(), out.sections.end(), [](const Placed& p) { return p.romfs; })) return false;
-    // each where it was until the RomFS, which takes its new size; those after it move with it
-    int64_t shift = 0;
+    // each where it was until the RomFS, which takes its new size; those after it move with it; all
+    // of them moved when the first starts before kFirstSection
+    int64_t shift = int64_t(FirstShift(hd));
     for (auto& p : out.sections) {
         p.start = uint64_t(int64_t(p.old_start) + shift);
         if (p.romfs) {
