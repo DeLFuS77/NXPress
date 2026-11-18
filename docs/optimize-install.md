@@ -50,8 +50,11 @@ no update under it. So:
 
 The files given are grouped by game, as `--pack-games` groups them (a SuperNSP, an XCI or an XCZ
 holding the game and its update works too). For each game with its base and an update, the newest
-update is taken; a game without its update, an update without its game and the DLC are left as they
-are, each told why. The NSP holds:
+update is taken. A game that holds its update already (its version is that of an update: optimized
+before, or merged by another tool) is made again alone, from its own program and contents, the same
+way. Any other game without its update (of version 0, also one Nintendo ships compressed: an update
+must still read over it), an update without its game and the DLC are left as they are, each told
+why. The NSP holds:
 
 | File | What it is |
 |---|---|
@@ -71,6 +74,11 @@ It is the program NCA of the update made whole, so it no longer needs the base g
   program ID (its ticket keeps opening it). Only the sections and their FS header hashes change, so
   its header is no longer signed by Nintendo: this is why sigpatches are needed.
 - **ExeFS and logo**: those of the update, byte for byte, moved to their new place.
+- **Places**: every section keeps its place, those after the RomFS moved with its new size. When
+  the first section starts before 0x4000 (some tools that merge games put it at 0xC00), they all
+  move for it to start at 0x4000, as Nintendo lays them out: an NSZ keeps the first 0x4000 bytes of
+  an NCA as they are, encrypted, and some readers (Eden) take whatever section starts there as
+  decrypted.
 - **RomFS**: the RomFS the game reads with its update (the base game through the indirect table of
   the update, its sparse storage when it has one, and the compressed storage of either), written as
   a plain RomFS section:

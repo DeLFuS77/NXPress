@@ -290,7 +290,9 @@ func (g *game) program(m *meta, idOffset uint8) (*nca, int, error) {
 	return found, programs, nil
 }
 
-// pair finds the game and its newest update among the CNMTs read.
+// pair finds the game and its newest update among the CNMTs read. The update is nil for a game
+// alone: one with no update newer than it (merged already, as an optimized game or one hacBrewPackLZ
+// merged, which holds the update; or one never updated).
 func (g *game) pair() (*meta, *meta, error) {
 	var base, update *meta
 	for _, m := range g.metas {
@@ -308,12 +310,9 @@ func (g *game) pair() (*meta, *meta, error) {
 		return nil, nil, errors.New("no base game among the files given")
 	}
 	for _, m := range g.metas {
-		if m.typ == metaPatch && m.titleID == base.titleID|0x800 && (update == nil || m.version > update.version) {
+		if m.typ == metaPatch && m.titleID == base.titleID|0x800 && m.version > base.version && (update == nil || m.version > update.version) {
 			update = m
 		}
-	}
-	if update == nil {
-		return nil, nil, fmt.Errorf("no update of %016X among the files given", base.titleID)
 	}
 	return base, update, nil
 }

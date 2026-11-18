@@ -777,7 +777,10 @@ Usage: nxpress [options] file or folder...
                       its files or in -o (an NSZ with -C): one Application of the version of
                       the update, its program merged with the update and its RomFS packed with
                       the LZ4 of the NCA (LZ4 HC level 9, what is held twice stored once, of
-                      each block the smaller), checked whole before it gets its name. Install
+                      each block the smaller), checked whole before it gets its name. A game
+                      that holds its update already (merged by this or by another tool) is
+                      made again alone, its sections from 0x4000 as Nintendo lays them out,
+                      so its NSZ reads in every emulator. Install
                       it with NXDock or DBI, with sigpatches (firmware 12.0.0 or newer),
                       after deleting the update of the game from the console: left there, it
                       is read over the optimized game and the game closes with an error. Do

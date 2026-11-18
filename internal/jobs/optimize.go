@@ -21,7 +21,7 @@ const DefaultOptimizeTemplate = "{name} [{id}][v{version}] (optimized)"
 // what each step of the optimization is told as
 var optimizeSteps = map[string]string{
 	"Decompressing": "Decompressing",
-	"Reading":       "Reading the game with its update",
+	"Reading":       "Reading the game",
 	"Measuring":     "Optimizing (measuring)",
 	"Writing":       "Optimizing (writing)",
 	"Checking":      "Checking the RomFS",
@@ -38,8 +38,10 @@ func optimizeTemplate(o Options) string {
 
 // OptimizeGames optimizes the files given by game (--optimize, experimental): each game with its
 // newest update into one NSP (an NSZ with -C) that takes the least room installed, next to its
-// files or in -o. A game without its update, an update without its game and the DLC are left as
-// they are, told why. It gives how many files failed.
+// files or in -o. A game that holds its update already (merged: its version is that of an update)
+// is made again alone, laid out as Nintendo lays it out. Any other game without its update, an
+// update without its game and the DLC are left as they are, told why. It gives how many files
+// failed.
 func OptimizeGames(ctx context.Context, o Options, out Output) int {
 	sources, missing := Inputs(o.Files, Takes["optimize"])
 	failed := len(missing)
@@ -73,12 +75,12 @@ func OptimizeGames(ctx context.Context, o Options, out Output) int {
 			}
 			continue
 		}
-		game, dlcs, hasBase, hasUpdate := optimizeFiles(files)
+		game, dlcs, hasBase, hasUpdate, merged := optimizeFiles(files)
 		for _, dlc := range dlcs {
 			out.Done(dlc, "", "", Skipped("a DLC is not optimized: install it as it is, next to the optimized game"))
 		}
-		if !hasBase || !hasUpdate {
-			why := "Optimize for install needs the game and its update: its update is not among the files given"
+		if !hasBase || !hasUpdate && !merged {
+			why := "Optimize for install needs the game and its update, or one file that holds both already: its update is not among the files given"
 			if !hasBase {
 				why = "Optimize for install needs the game and its update: the game is not among the files given"
 			}
@@ -105,8 +107,10 @@ func OptimizeGames(ctx context.Context, o Options, out Output) int {
 }
 
 // optimizeFiles splits the files of a game: the game and its updates (a file holding both
-// too), and the DLC files.
-func optimizeFiles(files []string) (game []string, dlcs []string, hasBase bool, hasUpdate bool) {
+// too), and the DLC files. merged tells the game holds its update already: it is of the version of
+// an update (merged by Optimize for install or by another tool). Being compressed with LZ4 says
+// nothing of it: Nintendo ships some games so, and an update must still read over them.
+func optimizeFiles(files []string) (game []string, dlcs []string, hasBase bool, hasUpdate bool, merged bool) {
 	for _, file := range files {
 		titles, err := ReadTitles(file)
 		if err != nil {
@@ -116,6 +120,9 @@ func optimizeFiles(files []string) (game []string, dlcs []string, hasBase bool, 
 		kinds := map[string]bool{}
 		for _, title := range titles {
 			kinds[title.Type] = true
+			if title.Type == "BASE" && title.Version > 0 {
+				merged = true
+			}
 		}
 		hasBase = hasBase || kinds["BASE"]
 		hasUpdate = hasUpdate || kinds["UPD"]
@@ -125,7 +132,7 @@ func optimizeFiles(files []string) (game []string, dlcs []string, hasBase bool, 
 		}
 		game = append(game, file)
 	}
-	return game, dlcs, hasBase, hasUpdate
+	return game, dlcs, hasBase, hasUpdate, merged
 }
 
 // optimizeName is the name of the optimized file of a game: by the game and its newest update,
@@ -212,8 +219,17 @@ func optimizeGame(ctx context.Context, o Options, files []string, next string, o
 	if err := finish(o, written, name); err != nil {
 		return "", "", err
 	}
-	note := fmt.Sprintf("experimental: v%d, one Application; installed, the game and its update take %s, now %s (%s smaller); install it with NXDock or DBI, with sigpatches, after deleting the update of the game from the console, and do not install official updates over it",
-		res.Version, size(res.InputSize), size(res.OutputSize), percent(res.InputSize-res.OutputSize, res.InputSize))
+	took := "the game and its update take"
+	if res.Alone {
+		// a game merged already, by another tool: made again, it may come out a little bigger
+		took = "the game took"
+	}
+	change := percent(res.InputSize-res.OutputSize, res.InputSize) + " smaller"
+	if res.OutputSize > res.InputSize {
+		change = percent(res.OutputSize-res.InputSize, res.InputSize) + " bigger"
+	}
+	note := fmt.Sprintf("experimental: v%d, one Application; installed, %s %s, now %s (%s); install it with NXDock or DBI, with sigpatches, after deleting the update of the game from the console, and do not install official updates over it",
+		res.Version, took, size(res.InputSize), size(res.OutputSize), change)
 	if o.Compress {
 		note += fmt.Sprintf("; the NSZ is %s", size(packed))
 	}

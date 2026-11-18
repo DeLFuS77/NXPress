@@ -78,9 +78,11 @@ func TestOptimizeGamesLeavesWhatItCannot(t *testing.T) {
 		t.Fatalf("left: %v", left)
 	}
 
+	// a game of version 0 alone holds no update: left as it is (one of a higher version, merged
+	// already, would be made again alone)
 	results = &testkit.Results{}
 	OptimizeGames(context.Background(), Options{Optimize: true, Files: []string{base}}, results)
-	if got := results.Results[base].Err; got == nil || !strings.Contains(got.Error(), "its update is not among the files given") {
+	if got := results.Results[base].Err; got == nil || !IsSkipped(got) || !strings.Contains(got.Error(), "or one file that holds both already: its update is not among the files given") {
 		t.Fatalf("a game alone: %v", got)
 	}
 }

@@ -38,7 +38,8 @@ typedef struct {
 enum { NXO_MEASURE = 1, NXO_WRITE = 2 };
 
 // `handle` is given back to every call of Go. Every function giving int gives 1 when it worked,
-// 0 with the reason in err.
+// 0 with the reason in err. nxo_merger_open with `base` NULL makes a game alone (merged already, or
+// with no update) again: `update` is then its own program NCA.
 nxo_merger* nxo_merger_new(uintptr_t handle);
 int nxo_merger_open(nxo_merger* m, const nxo_section* base, const nxo_section* update, int update_index,
                     const uint8_t* update_header, int level, unsigned threads, char* err, size_t errlen);
@@ -82,7 +83,8 @@ typedef struct {
 // The meta NCA of the merged game, from the meta NCAs of the base and the update (their headers
 // decrypted, 0xC00 bytes, and their section decrypted) and the merged program: its header
 // (decrypted, 0xC00 bytes into out_header), its section not encrypted yet (from 0xC00 in the NCA,
-// to be freed with nxo_free), and the contents of its CNMT.
+// to be freed with nxo_free), and the contents of its CNMT. With `update_header` NULL, the meta NCA
+// of a game alone, from its own (the base's) with the new program.
 int nxo_merged_meta(uintptr_t handle, const uint8_t* base_header, const uint8_t* base_section, size_t base_len,
                     const uint8_t* update_header, const uint8_t* update_section, size_t update_len, const nxo_content* program,
                     uint8_t* out_header, uint8_t** out_section, size_t* out_len, nxo_content** contents, size_t* count,

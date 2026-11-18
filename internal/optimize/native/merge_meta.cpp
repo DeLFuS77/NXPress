@@ -126,6 +126,24 @@ bool MergedCnmt(const Cnmt& base, const Cnmt& update, const Content& program, Cn
     return have_program;
 }
 
+bool GameCnmt(const Cnmt& game, const Content& program, Cnmt& out) {
+    if (game.type != kTypeApplication || game.extended.size() < 0x10 || (game.header[0x14] & kAttributeCompacted)) return false;
+    out = game;
+    Put32(out.extended.data() + 8, std::max(Get32(game.extended.data() + 8), kFirmware12));
+    out.contents.clear();
+    bool have_program = false;
+    for (const auto& c : game.contents) {
+        if (c.type == kContentDeltaFragment) continue;
+        if (c.type == kContentProgram && c.id_offset == program.id_offset) {
+            out.contents.push_back(program);
+            have_program = true;
+        } else {
+            out.contents.push_back(c);
+        }
+    }
+    return have_program;
+}
+
 bool CnmtFromSection(const std::vector<uint8_t>& s, const uint8_t* fsh, std::vector<uint8_t>& cnmt) {
     if (fsh[3] != 2) return false; // HierarchicalSha256
     const uint64_t po = Get64(fsh + 0x40), ps = Get64(fsh + 0x48);
