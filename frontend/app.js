@@ -2842,13 +2842,13 @@ const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : stat
 // total, the files at once left to them, and the biggest first
 const defaultThreads = () => ({ totalThreads: state.setup.threads, multi: 0, biggestFirst: true });
 const builtinPresets = () => [
-  { name: t("presetInstallers"), level: 18, block: false, builtin: true, ...defaultThreads() },
-  { name: t("presetEmulators"), level: 18, block: true, builtin: true, ...defaultThreads() },
-  { name: t("presetFast"), level: 3, block: false, builtin: true, ...defaultThreads() },
+  { name: t("presetInstallers"), level: 18, block: false, builtin: true },
+  { name: t("presetEmulators"), level: 18, block: true, builtin: true },
+  { name: t("presetFast"), level: 3, block: false, builtin: true },
   // the smallest files: the highest level, for installers, and with the extra compression too,
   // which asks first, as its box does (#125)
-  { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false, ...defaultThreads() },
-  { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true, ...defaultThreads() },
+  { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
+  { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
 // threadsOf gives the threads kept in saved settings or a preset: the total, the most files at
 // once (0: Auto) and the order, within what this computer offers. Kept before there was a total,
