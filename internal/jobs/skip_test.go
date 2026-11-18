@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"crypto/sha256"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -67,7 +68,7 @@ func TestSparsePairsNeedTheGameLeftAsItIs(t *testing.T) {
 	if pairs := sparsePairs(context.Background(), Options{SkipSparseUpdates: true, Sparse: true}, "compress", files); len(pairs) != 0 {
 		t.Errorf("with the extra compression: %v", pairs)
 	}
-	if pairs := sparsePairs(context.Background(), Options{SkipSparseUpdates: true}, "recompress", files); len(pairs) != 0 {
+	if pairs := sparsePairs(context.Background(), Options{SkipSparseUpdates: true}, "decompress", files); len(pairs) != 0 {
 		t.Errorf("in another action: %v", pairs)
 	}
 	if pairs := sparsePairs(context.Background(), Options{SkipSparseUpdates: true}, "compress", []string{update}); len(pairs) != 0 {
@@ -142,5 +143,52 @@ func TestFileAtWorkSkippedByHand(t *testing.T) {
 	o.Files = []string{update}
 	if failed := RunJobs(WithSkips(context.Background(), NewSkips()), o, again); failed != 0 {
 		t.Fatalf("the update: %v", again.Results)
+	}
+}
+
+// In Recompress what Compress leaves as it is is left too (#132): a game in sparse storage kept in
+// the extra compression stays as it is without it, its update stays with it with
+// --skip-sparse-updates, the DLC stay as they are with --skip-dlc, and with --move-skipped the
+// three go to its folder as their turn comes. Nothing of them is written again.
+func TestRecompressLeavesWhatCompressLeaves(t *testing.T) {
+	testkit.Isolate(t)
+	folder := t.TempDir()
+	base, update, dlc := testkit.Game(t, folder)
+	if failed := RunJobs(context.Background(), Options{Compress: true, Level: 3, Threads: 1, Multi: 1, Files: []string{base, update, dlc}}, testkit.Quiet{}); failed != 0 {
+		t.Fatalf("compress: %d failed", failed)
+	}
+	nsz := func(path string) string {
+		os.Remove(path)
+		return strings.TrimSuffix(path, ".nsp") + ".nsz"
+	}
+	base, update, dlc = nsz(base), nsz(update), nsz(dlc)
+	// the game, as if it were in sparse storage kept in NCZSECT2
+	real := describeFile
+	describeFile = func(path string) (switchfs.FileFacts, error) {
+		facts, err := real(path)
+		if SameFile(path, base) {
+			facts.Sparse = 1
+		}
+		return facts, err
+	}
+	t.Cleanup(func() { describeFile = real })
+
+	if pairs := sparsePairs(context.Background(), Options{SkipSparseUpdates: true, Sparse: true}, "recompress", []string{update, base}); len(pairs) != 0 {
+		t.Errorf("with the extra compression: %v", pairs)
+	}
+	aside := filepath.Join(t.TempDir(), "aside")
+	out := &testkit.Results{}
+	o := Options{Recompress: true, Level: 5, Threads: 1, Multi: 1, Files: []string{update, dlc, base}, SkipSparseUpdates: true, SkipDlc: true, MoveSkipped: aside}
+	if failed := RunJobs(context.Background(), o, out); failed != 0 {
+		t.Fatalf("recompress: %d failed: %v", failed, out.Results)
+	}
+	for path, reason := range map[string]string{base: sparseNoPlain, update: sparseUpdateSkipped, dlc: dlcSkipped} {
+		err := out.Results[path].Err
+		if err == nil || !IsSkipped(err) || !strings.HasPrefix(err.Error(), reason) {
+			t.Errorf("%s: %v", filepath.Base(path), err)
+		}
+		if testkit.Exists(path) || !testkit.Exists(filepath.Join(aside, filepath.Base(path))) {
+			t.Errorf("%s was not moved to its folder", filepath.Base(path))
+		}
 	}
 }

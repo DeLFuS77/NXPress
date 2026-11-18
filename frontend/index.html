@@ -174,16 +174,17 @@
           <span><b data-t="forEmulators"></b><small data-t="forEmulatorsHint"></small>
           <span class="tags"><i class="yes">NXDock</i><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
         </div>
-        <!-- what Compress leaves as it is, and the folder it goes to as its turn comes: the
-             games in sparse storage, their updates and the DLC, when they are skipped -->
-        <div class="left-group" data-for="compress">
+        <!-- what Compress and Recompress leave as it is, and the folder it goes to as its turn
+             comes: the games in sparse storage, their updates and the DLC, when they are skipped;
+             each help tells what it does in the section open (#132) -->
+        <div class="left-group" data-for="compress recompress">
           <div class="label" data-t="leftAsIs"></div>
           <label class="check"><input id="skip-dlc" type="checkbox"><span data-t="skipDlc"></span></label>
-          <p class="hint" data-t="skipDlcHint"></p>
+          <p class="hint" data-t="skipDlcHint" data-t-recompress="skipDlcRecompressHint"></p>
           <!-- without the extra compression a base game in sparse storage is left as it is: its
                update can be left with it, so the two stay together -->
           <label class="check"><input id="skip-sparse-updates" type="checkbox"><span data-t="skipSparseUpdates"></span></label>
-          <p class="hint" data-t="skipSparseUpdatesHint"></p>
+          <p class="hint" data-t="skipSparseUpdatesHint" data-t-recompress="skipSparseUpdatesRecompressHint"></p>
           <div class="move-field">
             <div class="label" data-t="moveSkipped"></div>
             <div class="path"><span id="move-skipped"></span><button id="choose-move-skipped" data-t="choose"></button><button id="reset-move-skipped" class="quiet icon" data-t-title="moveSkippedNone" data-t-label="moveSkippedNone">✕</button></div>
@@ -202,10 +203,12 @@
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
         <!-- Optimize for install (experimental): each game with its update into one NSZ that takes
-             the least room installed; the files of its list are the games and their updates -->
-        <div class="extra-field" data-for="compress">
+             the least room installed; the files of its list are the games and their updates. In
+             Recompress too, where it goes through an NSP as in Compress (#132) -->
+        <div class="extra-field" data-for="compress recompress">
           <label class="check"><input id="optimize" type="checkbox"><span data-t="optimize"></span></label>
           <p class="hint" data-t="optimizeHint"></p>
+          <p class="hint always" data-for="recompress" data-t="optimizeRecompress"></p>
         </div>
         </details>
         <p class="hint" data-t="xczBlock"></p>

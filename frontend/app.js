@@ -20,13 +20,14 @@ const isNup = path => /\.nup$/i.test(path);
 const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
 // whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
 // dump folders only
-// Recompress needs them only with the extra compression, which goes through an NSP (#92)
+// Recompress needs them only with the extra compression or Optimize for install, which go
+// through an NSP (#92, #132)
 // Combine with dump folders only: each becomes a NUP of its own, so the choice between a SuperNSP
 // per game and one file with everything does not apply, and the template names each NUP
 const onlyDumps = () => state.mode === "pack" && state.items.length > 0 && state.items.every(item => item.dump);
 // the template names a file per game: a SuperNSP per game, or the NUP of each dump folder
 const packEach = () => $("pack-games").checked || onlyDumps();
-const needsKeys = mode => (mode === "recompress" ? $("extra").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
+const needsKeys = mode => (mode === "recompress" ? $("extra").checked || $("optimize").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
 
 // the icon of each section: lines drawn on a grid of 24, in the color of the text
 const icons = {
@@ -1419,7 +1420,7 @@ function refreshHelp() {
 function skippable(row) {
   const run = state.lastRun;
   if (!state.busy || !run || row.run !== run.started || !["work", "waiting"].includes(row.status)) return false;
-  return !["pack", "measure"].includes(run.mode) && !(run.mode === "compress" && run.request.optimize);
+  return !["pack", "measure"].includes(run.mode) && !(["compress", "recompress"].includes(run.mode) && run.request.optimize);
 }
 function showRowMenu(row, remove, x, y) {
   hidePop();
@@ -1956,7 +1957,8 @@ function render() {
     app().RelabelExplorerMenu(menuTexts()).catch(() => { });
   }
   paintStatus();
-  document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t(element.dataset.t); });
+  // a text with one of its own for Recompress says that one there (#132)
+  document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t((state.mode === "recompress" && element.dataset.tRecompress) || element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
   // the name of a button that shows an icon, or no text on a narrow window
   document.querySelectorAll("[data-t-label]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.tLabel)); });
@@ -2762,17 +2764,19 @@ function settings() {
     repair: $("repair").checked,
     // one box for the two experimental formats: each file gets the one it needs, or none
     sparse: $("extra").checked, archive: $("extra").checked,
-    // Optimize for install, in Compress
+    // Optimize for install, in Compress and Recompress
     optimize: $("optimize").checked,
-    // the update of a game in sparse storage left as it is with it, in Compress
+    // the update of a game in sparse storage left as it is with it, in Compress and Recompress
     skipSparseUpdates: $("skip-sparse-updates").checked,
-    // Compress: the DLC left as they are, and the folder what is left goes to as its turn comes
+    // Compress and Recompress: the DLC left as they are, and the folder what is left goes to as
+    // its turn comes
     skipDlc: $("skip-dlc").checked, moveSkipped: state.moveSkipped,
   };
 }
 
-// Compress with Optimize for install on: the games with their updates, into one NSZ each
-const optimizing = () => state.mode === "compress" && $("optimize").checked;
+// Compress or Recompress with Optimize for install on: the games with their updates, into one NSZ
+// each
+const optimizing = () => ["compress", "recompress"].includes(state.mode) && $("optimize").checked;
 // Convert from NSP and NSZ into game cards
 const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
 // the files the list takes: Optimize for install takes NSZ and XCZ too, and Convert into game

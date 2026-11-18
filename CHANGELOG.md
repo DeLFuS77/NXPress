@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Recompress has Optimize for install too, and what Compress leaves as it is: Skip DLC, Skip the updates of games in sparse storage and Move what is skipped to, with a help that tells what each one does there. Thanks to @NikoMuffin (#132)
+
 ## 1.7.24
 
 ### Improvements
