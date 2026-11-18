@@ -109,6 +109,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		}
 	}
 	if action == "optimize" {
+		// one game at a time: with a total of threads, it takes all of them the memory takes
+		if o.TotalThreads > 0 {
+			o.Threads = switchfs.LimitThreads(strconv.Itoa(o.Level), o.TotalThreads, 1)
+		}
 		return OptimizeGames(ctx, o, out)
 	}
 	if action == "pack" && o.PackGames {
@@ -169,9 +173,14 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	)
 	// a file is started only while the work is not paused: renaming, -i and the files checked
 	// before have no progress of their own to pause in. Each file takes the threads and the
-	// files at once set as it starts, which the window may change while the work goes on.
+	// files at once set as it starts, which the window may change while the work goes on, or
+	// with a total of threads its share of them.
 	eachFile(ctx, o, files, out, func(path string, o Options) {
-		threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		// its share of the total is within what the memory takes already
+		threads := o.Threads
+		if o.TotalThreads == 0 {
+			threads = limitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		}
 		// its LZ4 blocks keep to its share of the processors among the files at once now
 		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
 		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
@@ -219,6 +228,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	}
 	return failed
 }
+
+// limitThreads lowers the threads of each file when the memory is short (switchfs.LimitThreads);
+// a measure stands in for it, to compare settings on the same threads.
+var limitThreads = switchfs.LimitThreads
 
 // waitWhilePaused waits while the work is paused, in the window; the console has no pause.
 func waitWhilePaused(out Output) {
