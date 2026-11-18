@@ -861,6 +861,12 @@ type Request struct {
 	NupIconCrops map[string]nup.Crop `json:"nupIconCrops"`
 	// Split: what to take out of each NUP, by its path (#138); a NUP not named, all of it
 	SplitParts map[string]jobs.SplitParts `json:"splitParts"`
+	// the threads of the whole work, which NXPress shares among the files at work by itself (0:
+	// each file takes Threads); with it, Multi is the most files at once, 0 to leave them to the
+	// total (one for every 3 threads)
+	TotalThreads int `json:"totalThreads"`
+	// the files waiting start biggest first
+	BiggestFirst bool `json:"biggestFirst"`
 }
 
 // requestOptions are the options of the work the page asks for, before they are checked.
@@ -868,6 +874,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 	o := jobs.Options{
 		Level: request.Level, Block: request.Block, Threads: request.Threads, Multi: max(1, request.Multi),
 		Output: request.Output, Overwrite: request.Overwrite, RmSource: request.RemoveSource, Files: request.Files,
+		TotalThreads: max(0, request.TotalThreads), BiggestFirst: request.BiggestFirst, MultiGiven: request.Multi > 0,
 	}
 	if request.Mode == "verify" {
 		o.VerifyLevel = request.VerifyLevel
@@ -980,7 +987,7 @@ func (a *App) Start(request Request) error {
 	ctx, cancel := context.WithCancel(a.ctx)
 	skips := jobs.NewSkips()
 	ctx = jobs.WithSkips(ctx, skips)
-	live := jobs.NewLive(o.Threads, o.Multi)
+	live := jobs.NewLiveFor(o)
 	ctx = jobs.WithLive(ctx, live)
 	finished := make(chan struct{})
 	a.cancel, a.finished, a.skips, a.live = cancel, finished, skips, live
@@ -1034,6 +1041,18 @@ func (a *App) SetLive(threads int, multi int) {
 	defer a.mutex.Unlock()
 	if a.live != nil {
 		a.live.Set(threads, multi)
+	}
+}
+
+// SetLiveTotal changes the total of threads of the work going on, which NXPress shares among its
+// files (0: each file takes the threads of SetLive), and whether the files waiting start biggest
+// first: a file at work keeps the threads it took, and the change applies from the next file.
+// Without a work it does nothing.
+func (a *App) SetLiveTotal(total int, biggestFirst bool) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.live != nil {
+		a.live.SetTotal(total, biggestFirst)
 	}
 }
 

@@ -694,3 +694,43 @@ func TestRequestOfRecompressLeavesAndOptimizes(t *testing.T) {
 		t.Fatalf("recompress with optimize: %+v", o)
 	}
 }
+
+// A request carries the total of threads and the order of the files, with the files at once left
+// to the total when none are asked; the work at hand starts with them and the window changes them
+// while it goes on.
+func TestTotalThreadsOfTheWorkAtHand(t *testing.T) {
+	asked := Request{Mode: "compress", Files: []string{"x.nsp"}, Threads: 4, Multi: 0, TotalThreads: 21, BiggestFirst: true}
+	o := (&App{}).requestOptions(asked)
+	if err := o.Check(); err != nil || o.TotalThreads != 21 || !o.BiggestFirst || o.Multi != 0 {
+		t.Fatalf("total without files at once: %v %+v", err, o)
+	}
+	asked.Multi = 3
+	if o := (&App{}).requestOptions(asked); o.Check() != nil || o.Multi != 3 {
+		t.Fatalf("total with files at once: %+v", o)
+	}
+	asked.TotalThreads = 0
+	if o := (&App{}).requestOptions(asked); o.Check() != nil || o.TotalThreads != 0 || o.Multi != 3 || o.Threads != 4 {
+		t.Fatalf("no total: %+v", o)
+	}
+
+	catchEvents(t)
+	a := &App{ctx: context.Background()}
+	a.SetLiveTotal(4, false)
+	if err := a.Start(Request{Mode: "recompress", Files: []string{t.TempDir()}, Watch: true, Threads: 6, TotalThreads: 12, BiggestFirst: true}); err != nil {
+		t.Fatal(err)
+	}
+	a.mutex.Lock()
+	live := a.live
+	a.mutex.Unlock()
+	if total, biggest := live.Total(); total != 12 || !biggest {
+		t.Fatalf("started with a total of %d, biggest first %v", total, biggest)
+	}
+	if _, multi := live.Values(); multi != 0 {
+		t.Fatalf("started with %d files at once, want them left to the total", multi)
+	}
+	a.SetLiveTotal(8, false)
+	if total, biggest := live.Total(); total != 8 || biggest {
+		t.Fatalf("changed to a total of %d, biggest first %v", total, biggest)
+	}
+	a.closed(context.Background())
+}
