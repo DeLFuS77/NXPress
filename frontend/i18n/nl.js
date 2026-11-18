@@ -97,7 +97,7 @@ texts.nl = {
   measureHint: "Comprimeert een paar seconden van het eerste spel in de lijst met meerdere threads en bestanden tegelijk, op het gekozen niveau en type, en zet het snelste in deze velden. Duurt 1 tot 3 minuten.", measureNeedsGame: "Voeg een NSP of XCI toe om mee te meten.",
   measureTitle: "Meting van deze computer", measureSpeed: "Snelheid, alle bestanden samen", measureApplied: "toegepast", close: "Sluiten",
   measureIntro: (p, l, b) => `${p} processors, niveau ${l}, ${b ? "in blokken" : "solide"}: elke instelling comprimeerde een paar seconden een deel van het spel.`,
-  measureResult: (th, m, s, tm) => `Toegepast: ${th} threads per bestand en ${m} tegelijk, ${s} MB/s, ongeveer ${tm} voor 10 GB.`,
+  measureResult: (total, m, s, tm) => `Toegepast: ${total} threads in totaal en ${m} bestanden tegelijk, ${s} MB/s, ongeveer ${tm} voor 10 GB.`,
   measureKept: (th, m, s) => `${th} threads × ${m} tegelijk haalden ${s} MB/s, minder dan 5% sneller: de lichtere instelling blijft, die gebruikt minder geheugen en heeft elk bestand eerder af.`, takesUpdates: "updates",
   measureChange: "Je kunt ze wijzigen onder Geavanceerd; ze worden met je instellingen bewaard.",
   auto: "Automatisch", watch: "Aan de lijst toegevoegde mappen in de gaten houden", watchHint: "Zodra het werk begonnen is, houdt NXPress de mappen in de gaten die met Map toevoegen zijn toegevoegd of op het venster zijn neergezet, en verwerkt het de bestanden die er later in worden gekopieerd, tot je op Stoppen drukt. Los toegevoegde bestanden worden niet in de gaten gehouden.",
@@ -124,10 +124,15 @@ texts.nl = {
   leftAsIs: "Wat blijft zoals het is", skipDlc: "DLC overslaan", skipDlcHint: "DLC blijven zoals ze zijn, als NSP; games en updates worden gecomprimeerd.",
   moveSkipped: "Overgeslagen verplaatsen naar", moveSkippedNone: "Niet verplaatst, het blijft waar het is",
   moveSkippedHint: "Is een bestand aan de beurt en blijft het zoals het is, dan gaat het naar deze map: games in sparse storage, en hun updates en de DLC als ze worden overgeslagen. Een bestand dat er al staat wordt nooit vervangen; op een andere schijf wordt het gekopieerd en gecontroleerd voordat het origineel wordt verwijderd.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "Tijdens het werk", liveFewer: "Minder", liveMore: "Meer",
-  livePending: (threads, multi, all) => "Vanaf het volgende bestand: " + (all ? `threads per bestand ${threads} · ` : "") + `bestanden tegelijk ${multi}`,
-  liveChanged: (threads, multi, all) => "Gewijzigd vanaf het volgende bestand: " + (all ? `threads per bestand ${threads} · ` : "") + `bestanden tegelijk ${multi}`,
+  livePending: (total, files, all) => "Vanaf het volgende bestand: " + (all ? `threads in totaal ${total} · ` : "") + `bestanden tegelijk ${files}`,
+  liveChanged: (total, files, all) => "Gewijzigd vanaf het volgende bestand: " + (all ? `threads in totaal ${total} · ` : "") + `bestanden tegelijk ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Threads in totaal", totalThreadsHint: "NXPress verdeelt ze zelf over de bestanden in bewerking: de threads die een bestand vrijlaat, gaan naar de volgende.",
+  filesAuto: "Auto", biggestFirst: "Grootste eerst", biggestFirstHint: "Begint met de grootste bestanden, zodat het werk niet eindigt met één groot bestand alleen.",
+  threadsInUse: (used, total) => `${used} van ${total} in gebruik`, fileThreads: n => n === 1 ? "1 thread" : `${n} threads`,
   steps: { Moving: "Verplaatsen", Measuring: "Meten", Reading: "Lezen", Optimizing: "Optimaliseren", Checking: "Controleren",
     Comparing: "Vergelijken", Estimating: "Schatten", Trimming: "Inkorten", Recompressing: "Opnieuw comprimeren", Compressing: "Comprimeren",
     Packaging: "Inpakken", Unpacking: "Uitpakken", Verifying: "Controleren", Decompressing: "Uitpakken", Converting: "Omzetten", Packing: "Samenvoegen", Splitting: "Splitsen", Joining: "Samenvoegen",

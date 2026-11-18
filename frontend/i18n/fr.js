@@ -97,7 +97,7 @@ texts.fr = {
   measureHint: "Compresse quelques secondes du premier jeu de la liste avec plusieurs threads et fichiers à la fois, au niveau et au type choisis, et met le plus rapide dans ces champs. Cela prend 1 à 3 minutes.", measureNeedsGame: "Ajoutez un NSP ou XCI pour mesurer.",
   measureTitle: "Mesure de cet ordinateur", measureSpeed: "Vitesse, tous les fichiers ensemble", measureApplied: "appliqué", close: "Fermer",
   measureIntro: (p, l, b) => `${p} processeurs, niveau ${l}, ${b ? "par blocs" : "solide"} : chaque réglage a compressé une partie du jeu pendant quelques secondes.`,
-  measureResult: (th, m, s, tm) => `Appliqué : ${th} threads par fichier et ${m} à la fois, ${s} Mo/s, environ ${tm} pour 10 Go.`,
+  measureResult: (total, m, s, tm) => `Appliqué : ${total} threads au total et ${m} fichiers à la fois, ${s} Mo/s, environ ${tm} pour 10 Go.`,
   measureKept: (th, m, s) => `${th} threads × ${m} à la fois ont atteint ${s} MB/s, moins de 5 % plus rapide : le réglage le plus léger reste, il utilise moins de mémoire et termine chaque fichier plus tôt.`, takesUpdates: "mises à jour",
   measureChange: "Vous pouvez les changer dans Avancé ; ils sont gardés avec vos réglages.",
   auto: "Automatique", watch: "Surveiller les dossiers ajoutés à la liste", watchHint: "Une fois le travail lancé, NXPress surveille les dossiers ajoutés avec Ajouter un dossier ou déposés sur la fenêtre, et traite les fichiers qui y sont copiés ensuite, jusqu'à ce que vous appuyiez sur Arrêter. Les fichiers ajoutés seuls ne sont pas surveillés.",
@@ -124,10 +124,15 @@ texts.fr = {
   leftAsIs: "Ce qui reste tel quel", skipDlc: "Ignorer les DLC", skipDlcHint: "Les DLC restent tels quels, en NSP ; les jeux et les mises à jour sont compressés.",
   moveSkipped: "Déplacer ce qui est ignoré vers", moveSkippedNone: "Pas déplacé, il reste où il est",
   moveSkippedHint: "À son tour, chaque fichier laissé tel quel va dans ce dossier : les jeux en sparse storage, ainsi que leurs mises à jour et les DLC quand ils sont ignorés. Un fichier déjà présent n'est jamais remplacé ; sur un autre disque, il est copié et vérifié avant que l'original soit supprimé.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "Pendant le travail", liveFewer: "Moins", liveMore: "Plus",
-  livePending: (threads, multi, all) => "À partir du fichier suivant : " + (all ? `threads par fichier ${threads} · ` : "") + `fichiers à la fois ${multi}`,
-  liveChanged: (threads, multi, all) => "Changé à partir du fichier suivant : " + (all ? `threads par fichier ${threads} · ` : "") + `fichiers à la fois ${multi}`,
+  livePending: (total, files, all) => "À partir du fichier suivant : " + (all ? `threads au total ${total} · ` : "") + `fichiers à la fois ${files}`,
+  liveChanged: (total, files, all) => "Changé à partir du fichier suivant : " + (all ? `threads au total ${total} · ` : "") + `fichiers à la fois ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Threads au total", totalThreadsHint: "NXPress les répartit lui-même entre les fichiers en cours : les threads qu’un fichier libère vont aux suivants.",
+  filesAuto: "Auto", biggestFirst: "Les plus gros d’abord", biggestFirstHint: "Commence par les plus gros fichiers, pour que le travail ne finisse pas avec un gros fichier tout seul.",
+  threadsInUse: (used, total) => `${used} sur ${total} utilisés`, fileThreads: n => n === 1 ? "1 thread" : `${n} threads`,
   steps: { Moving: "Déplacement", Measuring: "Mesure", Reading: "Lecture", Optimizing: "Optimisation", Checking: "Contrôle",
     Comparing: "Comparaison", Estimating: "Estimation", Trimming: "Allègement", Recompressing: "Recompression", Compressing: "Compression",
     Packaging: "Empaquetage", Unpacking: "Dépaquetage", Verifying: "Vérification", Decompressing: "Décompression", Converting: "Conversion", Packing: "Regroupement", Splitting: "Découpage", Joining: "Réunion",

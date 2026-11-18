@@ -121,13 +121,17 @@
       <button id="pause" class="secondary" hidden></button>
       <button id="estimate" class="secondary" data-t="estimateButton" data-for="compress"></button>
       <button id="start" class="primary big"></button>
-      <!-- while a work goes on: the threads of each file and the files at once, which NXPress
-           takes from the next file on (the files at work keep theirs), and the low priority, at
+      <!-- while a work goes on: the total of threads NXPress shares among the files at work, the
+           most files at once and the biggest files first, which NXPress takes from the next file
+           on (the files at work keep their threads), the threads in use, and the low priority, at
            once; the side panel and Settings wait for the end of the work -->
       <div class="live-row" id="live" hidden>
         <span class="live-name"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span data-t="liveTitle"></span></span>
-        <span class="live-field" id="live-threads-field"><span id="live-threads-name" data-t="threads"></span><span class="stepper" role="group" aria-labelledby="live-threads-name"><button id="live-threads-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><b id="live-threads" aria-live="polite"></b><button id="live-threads-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span></span>
-        <span class="live-field" id="live-multi-field"><span id="live-multi-name" data-t="multi"></span><span class="stepper" role="group" aria-labelledby="live-multi-name"><button id="live-multi-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><b id="live-multi" aria-live="polite"></b><button id="live-multi-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span></span>
+        <span class="live-field" id="live-total-field"><span class="label" id="live-total-name" data-t="totalThreads"></span><span class="stepper" role="group" aria-labelledby="live-total-name"><button id="live-total-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><b id="live-total" aria-live="polite"></b><button id="live-total-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span><span class="hint" data-t="totalThreadsHint"></span></span>
+        <label class="live-field" id="live-multi-field"><span data-t="multi"></span><select id="live-multi"><option value="0" data-t="filesAuto"></option></select></label>
+        <span class="live-field" id="live-biggest-field"><label class="check"><input id="live-biggest-first" type="checkbox"><span data-t="biggestFirst"></span></label><span class="hint" data-t="biggestFirstHint"></span></span>
+        <!-- the threads in use as files start and end: one square for each thread of the total -->
+        <span class="live-use" id="live-use"><span id="live-use-text"></span><span class="use-strip" id="live-use-strip" aria-hidden="true"></span></span>
         <label class="live-low"><input id="live-low-priority" type="checkbox" class="switch" role="switch"><span data-t="lowPriority"></span></label>
         <span class="live-pending" id="live-pending" aria-live="polite" hidden></span>
       </div>
@@ -311,12 +315,20 @@
 
     <details class="block advanced" data-for="compress decompress recompress trim verify convert split fat32" id="advanced">
       <summary data-t="advanced"></summary>
+      <!-- the threads of the whole work, which NXPress shares among the files at work by itself:
+           each takes its share by its size as it starts and gives it back as it ends; the files at
+           once are the most at work (Auto: one for every 3 threads), and the biggest start first
+           (asked by ItsmeAJ on GBAtemp). The other sections take the files at once alone -->
       <div class="field row" data-for="compress recompress">
-        <label for="threads" data-t="threads"></label><input id="threads" type="number" min="1" max="64">
+        <label for="total-threads" data-t="totalThreads"></label>
+        <span class="stepper"><button id="total-threads-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><input id="total-threads" type="number" min="1" max="64"><button id="total-threads-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span>
+        <p class="hint" data-t="totalThreadsHint"></p>
       </div>
       <div class="field row">
-        <label for="multi" data-t="multi"></label><input id="multi" type="number" min="1" max="16">
+        <label for="multi" data-t="multi"></label><select id="multi"><option value="0" data-t="filesAuto"></option></select>
       </div>
+      <label class="check" data-for="compress recompress"><input id="biggest-first" type="checkbox"><span data-t="biggestFirst"></span></label>
+      <p class="hint" data-for="compress recompress" data-t="biggestFirstHint"></p>
       <div class="field" data-for="compress">
         <button id="measure" class="link"></button>
         <p class="hint" data-t="measureHint"></p>

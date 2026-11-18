@@ -97,7 +97,7 @@ texts.ja = {
   measureHint: "リストの最初のゲームを数秒間、選んだレベルと種類で、スレッド数と同時ファイル数を変えて圧縮し、最も速い組み合わせをこの欄に入れます。1〜3分かかります。", measureNeedsGame: "測定に使う NSP か XCI を追加してください。",
   measureTitle: "このコンピューターの測定", measureSpeed: "速度（全ファイル合計）", measureApplied: "適用済み", close: "閉じる",
   measureIntro: (p, l, b) => `${p} プロセッサ、レベル ${l}、${b ? "ブロック単位" : "ソリッド"}:各設定でゲームの一部を数秒間圧縮しました。`,
-  measureResult: (th, m, s, tm) => `適用: ファイルごとに ${th} スレッド、同時に ${m} ファイル、${s} MB/s、10 GB で約 ${tm}。`,
+  measureResult: (total, m, s, tm) => `適用: 合計 ${total} スレッド、同時に ${m} ファイル、${s} MB/s、10 GB で約 ${tm}。`,
   measureKept: (th, m, s) => `${th} スレッド × 同時 ${m} 件は ${s} MB/s で、5% 未満しか速くありませんでした。メモリが少なく、各ファイルが早く終わる軽い設定のままにします。`, takesUpdates: "アップデート",
   measureChange: "「詳細設定」で変更できます。設定と一緒に保存されます。",
   auto: "自動", watch: "リストに追加したフォルダーを監視", watchHint: "作業を始めると、「フォルダーを追加」で追加したフォルダーやウィンドウにドロップしたフォルダーを NXPress が監視し、あとからコピーされたファイルを処理します。「停止」を押すまで続きます。個別に追加したファイルは監視しません。",
@@ -124,10 +124,15 @@ texts.ja = {
   leftAsIs: "そのままにするもの", skipDlc: "DLC をスキップ", skipDlcHint: "DLC は NSP のままにし、ゲームとアップデートを圧縮します。",
   moveSkipped: "スキップしたものの移動先", moveSkippedNone: "移動せず、元の場所のまま",
   moveSkippedHint: "順番が来たファイルのうち、そのままにするものをこのフォルダーへ移動します: sparse storage のゲームと、スキップする場合はそのアップデートと DLC。既にあるファイルは置き換えません。別のドライブへはコピーして確認してから元のファイルを削除します。",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "作業中", liveFewer: "減らす", liveMore: "増やす",
-  livePending: (threads, multi, all) => "次のファイルから: " + (all ? `ファイルごとのスレッド ${threads} · ` : "") + `同時に処理するファイル ${multi}`,
-  liveChanged: (threads, multi, all) => "次のファイルから変更: " + (all ? `ファイルごとのスレッド ${threads} · ` : "") + `同時に処理するファイル ${multi}`,
+  livePending: (total, files, all) => "次のファイルから: " + (all ? `合計スレッド数 ${total} · ` : "") + `同時に処理するファイル ${files}`,
+  liveChanged: (total, files, all) => "次のファイルから変更: " + (all ? `合計スレッド数 ${total} · ` : "") + `同時に処理するファイル ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "合計スレッド数", totalThreadsHint: "NXPress が処理中のファイルに自動で振り分けます。ファイルが空けたスレッドは次のファイルに回ります。",
+  filesAuto: "自動", biggestFirst: "大きい順", biggestFirstHint: "大きいファイルから始めるので、最後に大きなファイルが 1 つだけ残ることがありません。",
+  threadsInUse: (used, total) => `${total} 中 ${used} 使用中`, fileThreads: n => `${n} スレッド`,
   steps: { Moving: "移動中", Measuring: "測定中", Reading: "読み込み中", Optimizing: "最適化中", Checking: "確認中",
     Comparing: "照合中", Estimating: "見積もり中", Trimming: "スリム化中", Recompressing: "再圧縮中", Compressing: "圧縮中",
     Packaging: "パック中", Unpacking: "展開中", Verifying: "検証中", Decompressing: "展開中", Converting: "変換中", Packing: "まとめ中", Splitting: "分割中", Joining: "結合中",

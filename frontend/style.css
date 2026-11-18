@@ -300,7 +300,7 @@ input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: va
 /* the speed of a setting in the letter of its row, not in the one of the line of speed under the list */
 .measure-table .speed { font-size: inherit; color: inherit; margin-top: 0; }
 @keyframes changed { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
-input.changed { animation: changed 2.5s ease-out; }
+input.changed, select.changed, .stepper.changed { animation: changed 2.5s ease-out; }
 .badge.skipped, .badge.modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 /* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
@@ -1100,18 +1100,37 @@ nav button small { line-height: 1.3; }
 .pref-credits .credit-badge { width: 20px; height: 20px; font-size: 11px; }
 .pref-credits .credit-thanks { flex-basis: 100%; }
 
-/* while a work goes on, under its buttons: the threads of each file and the files at once, from
-   the next file on, and the low priority at once (asked by ItsmeAJ on GBAtemp) */
+/* while a work goes on, under its buttons: the total of threads, the files at once and the
+   biggest first, from the next file on, the threads in use, and the low priority at once (asked
+   by ItsmeAJ on GBAtemp) */
 .live-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
 .live-row .live-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); }
 .live-row .live-name .icon { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .live-field, .live-low { display: inline-flex; align-items: center; gap: 8px; }
+.live-row .label { margin: 0; font-weight: inherit; }
+.live-row label.check { margin: 0; gap: 6px; }
+.live-row select { flex: none; font-size: 12px; padding: 2px 6px; background: var(--raised); }
 .live-low { cursor: pointer; }
 .live-low .switch { transform: scale(.85); }
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-small); overflow: hidden; background: var(--bg); }
 .stepper button { border: 0; border-radius: 0; background: transparent; padding: 2px 10px; font-size: 14px; line-height: 1.25; }
 .stepper button:focus-visible { outline-offset: -3px; border-radius: 4px; }
 .stepper b { min-width: 26px; text-align: center; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+/* in Advanced the number of a stepper can be typed too, between its − and + */
+.stepper input[type=number] { width: 44px; padding: 3px 2px; border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: 0; background: transparent; text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.stepper input[type=number]::-webkit-inner-spin-button, .stepper input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:focus-visible { outline-offset: -3px; }
+#multi { flex: none; min-width: 96px; }
+/* the threads in use, as files start and end: one square for each thread of the total, blue
+   while a file holds it, under how many */
+.live-use { display: inline-flex; flex-direction: column; gap: 3px; font-variant-numeric: tabular-nums; }
+.use-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 9px); gap: 2px; max-width: 264px; }
+.use-strip.dense { gap: 1px; }
+.use-strip i { height: 9px; border-radius: 2px; background: var(--bar); transition: background .25s; }
+.use-strip i.on { background: var(--accent); }
+/* the threads a file at work took of the total: at the end of its row, and on its cover in the grid */
+.threads-chip { flex: none; margin-left: auto; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 18px; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.grid .game .threads-chip { position: absolute; top: 6px; left: 6px; z-index: 1; margin: 0; background: color-mix(in srgb, var(--panel) 88%, transparent); }
 .live-pending { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
 .live-pending::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: live-wait 1.4s ease-in-out infinite; }
 @keyframes live-wait { 50% { opacity: .3; } }
