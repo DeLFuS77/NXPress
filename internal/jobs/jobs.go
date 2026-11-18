@@ -601,11 +601,11 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	return verify(ctx, path, o, out)
 }
 
-// removeSource deletes the original with --rm-source once its new file is checked whole, and
-// gives back name and note. A file checked only in part (an NCA rewritten by a tool with a
-// section that cannot be checked on its own) does not replace it: the original is kept, and the
-// note says why. An original that is the new file itself, however its name is written, is
-// never deleted.
+// removeSource takes the original away with --rm-source once its new file is checked whole (to
+// the recycle bin with --trash, see discard), and gives back name and note, which tells where it
+// went. A file checked only in part (an NCA rewritten by a tool with a section that cannot be
+// checked on its own) does not replace it: the original is kept, and the note says why. An
+// original that is the new file itself, however its name is written, is never taken away.
 func removeSource(o Options, path string, check switchfs.FileCheck, name string, note string) (string, string, error) {
 	if !o.RmSource {
 		return name, note, nil
@@ -616,12 +616,21 @@ func removeSource(o Options, path string, check switchfs.FileCheck, name string,
 	if name != "" && SameFile(path, name) {
 		return name, note, nil
 	}
-	if err := os.Remove(path); err != nil {
-		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
+	gone, err := discard(o, []string{path}, os.Remove)
+	if err != nil {
+		return name, note, removeFailed(o, err)
 	}
 	// its recovery data goes with it, or it would be left for a file no longer there
-	removeRecovery(path)
-	return name, note, nil
+	removeRecovery(path, gone)
+	return name, joinNotes(note, gone.note()), nil
+}
+
+// removeFailed is the error of an original that could not be taken away, its new file checked.
+func removeFailed(o Options, err error) error {
+	if o.Trash {
+		return fmt.Errorf("the new file is checked, but the original could not go to the recycle bin: %w", err)
+	}
+	return fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 }
 
 // keptNote is note, with why the original stays when --rm-source cannot delete it.

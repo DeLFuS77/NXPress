@@ -72,15 +72,35 @@ func pack(ctx context.Context, o Options, out Output) error {
 		return err
 	}
 	kept := incompleteNote(o, check, name, sources)
-	out.Done(o.Pack, name, joinNotes(keptNote(o, check, note), kept), nil)
+	note = joinNotes(keptNote(o, check, note), kept)
 	if kept != "" {
+		out.Done(o.Pack, name, note, nil)
 		return nil
 	}
+	// the originals go before the pack is told, so its note says where they went; a pack checked
+	// only in part keeps them, as its note says already
+	notes := []string{}
+	trashed := 0
 	for _, source := range sources {
-		if _, _, err := removeSource(o, source, check, name, ""); err != nil {
+		if check.Partial {
+			break
+		}
+		_, gone, err := removeSource(o, source, check, name, "")
+		if err != nil {
 			return err
 		}
+		if gone == trashedOne {
+			trashed++
+		} else if gone != "" {
+			notes = append(notes, filepath.Base(source)+": "+gone)
+		}
 	}
+	if trashed > 0 && len(notes) == 0 {
+		note = joinNotes(note, trashedAll)
+	} else if trashed > 0 {
+		note = joinNotes(note, fmt.Sprintf(trashedSome, trashed))
+	}
+	out.Done(o.Pack, name, joinNotes(append([]string{note}, notes...)...), nil)
 	removeEmptyFolders(o, sources)
 	return nil
 }
@@ -486,32 +506,34 @@ func combine(ctx context.Context, o Options, files []string, template string, ne
 		}
 		return 0
 	}
-	kept := ""
-	if err == nil {
-		kept = incompleteNote(o, check, name, files)
-	}
-	out.Done(files[0], name, joinNotes(keptNote(o, check, note), kept), err)
-	for _, file := range files[1:] {
-		if err != nil {
-			out.Done(file, "", "", err)
-			continue
-		}
-		out.Done(file, "", "combined into "+filepath.Base(name), nil)
-	}
 	if err != nil {
+		out.Done(files[0], name, keptNote(o, check, note), err)
+		for _, file := range files[1:] {
+			out.Done(file, "", "", err)
+		}
 		return len(files)
 	}
-	if kept != "" {
-		return 0
-	}
+	kept := incompleteNote(o, check, name, files)
+	// the originals go before each is told, so its note says where it went
 	failed := 0
-	for _, file := range files {
-		if _, _, err := removeSource(o, file, check, name, ""); err != nil {
-			out.Done(file, "", "", shown(err))
+	for i, file := range files {
+		output, told := "", "combined into "+filepath.Base(name)
+		if i == 0 {
+			output, told = name, joinNotes(note, kept)
+		}
+		// a pack checked only in part keeps them too: the note says why
+		var err error
+		if kept == "" {
+			_, told, err = removeSource(o, file, check, name, told)
+		}
+		if err != nil {
 			failed++
 		}
+		out.Done(file, output, told, shown(err))
 	}
-	removeEmptyFolders(o, files)
+	if kept == "" {
+		removeEmptyFolders(o, files)
+	}
 	return failed
 }
 
@@ -520,7 +542,8 @@ func combine(ctx context.Context, o Options, files []string, template string, ne
 // their own leaves none behind once its pack is made. Only folders that are empty go, from the
 // one of each original up to the folder given that holds it, never above it; a folder with
 // anything else in it, a file of the user or a hidden one, stays, and so do the ones above it.
-// Files given one by one leave their folders as they are.
+// Files given one by one leave their folders as they are. A folder left empty holds nothing to
+// put back: it goes for good with --trash too.
 func removeEmptyFolders(o Options, files []string) {
 	if !o.RmSource {
 		return

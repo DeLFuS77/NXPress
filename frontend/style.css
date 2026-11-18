@@ -59,6 +59,9 @@ button.primary:disabled { background: var(--hover); border-color: var(--line); c
 button.primary.small { padding: 6px 14px; white-space: nowrap; }
 button.primary.stop { background: var(--raised); border-color: var(--line); color: var(--text); }
 button.icon { padding: 4px 8px; }
+/* the one button that deletes for good, in red: red is for errors and what cannot be undone */
+button.danger { background: transparent; border-color: var(--bad); color: var(--bad); font-weight: 600; }
+button.danger:hover:not(:disabled) { background: var(--bad-soft); }
 input[type=number] { width: 72px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
 input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
@@ -494,6 +497,7 @@ label .has-help, button.has-help { cursor: pointer; }
 .space-list b { overflow-wrap: anywhere; font-weight: 600; }
 .space-list span { color: var(--muted); font-size: 13px; }
 .done-saved { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.done-bin { margin: 4px 0 2px; font-size: 13px; color: var(--muted); }
 #done-dialog h3 { font-size: 13px; margin: 14px 0 6px; }
 .done-star { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-small); background: var(--accent-soft); }
 .done-star p { margin: 0 0 8px; font-size: 13px; }
@@ -775,7 +779,7 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 .brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .brand-button .discord-logo { width: 16px; height: 16px; flex: none; fill: #5865f2; }
 .pref-item .segmented { margin: 0; }
-.pref-item .segmented button { padding: 3px 10px; }
+.pref-item .segmented button { padding: 3px 10px; white-space: nowrap; }
 #preferences .pref-keys { word-break: break-all; }
 #preferences .pref-sound { padding-left: 0; margin-top: 4px; }
 .pref-more { display: block; }
