@@ -57,5 +57,7 @@ func spaceShort(request Request, free func(string) (int64, error)) []space.Short
 			Replaces: replaces && request.Mode != "pack" && drive == space.VolumeOf(filepath.Dir(path)),
 		})
 	}
-	return space.Needed(files, max(1, request.Multi), free)
+	// the files made at once are the most the work starts at once: with a total of threads and
+	// no files at once asked, one for every 3 threads
+	return space.Needed(files, jobs.FilesAtOnce(jobs.Options{Multi: request.Multi, TotalThreads: request.TotalThreads}), free)
 }

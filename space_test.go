@@ -33,6 +33,8 @@ func TestSpaceShort(t *testing.T) {
 		{"fits", Request{Mode: "compress", Files: files, Multi: 1}, 600, 0},
 		{"originals removed, one at once", Request{Mode: "compress", Files: files, Multi: 1, RemoveSource: true}, 299, 300},
 		{"originals removed, two at once", Request{Mode: "compress", Files: files, Multi: 2, RemoveSource: true}, 499, 500},
+		{"originals removed, files at once left to a total of 6 threads", Request{Mode: "compress", Files: files, TotalThreads: 6, RemoveSource: true}, 499, 500},
+		{"originals removed, one at once with a total", Request{Mode: "compress", Files: files, Multi: 1, TotalThreads: 6, RemoveSource: true}, 299, 300},
 		{"recompress in place", Request{Mode: "recompress", Files: files, Multi: 1}, 300, 0},
 		{"verify writes nothing", Request{Mode: "verify", Files: files, Multi: 1}, 0, 0},
 	} {

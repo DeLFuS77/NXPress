@@ -95,6 +95,12 @@ func filesAtOnce(o Options) int {
 	return max(1, o.Multi)
 }
 
+// FilesAtOnce are the most files of the work of o at work at once (see filesAtOnce), for what
+// weighs them before it starts: the room their new files take.
+func FilesAtOnce(o Options) int {
+	return filesAtOnce(o)
+}
+
 // zstdJobSize is the data each thread of the zstd library in C takes at once on one stream, as
 // switchfs sets it (nativeJobSize there): with the long window, 32 MiB above level 11 (since
 // 1.7.16, so a big game keeps every thread busy to its end) and below it 8 times the chain table

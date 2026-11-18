@@ -734,3 +734,25 @@ func TestTotalThreadsOfTheWorkAtHand(t *testing.T) {
 	}
 	a.closed(context.Background())
 }
+
+// The window tells the page the threads a file takes of the total and gives back, as an event of
+// the work, also through a watch.
+func TestWindowTellsTheThreadsOfEachFile(t *testing.T) {
+	caught := catchEvents(t)
+	var out jobs.Output = &jobs.WatchOutput{Output: &window{job: context.Background()}}
+	told, ok := out.(jobs.ThreadsTold)
+	if !ok {
+		t.Fatal("the window is not told the threads of each file")
+	}
+	told.FileThreads("game.nsp", 12)
+	told.FileThreads("game.nsp", 0)
+	if caught.count("threads") != 2 {
+		t.Fatalf("events: %v", caught.events)
+	}
+	caught.mutex.Lock()
+	defer caught.mutex.Unlock()
+	first := caught.data[0].([]any)[0].(map[string]any)
+	if first["file"] != "game.nsp" || first["threads"] != 12 {
+		t.Fatalf("told %v", first)
+	}
+}

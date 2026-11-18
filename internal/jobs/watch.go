@@ -241,7 +241,8 @@ func (w *WatchOutput) Take() []watchEnd {
 	return ends
 }
 
-// WaitWhilePaused and measured go on to the window, which pauses the work and shows a measure.
+// WaitWhilePaused, Measured and FileThreads go on to the window, which pauses the work, shows a
+// measure and shows the threads each file holds.
 func (w *WatchOutput) WaitWhilePaused() {
 	if pausing, ok := w.Output.(interface{ WaitWhilePaused() }); ok {
 		pausing.WaitWhilePaused()
@@ -252,4 +253,8 @@ func (w *WatchOutput) Measured(report MeasureReport) {
 	if window, ok := w.Output.(Measured); ok {
 		window.Measured(report)
 	}
+}
+
+func (w *WatchOutput) FileThreads(path string, threads int) {
+	tellThreads(w.Output, path, threads)
 }

@@ -116,6 +116,20 @@ func (l *Live) now(o Options) (Options, <-chan struct{}) {
 	return o, l.changed
 }
 
+// ThreadsTold is told the threads a file takes of a total of threads as it starts, and 0 as it
+// ends and gives them back: the window shows them on the file, and the threads in use. Its method
+// is exported, as the window is in another package.
+type ThreadsTold interface {
+	FileThreads(path string, threads int)
+}
+
+// tellThreads tells out the threads a file holds now, when it is told them.
+func tellThreads(out Output, path string, threads int) {
+	if told, ok := out.(ThreadsTold); ok {
+		told.FileThreads(path, threads)
+	}
+}
+
 // eachFile does job on every file, as many at once as the work allows, each with the options it
 // starts with: with Live (the window) the threads of each file, the files at once and the total
 // of threads are read as each file starts, so a change applies from the next file. With a total
@@ -137,9 +151,17 @@ func eachFile(ctx context.Context, o Options, files []string, out Output, job fu
 		f, now, wake, changed := s.next()
 		if f != nil {
 			wait.Add(1)
+			shared := now.TotalThreads > 0
+			if shared {
+				tellThreads(out, f.path, now.Threads)
+			}
 			go func() {
 				defer wait.Done()
 				defer s.end(f)
+				// told before they are given back, so a file that starts with them is told after
+				if shared {
+					defer tellThreads(out, f.path, 0)
+				}
 				job(f.path, now)
 			}()
 			continue

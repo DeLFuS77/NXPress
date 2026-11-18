@@ -510,3 +510,57 @@ type changeTotalOnProgress struct {
 func (c *changeTotalOnProgress) Progress(string, string) func(int64, int64) {
 	return func(int64, int64) { c.once.Do(func() { c.live.SetTotal(5, false) }) }
 }
+
+// toldThreads keeps the threads each file was told it holds, and the most told in use at once.
+type toldThreads struct {
+	testkit.Quiet
+	mutex sync.Mutex
+	holds map[string]int
+	told  []string
+	inUse int
+	most  int
+}
+
+func (o *toldThreads) FileThreads(path string, threads int) {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+	if o.holds == nil {
+		o.holds = map[string]int{}
+	}
+	o.inUse += threads - o.holds[path]
+	o.most = max(o.most, o.inUse)
+	o.holds[path] = threads
+	o.told = append(o.told, fmt.Sprintf("%s %d", filepath.Base(path), threads))
+}
+
+// With a total of threads the window is told the share each file takes as it starts and 0 as it
+// ends, never more in use than the total; without one, it is told nothing. A watch passes it on.
+func TestEachFileTellsItsThreads(t *testing.T) {
+	noMemoryLimit(t)
+	paths := sizedFiles(t, 1, 8, 1)
+	out := &toldThreads{}
+	eachFile(context.Background(), Options{TotalThreads: 6, Multi: 2, MultiGiven: true, BiggestFirst: true}, paths, out, func(string, Options) {})
+	if out.inUse != 0 || out.most > 6 || len(out.told) != 6 {
+		t.Fatalf("told %v, %d in use at the end, %d at most", out.told, out.inUse, out.most)
+	}
+	if out.told[0] != "file1.nsp 5" {
+		t.Fatalf("the biggest file was told %s first, want its share of 5", out.told[0])
+	}
+	for _, path := range paths {
+		if out.holds[path] != 0 {
+			t.Fatalf("%s still holds threads: %v", path, out.told)
+		}
+	}
+
+	none := &toldThreads{}
+	eachFile(context.Background(), Options{Threads: 4, Multi: 2}, paths, none, func(string, Options) {})
+	if len(none.told) != 0 {
+		t.Fatalf("told %v without a total", none.told)
+	}
+
+	watched := &toldThreads{}
+	eachFile(context.Background(), Options{TotalThreads: 4}, paths[:1], &WatchOutput{Output: watched}, func(string, Options) {})
+	if !slices.Equal(watched.told, []string{"file0.nsp 4", "file0.nsp 0"}) {
+		t.Fatalf("through a watch: %v", watched.told)
+	}
+}

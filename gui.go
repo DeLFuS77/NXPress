@@ -1563,6 +1563,12 @@ func (w *window) Say(format string, args ...any) {
 	w.send("say", fmt.Sprintf(format, args...))
 }
 
+// FileThreads tells the page the threads a file took of the total of the work as it starts, and 0
+// as it ends: the page shows them on the file, and the threads in use under the buttons.
+func (w *window) FileThreads(path string, threads int) {
+	w.send("threads", map[string]any{"file": path, "threads": threads})
+}
+
 // Measured gives the page what a measure found: the setting chosen, to put in its fields, and
 // every setting tried, to show them.
 func (w *window) Measured(report jobs.MeasureReport) {
