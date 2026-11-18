@@ -120,11 +120,20 @@ texts.it = {
   finished: (n, f, s, k) => `${n - f - (k || 0)} di ${n} completati` + (k ? `, ${k} saltati` : "") + (f ? `, ${f} con errore` : "") + ` in ${time(s)}.`,
   stopped: "Annullato.",
   modesLabel: "Sezioni",
-  steps: { Measuring: "Misurazione", Reading: "Lettura", Optimizing: "Ottimizzazione", Checking: "Controllo",
+  // Compress: what is left as it is, and the folder it goes to as its turn comes
+  leftAsIs: "Ciò che resta com'è", skipDlc: "Salta i DLC", skipDlcHint: "I DLC restano come sono, in NSP; giochi e aggiornamenti vengono compressi.",
+  moveSkipped: "Sposta ciò che è saltato in", moveSkippedNone: "Non spostato, resta dov'è",
+  moveSkippedHint: "Quando arriva il suo turno, ogni file che resta com'è va in questa cartella: i giochi in sparse storage, e i loro aggiornamenti e i DLC quando vengono saltati. Un file già presente non viene mai sostituito; su un altro disco viene copiato e controllato prima di eliminare l'originale.",
+  // while a work goes on: the threads of each file and the files at once, from the next file
+  liveTitle: "Durante il lavoro", liveFewer: "Meno", liveMore: "Più",
+  livePending: (threads, multi, all) => "Dal prossimo file: " + (all ? `thread per file ${threads} · ` : "") + `file alla volta ${multi}`,
+  liveChanged: (threads, multi, all) => "Cambiato dal prossimo file: " + (all ? `thread per file ${threads} · ` : "") + `file alla volta ${multi}`,
+  steps: { Moving: "Spostamento", Measuring: "Misurazione", Reading: "Lettura", Optimizing: "Ottimizzazione", Checking: "Controllo",
     Comparing: "Confronto", Estimating: "Stima", Trimming: "Alleggerimento", Recompressing: "Ricompressione", Compressing: "Compressione",
     Packaging: "Impacchettamento", Unpacking: "Spacchettamento", Verifying: "Verifica", Decompressing: "Decompressione", Converting: "Conversione", Packing: "Unione", Splitting: "Divisione", Joining: "Riunione",
   },
   notes: {
+    dlcSkip: "un DLC: i DLC restano come sono", movedTo: "; spostato in ", staysWhere: "; resta dov'è: ", nameThere: "lì c'è già un file con il suo nome", copiedNotDeleted: "è stato copiato, ma non si è potuto eliminare l'originale: ", copyDiffers: "la sua copia non si rilegge uguale", movedCount: "file lasciati come sono spostati in $1: $2",
     notePackage: "pacchetto: ", notePublished: "come pubblicato: download firmati da Nintendo, con i loro ticket", noteCard: "dump di cartuccia: un XCI con i file della cartuccia", noteFromCard: "convertito: un NSP fatto da una cartuccia", noteToCard: "convertito: un XCI fatto da un download", noteHomebrew: "homebrew: senza firma di Nintendo e senza rights ID", noteModified: "modificato da uno strumento: file riscritti o ticket tolti", noteIncomplete: "incompleto: manca ", noteMissingNca: "l’NCA $1 di $2", noteMissingTicket: "il ticket di $1", notePermissions: "permessi: $1 servizi, $2 chiamate di sistema, core $3-$4", noteOffers: ", ne offre $1 di suoi", noteDebug: ", si può fare il debug", noteAcid: "; firma dell’ACID non verificata (serve una chiave di Nintendo che NXPress non ha)",
     sparseNote: "$1 NCA in sparse storage nel formato sperimentale NCZSECT2: decomprimilo con NXPress per installarlo", sparseNoPlain: "contiene un gioco in sparse storage, che solo la compressione extra (NCZSECT2) comprime: non esiste un suo NSZ che gli installer leggano, quindi resta com'è; Decomprimi ne fa un NSP", throughKeys: "cambia formato passando per una copia decompressa, che richiede prod.keys", plainAgain: "di nuovo un NSZ normale, che gli installer leggono", worksSparse: "funziona con: solo NXPress e NXDock, formato sperimentale NCZSECT2 per lo sparse storage: decomprimilo con NXPress per installarlo con un altro installer",
     archiveNote: "$1 blocchi LZ4 di Nintendo tenuti decompressi nel formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo", lz4Unread: "$1 NCA con i blocchi LZ4 lasciati come sono: non è stato possibile leggere la loro memoria compressa", worksArchive: "funziona con: solo NXPress e NXDock, formato di archivio sperimentale NCZSECT3: decomprimilo con NXPress per installarlo con un altro installer",

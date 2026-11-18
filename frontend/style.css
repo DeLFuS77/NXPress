@@ -1093,3 +1093,28 @@ nav button small { line-height: 1.3; }
 .pref-credits .credit-mini b { color: var(--text); font-weight: 600; }
 .pref-credits .credit-badge { width: 20px; height: 20px; font-size: 11px; }
 .pref-credits .credit-thanks { flex-basis: 100%; }
+
+/* while a work goes on, under its buttons: the threads of each file and the files at once, from
+   the next file on, and the low priority at once (asked by ItsmeAJ on GBAtemp) */
+.live-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
+.live-row .live-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); }
+.live-row .live-name .icon { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.live-field, .live-low { display: inline-flex; align-items: center; gap: 8px; }
+.live-low { cursor: pointer; }
+.live-low .switch { transform: scale(.85); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-small); overflow: hidden; background: var(--bg); }
+.stepper button { border: 0; border-radius: 0; background: transparent; padding: 2px 10px; font-size: 14px; line-height: 1.25; }
+.stepper button:focus-visible { outline-offset: -3px; border-radius: 4px; }
+.stepper b { min-width: 26px; text-align: center; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+.live-pending { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
+.live-pending::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: live-wait 1.4s ease-in-out infinite; }
+@keyframes live-wait { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .live-pending::before { animation-duration: 4.2s; } }
+
+/* Compress: what is left as it is, and the folder it goes to before the work starts */
+.left-group { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.left-group .label { margin-bottom: 4px; }
+.left-group label.check { margin-top: 6px; }
+.left-group .move-field { margin-top: 12px; }
+.left-group .move-field .label { margin-bottom: 6px; }
+.left-group :disabled + span { opacity: .55; }

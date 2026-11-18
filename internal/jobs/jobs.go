@@ -159,62 +159,64 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		o.datFile = loaded
 	}
 	ctx = withDestinations(ctx, files)
-	threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
 	// the updates whose game in sparse storage is left as it is, left as they are with it
 	pairs := sparsePairs(ctx, o, action, files)
 	var (
 		mutex  sync.Mutex
 		failed = len(missing)
-		wait   sync.WaitGroup
+		// the files left as they are moved to the folder of --move-skipped
+		moved = 0
 	)
-	work := make(chan string)
-	for worker := 0; worker < min(o.Multi, len(files)); worker++ {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
-			for path := range work {
-				// a file is taken only while the work is not paused: renaming, -i and the files
-				// checked before have no progress of their own to pause in
-				waitWhilePaused(out)
-				if ctx.Err() != nil {
-					continue
-				}
-				output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
-					if reason, ok := pairs[path]; ok {
-						return "", "", Skipped(reason)
-					}
-					return safeJob(ctx, action, path, o, threads, out)
-				})
-				// the recovery data of the new file, with --par2, or made again for a file written again
-				if err == nil {
-					note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
-				}
-				// a new file checked as a game before it got its name need not be read again (a
-				// folder a NUP was unpacked into is no file to remember)
-				if err == nil && output != "" && checksOutput[action] && !isDir(output) {
-					if isNup(output) {
-						cache.Checked.KeepChecked(output, "", nupChecker)
-					} else {
-						cache.Checked.Keep(output, "")
-					}
-				}
-				out.Done(path, output, note, shown(err))
-				if isFailure(err) {
-					mutex.Lock()
-					failed++
-					mutex.Unlock()
-				}
+	// a file is started only while the work is not paused: renaming, -i and the files checked
+	// before have no progress of their own to pause in. Each file takes the threads and the
+	// files at once set as it starts, which the window may change while the work goes on.
+	eachFile(ctx, o, files, out, func(path string, o Options) {
+		threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		// its LZ4 blocks keep to its share of the processors among the files at once now
+		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
+		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
+			// what Compress leaves as it is goes to the folder of --move-skipped as its turn comes:
+			// the updates of a game in sparse storage, the DLC with --skip-dlc, and the game itself,
+			// found as it is compressed
+			if reason, ok := pairs[path]; ok {
+				return leaveAsItIs(ctx, o, path, reason, out)
 			}
-		}()
-	}
-	for _, path := range files {
-		if ctx.Err() != nil {
-			break
+			if action == "compress" && o.SkipDlc && dlcOnly(path) {
+				return leaveAsItIs(ctx, o, path, dlcSkipped, out)
+			}
+			output, note, err := safeJob(ctx, action, path, o, threads, out)
+			if action == "compress" && IsSkipped(err) && err.Error() == sparseSkipped {
+				return leaveAsItIs(ctx, o, path, sparseSkipped, out)
+			}
+			return output, note, err
+		})
+		// the recovery data of the new file, with --par2, or made again for a file written again
+		if err == nil {
+			note = joinNotes(note, recoveryAfter(ctx, o, action, output, out))
 		}
-		work <- path
+		// a new file checked as a game before it got its name need not be read again (a
+		// folder a NUP was unpacked into is no file to remember)
+		if err == nil && output != "" && checksOutput[action] && !isDir(output) {
+			if isNup(output) {
+				cache.Checked.KeepChecked(output, "", nupChecker)
+			} else {
+				cache.Checked.Keep(output, "")
+			}
+		}
+		out.Done(path, output, note, shown(err))
+		mutex.Lock()
+		if isFailure(err) {
+			failed++
+		}
+		if IsSkipped(err) && output != "" {
+			moved++
+		}
+		mutex.Unlock()
+	})
+	if moved > 0 {
+		folder, _ := filepath.Abs(o.MoveSkipped)
+		out.Say("files left as they are moved to %s: %d", folder, moved)
 	}
-	close(work)
-	wait.Wait()
 	return failed
 }
 

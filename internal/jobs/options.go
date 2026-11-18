@@ -99,11 +99,17 @@ type Options struct {
 	// with -C and without the extra compression: the update of a game in sparse storage given
 	// with it is left as it is too, so the two stay together
 	SkipSparseUpdates bool
-	Threads           int
-	Multi             int
-	Output            string
-	Overwrite         bool
-	RmSource          bool
+	// --skip-dlc: with -C, a file of DLC only is left as it is
+	SkipDlc bool
+	// --move-skipped: with -C, the files left as they are (the games in sparse storage, their
+	// updates with SkipSparseUpdates, the DLC with SkipDlc) are moved into this folder as their
+	// turn comes in the work
+	MoveSkipped string
+	Threads     int
+	Multi       int
+	Output      string
+	Overwrite   bool
+	RmSource    bool
 	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
 	// rebuilds a damaged file with its .par2
 	Par2   int
@@ -155,7 +161,7 @@ var optionNames = []optionName{
 	{"--no-cache", 0, false, false}, {"--dat", 0, true, false},
 	{"--level", 'l', true, true}, {"--block", 'B', false, true}, {"--solid", 'S', false, true},
 	{"--extra", 0, false, false}, {"--sparse", 0, false, false}, {"--archive", 0, false, false},
-	{"--skip-sparse-updates", 0, false, false},
+	{"--skip-sparse-updates", 0, false, false}, {"--skip-dlc", 0, false, false}, {"--move-skipped", 0, true, false},
 	{"--no-long", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
@@ -330,6 +336,8 @@ func (o *Options) flag(option optionName) {
 		o.Sparse = true
 	case "--skip-sparse-updates":
 		o.SkipSparseUpdates = true
+	case "--skip-dlc":
+		o.SkipDlc = true
 	case "--archive":
 		o.Archive = true
 	case "--low-priority":
@@ -440,6 +448,8 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Output = value
 	case "--keys":
 		o.Keys = value
+	case "--move-skipped":
+		o.MoveSkipped = value
 	case "--par2":
 		o.Par2, err = number(1)
 		if err == nil && o.Par2 > 100 {
@@ -580,6 +590,14 @@ func (o *Options) Check() error {
 	if o.NupIcon != "" && o.NoNupIcon {
 		return errors.New("--nup-icon and --no-nup-icon cannot be used together")
 	}
+	// what is left as it is is told before a compression starts; an optimized game leaves its DLC
+	// as they are already
+	if o.SkipDlc && (!o.Compress || o.Optimize || o.Rebuild) {
+		o.Notes = append(o.Notes, "--skip-dlc has no effect without -C, nor with --optimize or --rebuild")
+	}
+	if o.MoveSkipped != "" && (!o.Compress || o.Optimize || o.Rebuild) {
+		o.Notes = append(o.Notes, "--move-skipped has no effect without -C, nor with --optimize or --rebuild")
+	}
 	if (o.Sparse || o.Archive) && !o.Optimize && !o.Compress && !o.Recompress && !o.Estimate {
 		o.Notes = append(o.Notes, "--extra, --sparse and --archive have no effect without -C or --recompress")
 	}
@@ -637,6 +655,12 @@ Usage: nxpress [options] file or folder...
   --skip-sparse-updates  with -C and without --extra, a base game in sparse storage is left
                       as it is, and so is its update among the files given: the two stay
                       together as NSP
+  --skip-dlc          with -C, leave the DLC as they are (a file that holds DLC only)
+  --move-skipped DIR  with -C, move what is left as it is into DIR as its turn comes: the
+                      base games in sparse storage (without --extra), their updates with
+                      --skip-sparse-updates and the DLC with --skip-dlc. A file keeps its name
+                      and never replaces one there (it stays where it is then); on another
+                      drive it is copied, read back and compared before the original goes
   -t, --threads N     threads per file (default: every processor but an eighth, shared among
                       the files of -m; fewer when the memory is short; --measure tells the
                       fastest)

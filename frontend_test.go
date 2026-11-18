@@ -194,6 +194,15 @@ const samples = [
   ["the code of the game is damaged in the dump this NUP was made of: dump the game again (game v0: exefs/rtld: it ends in its header (128 of 256 bytes); game v0: exefs/sdk: its data segment cannot decompress to the 536870912 bytes its header says)", "ends in its header"],
   ["the code of the game is damaged in the dump this NUP was made of: dump the game again (game v0: exefs/rtld: it ends in its header (128 of 256 bytes); game v0: exefs/sdk: its data segment cannot decompress to the 536870912 bytes its header says)", "cannot decompress"],
   ["it holds no code module (NSO) to check, and the other files of a dump folder have no hashes to be checked by", "no code module"],
+  ["a DLC: DLC are left as they are", "DLC are left"],
+  ["a DLC: DLC are left as they are; moved to D:\Switch\Left", "moved to"],
+  ["this game uses sparse storage: to compress it with the experimental format of NXPress (NCZSECT2), turn on Extra compression under Made for, or use --extra; moved to D:\Left", "use --extra"],
+  ["its game uses sparse storage and is left as it is: the update is left with it; moved to D:\Left", "the update is left"],
+  ["a DLC: DLC are left as they are; it stays where it is: a file of its name is there already", "stays where"],
+  ["a DLC: DLC are left as they are; it stays where it is: a file of its name is there already", "there already"],
+  ["a DLC: DLC are left as they are; it stays where it is: it was copied, but the original could not be deleted: access denied", "was copied"],
+  ["a DLC: DLC are left as they are; it stays where it is: its copy did not read back the same", "read back"],
+  ["files left as they are moved to D:\Switch\Left: 3", "files left"],
 ];
 // in English too: what the window says in its own words
 const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];

@@ -108,6 +108,9 @@ type App struct {
 	cancel context.CancelFunc
 	// the files of the work at hand skipped from the list while it goes on
 	skips *jobs.Skips
+	// the threads of each file and the files at once of the work at hand, which the page changes
+	// while it goes on
+	live *jobs.Live
 	// closed once the work stopped, its half written files removed
 	finished chan struct{}
 	// the files NXPress was started with, the section the Explorer asked for (#88), and whether
@@ -840,7 +843,11 @@ type Request struct {
 	Sparse       bool     `json:"sparse"`
 	// Compress: the update of a game in sparse storage left as it is with its game
 	SkipSparseUpdates bool `json:"skipSparseUpdates"`
-	Archive           bool `json:"archive"`
+	// Compress: the DLC left as they are, and the folder what is left as it is goes to as its
+	// turn comes (none: it stays where it is)
+	SkipDlc     bool   `json:"skipDlc"`
+	MoveSkipped string `json:"moveSkipped"`
+	Archive     bool   `json:"archive"`
 	// Optimize for install (experimental), in Compress: each game with its update into one NSZ
 	Optimize bool `json:"optimize"`
 	// Convert: NSP and NSZ into XCI and XCZ (#127)
@@ -859,9 +866,8 @@ type Request struct {
 	SplitParts map[string]jobs.SplitParts `json:"splitParts"`
 }
 
-// Start does the work in the background: the page follows it by the events "progress", "done"
-// and "say", and "finished" once every file is done.
-func (a *App) Start(request Request) error {
+// requestOptions are the options of the work the page asks for, before they are checked.
+func (a *App) requestOptions(request Request) jobs.Options {
 	o := jobs.Options{
 		Level: request.Level, Block: request.Block, Threads: request.Threads, Multi: max(1, request.Multi),
 		Output: request.Output, Overwrite: request.Overwrite, RmSource: request.RemoveSource, Files: request.Files,
@@ -875,6 +881,9 @@ func (a *App) Start(request Request) error {
 	o.Levels = request.Levels
 	o.Sparse = request.Sparse
 	o.SkipSparseUpdates = request.SkipSparseUpdates && request.Mode == "compress"
+	if request.Mode == "compress" {
+		o.SkipDlc, o.MoveSkipped = request.SkipDlc, request.MoveSkipped
+	}
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
 	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
@@ -890,6 +899,7 @@ func (a *App) Start(request Request) error {
 		// none of them goes with it
 		if request.Optimize {
 			o.Optimize, o.Sparse, o.Archive, o.RmSource, o.Watch = true, false, false, false, false
+			o.SkipDlc, o.MoveSkipped = false, ""
 		}
 	case "decompress":
 		o.Decompress = true
@@ -939,6 +949,13 @@ func (a *App) Start(request Request) error {
 	default:
 		o.Verify = true
 	}
+	return o
+}
+
+// Start does the work in the background: the page follows it by the events "progress", "done"
+// and "say", and "finished" once every file is done.
+func (a *App) Start(request Request) error {
+	o := a.requestOptions(request)
 	if err := o.Check(); err != nil {
 		return err
 	}
@@ -957,8 +974,10 @@ func (a *App) Start(request Request) error {
 	ctx, cancel := context.WithCancel(a.ctx)
 	skips := jobs.NewSkips()
 	ctx = jobs.WithSkips(ctx, skips)
+	live := jobs.NewLive(o.Threads, o.Multi)
+	ctx = jobs.WithLive(ctx, live)
 	finished := make(chan struct{})
-	a.cancel, a.finished, a.skips = cancel, finished, skips
+	a.cancel, a.finished, a.skips, a.live = cancel, finished, skips, live
 	// a turning off still to come was for the work before: it would cut this one off
 	stopped := a.stopShutdown()
 	priority := a.setPriority(request.LowPriority)
@@ -982,7 +1001,7 @@ func (a *App) Start(request Request) error {
 		batch.flush()
 		cancelled := ctx.Err() != nil
 		a.mutex.Lock()
-		a.cancel, a.finished, a.skips = nil, nil, nil
+		a.cancel, a.finished, a.skips, a.live = nil, nil, nil, nil
 		// the taskbar ends as the work did: red while there are errors to look at, else nothing
 		if failed > 0 && !cancelled {
 			system.SetTaskbarProgress("error", 1, 1)
@@ -998,6 +1017,29 @@ func (a *App) Start(request Request) error {
 		close(finished)
 	}()
 	return nil
+}
+
+// SetLive changes the threads of each file and the files at once of the work going on, from the
+// next file on: the files at work keep their threads until they are done, and more files start,
+// or fewer, as the ones at work end. Without a work it does nothing; the next one takes the
+// fields as they are.
+func (a *App) SetLive(threads int, multi int) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.live != nil {
+		a.live.Set(threads, multi)
+	}
+}
+
+// SetLowPriority puts NXPress below the normal priority, or back to it, at once: with files at
+// work too, not only as a work starts. What could not be done is told in the log.
+func (a *App) SetLowPriority(low bool) {
+	a.mutex.Lock()
+	note := a.setPriority(low)
+	a.mutex.Unlock()
+	if note != "" {
+		emit(a.ctx, "say", note)
+	}
 }
 
 // changePriority puts NXPress below the normal priority, or back to it.

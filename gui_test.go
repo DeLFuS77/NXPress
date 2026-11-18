@@ -588,3 +588,94 @@ func TestWindowBatchSendsTogether(t *testing.T) {
 		t.Fatalf("%d batches for events sent at once", batches)
 	}
 }
+
+// The threads and the files at once of the work at hand change while it goes on, and a request
+// carries them, the DLC left as they are and their folder to it; without a work nothing changes.
+func TestLiveSettingsOfTheWorkAtHand(t *testing.T) {
+	catchEvents(t)
+	a := &App{ctx: context.Background()}
+	a.SetLive(2, 2)
+	if err := a.Start(Request{Mode: "recompress", Files: []string{t.TempDir()}, Watch: true, Threads: 6, Multi: 1}); err != nil {
+		t.Fatal(err)
+	}
+	a.mutex.Lock()
+	live := a.live
+	a.mutex.Unlock()
+	if threads, multi := live.Values(); threads != 6 || multi != 1 {
+		t.Fatalf("started with %d threads and %d files at once", threads, multi)
+	}
+	a.SetLive(3, 4)
+	if threads, multi := live.Values(); threads != 3 || multi != 4 {
+		t.Fatalf("changed to %d threads and %d files at once", threads, multi)
+	}
+	a.closed(context.Background())
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.live != nil {
+		t.Fatal("the work ended and its settings stayed")
+	}
+}
+
+// Low priority changes at once, also while files are at work, and only when it changes.
+func TestLowPriorityChangesAtOnce(t *testing.T) {
+	events := catchEvents(t)
+	var mutex sync.Mutex
+	changes := []bool{}
+	refuse := false
+	changed := changePriority
+	changePriority = func(low bool) error {
+		mutex.Lock()
+		defer mutex.Unlock()
+		changes = append(changes, low)
+		if refuse {
+			return syscall.EPERM
+		}
+		return nil
+	}
+	childrenChanged := changeChildrenPriority
+	changeChildrenPriority = func(bool) {}
+	defer func() { changePriority, changeChildrenPriority = changed, childrenChanged }()
+
+	a := &App{ctx: context.Background()}
+	if err := a.Start(Request{Mode: "recompress", Files: []string{t.TempDir()}, Watch: true}); err != nil {
+		t.Fatal(err)
+	}
+	a.SetLowPriority(true)
+	a.SetLowPriority(true)
+	refuse = true
+	a.SetLowPriority(false)
+	a.closed(context.Background())
+	mutex.Lock()
+	defer mutex.Unlock()
+	if len(changes) != 2 || !changes[0] || changes[1] {
+		t.Fatalf("the priority changed %v, want low then back", changes)
+	}
+	eventually(t, "NXPress did not say the priority could not go back to normal", func() bool {
+		events.mutex.Lock()
+		defer events.mutex.Unlock()
+		for i, event := range events.events {
+			if said, ok := events.data[i].([]any); ok && event == "say" && len(said) == 1 && said[0] == "the priority could not go back to normal: "+syscall.EPERM.Error() {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// A request to compress gives the work its DLC left as they are and the folder of what is left;
+// Optimize for install, and the other works, take neither.
+func TestRequestOfTheFilesLeftAsTheyAre(t *testing.T) {
+	asked := Request{Mode: "compress", SkipDlc: true, MoveSkipped: `D:\left`}
+	o := (&App{}).requestOptions(asked)
+	if !o.SkipDlc || o.MoveSkipped != `D:\left` {
+		t.Fatalf("compress: %+v", o)
+	}
+	asked.Optimize = true
+	if o := (&App{}).requestOptions(asked); o.SkipDlc || o.MoveSkipped != "" {
+		t.Fatalf("optimize: %+v", o)
+	}
+	asked.Optimize, asked.Mode = false, "decompress"
+	if o := (&App{}).requestOptions(asked); o.SkipDlc || o.MoveSkipped != "" {
+		t.Fatalf("decompress: %+v", o)
+	}
+}

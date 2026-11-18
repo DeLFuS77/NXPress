@@ -121,6 +121,16 @@
       <button id="pause" class="secondary" hidden></button>
       <button id="estimate" class="secondary" data-t="estimateButton" data-for="compress"></button>
       <button id="start" class="primary big"></button>
+      <!-- while a work goes on: the threads of each file and the files at once, which NXPress
+           takes from the next file on (the files at work keep theirs), and the low priority, at
+           once; the side panel and Settings wait for the end of the work -->
+      <div class="live-row" id="live" hidden>
+        <span class="live-name"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span data-t="liveTitle"></span></span>
+        <span class="live-field" id="live-threads-field"><span id="live-threads-name" data-t="threads"></span><span class="stepper" role="group" aria-labelledby="live-threads-name"><button id="live-threads-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><b id="live-threads" aria-live="polite"></b><button id="live-threads-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span></span>
+        <span class="live-field" id="live-multi-field"><span id="live-multi-name" data-t="multi"></span><span class="stepper" role="group" aria-labelledby="live-multi-name"><button id="live-multi-down" data-t-label="liveFewer" data-t-title="liveFewer">−</button><b id="live-multi" aria-live="polite"></b><button id="live-multi-up" data-t-label="liveMore" data-t-title="liveMore">+</button></span></span>
+        <label class="live-low"><input id="live-low-priority" type="checkbox" class="switch" role="switch"><span data-t="lowPriority"></span></label>
+        <span class="live-pending" id="live-pending" aria-live="polite" hidden></span>
+      </div>
     </div>
   </section>
 
@@ -164,6 +174,22 @@
           <span><b data-t="forEmulators"></b><small data-t="forEmulatorsHint"></small>
           <span class="tags"><i class="yes">NXDock</i><i class="yes">DBI</i><i class="yes">Tinfoil</i><i class="no">Awoo</i><i class="yes">CyberFoil</i><i class="yes">Sphaira</i><i class="yes" data-t="tagEmulators"></i></span></span></label>
         </div>
+        <!-- what Compress leaves as it is, and the folder it goes to as its turn comes: the
+             games in sparse storage, their updates and the DLC, when they are skipped -->
+        <div class="left-group" data-for="compress">
+          <div class="label" data-t="leftAsIs"></div>
+          <label class="check"><input id="skip-dlc" type="checkbox"><span data-t="skipDlc"></span></label>
+          <p class="hint" data-t="skipDlcHint"></p>
+          <!-- without the extra compression a base game in sparse storage is left as it is: its
+               update can be left with it, so the two stay together -->
+          <label class="check"><input id="skip-sparse-updates" type="checkbox"><span data-t="skipSparseUpdates"></span></label>
+          <p class="hint" data-t="skipSparseUpdatesHint"></p>
+          <div class="move-field">
+            <div class="label" data-t="moveSkipped"></div>
+            <div class="path"><span id="move-skipped"></span><button id="choose-move-skipped" data-t="choose"></button><button id="reset-move-skipped" class="quiet icon" data-t-title="moveSkippedNone" data-t-label="moveSkippedNone">✕</button></div>
+            <p class="hint" data-t="moveSkippedHint"></p>
+          </div>
+        </div>
         <!-- the experimental options, together, a click away; open when one is on -->
         <details class="more-options" id="extra-options">
         <summary data-t="extraOptions"></summary>
@@ -175,12 +201,6 @@
           <p class="hint always" data-for="recompress" data-t="extraRecompress"></p>
         </div>
         <p class="warning" id="extra-target-warning" data-t="extraTargetWarn" hidden></p>
-        <!-- without the extra compression a base game in sparse storage is left as it is: its
-             update can be left with it, so the two stay together -->
-        <div class="extra-field" data-for="compress">
-          <label class="check"><input id="skip-sparse-updates" type="checkbox"><span data-t="skipSparseUpdates"></span></label>
-          <p class="hint" data-t="skipSparseUpdatesHint"></p>
-        </div>
         <!-- Optimize for install (experimental): each game with its update into one NSZ that takes
              the least room installed; the files of its list are the games and their updates -->
         <div class="extra-field" data-for="compress">
