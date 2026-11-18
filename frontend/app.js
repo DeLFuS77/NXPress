@@ -95,9 +95,10 @@ const state = {
   installing: null, installError: "", installed: "", restartAfterWork: false,
   // the tools left out of the side menu in Settings (#140)
   hiddenTools: new Set(),
-  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), and the
-  // threads and files at once changed while a work goes on, until a file starts with them
-  moveSkipped: "", livePending: null,
+  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), the
+  // total of threads and the files at once changed while a work goes on, until a file starts
+  // with them, and the threads each file at work holds of the total, by its path
+  moveSkipped: "", livePending: null, threadsAtWork: new Map(),
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -1291,19 +1292,21 @@ function popText() {
 // by render as before, and describe their option to screen readers.
 const helpOwners = new WeakMap();
 let helpTimer = 0, helpHideTimer = 0, helpOpen = null, helpControl = null, helpWarm = 0;
-// the name a text of help goes with: the box or the button before it, else the title of its field
+// the name a text of help goes with: the box or the button before it, else the title or the
+// label of its field
 function helpName(hint) {
   if (hint.id === "about") return $("title");
   const item = hint.closest("label.choice, .pref-text");
   if (item) return item.querySelector("b");
   for (let element = hint.previousElementSibling; element; element = element.previousElementSibling) {
     if (element.matches("label.check, .level-head")) return element.querySelector("span");
-    if (element.matches("button:not(.small-link), h2, .label")) return element;
+    if (element.matches("button:not(.small-link), h2, .label, label[for]")) return element;
   }
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role):not(.pref-legal)");
+  // the options of the row under the buttons while a work goes on too
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #live .hint, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role):not(.pref-legal)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
@@ -1341,7 +1344,8 @@ function setupHelp() {
     helpHideTimer = setTimeout(hideHelp, 180);
   });
   document.addEventListener("focusin", event => {
-    const name = helpOwners.get(event.target);
+    // a button of a group of buttons (− and +) shows the help of the group
+    const name = helpOwners.get(event.target) || helpOwners.get(event.target.closest?.("[role=group]"));
     if (name && event.target.matches(":focus-visible")) showHelp(name, event.target);
   });
   document.addEventListener("focusout", event => { if (helpOpen && event.target === helpControl) hideHelp(); });
@@ -1786,48 +1790,94 @@ function addLog(line) {
   }, 100);
 }
 
-// the works whose files at once change while they go on, and the ones whose threads do too
+// the works whose files at once change while they go on, and the ones that share a total of
+// threads among their files, the biggest first, which changes too
 const liveFiles = ["compress", "decompress", "recompress", "trim", "verify", "convert", "split", "fat32"];
 const liveThreads = ["compress", "recompress"];
-// paintLive shows, while a work goes on, its threads of each file and files at once (the fields
-// of Advanced), which NXPress takes from the next file on, and Low priority, which it takes at
-// once; a change waits in a mark until a file starts with it (asked by ItsmeAJ on GBAtemp)
+// the works that share a total of threads: Compress and Recompress, and the estimate of Compress;
+// the others take the files at once alone, Auto being one at a time
+const sharesThreads = mode => liveThreads.includes(mode) || mode === "estimate";
+// the most files at once offered besides Auto
+const mostFilesAtOnce = 16;
+// the files at once as the window says them: a number, or Auto
+const filesText = multi => +multi > 0 ? String(multi) : t("filesAuto");
+// paintLive shows, while a work goes on, its total of threads, files at once and order (the
+// fields of Advanced), which NXPress takes from the next file on, the threads in use, and Low
+// priority, which it takes at once; a change waits in a mark until a file starts with it (asked
+// by ItsmeAJ on GBAtemp)
 function paintLive() {
   const run = state.lastRun;
   const mode = run ? run.mode : "";
   const files = state.busy && liveFiles.includes(mode) && !(run.request && run.request.optimize);
-  const threads = files && liveThreads.includes(mode);
+  const shared = files && liveThreads.includes(mode);
   $("live").hidden = !state.busy || mode === "measure" || mode === "estimate";
   $("live-multi-field").hidden = !files;
-  $("live-threads-field").hidden = !threads;
-  for (const id of ["threads", "multi"]) {
-    const field = $(id);
-    $("live-" + id).textContent = field.value;
-    $("live-" + id + "-down").disabled = +field.value <= 1;
-    $("live-" + id + "-up").disabled = +field.value >= +field.max;
-  }
+  $("live-total-field").hidden = $("live-biggest-field").hidden = !shared;
+  // a work resumed from a window before the total has none, until one is set
+  $("live-use").hidden = !shared || !(run.request.totalThreads > 0 || state.threadsAtWork.size);
+  const total = $("total-threads");
+  $("live-total").textContent = total.value;
+  $("live-total-down").disabled = +total.value <= 1;
+  $("live-total-up").disabled = +total.value >= +total.max;
+  $("live-multi").value = $("multi").value;
+  $("live-biggest-first").checked = $("biggest-first").checked;
   $("live-low-priority").checked = $("low-priority").checked;
+  paintThreadsInUse();
   const pending = state.livePending;
   $("live-pending").hidden = !pending || !files;
-  if (pending) $("live-pending").textContent = t("livePending")(pending.threads, pending.multi, pending.withThreads);
+  if (pending) $("live-pending").textContent = t("livePending")(pending.total, filesText(pending.multi), pending.shared);
 }
-// changeLive moves the threads of each file or the files at once of the work going on by step:
-// the field of Advanced too, so the next work takes them as they were left; the log tells the
-// change once the clicks stop
+// paintThreadsInUse tells the threads of the total held by the files at work, as they start and
+// end: one square for each thread, in blue while a file holds it. A total lowered while the work
+// goes on can have more in use for a while, until files end.
+function paintThreadsInUse() {
+  const total = Math.max(1, +$("total-threads").value || 1);
+  let used = 0;
+  for (const threads of state.threadsAtWork.values()) used += threads;
+  $("live-use-text").textContent = t("threadsInUse")(used, total);
+  const strip = $("live-use-strip");
+  const squares = Math.max(total, used);
+  if (strip.childElementCount !== squares) strip.replaceChildren(...Array.from({ length: squares }, () => document.createElement("i")));
+  strip.classList.toggle("dense", squares > 32);
+  [...strip.children].forEach((square, i) => square.classList.toggle("on", i < used));
+}
+// paintThreads shows the threads a file at work took of the total: beside its name, and on its
+// cover in the grid
+function paintThreads(row) {
+  const game = row.tr.querySelector(".game");
+  let chip = game.querySelector(".threads-chip");
+  if (!(row.threads > 0)) { chip?.remove(); return; }
+  if (!chip) {
+    chip = document.createElement("span");
+    chip.className = "threads-chip";
+    game.append(chip);
+  }
+  chip.textContent = t("fileThreads")(row.threads);
+}
+// liveChanged gives the work going on the total of threads, the files at once and the order set
+// in the fields of Advanced, from the next file on: they are kept with the settings, so the next
+// work takes them as they were left; the log tells the change once the clicks stop
 let liveTimer = 0;
-function changeLive(id, step) {
-  const field = $(id);
-  const value = Math.max(1, Math.min(+field.max || 64, (+field.value || 1) + step));
-  if (value === +field.value) return;
-  field.value = value;
+function liveChanged() {
   save("settings", settings());
-  const threads = +$("threads").value, multi = +$("multi").value;
-  const withThreads = !!state.lastRun && liveThreads.includes(state.lastRun.mode);
-  app().SetLive(threads, multi);
-  state.livePending = { threads, multi, withThreads };
+  const total = +$("total-threads").value, multi = +$("multi").value;
+  const shared = !!state.lastRun && liveThreads.includes(state.lastRun.mode);
+  if (shared) app().SetLiveTotal(total, $("biggest-first").checked);
+  // the threads of each file are left to the files at once, or with a total to its share
+  app().SetLive(0, multi);
+  state.livePending = { total, multi, shared };
   clearTimeout(liveTimer);
-  liveTimer = setTimeout(() => addLog(t("liveChanged")(threads, multi, withThreads)), 1200);
+  liveTimer = setTimeout(() => addLog(t("liveChanged")(total, filesText(multi), shared)), 1200);
   paintLive();
+}
+// stepTotal moves the total of threads by step, a whole number between 1 and the processors of
+// the computer (0 puts one typed within them), and tells whether it changed
+function stepTotal(step) {
+  const field = $("total-threads");
+  const value = Math.max(1, Math.min(+field.max || 64, (Math.round(+field.value) || 1) + step));
+  if (String(value) === field.value) return false;
+  field.value = value;
+  return true;
 }
 // setLowPriority puts NXPress below the other programs, or back, at once: also while it works
 function setLowPriority(low) {
@@ -2528,6 +2578,7 @@ function paint(row) {
   const game = row.tr.querySelector(".game");
   game.classList.toggle("working", row.status === "work");
   row.tr.classList.toggle("waiting", row.status === "waiting");
+  paintThreads(row);
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
     // a file in steps (the work, then the check) has its bar split in them, each in its colour:
@@ -2751,7 +2802,10 @@ function previewNames() {
 
 function settings() {
   return {
-    level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
+    level: +$("level").value, block: $("target-block").checked,
+    // the threads of the whole work, shared among its files, the most files at once (0: Auto) and
+    // the biggest files first; the threads of each file are left to them
+    totalThreads: Math.max(1, Math.round(+$("total-threads").value) || 1), multi: +$("multi").value, biggestFirst: $("biggest-first").checked,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
     nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
@@ -2784,6 +2838,9 @@ const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
 const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : state.mode);
 
 // presets: the settings of a compression kept with a name
+// the presets of NXPress take the threads a new window starts with: the usable processors in
+// total, the files at once left to them, and the biggest first
+const defaultThreads = () => ({ totalThreads: state.setup.threads, multi: 0, biggestFirst: true });
 const builtinPresets = () => [
   { name: t("presetInstallers"), level: 18, block: false, builtin: true },
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
@@ -2793,6 +2850,25 @@ const builtinPresets = () => [
   { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
   { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
+// threadsOf gives the threads kept in saved settings or a preset: the total, the most files at
+// once (0: Auto) and the order, within what this computer offers. Kept before there was a total,
+// they held the threads of each file and the files at once: their product is the total, more than
+// one file at once stays the most at work, one file at once (the default then) becomes Auto, so
+// the threads are shared among the files, and the biggest go first. Null when they hold no threads.
+function threadsOf(kept) {
+  const cpus = +$("total-threads").max || 64;
+  const whole = value => Number.isInteger(value) && value > 0 ? value : 0;
+  const multi = Math.min(mostFilesAtOnce, whole(kept.multi));
+  if (whole(kept.totalThreads)) return { totalThreads: Math.min(cpus, kept.totalThreads), multi, biggestFirst: kept.biggestFirst !== false };
+  if (whole(kept.threads)) return { totalThreads: Math.min(cpus, kept.threads * Math.max(1, multi)), multi: multi > 1 ? multi : 0, biggestFirst: true };
+  return null;
+}
+// setThreads puts threads (see threadsOf) in the fields of Advanced
+function setThreads(threads) {
+  $("total-threads").value = threads.totalThreads;
+  $("multi").value = String(threads.multi);
+  $("biggest-first").checked = threads.biggestFirst;
+}
 // the preset chosen is kept by what it is, not by its place in the list, which changes when one
 // is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
 // for the others
@@ -2850,8 +2926,9 @@ function applyPreset() {
   if (!preset) return;
   $("level").value = preset.level;
   $(preset.block ? "target-block" : "target-solid").checked = true;
-  if (preset.threads) $("threads").value = preset.threads;
-  if (preset.multi) $("multi").value = preset.multi;
+  // the threads of a preset saved before there was a total become one (see threadsOf)
+  const threads = threadsOf(preset);
+  if (threads) setThreads(threads);
   // the presets of NXPress say whether the extra compression goes with them: turned on, it asks
   // first, and stays off if that is not accepted
   if (preset.extra === false && $("extra").checked) $("extra").checked = false;
@@ -2904,6 +2981,9 @@ async function start(mode, extra) {
   const splitParts = {};
   if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
   const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
+  // only the works that compress share a total of threads, the biggest first; the others take
+  // the files at once alone, Auto being one at a time
+  if (!sharesThreads(mode)) Object.assign(request, { totalThreads: 0, biggestFirst: false });
   // dump folders only: each NUP is named by the template, whichever way of Combine was left chosen
   if (mode === "pack" && onlyDumps()) request.packGames = true;
   files = request.files;
@@ -2936,6 +3016,7 @@ async function start(mode, extra) {
   resetSpeed();
   state.busy = true;
   state.paused = false;
+  state.threadsAtWork.clear();
   // bytes: the size of the files given, which the new file of a pack weighs in the progress
   const bytes = state.items.filter(item => files.includes(item.path)).reduce((sum, item) => sum + (item.size || 0), 0);
   state.lastRun = { mode, request, started, watch, skipped: 0, bytes };
@@ -2982,6 +3063,14 @@ function spaceAllows(request, opener) {
   }).catch(() => true);
 }
 
+// measuredThreads are the threads a measure found, as the window takes them: the threads of each
+// file of the fastest setting times its files at once make the total, and its files at once stay
+// the most at work, one file at once too: a measure that found one file the fastest (a hard disk)
+// keeps it, unlike the settings kept before there was a total (threadsOf)
+const measuredThreads = report => {
+  const threads = threadsOf({ threads: report.threads, multi: report.multi });
+  return threads ? { ...threads, multi: Math.max(1, Math.min(mostFilesAtOnce, report.multi || 1)) } : defaultThreads();
+};
 // showMeasure tells what a measure found in a dialog: every setting tried, as fast as it went,
 // and the one applied
 function showMeasure(report) {
@@ -2999,7 +3088,7 @@ function showMeasure(report) {
     tr.querySelector(".bar div").style.width = (trial.speed / fastest * 100).toFixed(1) + "%";
     rows.append(tr);
   }
-  $("measure-result").textContent = t("measureResult")(report.threads, report.multi, report.speed, time(report.seconds10GB));
+  $("measure-result").textContent = t("measureResult")(measuredThreads(report).totalThreads, report.multi, report.speed, time(report.seconds10GB));
   // a heavier setting a little faster was not taken: the window tells why
   $("measure-kept").hidden = !report.faster;
   if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
@@ -3012,7 +3101,7 @@ function report() {
   const r = run.request || {};
   const lines = [
     `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" || (!state.setup.officialBuild && state.official !== "dev") ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
-    `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
+    `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · ` + (r.totalThreads > 0 ? `total threads ${r.totalThreads} · files at once ${r.multi || "auto"}` + (r.biggestFirst ? " · biggest first" : "") : `threads ${r.threads || "auto"} · files at once ${r.multi || 1}`) + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
   ];
@@ -3037,12 +3126,30 @@ function listen() {
   events.EventsOn("opened", takeOpened);
   on("progress", event => {
     const row = rowOf(event.file);
-    // a file that starts takes the threads and the files at once changed while it waited
+    // a file that starts takes the total and the files at once changed while it waited
     if (row.status !== "work" && state.livePending) { state.livePending = null; paintLive(); }
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
+  });
+  // the threads a file takes of the total as it starts, and gives back (0) as it ends: on the
+  // file, and in the threads in use under the buttons
+  on("threads", event => {
+    if (event.threads > 0) {
+      state.threadsAtWork.set(event.file, event.threads);
+      const row = rowOf(event.file);
+      row.threads = event.threads;
+      paintThreads(row);
+      // a file that starts takes the total and the files at once changed while it waited
+      state.livePending = null;
+    } else {
+      // a file renamed or moved as it ended has its row under its new path already
+      state.threadsAtWork.delete(event.file);
+      const row = state.rows.get(event.file);
+      if (row) { row.threads = 0; paintThreads(row); }
+    }
+    paintLive();
   });
   on("done", event => {
     // the mode of the work, which is not the section shown when only one file is verified
@@ -3055,6 +3162,8 @@ function listen() {
     }
     const row = rowOf(event.file);
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
+    // its threads go with it, and are told given back next
+    row.threads = 0;
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0, mode: state.lastRun ? state.lastRun.mode : state.mode });
@@ -3086,14 +3195,15 @@ function listen() {
   on("say", text => addLog(noteText(text)));
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {
-    $("threads").value = event.threads;
-    $("multi").value = event.multi;
+    // one total: the threads of each file times the files at once of the fastest setting, which
+    // stay the most at work (see measuredThreads)
+    setThreads(measuredThreads(event));
     $("preset").value = "";
     save("settings", settings());
     // the fields changed are shown: Advanced opens, and they light up for a moment
     $("advanced").open = true;
-    $("threads").scrollIntoView({ block: "center", behavior: "smooth" });
-    for (const field of [$("threads"), $("multi")]) {
+    $("total-threads").scrollIntoView({ block: "center", behavior: "smooth" });
+    for (const field of [$("total-threads").closest(".stepper"), $("multi")]) {
       field.classList.remove("changed");
       void field.offsetWidth;
       field.classList.add("changed");
@@ -3104,6 +3214,8 @@ function listen() {
     state.busy = false;
     state.paused = false;
     state.livePending = null;
+    state.threadsAtWork.clear();
+    for (const row of state.rows.values()) row.threads = 0;
     clearTimeout(liveTimer);
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const single = onePack(state.lastRun);
@@ -3756,7 +3868,11 @@ async function main() {
   $("level").max = state.setup.maxLevel;
   $("level").value = number(chosen.level) || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;
-  $("threads").value = number(chosen.threads) || state.setup.threads;
+  // the threads: a total, the most files at once (Auto, or 1 to 16) and the order; the threads of
+  // each file and the files at once kept before there was a total become one (see threadsOf)
+  $("total-threads").max = state.setup.cpus;
+  for (const select of [$("multi"), $("live-multi")]) for (let n = 1; n <= mostFilesAtOnce; n++) select.append(new Option(String(n), String(n)));
+  setThreads(threadsOf(chosen) || defaultThreads());
   state.restorePreset = load("preset", "");
   // the log is read, and shown when the computer was turned off at the end of the last work
   const showLog = load("showReport", false);
@@ -3765,8 +3881,6 @@ async function main() {
   // Advanced is open unless it was closed, and stays as it was left
   $("advanced").open = load("advancedOpen", true);
   $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
-  $("threads").max = state.setup.cpus;
-  $("multi").value = number(chosen.multi) || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("remove-dumps").checked = !!chosen.removeDumps;
@@ -3850,11 +3964,14 @@ async function main() {
   // the folder what Compress leaves as it is goes to as its turn comes; none: it stays
   $("choose-move-skipped").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.moveSkipped = path; save("settings", settings()); render(); };
   $("reset-move-skipped").onclick = () => { state.moveSkipped = ""; save("settings", settings()); render(); };
-  // while a work goes on (see paintLive)
-  $("live-threads-down").onclick = () => changeLive("threads", -1);
-  $("live-threads-up").onclick = () => changeLive("threads", 1);
-  $("live-multi-down").onclick = () => changeLive("multi", -1);
-  $("live-multi-up").onclick = () => changeLive("multi", 1);
+  // the total of threads of Advanced, by steps or typed, between 1 and the processors
+  for (const [id, step] of [["total-threads-down", -1], ["total-threads-up", 1]]) $(id).onclick = () => { if (stepTotal(step)) save("settings", settings()); };
+  $("total-threads").onchange = () => { stepTotal(0); save("settings", settings()); };
+  // while a work goes on (see paintLive): the fields of Advanced change with them
+  $("live-total-down").onclick = () => { if (stepTotal(-1)) liveChanged(); };
+  $("live-total-up").onclick = () => { if (stepTotal(1)) liveChanged(); };
+  $("live-multi").onchange = () => { $("multi").value = $("live-multi").value; liveChanged(); };
+  $("live-biggest-first").onchange = () => { $("biggest-first").checked = $("live-biggest-first").checked; liveChanged(); };
   $("live-low-priority").onchange = () => setLowPriority($("live-low-priority").checked);
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
@@ -4114,7 +4231,7 @@ async function main() {
     const before = savedPresets();
     const presets = before.slice();
     const now = settings();
-    const preset = { name, level: now.level, block: now.block, threads: now.threads, multi: now.multi };
+    const preset = { name, level: now.level, block: now.block, totalThreads: now.totalThreads, multi: now.multi, biggestFirst: now.biggestFirst };
     if (found.kind === "replace") presets[found.index] = preset;
     else presets.push(preset);
     save("presets", presets);

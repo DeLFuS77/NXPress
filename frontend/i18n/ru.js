@@ -104,7 +104,7 @@ texts.ru = {
   measureHint: "Сжимает несколько секунд первой игры из списка с разным числом потоков и файлов одновременно, на выбранном уровне и типе, и подставляет самый быстрый вариант в эти поля. Занимает от 1 до 3 минут.", measureNeedsGame: "Добавьте NSP или XCI для измерения.",
   measureTitle: "Измерение этого компьютера", measureSpeed: "Скорость, все файлы вместе", measureApplied: "применено", close: "Закрыть",
   measureIntro: (p, l, b) => `${p} ${ruPlural(p, "процессор", "процессора", "процессоров")}, уровень ${l}, ${b ? "по блокам" : "сплошное"}: каждая настройка несколько секунд сжимала часть игры.`,
-  measureResult: (th, m, s, tm) => `Применено: ${th} потоков на файл и ${m} одновременно, ${s} МБ/с, около ${tm} на 10 ГБ.`,
+  measureResult: (total, m, s, tm) => `Применено: всего потоков ${total}, файлов одновременно ${m}, ${s} МБ/с, около ${tm} на 10 ГБ.`,
   measureKept: (th, m, s) => `${th} потоков × ${m} одновременно дали ${s} MB/s, быстрее менее чем на 5 %: остаётся более лёгкая настройка — она тратит меньше памяти и раньше заканчивает каждый файл.`, takesUpdates: "обновления",
   measureChange: "Их можно изменить в разделе «Дополнительно»; они сохраняются вместе с настройками.",
   auto: "Автоматически", watch: "Следить за папками, добавленными в список", watchHint: "Когда работа запущена, NXPress следит за папками, добавленными кнопкой «Добавить папку» или перетащенными в окно, и обрабатывает файлы, которые потом в них копируются, пока вы не нажмёте «Стоп». За файлами, добавленными по отдельности, он не следит.",
@@ -131,10 +131,15 @@ texts.ru = {
   leftAsIs: "Что остаётся как есть", skipDlc: "Пропускать DLC", skipDlcHint: "DLC остаются как есть, в NSP; игры и обновления сжимаются.",
   moveSkipped: "Перемещать пропущенное в", moveSkippedNone: "Не перемещается, остаётся на месте",
   moveSkippedHint: "Когда до файла доходит очередь, то, что остаётся как есть, перемещается в эту папку: игры в sparse storage, а также их обновления и DLC, если они пропускаются. Файл, который там уже есть, никогда не заменяется; на другой диск файл копируется и проверяется, и только потом оригинал удаляется.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "Во время работы", liveFewer: "Меньше", liveMore: "Больше",
-  livePending: (threads, multi, all) => "Со следующего файла: " + (all ? `потоков на файл ${threads} · ` : "") + `файлов одновременно ${multi}`,
-  liveChanged: (threads, multi, all) => "Изменено со следующего файла: " + (all ? `потоков на файл ${threads} · ` : "") + `файлов одновременно ${multi}`,
+  livePending: (total, files, all) => "Со следующего файла: " + (all ? `всего потоков ${total} · ` : "") + `файлов одновременно ${files}`,
+  liveChanged: (total, files, all) => "Изменено со следующего файла: " + (all ? `всего потоков ${total} · ` : "") + `файлов одновременно ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Всего потоков", totalThreadsHint: "NXPress сам распределяет их между файлами в работе: потоки, которые освобождает файл, переходят к следующим.",
+  filesAuto: "Авто", biggestFirst: "Сначала крупные", biggestFirstHint: "Начинает с самых больших файлов, чтобы работа не заканчивалась одним большим файлом.",
+  threadsInUse: (used, total) => `занято ${used} из ${total}`, fileThreads: n => `${n} ${ruPlural(n, "поток", "потока", "потоков")}`,
   steps: { Moving: "Перемещение", Measuring: "Измерение", Reading: "Чтение", Optimizing: "Оптимизация", Checking: "Проверка",
     Comparing: "Сравнение", Estimating: "Оценка", Trimming: "Обрезка", Recompressing: "Пересжатие", Compressing: "Сжатие",
     Packaging: "Упаковка", Unpacking: "Распаковка", Verifying: "Проверка", Decompressing: "Распаковка", Converting: "Конвертация", Packing: "Объединение", Splitting: "Разбиение", Joining: "Сборка",

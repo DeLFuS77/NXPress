@@ -80,3 +80,28 @@ func TestCheckOptions(t *testing.T) {
 		t.Errorf("--rename: %s", o.Action())
 	}
 }
+
+// With a total of threads, -m is the most files at once, left to the total without it; -t is
+// left as it is, and has no effect.
+func TestTotalThreadsOptions(t *testing.T) {
+	o, err := ParseOptions([]string{"-C", "--total-threads", "21", "--biggest-first", "x"})
+	if err == nil {
+		err = o.Check()
+	}
+	if err != nil || o.TotalThreads != 21 || !o.BiggestFirst || o.Multi != 0 || o.MultiGiven || filesAtOnce(o) != 7 || len(o.Notes) != 0 {
+		t.Fatalf("total without -m: %v %+v", err, o)
+	}
+	o, _ = ParseOptions([]string{"-C", "--total-threads", "21", "-m", "4", "x"})
+	if err := o.Check(); err != nil || o.Multi != 4 || !o.MultiGiven || filesAtOnce(o) != 4 {
+		t.Fatalf("total with -m: %v %+v", err, o)
+	}
+	o, _ = ParseOptions([]string{"-C", "--total-threads", "0", "x"})
+	if err := o.Check(); err != nil || o.TotalThreads != 0 || o.Multi != 1 || o.Threads != DefaultThreads(1) {
+		t.Fatalf("no total: %v %+v", err, o)
+	}
+	for _, text := range []string{"--total-threads N", "--biggest-first", "one for every 3"} {
+		if !strings.Contains(Usage, text) {
+			t.Errorf("--help does not tell %q", text)
+		}
+	}
+}

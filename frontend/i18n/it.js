@@ -97,7 +97,7 @@ texts.it = {
   measureHint: "Comprime alcuni secondi del primo gioco della lista con più thread e file alla volta, al livello e tipo scelti, e mette il più veloce in questi campi. Richiede da 1 a 3 minuti.", measureNeedsGame: "Aggiungi un NSP o XCI con cui misurare.",
   measureTitle: "Misurazione di questo computer", measureSpeed: "Velocità, tutti i file insieme", measureApplied: "applicato", close: "Chiudi",
   measureIntro: (p, l, b) => `${p} processori, livello ${l}, ${b ? "a blocchi" : "solido"}: ogni impostazione ha compresso una parte del gioco per qualche secondo.`,
-  measureResult: (th, m, s, tm) => `Applicato: ${th} thread per file e ${m} alla volta, ${s} MB/s, circa ${tm} per 10 GB.`,
+  measureResult: (total, m, s, tm) => `Applicato: ${total} thread totali e ${m} file alla volta, ${s} MB/s, circa ${tm} per 10 GB.`,
   measureKept: (th, m, s) => `${th} thread × ${m} alla volta hanno fatto ${s} MB/s, meno del 5% più veloce: resta l'impostazione più leggera, che usa meno memoria e finisce prima ogni file.`, takesUpdates: "aggiornamenti",
   measureChange: "Puoi cambiarli in Avanzate; vengono salvati con le tue impostazioni.",
   auto: "Automatico", watch: "Controlla le cartelle aggiunte alla lista", watchHint: "Una volta avviato il lavoro, NXPress tiene d'occhio le cartelle aggiunte con Aggiungi cartella o trascinate nella finestra, ed elabora i file copiati in esse in seguito, finché non premi Ferma. I file aggiunti da soli non vengono controllati.",
@@ -124,10 +124,15 @@ texts.it = {
   leftAsIs: "Ciò che resta com'è", skipDlc: "Salta i DLC", skipDlcHint: "I DLC restano come sono, in NSP; giochi e aggiornamenti vengono compressi.",
   moveSkipped: "Sposta ciò che è saltato in", moveSkippedNone: "Non spostato, resta dov'è",
   moveSkippedHint: "Quando arriva il suo turno, ogni file che resta com'è va in questa cartella: i giochi in sparse storage, e i loro aggiornamenti e i DLC quando vengono saltati. Un file già presente non viene mai sostituito; su un altro disco viene copiato e controllato prima di eliminare l'originale.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "Durante il lavoro", liveFewer: "Meno", liveMore: "Più",
-  livePending: (threads, multi, all) => "Dal prossimo file: " + (all ? `thread per file ${threads} · ` : "") + `file alla volta ${multi}`,
-  liveChanged: (threads, multi, all) => "Cambiato dal prossimo file: " + (all ? `thread per file ${threads} · ` : "") + `file alla volta ${multi}`,
+  livePending: (total, files, all) => "Dal prossimo file: " + (all ? `thread totali ${total} · ` : "") + `file alla volta ${files}`,
+  liveChanged: (total, files, all) => "Cambiato dal prossimo file: " + (all ? `thread totali ${total} · ` : "") + `file alla volta ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Thread totali", totalThreadsHint: "NXPress li divide da solo tra i file in lavorazione: i thread che un file lascia passano ai successivi.",
+  filesAuto: "Auto", biggestFirst: "Prima i più grandi", biggestFirstHint: "Inizia dai file più grandi, così il lavoro non finisce con un file grande da solo.",
+  threadsInUse: (used, total) => `${used} di ${total} in uso`, fileThreads: n => n === 1 ? "1 thread" : `${n} thread`,
   steps: { Moving: "Spostamento", Measuring: "Misurazione", Reading: "Lettura", Optimizing: "Ottimizzazione", Checking: "Controllo",
     Comparing: "Confronto", Estimating: "Stima", Trimming: "Alleggerimento", Recompressing: "Ricompressione", Compressing: "Compressione",
     Packaging: "Impacchettamento", Unpacking: "Spacchettamento", Verifying: "Verifica", Decompressing: "Decompressione", Converting: "Conversione", Packing: "Unione", Splitting: "Divisione", Joining: "Riunione",

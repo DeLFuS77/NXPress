@@ -97,7 +97,7 @@ texts.zh = {
   measureHint: "以所选级别和方式，用不同的线程数和同时处理的文件数压缩列表中第一个游戏的几秒钟数据，并把最快的组合填入这些栏。需要 1 到 3 分钟。", measureNeedsGame: "请添加一个 NSP 或 XCI 用于测试。",
   measureTitle: "本机测试结果", measureSpeed: "速度（所有文件合计）", measureApplied: "已应用", close: "关闭",
   measureIntro: (p, l, b) => `${p} 个处理器,级别 ${l},${b ? "按块" : "固实"}:每种设置都压缩了游戏的一部分几秒钟。`,
-  measureResult: (th, m, s, tm) => `已应用:每个文件 ${th} 个线程,同时 ${m} 个文件,${s} MB/s,10 GB 约需 ${tm}。`,
+  measureResult: (total, m, s, tm) => `已应用:共 ${total} 个线程,同时 ${m} 个文件,${s} MB/s,10 GB 约需 ${tm}。`,
   measureKept: (th, m, s) => `${th} 线程 × 同时 ${m} 个达到 ${s} MB/s，快不到 5%：保留更轻的设置，它占用内存更少，每个文件也更早完成。`, takesUpdates: "更新",
   measureChange: "可在“高级”中修改;它们会随设置一起保存。",
   auto: "自动", watch: "监视添加到列表的文件夹", watchHint: "工作开始后，NXPress 会监视用“添加文件夹”添加或拖放到窗口中的文件夹，并处理之后复制进去的文件，直到你按下“停止”。单独添加的文件不会被监视。",
@@ -124,10 +124,15 @@ texts.zh = {
   leftAsIs: "保持原样的内容", skipDlc: "跳过 DLC", skipDlcHint: "DLC 保持原样（NSP），游戏和更新照常压缩。",
   moveSkipped: "将跳过的文件移动到", moveSkippedNone: "不移动，留在原处",
   moveSkippedHint: "轮到某个文件时，若它保持原样，就移动到此文件夹：sparse storage 游戏，以及被跳过时它们的更新和 DLC。不会替换已在那里的文件；移动到其他驱动器时会先复制并检查，再删除原文件。",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "工作时", liveFewer: "减少", liveMore: "增加",
-  livePending: (threads, multi, all) => "从下一个文件起：" + (all ? `每个文件的线程 ${threads} · ` : "") + `同时处理的文件 ${multi}`,
-  liveChanged: (threads, multi, all) => "从下一个文件起已更改：" + (all ? `每个文件的线程 ${threads} · ` : "") + `同时处理的文件 ${multi}`,
+  livePending: (total, files, all) => "从下一个文件起：" + (all ? `总线程数 ${total} · ` : "") + `同时处理的文件 ${files}`,
+  liveChanged: (total, files, all) => "从下一个文件起已更改：" + (all ? `总线程数 ${total} · ` : "") + `同时处理的文件 ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "总线程数", totalThreadsHint: "NXPress 会自动分给正在处理的文件：一个文件空出的线程会交给后面的文件。",
+  filesAuto: "自动", biggestFirst: "大文件优先", biggestFirstHint: "先处理最大的文件，这样工作不会以一个大文件单独收尾。",
+  threadsInUse: (used, total) => `已用 ${used} / ${total}`, fileThreads: n => `${n} 个线程`,
   steps: { Moving: "移动中", Measuring: "测试中", Reading: "读取中", Optimizing: "优化中", Checking: "检查中",
     Comparing: "比对中", Estimating: "估算中", Trimming: "精简中", Recompressing: "重新压缩中", Compressing: "压缩中",
     Packaging: "打包中", Unpacking: "解包中", Verifying: "校验中", Decompressing: "解压中", Converting: "转换中", Packing: "合并中", Splitting: "分片中", Joining: "合并分片中",

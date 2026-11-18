@@ -98,7 +98,7 @@ texts.en = {
   measureHint: "Compresses a few seconds of the first game of the list with several threads and files at once, at the level and kind chosen, and puts the fastest in these fields. It takes 1 to 3 minutes.", measureNeedsGame: "Add an NSP or XCI to measure with.",
   measureTitle: "Measure of this computer", measureSpeed: "Speed, all files together", measureApplied: "applied", close: "Close",
   measureIntro: (p, l, b) => `${p} processors, level ${l}, ${b ? "in blocks" : "solid"}: each setting compressed a part of the game for a few seconds.`,
-  measureResult: (th, m, s, tm) => `Applied: ${th} threads per file and ${m} at once, ${s} MB/s, about ${tm} for 10 GB.`,
+  measureResult: (total, m, s, tm) => `Applied: ${total} threads in total and ${m} files at once, ${s} MB/s, about ${tm} for 10 GB.`,
   measureKept: (th, m, s) => `${th} threads × ${m} at once went ${s} MB/s, less than 5% faster: the lighter setting stays, as it uses less memory and finishes each file sooner.`, takesUpdates: "updates",
   measureChange: "You can change them under Advanced; they are kept with your settings.",
   auto: "Automatic", watch: "Watch the folders added to the list", watchHint: "Once the work has started, NXPress keeps an eye on the folders added with Add folder or dropped on the window, and processes the files copied into them later, until you press Stop. Files added on their own are not watched.",
@@ -125,10 +125,15 @@ texts.en = {
   leftAsIs: "What is left as it is", skipDlc: "Skip DLC", skipDlcHint: "DLC are left as they are, as NSP; games and updates are compressed.",
   moveSkipped: "Move what is skipped to", moveSkippedNone: "Not moved, it stays where it is",
   moveSkippedHint: "As each file's turn comes, what is left as it is goes to this folder: games in sparse storage, and their updates and the DLC when they are skipped. A file already there is never replaced; on another drive it is copied and checked before the original is deleted.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "While it works", liveFewer: "Fewer", liveMore: "More",
-  livePending: (threads, multi, all) => "From the next file: " + (all ? `threads per file ${threads} · ` : "") + `files at once ${multi}`,
-  liveChanged: (threads, multi, all) => "Changed from the next file on: " + (all ? `threads per file ${threads} · ` : "") + `files at once ${multi}`,
+  livePending: (total, files, all) => "From the next file: " + (all ? `total threads ${total} · ` : "") + `files at once ${files}`,
+  liveChanged: (total, files, all) => "Changed from the next file on: " + (all ? `total threads ${total} · ` : "") + `files at once ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Total threads", totalThreadsHint: "NXPress shares them among the files at work by itself: the threads a file leaves go to the next ones.",
+  filesAuto: "Auto", biggestFirst: "Biggest first", biggestFirstHint: "Starts the biggest files first, so the work does not end with one big file alone.",
+  threadsInUse: (used, total) => `${used} of ${total} in use`, fileThreads: n => n === 1 ? "1 thread" : `${n} threads`,
   steps: { Measuring: "Measuring",},
   notes: {
     sparseNote: "$1 NCA in sparse storage in the experimental format NCZSECT2: decompress it with NXPress to install it", sparseNoPlain: "it holds a game in sparse storage, which only the extra compression (NCZSECT2) compresses: there is no NSZ of it that installers read, so it stays as it is; Decompress makes an NSP of it", throughKeys: "it changes format through a decompressed copy, which needs prod.keys", plainAgain: "a plain NSZ again, which installers read", worksSparse: "works with: NXPress and NXDock only, experimental format NCZSECT2 for sparse storage: decompress it with NXPress to install it with another installer",

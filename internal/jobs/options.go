@@ -110,6 +110,15 @@ type Options struct {
 	Output      string
 	Overwrite   bool
 	RmSource    bool
+	// -m given: with TotalThreads and without it, the files at once are left to the total
+	MultiGiven bool
+	// --total-threads: the threads of the whole work, which NXPress shares among the files at
+	// work by itself (0: each file takes Threads); Multi is then the most files at once, 0 to
+	// leave them to the total (see sharing)
+	TotalThreads int
+	// --biggest-first: the files waiting start biggest first, so a big one does not end the work
+	// alone
+	BiggestFirst bool
 	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
 	// rebuilds a damaged file with its .par2
 	Par2   int
@@ -164,6 +173,7 @@ var optionNames = []optionName{
 	{"--skip-sparse-updates", 0, false, false}, {"--skip-dlc", 0, false, false}, {"--move-skipped", 0, true, false},
 	{"--no-long", 0, false, false},
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
+	{"--total-threads", 0, true, false}, {"--biggest-first", 0, false, false},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
 	{"--rm-source", 0, false, true}, {"--par2", 0, true, false}, {"--repair", 0, false, false}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
@@ -342,6 +352,8 @@ func (o *Options) flag(option optionName) {
 		o.Archive = true
 	case "--low-priority":
 		o.LowPriority = true
+	case "--biggest-first":
+		o.BiggestFirst = true
 	case "--solid":
 		o.Block = false
 	case "--overwrite":
@@ -444,6 +456,9 @@ func (o *Options) set(option optionName, told string, value string, hasValue boo
 		o.Threads, err = number(1)
 	case "--multi":
 		o.Multi, err = number(1)
+		o.MultiGiven = true
+	case "--total-threads":
+		o.TotalThreads, err = number(0)
 	case "--output":
 		o.Output = value
 	case "--keys":
@@ -610,6 +625,19 @@ func (o *Options) Check() error {
 			o.Notes = append(o.Notes, "-o has no effect with "+action.name)
 		}
 	}
+	// with a total of threads, the files at once are the most at work, left to the total
+	// without -m, and each file takes its share instead of -t
+	if o.TotalThreads > 0 {
+		if !o.MultiGiven {
+			o.Multi = 0
+		}
+		if o.Threads > 0 {
+			o.Notes = append(o.Notes, "-t has no effect with --total-threads: each file takes its share of the total")
+		}
+		if o.Measure {
+			o.Notes = append(o.Notes, "--total-threads has no effect with --measure")
+		}
+	}
 	if o.Threads == 0 {
 		o.Threads = DefaultThreads(o.Multi)
 	}
@@ -669,6 +697,15 @@ Usage: nxpress [options] file or folder...
   --low-priority      run below the normal priority of the processor, so the computer stays
                       responsive while NXPress works
   -m, --multi N       files at once (default 1)
+  --total-threads N   the threads of the whole work, which NXPress shares among the files
+                      at work by itself instead of giving each the same: a file that starts
+                      takes a share of the threads free by its size, never more than its
+                      compression keeps busy, and the threads of a file that ends go to the
+                      files that start next. -m is then the most files at once (without it,
+                      one for every 3 threads) and -t has no effect; fewer threads when the
+                      memory is short
+  --biggest-first     start the biggest files first, so a big one is not left to end the
+                      work alone
   -o, --output [DIR]  folder of the new files (default, and -o alone: next to each file)
   --recursive         take the files in the folders inside the folders given too, and in
                       theirs (without it, only the files of the folders given, as nsz)

@@ -97,7 +97,7 @@ texts.ko = {
   measureHint: "목록의 첫 번째 게임을 선택한 레벨과 방식으로 몇 초 동안 스레드 수와 동시 파일 수를 바꿔 가며 압축하고, 가장 빠른 조합을 이 칸에 넣습니다. 1~3분 걸립니다.", measureNeedsGame: "측정할 NSP 또는 XCI를 추가하세요.",
   measureTitle: "이 컴퓨터 측정", measureSpeed: "속도(모든 파일 합계)", measureApplied: "적용됨", close: "닫기",
   measureIntro: (p, l, b) => `프로세서 ${p}개, 레벨 ${l}, ${b ? "블록 단위" : "솔리드"}: 각 설정으로 게임 일부를 몇 초 동안 압축했어요.`,
-  measureResult: (th, m, s, tm) => `적용: 파일당 스레드 ${th}개, 동시 파일 ${m}개, ${s} MB/s, 10 GB에 약 ${tm}.`,
+  measureResult: (total, m, s, tm) => `적용: 전체 스레드 ${total}개, 동시 파일 ${m}개, ${s} MB/s, 10 GB에 약 ${tm}.`,
   measureKept: (th, m, s) => `${th}스레드 × 동시 ${m}개는 ${s} MB/s로 5% 미만 빨랐어요. 메모리를 덜 쓰고 파일마다 더 빨리 끝나는 가벼운 설정을 유지해요.`, takesUpdates: "업데이트",
   measureChange: "고급에서 바꿀 수 있어요. 설정과 함께 저장돼요.",
   auto: "자동", watch: "목록에 추가한 폴더 감시", watchHint: "작업을 시작하면 NXPress가 '폴더 추가'로 추가했거나 창에 끌어다 놓은 폴더를 감시하고, 나중에 그 안에 복사된 파일을 처리합니다. '중지'를 누를 때까지 계속됩니다. 따로 추가한 파일은 감시하지 않습니다.",
@@ -124,10 +124,15 @@ texts.ko = {
   leftAsIs: "그대로 두는 것", skipDlc: "DLC 건너뛰기", skipDlcHint: "DLC는 NSP 그대로 두고 게임과 업데이트를 압축합니다.",
   moveSkipped: "건너뛴 파일을 옮길 폴더", moveSkippedNone: "옮기지 않고 그 자리에 둡니다",
   moveSkippedHint: "차례가 온 파일 중 그대로 두는 것을 이 폴더로 옮깁니다: sparse storage 게임, 그리고 건너뛸 때는 그 업데이트와 DLC. 이미 있는 파일은 바꾸지 않으며, 다른 드라이브로는 복사하고 확인한 뒤 원본을 지웁니다.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "작업 중", liveFewer: "줄이기", liveMore: "늘리기",
-  livePending: (threads, multi, all) => "다음 파일부터: " + (all ? `파일당 스레드 ${threads} · ` : "") + `동시에 처리할 파일 ${multi}`,
-  liveChanged: (threads, multi, all) => "다음 파일부터 변경: " + (all ? `파일당 스레드 ${threads} · ` : "") + `동시에 처리할 파일 ${multi}`,
+  livePending: (total, files, all) => "다음 파일부터: " + (all ? `전체 스레드 ${total} · ` : "") + `동시에 처리할 파일 ${files}`,
+  liveChanged: (total, files, all) => "다음 파일부터 변경: " + (all ? `전체 스레드 ${total} · ` : "") + `동시에 처리할 파일 ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "전체 스레드", totalThreadsHint: "NXPress가 작업 중인 파일에 알아서 나눠 줘요. 파일이 내놓은 스레드는 다음 파일로 가요.",
+  filesAuto: "자동", biggestFirst: "큰 파일 먼저", biggestFirstHint: "가장 큰 파일부터 시작해서, 큰 파일 하나만 남은 채로 작업이 끝나지 않게 해요.",
+  threadsInUse: (used, total) => `${total}개 중 ${used}개 사용 중`, fileThreads: n => `스레드 ${n}개`,
   steps: { Moving: "옮기는 중", Measuring: "측정 중", Reading: "읽는 중", Optimizing: "최적화 중", Checking: "확인 중",
     Comparing: "비교 중", Estimating: "예상 중", Trimming: "다듬는 중", Recompressing: "다시 압축 중", Compressing: "압축 중",
     Packaging: "패키징 중", Unpacking: "풀기 중", Verifying: "검증 중", Decompressing: "압축 해제 중", Converting: "변환 중", Packing: "합치는 중", Splitting: "나누는 중", Joining: "합치는 중",

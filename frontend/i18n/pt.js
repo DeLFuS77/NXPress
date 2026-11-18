@@ -97,7 +97,7 @@ texts.pt = {
   measureHint: "Comprime alguns segundos do primeiro jogo da lista com vários threads e arquivos ao mesmo tempo, no nível e tipo escolhidos, e coloca o mais rápido nestes campos. Leva de 1 a 3 minutos.", measureNeedsGame: "Adicione um NSP ou XCI para medir.",
   measureTitle: "Medição deste computador", measureSpeed: "Velocidade, todos os arquivos juntos", measureApplied: "aplicado", close: "Fechar",
   measureIntro: (p, l, b) => `${p} processadores, nível ${l}, ${b ? "por blocos" : "sólido"}: cada ajuste comprimiu uma parte do jogo durante alguns segundos.`,
-  measureResult: (th, m, s, tm) => `Aplicado: ${th} threads por arquivo e ${m} ao mesmo tempo, ${s} MB/s, cerca de ${tm} por 10 GB.`,
+  measureResult: (total, m, s, tm) => `Aplicado: ${total} threads no total e ${m} arquivos de cada vez, ${s} MB/s, cerca de ${tm} por 10 GB.`,
   measureKept: (th, m, s) => `${th} threads × ${m} de cada vez chegaram a ${s} MB/s, menos de 5% mais rápido: fica o ajuste mais leve, que usa menos memória e termina cada arquivo antes.`, takesUpdates: "atualizações",
   measureChange: "Pode alterá-los em Avançado; ficam guardados com as suas definições.",
   auto: "Automático", watch: "Vigiar as pastas adicionadas à lista", watchHint: "Depois de iniciado o trabalho, o NXPress vigia as pastas adicionadas com Adicionar pasta ou soltas na janela, e processa os arquivos copiados para elas depois, até você clicar em Parar. Os arquivos adicionados sozinhos não são vigiados.",
@@ -124,10 +124,15 @@ texts.pt = {
   leftAsIs: "O que fica como está", skipDlc: "Saltar os DLC", skipDlcHint: "Os DLC ficam como estão, em NSP; os jogos e as atualizações são comprimidos.",
   moveSkipped: "Mover o que é ignorado para", moveSkippedNone: "Não é movido, fica onde está",
   moveSkippedHint: "Quando chega a sua vez, cada arquivo que fica como está vai para esta pasta: os jogos em sparse storage, e as suas atualizações e os DLC quando são saltados. Um arquivo que já esteja lá nunca é substituído; noutra unidade é copiado e conferido antes de apagar o original.",
-  // while a work goes on: the threads of each file and the files at once, from the next file
+  // while a work goes on: the total of threads and the files at once, from the next file
   liveTitle: "Enquanto trabalha", liveFewer: "Menos", liveMore: "Mais",
-  livePending: (threads, multi, all) => "A partir do próximo arquivo: " + (all ? `threads por arquivo ${threads} · ` : "") + `arquivos de cada vez ${multi}`,
-  liveChanged: (threads, multi, all) => "Alterado a partir do próximo arquivo: " + (all ? `threads por arquivo ${threads} · ` : "") + `arquivos de cada vez ${multi}`,
+  livePending: (total, files, all) => "A partir do próximo arquivo: " + (all ? `threads no total ${total} · ` : "") + `arquivos de cada vez ${files}`,
+  liveChanged: (total, files, all) => "Alterado a partir do próximo arquivo: " + (all ? `threads no total ${total} · ` : "") + `arquivos de cada vez ${files}`,
+  // the total of threads NXPress shares among the files at work by itself, the most files at once
+  // (Auto: one for every 3 threads), the biggest files first, and the threads each file holds
+  totalThreads: "Threads no total", totalThreadsHint: "O NXPress as divide sozinho entre os arquivos em andamento: as threads que um arquivo deixa vão para os próximos.",
+  filesAuto: "Auto", biggestFirst: "Os maiores primeiro", biggestFirstHint: "Começa pelos arquivos maiores, para que o trabalho não termine com um arquivo grande sozinho.",
+  threadsInUse: (used, total) => `${used} de ${total} em uso`, fileThreads: n => n === 1 ? "1 thread" : `${n} threads`,
   steps: { Moving: "Movendo", Measuring: "Medindo", Reading: "Lendo", Optimizing: "Otimizando", Checking: "Conferindo",
     Comparing: "Comparando", Estimating: "Estimando", Trimming: "Aparando", Recompressing: "Recomprimindo", Compressing: "Comprimindo",
     Packaging: "Empacotando", Unpacking: "Desempacotando", Verifying: "Verificando", Decompressing: "Descomprimindo", Converting: "Convertendo", Packing: "Juntando", Splitting: "Dividindo", Joining: "Unindo",
