@@ -263,6 +263,21 @@ const noteRules = [
   [/^solid, /, "solidComma"],
   [/^in blocks, /, "blocksComma"],
   [/ smaller/g, "smaller"],
+  // where the originals went with the recycle bin (--trash, and the setting of the window), and
+  // why one stayed or went for good
+  [/the dump folder is in the recycle bin: the NUP holds all its files, checked/g, "dumpTrashed"],
+  [/the dump folder is kept: some of its files are not in the NUP as they are, and it goes to the recycle bin only whole/g, "dumpKeptInPart"],
+  [/the dump folder is kept: (?=its drive has no recycle bin|it is too big for the recycle bin of its drive|its path is too long for the recycle bin|it could not go to the recycle bin: )/g, "dumpKeptNoBin"],
+  [/the dump folder is deleted for good: /g, "dumpDeletedNoBin"],
+  [/\b(\d+) originals are in the recycle bin/g, "trashedSome"],
+  [/the originals are in the recycle bin/g, "trashedAll"],
+  [/the original is in the recycle bin/g, "trashedOne"],
+  [/the original is kept: (?=its drive has no recycle bin|it is too big for the recycle bin of its drive|its path is too long for the recycle bin)/g, "keptNoBin"],
+  [/the original is deleted for good: /g, "deletedNoBin"],
+  [/its drive has no recycle bin/g, "noBin"],
+  [/it is too big for the recycle bin of its drive/g, "binTooBig"],
+  [/its path is too long for the recycle bin/g, "binTooLong"],
+  [/it could not go to the recycle bin: /g, "binFailed"],
   // the figures of the notes as the language writes them: its decimal mark, and an arrow
   [/(\d)\.(\d)(?= ?(?:B|KB|MB|GB|TB)\b|%)/g, "decimal"],
   [/ -> /g, "arrow"],

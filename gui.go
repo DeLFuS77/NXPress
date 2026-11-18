@@ -822,6 +822,10 @@ type Request struct {
 	RemoveSource bool     `json:"removeSource"`
 	// the dump folders too, once their NUP is checked: in Combine, with Delete originals (#79)
 	RemoveDumps bool `json:"removeDumps"`
+	// the originals go to the recycle bin instead of being deleted for good (Settings › General),
+	// and where there is none, what was answered before the work: "delete" for good, else kept
+	Trash   bool   `json:"trash"`
+	NoTrash string `json:"noTrash"`
 	// the files of a NUP over 256 MiB stored as they are, for Eglantine and Lichii
 	NupRawBig    bool     `json:"nupRawBig"`
 	Pack         string   `json:"pack"`
@@ -884,6 +888,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 		o.SkipDlc, o.MoveSkipped = request.SkipDlc, request.MoveSkipped
 	}
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
+	o.Trash, o.TrashDelete = request.Trash, request.Trash && request.NoTrash == "delete"
 	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
 	if request.Par2 > 0 && request.Par2 <= 100 {

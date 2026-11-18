@@ -229,11 +229,19 @@ func joinParts(ctx context.Context, path string, whole string, o Options, out Ou
 	} else if err := finish(o, written, name); err != nil {
 		return "", "", err
 	}
-	// the parts give way to the whole file once it has its name, in place or when asked to
-	if inPlace || o.RmSource {
+	// the parts give way to the whole file once it has its name in place, and when asked to
+	// elsewhere: to the recycle bin with --trash
+	switch {
+	case inPlace:
 		if err := removeParts(path); err != nil {
 			return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 		}
+	case o.RmSource:
+		gone, err := discard(o, partNames(path), os.RemoveAll)
+		if err != nil {
+			return name, note, removeFailed(o, err)
+		}
+		note = joinNotes(note, gone.note())
 	}
 	return name, note, nil
 }
@@ -275,18 +283,27 @@ func PartsSize(path string) (int64, int, error) {
 
 // removeParts deletes a file in parts: its folder, or its parts name.ns0, name.ns1...
 func removeParts(path string) error {
+	for _, part := range partNames(path) {
+		if err := os.RemoveAll(part); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// partNames are what a file in parts is made of: its folder, or its parts name.ns0, name.ns1...
+func partNames(path string) []string {
 	if info, err := os.Stat(path); err == nil && info.IsDir() {
-		return os.RemoveAll(path)
+		return []string{path}
 	}
 	base := strings.TrimSuffix(path, "0")
+	var parts []string
 	for n := 0; ; n++ {
 		part := base + strconv.Itoa(n)
 		if _, err := os.Stat(part); err != nil {
-			return nil
+			return parts
 		}
-		if err := os.Remove(part); err != nil {
-			return err
-		}
+		parts = append(parts, part)
 	}
 }
 

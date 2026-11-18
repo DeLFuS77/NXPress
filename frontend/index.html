@@ -289,10 +289,11 @@
       </div>
       <label class="check"><input id="overwrite" type="checkbox"><span data-t="overwrite"></span></label>
       <p class="hint" data-t="overwriteHint"></p>
-      <label class="check" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span data-t="remove"></span></label>
+      <!-- what the box says follows Settings › General: to the recycle bin, or deleted for good -->
+      <label class="check" data-for="compress decompress recompress trim convert split pack fat32"><input id="remove" type="checkbox"><span id="remove-text" data-t="remove"></span></label>
       <!-- the dump folders Combine packs go too, once their NUP is checked, only when asked (#79) -->
       <label class="check sub-check" id="remove-dumps-option" hidden><input id="remove-dumps" type="checkbox"><span data-t="removeDumps"></span></label>
-      <p class="hint" data-t="removeDumpsHint"></p>
+      <p class="hint" id="remove-dumps-hint" data-t="removeDumpsHint"></p>
       <p class="warning" id="remove-warning" hidden></p>
       <!-- recovery data next to each new file, in the PAR 2.0 format: it rebuilds the parts of
            the file damaged on the disk over time -->
@@ -379,6 +380,12 @@
             <div class="pref-item">
               <div class="pref-text"><b data-t="soundWhenDone"></b><small data-t="soundHint"></small><span class="pref-sound" id="sound-row" hidden><span id="sound-name"></span><button id="sound-choose" class="link small-link" data-t="soundChoose"></button><button id="sound-play" class="link small-link" data-t="soundPlay"></button><button id="sound-default" class="link small-link" data-t="soundDefault"></button></span></div>
               <input id="sound" type="checkbox" class="switch" role="switch">
+            </div>
+            <!-- where the originals go once their new files are checked, for every section: the
+                 recycle bin unless deleting them for good is chosen -->
+            <div class="pref-item">
+              <div class="pref-text"><b data-t="removalTitle"></b><small data-t="removalHint"></small></div>
+              <div class="segmented" role="radiogroup" data-t-label="removalTitle"><button role="radio" data-removal="trash" data-t="removalTrash"></button><button role="radio" data-removal="delete" data-t="removalDelete"></button></div>
             </div>
           </section>
           <section class="pref-group" id="pref-look">
@@ -493,6 +500,14 @@
   <ul class="space-list" id="space-list"></ul>
   <div class="dialog-actions"><button id="space-cancel" data-t="cancel"></button><button id="space-start" class="primary" data-t="spaceStart"></button></div>
 </dialog>
+<!-- the originals that cannot go to the recycle bin, asked before the work starts: kept, or
+     deleted for good (the one button in red); Escape starts nothing -->
+<dialog id="no-bin-dialog" class="warn-dialog" aria-labelledby="no-bin-title" aria-describedby="no-bin-intro">
+  <h2 id="no-bin-title"><svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 9.5v4.5M12 16.8v.2"/></svg><span data-t="noBinTitle"></span></h2>
+  <p id="no-bin-intro" class="muted" data-t="noBinIntro"></p>
+  <ul class="space-list" id="no-bin-list"></ul>
+  <div class="dialog-actions"><button id="no-bin-delete" class="danger" data-t="noBinDelete"></button><button id="no-bin-keep" class="primary" data-t="noBinKeep"></button></div>
+</dialog>
 <dialog id="cover-dialog" class="cover-dialog" aria-labelledby="cover-title">
   <h2 id="cover-title"></h2>
   <div class="cover-bar"><input id="cover-query" type="search" data-t-label="coverQuery" maxlength="200" spellcheck="false"><button id="cover-search" class="primary small" data-t="coverSearch"></button></div>
@@ -579,6 +594,8 @@
 <dialog id="done-dialog" aria-labelledby="done-title">
   <h2 id="done-title" data-t="doneTitle"></h2>
   <p class="done-saved" id="done-saved"></p>
+  <!-- what is saved once the recycle bin is emptied: until then the originals take their room -->
+  <p class="done-bin" id="done-bin" hidden></p>
   <p class="muted" id="done-stats"></p>
   <div id="done-top-block">
     <h3 data-t="doneTop"></h3>

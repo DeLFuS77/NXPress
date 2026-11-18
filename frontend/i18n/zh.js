@@ -128,6 +128,10 @@ texts.zh = {
   liveTitle: "工作时", liveFewer: "减少", liveMore: "增加",
   livePending: (threads, multi, all) => "从下一个文件起：" + (all ? `每个文件的线程 ${threads} · ` : "") + `同时处理的文件 ${multi}`,
   liveChanged: (threads, multi, all) => "从下一个文件起已更改：" + (all ? `每个文件的线程 ${threads} · ` : "") + `同时处理的文件 ${multi}`,
+  removalTitle: "原文件去向", removalHint: "新文件校验通过后，原文件会移到回收站，清空之前都可以还原；或者永久删除，空间立即释放。对于没有回收站的驱动器（网络文件夹、部分 USB 驱动器），NXPress 会在开始前询问。", removalTrash: "移到回收站", removalDelete: "永久删除",
+  removeTrash: "校验后将原文件移到回收站", removeTrashWarning: "新文件校验通过后，原文件会移到回收站。", removeDumpsTrashHint: "NUP 完整读回、其每个文件按 SHA-256 校验后，转储文件夹会整个移到回收站。如果 NUP 缺少其中某个文件，或某个文件在打包后改动过，文件夹会留在原处。", removeDumpsTrashGo: "NUP 校验通过后，转储文件夹会移到回收站：可用“解压”把 NUP 还原成文件夹。",
+  noBinTitle: "部分原文件无法移到回收站", noBinIntro: "它们所在的驱动器没有回收站（网络文件夹、部分 USB 驱动器），或者回收站放不下。新文件校验通过后：", noBinLine: (n, bytes) => `${n} 个原文件 · ${size(bytes)}`, noBinTooBig: "对其回收站来说太大", noBinDelete: "永久删除", noBinKeep: "保留",
+  doneInBin: bytes => `清空回收站后还能再腾出 ${size(bytes)}：在此之前原文件仍在回收站中。`,
   steps: { Moving: "移动中", Measuring: "测试中", Reading: "读取中", Optimizing: "优化中", Checking: "检查中",
     Comparing: "比对中", Estimating: "估算中", Trimming: "精简中", Recompressing: "重新压缩中", Compressing: "压缩中",
     Packaging: "打包中", Unpacking: "解包中", Verifying: "校验中", Decompressing: "解压中", Converting: "转换中", Packing: "合并中", Splitting: "分片中", Joining: "合并分片中",
@@ -175,6 +179,7 @@ texts.zh = {
     iconSetTitledb: "现已带有 titledb 中该游戏的图标（256×256）：游戏文件保持原样", iconSetImage: "现已带有所选图片$1，256×256：游戏文件保持原样", iconKept: "已有图标：保留不变", iconPackTitledb: "文件夹没有图标：使用 titledb 中该游戏的图标（256×256）", iconPackImage: "文件夹没有图标：使用所选图片$1，256×256", iconGiveLater: "；可用 --nup-icon 或在窗口中的卡片里添加", iconNone: "没有图标：", iconUnknown: "titledb 中没有该游戏的图标", iconNoLookup: "未在 titledb 中查找图标：请在窗口设置中开启“提醒缺少的更新”", titledbUnreadable: "无法读取 titledb：", iconNoDownload: "无法从 titledb 下载图标：", imageUnreadable: "无法读取图片（PNG、JPEG、WEBP、BMP、GIF、AVIF 或 ICO）：", iconOther: "$1 是另一个 NUP 的目录副本：删除它才能继续", iconBack: "加入图标后 NUP 读取结果不同，因此已恢复原样：", sizeCut: "（$1×$2，取中间 $3×$4 的正方形）", sizeSquare: "（$1×$2，本就是正方形）", imageSmall: "图片小于 256×256，已被放大，可能显得模糊",
     iconSetEshop: "现在带有 eShop 的图片$1，256×256：游戏文件保持原样", iconSetPasted: "现在带有粘贴的图片$1，256×256：游戏文件保持原样", iconGameKept: "带有游戏自身的图标，保持不变", writeName: "请输入游戏名称", nameTooLong: "名称太长", eshopUnreachable: "无法连接 eShop：", eshopAnswered: "eShop 回应：", eshopTooLarge: "eShop 的回应太大", eshopBadAnswer: "无法读取 eShop 的回应：", eshopNoImages: "无法下载 eShop 的图片：网络可能不允许", imageNoDownload: "无法下载图片：", imageTooLarge: "图片太大", notEshopImage: "不是 eShop 的图片", pasteNotImage: "粘贴的内容不是图片", imageTooBig: "图片太大，无法作为图标",
     codeDamagedNup: "制作此 NUP 的转储中游戏代码已损坏：请重新转储游戏", codeDamagedDump: "此转储文件夹中的游戏代码已损坏：请重新转储游戏", nupMadeAnyway: "；NUP 仍按转储原样制作", codeCheckedOne: "已按头部校验 1 个代码模块 (NSO)", codeChecked: "已按头部校验 $1 个代码模块 (NSO)", codeNone: "其中没有可校验的代码模块 (NSO)，而且", dumpNoHashes: "转储文件夹中的其他文件没有可用于校验的哈希", dumpNoSignatures: "转储文件夹不带 Nintendo 签名", dumpNoDat: "未与 DAT 比对（DAT 不收录转储文件夹）", codeShort: "比头部所写的短 $1 字节", codeHeaderCut: "在头部中途结束（$2 字节中的 $1 字节）", codeNoLz4: "$1 段无法解压为头部所写的 $2 字节 (LZ4)", codeTooBig: "$1 段不可能解压为头部所写的 $2 字节", codeHashWrong: "$1 段的 SHA-256 与头部不一致", codeMore: "; 另有 $1 个)",
+    trashedOne: "原文件已移到回收站", trashedAll: "原文件已全部移到回收站", trashedSome: "$1 个原文件已移到回收站", keptNoBin: "保留原文件：", deletedNoBin: "已永久删除原文件：", dumpTrashed: "转储文件夹已移到回收站：NUP 包含其全部文件，并已校验", dumpKeptInPart: "保留转储文件夹：其中有些文件现在的样子不在 NUP 中，而它只能整个移到回收站", dumpKeptNoBin: "保留转储文件夹：", dumpDeletedNoBin: "已永久删除转储文件夹：", noBin: "其所在驱动器没有回收站", binTooBig: "对其驱动器的回收站来说太大", binTooLong: "其路径对回收站来说太长", binFailed: "无法移到回收站：",
     arrow: " → ", decimal: "$1.$2",
   },
 };

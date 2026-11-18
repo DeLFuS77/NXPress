@@ -98,6 +98,7 @@ nxpress -C --extra game.nsp         compress with the experimental extra compres
 nxpress -C --skip-sparse-updates games  leave the update of a game in sparse storage as NSP, like its game
 nxpress -C --skip-dlc --move-skipped left games  leave the DLC as NSP, and move what is left as it is into left
 nxpress -C --par2 3 games           write recovery data (.par2) for 3 % of each new file
+nxpress -C --rm-source --trash games  send each original to the recycle bin once its new file is checked
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds

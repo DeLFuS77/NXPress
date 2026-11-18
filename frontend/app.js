@@ -98,6 +98,9 @@ const state = {
   // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), and the
   // threads and files at once changed while a work goes on, until a file starts with them
   moveSkipped: "", livePending: null,
+  // where the originals go once their new files are checked (Settings › General): "trash", the
+  // recycle bin, or "delete", for good
+  removal: "trash",
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -179,6 +182,10 @@ function stateWord(status, mode, isDamaged) {
   if (mode === "verify" && isDamaged) return t("corrupted");
   return t(status);
 }
+
+// a file whose original went to the recycle bin, by the note of NXPress: the space it saved is
+// free only once the recycle bin is emptied
+const inBin = row => /\bin the recycle bin\b/.test(row.note || "");
 
 // the space saved since always, kept in the window: what every work that wrote files saved
 // in the units the window shows sizes in (1 GB = 1024 MB), so they read round
@@ -1578,11 +1585,17 @@ function showDone(event, status) {
   if (event.cancelled || !state.lastRun || !writes.includes(state.lastRun.mode)) return;
   const rows = [...state.rows.values()].filter(row => row.run === state.lastRun.started);
   if (!rows.length) return;
-  const savings = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after)
+  const smaller = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after);
+  // the originals in the recycle bin still take their room: what they save is told apart, as
+  // saved once the recycle bin is emptied
+  const savings = smaller.filter(row => !inBin(row))
     .map(row => ({ row, saved: row.item.size - row.after })).sort((a, b) => b.saved - a.saved);
   const saved = savings.reduce((sum, entry) => sum + entry.saved, 0);
+  const held = smaller.filter(inBin).reduce((sum, row) => sum + row.item.size - row.after, 0);
   $("done-saved").hidden = saved === 0;
   if (saved > 0) countUp($("done-saved"), saved, bytes => t("saved")(bytes));
+  $("done-bin").hidden = held === 0;
+  $("done-bin").textContent = held > 0 ? t("doneInBin")(held) : "";
   $("done-stats").textContent = status;
   $("done-top-block").hidden = savings.length < 2;
   $("done-top").innerHTML = "";
@@ -1601,9 +1614,9 @@ function showDone(event, status) {
   const best = savings.length ? savings[0].row : null;
   const tone = best && best.game && coverTone(best.game);
   const allFailed = rows.every(row => row.status === "failed");
-  $("done-dialog").style.setProperty("--done-tone", saved > 0 ? tone || "var(--ok)" : allFailed ? "var(--bad)" : "var(--tone-neutral)");
+  $("done-dialog").style.setProperty("--done-tone", saved + held > 0 ? tone || "var(--ok)" : allFailed ? "var(--bad)" : "var(--tone-neutral)");
   // after the third work that saved space, once and never again: a star on GitHub
-  const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
+  const works = load("worksSaved", 0) + (saved + held > 0 ? 1 : 0);
   save("worksSaved", works);
   $("done-star").hidden = works < 3 || load("starAsked", false);
   openDialog($("done-dialog"));
@@ -1957,6 +1970,10 @@ function render() {
     app().RelabelExplorerMenu(menuTexts()).catch(() => { });
   }
   paintStatus();
+  // the box that takes the originals away says where they go: the recycle bin, or for good
+  const toBin = state.removal !== "delete";
+  $("remove-text").dataset.t = toBin ? "removeTrash" : "remove";
+  $("remove-dumps-hint").dataset.t = toBin ? "removeDumpsTrashHint" : "removeDumpsHint";
   // a text with one of its own for Recompress says that one there (#132)
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t((state.mode === "recompress" && element.dataset.tRecompress) || element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
@@ -2055,6 +2072,11 @@ function render() {
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   paintUpdate();
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  for (const button of document.querySelectorAll("button[data-removal]")) {
+    const on = button.dataset.removal === state.removal;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
   paintPalettes();
   paintToolChoices();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
@@ -2088,8 +2110,8 @@ function render() {
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
   // how their NUP is packed, only for dump folders
   $("nup-block").hidden = !dumps;
-  const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
-  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
+  const keptText = dumps ? ($("remove-dumps").checked ? (toBin ? "removeDumpsTrashGo" : "removeDumpsGo") : "removeKeepsDumps") : "removeKeepsNup";
+  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t(toBin ? "removeTrashWarning" : "removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
   $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
@@ -2206,7 +2228,8 @@ function summary() {
   }
   const picked = pickedItems();
   text.textContent = t("selected")(picked.length, picked.reduce((sum, item) => sum + (item.size || 0), 0));
-  const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
+  // what went to the recycle bin is saved once it is emptied
+  const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after && !inBin(row) ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
     tag.className = "saved";
@@ -2903,7 +2926,7 @@ async function start(mode, extra) {
   // what to take out of each NUP in Split (#138)
   const splitParts = {};
   if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, trash: state.removal !== "delete", noTrash: "", ...(extra || {}) };
   // dump folders only: each NUP is named by the template, whichever way of Combine was left chosen
   if (mode === "pack" && onlyDumps()) request.packGames = true;
   files = request.files;
@@ -2917,7 +2940,7 @@ async function start(mode, extra) {
   state.starting = true;
   render();
   let allowed = false;
-  try { allowed = await spaceAllows(request, opener); } finally { state.starting = false; }
+  try { allowed = await spaceAllows(request, opener) && await binAllows(request, opener); } finally { state.starting = false; }
   // the button pressed lost the focus while it waited: it gets it back
   if (!allowed) { render(); refocus(opener); return; }
   // the work is marked as running before NXPress is asked to start it, as its first events (and
@@ -2978,6 +3001,37 @@ function spaceAllows(request, opener) {
       $("space-start").onclick = () => { resolve(true); $("space-dialog").close(); };
       $("space-dialog").onclose = () => resolve(false);
       openDialog($("space-dialog"), opener);
+    });
+  }).catch(() => true);
+}
+
+// binAllows tells, before anything is written, the originals the work would send to the recycle
+// bin that cannot go there (their drive has none, or they do not fit in it), by drive, and asks
+// whether to keep them or delete them for good; Escape starts nothing. The command line never
+// asks: it keeps them.
+const takesOriginals = ["compress", "decompress", "recompress", "trim", "convert", "split", "pack", "fat32"];
+function binAllows(request, opener) {
+  if (!request.removeSource || !request.trash || !takesOriginals.includes(request.mode)) return Promise.resolve(true);
+  return app().TrashCheck(request).then(drives => {
+    if (!drives || !drives.length) return true;
+    const list = $("no-bin-list");
+    list.innerHTML = "";
+    for (const drive of drives) {
+      const item = document.createElement("li");
+      item.innerHTML = `<b></b><span></span>`;
+      item.querySelector("b").textContent = drive.drive;
+      item.querySelector("span").textContent = t("noBinLine")(drive.files, drive.size) + (drive.tooBig ? " · " + t("noBinTooBig") : "");
+      list.append(item);
+    }
+    return new Promise(resolve => {
+      let answer = false;
+      const choose = what => () => { request.noTrash = what; answer = true; $("no-bin-dialog").close(); };
+      $("no-bin-keep").onclick = choose("keep");
+      $("no-bin-delete").onclick = choose("delete");
+      $("no-bin-dialog").onclose = () => resolve(answer);
+      openDialog($("no-bin-dialog"), opener);
+      // what cannot be undone is never the answer of Enter
+      $("no-bin-keep").focus();
     });
   }).catch(() => true);
 }
@@ -3735,6 +3789,10 @@ async function main() {
   state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
   applyPalette();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
+  // the recycle bin unless deleting for good was chosen: the settings of a version before it
+  // have none, and the originals go to the recycle bin
+  state.removal = load("removal", "trash") === "delete" ? "delete" : "trash";
+  for (const button of document.querySelectorAll("button[data-removal]")) button.onclick = () => { state.removal = button.dataset.removal; save("removal", state.removal); render(); };
   // the language: the one chosen, else the one chosen in the installer of Windows, else the one
   // of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);

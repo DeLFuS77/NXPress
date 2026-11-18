@@ -110,6 +110,11 @@ type Options struct {
 	Output      string
 	Overwrite   bool
 	RmSource    bool
+	// --trash: the originals RmSource and RmDumps take away go to the recycle bin instead of being
+	// deleted for good; where there is none they stay, or go for good with TrashDelete, which the
+	// window asks for (the command line never asks)
+	Trash       bool
+	TrashDelete bool
 	// --par2: recovery data for percent of each new file, in a .par2 next to it; --repair: Verify
 	// rebuilds a damaged file with its .par2
 	Par2   int
@@ -166,7 +171,7 @@ var optionNames = []optionName{
 	{"--threads", 't', true, true}, {"--low-priority", 0, false, false}, {"--multi", 'm', true, true},
 	{"--output", 'o', true, true}, {"--watch", 0, false, false}, {"--recursive", 0, false, false},
 	{"--overwrite", 'w', false, true},
-	{"--rm-source", 0, false, true}, {"--par2", 0, true, false}, {"--repair", 0, false, false}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
+	{"--rm-source", 0, false, true}, {"--trash", 0, false, false}, {"--par2", 0, true, false}, {"--repair", 0, false, false}, {"--rm-dumps", 0, false, false}, {"--nup-zstd-big", 0, false, false}, {"--info", 'i', false, true}, {"--estimate", 0, false, false},
 	{"--levels", 0, false, false}, {"--measure", 0, false, false}, {"--keys", 0, true, true},
 	{"--minimal-output", 0, false, true}, {"--machine-readable", 0, false, true},
 	{"--version", 0, false, false}, {"--help", 'h', false, true},
@@ -348,6 +353,8 @@ func (o *Options) flag(option optionName) {
 		o.Overwrite = true
 	case "--rm-source":
 		o.RmSource = true
+	case "--trash":
+		o.Trash = true
 	case "--repair":
 		o.Repair = true
 	case "--rm-dumps":
@@ -575,6 +582,9 @@ func (o *Options) Check() error {
 	if o.RmDumps && !o.RmSource {
 		o.Notes = append(o.Notes, "--rm-dumps has no effect without --rm-source")
 	}
+	if o.Trash && !o.RmSource {
+		o.Notes = append(o.Notes, "--trash has no effect without --rm-source")
+	}
 	if o.ToCard && !o.Convert {
 		o.Notes = append(o.Notes, "--to-xci has no effect without --convert")
 	}
@@ -676,6 +686,10 @@ Usage: nxpress [options] file or folder...
                       is copied, until Ctrl+C
   -w, --overwrite     replace a file that is already there
   --rm-source         delete each original once its new file is checked
+  --trash             with --rm-source, send the originals to the recycle bin instead of
+                      deleting them (and the dump folders of --rm-dumps, each one whole);
+                      where there is none (a network folder, some USB drives), or one does
+                      not fit in it, the original stays and a note says why
   --par2 PERCENT      write recovery data next to each new file, "<name>.par2" (PAR 2.0):
                       it rebuilds damaged parts of the file up to PERCENT of it
   --repair            with -V, rebuild a damaged file with its .par2, then check it again
