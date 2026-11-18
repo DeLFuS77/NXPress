@@ -2852,14 +2852,15 @@ const builtinPresets = () => [
 ];
 // threadsOf gives the threads kept in saved settings or a preset: the total, the most files at
 // once (0: Auto) and the order, within what this computer offers. Kept before there was a total,
-// they held the threads of each file and the files at once: their product is the total, the files
-// at once stay the most at work, and the biggest go first. Null when they hold no threads.
+// they held the threads of each file and the files at once: their product is the total, more than
+// one file at once stays the most at work, one file at once (the default then) becomes Auto, so
+// the threads are shared among the files, and the biggest go first. Null when they hold no threads.
 function threadsOf(kept) {
   const cpus = +$("total-threads").max || 64;
   const whole = value => Number.isInteger(value) && value > 0 ? value : 0;
   const multi = Math.min(mostFilesAtOnce, whole(kept.multi));
   if (whole(kept.totalThreads)) return { totalThreads: Math.min(cpus, kept.totalThreads), multi, biggestFirst: kept.biggestFirst !== false };
-  if (whole(kept.threads)) return { totalThreads: Math.min(cpus, kept.threads * Math.max(1, multi)), multi: Math.max(1, multi), biggestFirst: true };
+  if (whole(kept.threads)) return { totalThreads: Math.min(cpus, kept.threads * Math.max(1, multi)), multi: multi > 1 ? multi : 0, biggestFirst: true };
   return null;
 }
 // setThreads puts threads (see threadsOf) in the fields of Advanced
@@ -3064,8 +3065,12 @@ function spaceAllows(request, opener) {
 
 // measuredThreads are the threads a measure found, as the window takes them: the threads of each
 // file of the fastest setting times its files at once make the total, and its files at once stay
-// the most at work
-const measuredThreads = report => threadsOf({ threads: report.threads, multi: report.multi }) || defaultThreads();
+// the most at work, one file at once too: a measure that found one file the fastest (a hard disk)
+// keeps it, unlike the settings kept before there was a total (threadsOf)
+const measuredThreads = report => {
+  const threads = threadsOf({ threads: report.threads, multi: report.multi });
+  return threads ? { ...threads, multi: Math.max(1, Math.min(mostFilesAtOnce, report.multi || 1)) } : defaultThreads();
+};
 // showMeasure tells what a measure found in a dialog: every setting tried, as fast as it went,
 // and the one applied
 function showMeasure(report) {
