@@ -133,6 +133,7 @@ texts.nl = {
   edenHint: "Zolang NXPress open is, blijven de opslagbestanden van Eden op deze computer gelijk met die van je console in Switch Library Manager Web: een nieuw opslagbestand van Eden gaat naar de bibliotheek, en een nieuwer van de console gaat naar Eden, alleen als Eden gesloten is en altijd met een kopie van het vervangen opslagbestand in de bibliotheek. Zijn ze allebei veranderd, dan kies jij. Als NXPress gesloten is, gebeurt er niets.",
   edenPairFirst: "Koppel eerst een bibliotheek.", edenOff: "Uit.", edenWorking: "Opslagbestanden bekijken…", edenNever: "Nog niet gedaan.",
   edenRunning: emu => `${emu} is open: de opslagbestanden wachten tot het gesloten is.`,
+  edenHeld: "Switch Library Manager Web houdt deze opslagbestanden gelijk op deze computer: zet het daar uit om het hier te gebruiken.",
   edenLast: (ago, up, brought) => `Laatste keer: ${ago} · ${up === 1 ? "1 opslagbestand" : up + " opslagbestanden"} geüpload · ${brought} opgehaald`,
   edenLibrary: "Bibliotheek", edenLibraryHint: "Switch Library Manager Web, op het netwerk gevonden zoals NXDock die vindt, of via het adres. NXPress toont een code, en de bibliotheek vraagt op elk van haar pagina's een gebruiker die mag downloaden om deze computer te accepteren. Installeren via het netwerk moet aan staan in de bibliotheek.",
   edenFind: "Zoeken op het netwerk", edenSearching: "Zoeken op het netwerk…", edenNoneFound: "Niets gevonden: typ het adres.", edenAddress: "Adres, bijvoorbeeld 192.168.1.2:3000", edenPair: "Koppelen",

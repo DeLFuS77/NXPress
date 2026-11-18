@@ -1824,6 +1824,8 @@ function paintEden() {
   $("eden-on").checked = status.on;
   $("eden-on").disabled = !status.paired;
   if (!status.paired) edenLine("eden-status", t("edenPairFirst"));
+  // Switch Library Manager Web keeps them in step on this computer: the passes wait
+  else if (status.heldBy) edenLine("eden-status", t("edenHeld"), "warn");
   else if (!status.on) edenLine("eden-status", t("edenOff"));
   else if (status.working) edenLine("eden-status", t("edenWorking"), "work");
   else if (status.running) edenLine("eden-status", t("edenRunning")(emulator), "work");

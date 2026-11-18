@@ -133,6 +133,7 @@ texts.de = {
   edenHint: "Solange NXPress geöffnet ist, bleiben die Spielstände von Eden auf diesem Computer mit denen deiner Konsole in Switch Library Manager Web abgeglichen: Ein neuer Spielstand von Eden geht in die Bibliothek, und ein neuerer der Konsole kommt in Eden, nur bei geschlossenem Eden und immer mit einer Kopie des ersetzten Spielstands in der Bibliothek. Haben sich beide geändert, wählst du. Bei geschlossenem NXPress passiert nichts.",
   edenPairFirst: "Kopple zuerst eine Bibliothek.", edenOff: "Aus.", edenWorking: "Spielstände werden geprüft…", edenNever: "Noch nicht gelaufen.",
   edenRunning: emu => `${emu} ist geöffnet: Die Spielstände warten, bis es geschlossen wird.`,
+  edenHeld: "Switch Library Manager Web gleicht diese Spielstände auf diesem Computer ab: Schalte es dort aus, um es hier zu nutzen.",
   edenLast: (ago, up, brought) => `Zuletzt: ${ago} · ${up === 1 ? "1 Spielstand" : up + " Spielstände"} hochgeladen · ${brought} geholt`,
   edenLibrary: "Bibliothek", edenLibraryHint: "Switch Library Manager Web, im Netzwerk gefunden wie NXDock sie findet, oder über ihre Adresse. NXPress zeigt einen Code, und die Bibliothek bittet auf jeder ihrer Seiten einen Benutzer, der herunterladen darf, diesen Computer anzunehmen. Die Installation über das Netzwerk muss in der Bibliothek eingeschaltet sein.",
   edenFind: "Im Netzwerk suchen", edenSearching: "Suche im Netzwerk…", edenNoneFound: "Keine gefunden: Gib ihre Adresse ein.", edenAddress: "Adresse, z. B. 192.168.1.2:3000", edenPair: "Koppeln",

@@ -71,7 +71,9 @@ func (a *App) startEden(ctx context.Context) {
 	go service.Run(run)
 }
 
-// stopEden stops the passes as NXPress closes: a pass going on ends what it writes (see Busy).
+// stopEden stops the passes as NXPress closes: a pass going on ends what it writes (see Busy),
+// and the lock of the folder of the emulator is given up, so Switch Library Manager Web may keep
+// the saves in step.
 func (a *App) stopEden() {
 	a.mutex.Lock()
 	stop := a.edenStop
@@ -79,6 +81,7 @@ func (a *App) stopEden() {
 	a.mutex.Unlock()
 	if stop != nil {
 		stop()
+		a.eden.Release()
 	}
 }
 

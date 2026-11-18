@@ -133,6 +133,7 @@ texts.ko = {
   edenHint: "NXPress가 열려 있는 동안 이 컴퓨터의 Eden 세이브를 Switch Library Manager Web에 있는 본체 세이브와 맞춥니다. Eden의 새 세이브는 라이브러리로 올라가고, 본체의 더 새로운 세이브는 Eden으로 들어갑니다. 둘 다 Eden이 닫혀 있을 때만 하며, 바뀌는 세이브의 사본은 항상 라이브러리에 남습니다. 둘 다 바뀌었으면 직접 고릅니다. NXPress가 닫혀 있으면 아무것도 하지 않습니다.",
   edenPairFirst: "먼저 라이브러리와 페어링하세요.", edenOff: "꺼짐.", edenWorking: "세이브 확인 중…", edenNever: "아직 실행하지 않았습니다.",
   edenRunning: emu => `${emu}이(가) 열려 있습니다. 닫힐 때까지 세이브가 기다립니다.`,
+  edenHeld: "이 컴퓨터에서는 Switch Library Manager Web이 이 세이브들을 맞추고 있습니다. 여기서 사용하려면 그쪽에서 끄세요.",
   edenLast: (ago, up, brought) => `마지막: ${ago} · ${up}개 업로드 · ${brought}개 가져옴`,
   edenLibrary: "라이브러리", edenLibraryHint: "Switch Library Manager Web을 NXDock처럼 네트워크에서 찾거나 주소로 지정합니다. NXPress가 코드를 보여 주면, 라이브러리는 어느 페이지에서든 다운로드할 수 있는 사용자에게 이 컴퓨터를 수락하도록 요청합니다. 라이브러리에서 네트워크로 설치가 켜져 있어야 합니다.",
   edenFind: "네트워크에서 찾기", edenSearching: "네트워크에서 찾는 중…", edenNoneFound: "찾지 못했습니다. 주소를 입력하세요.", edenAddress: "주소(예: 192.168.1.2:3000)", edenPair: "페어링",

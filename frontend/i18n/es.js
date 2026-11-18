@@ -133,6 +133,7 @@ texts.es = {
   edenHint: "Mientras NXPress está abierto, las partidas de Eden de este ordenador se mantienen al día con las de tu consola en Switch Library Manager Web: una partida nueva de Eden sube a la biblioteca, y una más nueva de la consola se pone en Eden, solo con Eden cerrado y dejando siempre en la biblioteca una copia de la partida que sustituye. Si cambiaron las dos, eliges tú. Con NXPress cerrado no se hace nada.",
   edenPairFirst: "Primero empareja una biblioteca.", edenOff: "Apagado.", edenWorking: "Mirando las partidas…", edenNever: "Aún no se ha hecho.",
   edenRunning: emu => `${emu} está abierto: las partidas esperan a que se cierre.`,
+  edenHeld: "Switch Library Manager Web mantiene al día estas partidas en este ordenador: apágalo allí para usarlo aquí.",
   edenLast: (ago, up, brought) => `Última vez: ${ago} · ${up === 1 ? "1 partida subida" : up + " partidas subidas"} · ${brought === 1 ? "1 traída" : brought + " traídas"}`,
   edenLibrary: "Biblioteca", edenLibraryHint: "Switch Library Manager Web, encontrada en la red como la encuentra NXDock, o por su dirección. NXPress muestra un código, y la biblioteca pide aceptar este ordenador, en cualquiera de sus páginas, a un usuario que pueda descargar. Instalar por red tiene que estar activado en la biblioteca.",
   edenFind: "Buscar en la red", edenSearching: "Buscando en la red…", edenNoneFound: "No se ha encontrado ninguna: escribe su dirección.", edenAddress: "Dirección, por ejemplo 192.168.1.2:3000", edenPair: "Emparejar",

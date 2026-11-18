@@ -133,6 +133,7 @@ texts.it = {
   edenHint: "Finché NXPress è aperto, i salvataggi di Eden di questo computer restano allineati con quelli della tua console in Switch Library Manager Web: un nuovo salvataggio di Eden va nella libreria, e uno più recente della console va in Eden, solo con Eden chiuso e lasciando sempre nella libreria una copia del salvataggio sostituito. Se sono cambiati tutti e due, scegli tu. Con NXPress chiuso non succede nulla.",
   edenPairFirst: "Prima abbina una libreria.", edenOff: "Spento.", edenWorking: "Controllo dei salvataggi…", edenNever: "Non ancora eseguito.",
   edenRunning: emu => `${emu} è aperto: i salvataggi aspettano che venga chiuso.`,
+  edenHeld: "Switch Library Manager Web tiene allineati questi salvataggi su questo computer: disattivalo lì per usarlo qui.",
   edenLast: (ago, up, brought) => `Ultima volta: ${ago} · ${up === 1 ? "1 salvataggio caricato" : up + " salvataggi caricati"} · ${brought === 1 ? "1 portato" : brought + " portati"}`,
   edenLibrary: "Libreria", edenLibraryHint: "Switch Library Manager Web, trovata in rete come la trova NXDock, o dal suo indirizzo. NXPress mostra un codice, e la libreria chiede a un utente che può scaricare di accettare questo computer, in una qualsiasi delle sue pagine. L'installazione via rete deve essere attiva nella libreria.",
   edenFind: "Cerca in rete", edenSearching: "Ricerca in rete…", edenNoneFound: "Nessuna trovata: scrivi il suo indirizzo.", edenAddress: "Indirizzo, per esempio 192.168.1.2:3000", edenPair: "Abbina",

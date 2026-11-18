@@ -133,6 +133,7 @@ texts.zh = {
   edenHint: "NXPress 打开期间，这台电脑上 Eden 的存档会与 Switch Library Manager Web 中你主机的存档保持一致：Eden 的新存档会上传到库中，主机上更新的存档会放进 Eden。这些只在 Eden 关闭时进行，并且被替换的存档总会在库中留一份副本。两边都变了时由你来选。NXPress 关闭时什么都不做。",
   edenPairFirst: "请先配对一个库。", edenOff: "已关闭。", edenWorking: "正在查看存档…", edenNever: "尚未运行。",
   edenRunning: emu => `${emu} 已打开：存档会等到它关闭。`,
+  edenHeld: "Switch Library Manager Web 正在这台电脑上同步这些存档：请在那边关闭它，才能在这里使用。",
   edenLast: (ago, up, brought) => `上次：${ago} · 上传 ${up} 个 · 取回 ${brought} 个`,
   edenLibrary: "库", edenLibraryHint: "Switch Library Manager Web，像 NXDock 那样在网络中找到，或通过地址指定。NXPress 会显示一个代码，库会在它的任意页面上请有下载权限的用户接受这台电脑。库中必须开启通过网络安装。",
   edenFind: "在网络中查找", edenSearching: "正在网络中查找…", edenNoneFound: "未找到：请输入它的地址。", edenAddress: "地址，例如 192.168.1.2:3000", edenPair: "配对",

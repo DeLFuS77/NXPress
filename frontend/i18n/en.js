@@ -134,6 +134,7 @@ texts.en = {
   edenHint: "While NXPress is open, the saves of Eden on this computer stay in step with the ones of your console in Switch Library Manager Web: a new save of Eden goes to the library, and a newer one of the console goes into Eden, only while Eden is closed and always leaving a copy of the save it replaces in the library. When both changed, you choose. Nothing runs while NXPress is closed.",
   edenPairFirst: "Pair a library first.", edenOff: "Off.", edenWorking: "Looking at the saves…", edenNever: "Not run yet.",
   edenRunning: emu => `${emu} is open: the saves wait until it closes.`,
+  edenHeld: "Switch Library Manager Web keeps these saves in step on this computer: turn it off there to use this one.",
   edenLast: (ago, up, brought) => `Last time: ${ago} · ${up === 1 ? "1 save" : up + " saves"} uploaded · ${brought} brought`,
   edenLibrary: "Library", edenLibraryHint: "Switch Library Manager Web, found on the network as NXDock finds it, or by its address. NXPress shows a code, and the library asks a user who may download to accept this computer, on any of its pages. Installing over the network must be on in the library.",
   edenFind: "Find on the network", edenSearching: "Looking on the network…", edenNoneFound: "None found: type its address.", edenAddress: "Address, such as 192.168.1.2:3000", edenPair: "Pair",

@@ -493,6 +493,72 @@ func TestPassesWhileNXPressIsOpen(t *testing.T) {
 	<-done
 }
 
+// writeLock writes the lock of the folder of Eden as a program on this computer would.
+func writeLock(t *testing.T, folder edensync.Folder, owner, computer string) {
+	t.Helper()
+	data, _ := json.Marshal(edensync.Lock{Owner: owner, Computer: computer, Pid: os.Getpid(), Updated: time.Now().Unix()})
+	if err := os.WriteFile(filepath.Join(folder.Root, edensync.LockName), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Switch Library Manager Web keeping the saves of Eden in step on this computer: the status tells
+// it and the passes wait; once it lets go, NXPress takes them, and gives them up as it is turned
+// off and as it stops.
+func TestWaitsForTheLibraryOnThisComputer(t *testing.T) {
+	library := newFakeLibrary()
+	server := httptest.NewServer(library.handler())
+	defer server.Close()
+	folder, _ := fakeEden(t, map[string]string{"data.bin": "played in Eden"})
+	computer, _ := os.Hostname()
+	writeLock(t, folder, edensync.OwnerLibrary, computer)
+	lockPath := filepath.Join(folder.Root, edensync.LockName)
+	service := pairedService(t, server, folder, &atomic.Bool{})
+	passes := atomic.Int32{}
+	service.Busy = func() (func(), error) { passes.Add(1); return func() {}, nil }
+	if status := service.Status(); status.HeldBy != edensync.OwnerLibrary {
+		t.Fatalf("told before any pass: %+v", status)
+	}
+
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	done := make(chan struct{})
+	go func() { service.Run(ctx); close(done) }()
+	waitFor(t, "the first pass", func() bool { return passes.Load() > 0 && !service.Status().Working })
+	status := service.Status()
+	if status.HeldBy != edensync.OwnerLibrary || status.LastPass != 0 || library.emulatorSaves() != 0 || status.ErrorKind != "" {
+		t.Fatalf("the passes wait: %+v, %d saves of Eden", status, library.emulatorSaves())
+	}
+
+	// turned off in the library
+	os.Remove(lockPath)
+	service.Wake(true)
+	waitFor(t, "NXPress takes them", func() bool { return service.Status().LastPass > 0 })
+	if lock, ok := edensync.ReadLock(folder); !ok || lock.Owner != edensync.OwnerNXPress || library.emulatorSaves() != 1 || service.Status().HeldBy != "" {
+		t.Fatalf("the lock: %+v, %d saves of Eden", lock, library.emulatorSaves())
+	}
+
+	if err := service.SetOn(false); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the lock given up as it is turned off", func() bool { _, err := os.Stat(lockPath); return os.IsNotExist(err) })
+	if err := service.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the lock taken again", func() bool { lock, ok := edensync.ReadLock(folder); return ok && lock.Owner == edensync.OwnerNXPress })
+	stop()
+	<-done
+	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+		t.Fatalf("the lock given up as NXPress stops: %v", err)
+	}
+
+	// NXPress of another computer with the same folder is not told as the library
+	writeLock(t, folder, edensync.OwnerNXPress, "ANOTHER-COMPUTER")
+	if status := service.Status(); status.HeldBy != "" {
+		t.Fatalf("held by: %q", status.HeldBy)
+	}
+}
+
 // Without a folder of Eden, or with the key refused, the status tells why; turned off, no pass
 // writes, and the profiles are still shown and paired from NXPress.
 func TestStatusTellsWhatIsMissing(t *testing.T) {

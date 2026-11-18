@@ -87,6 +87,9 @@ type Status struct {
 	On      bool `json:"on"`
 	Running bool `json:"running"`
 	Working bool `json:"working"`
+	// the program that keeps the saves of the emulator in step on this computer instead of NXPress
+	// (Switch Library Manager Web, see the lock of edensync): the passes wait while it does
+	HeldBy string `json:"heldBy,omitempty"`
 	// the last pass that looked at the saves, and what the passes did since the pairing
 	LastPass int64 `json:"lastPass"`
 	Uploaded int   `json:"uploaded"`
@@ -149,6 +152,9 @@ type Service struct {
 	wantLook bool
 	// one pass or look at a time
 	passes sync.Mutex
+	// the folder whose lock the passes took, given up as they are turned off and as NXPress
+	// stops; with passes held
+	locked *edensync.Folder
 }
 
 type pairing struct {
@@ -250,6 +256,10 @@ func (s *Service) statusLocked() Status {
 	}
 	if folder, err := s.findFolderLocked(); err == nil {
 		status.Folder, status.Emulator, status.Portable = folder.Root, folder.Emulator.Name(), folder.Portable
+		// only read: NXPress of another computer with the same folder is not told as the library
+		if holder := edensync.HeldBy(folder, edensync.OwnerNXPress); holder != edensync.OwnerNXPress {
+			status.HeldBy = holder
+		}
 	}
 	// lists, never null, for the page
 	if status.Profiles == nil {
@@ -388,6 +398,7 @@ func (s *Service) Run(ctx context.Context) {
 				s.pairing.cancel()
 			}
 			s.mutex.Unlock()
+			s.Release()
 			return
 		case <-wake:
 			s.mutex.Lock()
@@ -458,7 +469,30 @@ func (s *Service) tick(ctx context.Context) {
 	s.changed()
 }
 
-// run makes a pass (sync) when the passes are on, else, paired, looks at the saves only.
+// Release gives up the lock of the folder of the emulator the passes took, so Switch Library
+// Manager Web may keep the saves in step at once; as NXPress stops. With a pass going on it does
+// nothing: the loop gives it up once the pass ends, and the lock of a process that ended is taken
+// over anyway.
+func (s *Service) Release() {
+	if !s.passes.TryLock() {
+		return
+	}
+	defer s.passes.Unlock()
+	s.releaseLocked()
+}
+
+// releaseLocked gives up the lock the passes took. With passes held.
+func (s *Service) releaseLocked() {
+	if s.locked == nil {
+		return
+	}
+	if edensync.Release(*s.locked, edensync.OwnerNXPress) == nil {
+		s.locked = nil
+	}
+}
+
+// run makes a pass (sync) when the passes are on, else, paired, looks at the saves only. Turned
+// off or unpaired, it gives up the lock of the folder the passes took.
 func (s *Service) run(ctx context.Context, sync bool) {
 	s.passes.Lock()
 	defer s.passes.Unlock()
@@ -468,6 +502,7 @@ func (s *Service) run(ctx context.Context, sync bool) {
 	s.lastRun = s.now()
 	if !config.Paired() {
 		s.mutex.Unlock()
+		s.releaseLocked()
 		return
 	}
 	sync = sync && config.On
@@ -476,12 +511,17 @@ func (s *Service) run(ctx context.Context, sync bool) {
 		s.folder = nil
 		s.errText, s.errKind = err.Error(), kindOf(err)
 		s.mutex.Unlock()
+		s.releaseLocked()
 		s.changed()
 		return
 	}
 	s.folder = &folder
 	s.working = sync
 	s.mutex.Unlock()
+	if !config.On || (s.locked != nil && s.locked.Root != folder.Root) {
+		// off, or the emulator is in another folder now
+		s.releaseLocked()
+	}
 	if sync {
 		s.changed()
 	}
@@ -495,6 +535,9 @@ func (s *Service) run(ctx context.Context, sync bool) {
 	var passErr error
 	if sync {
 		passErr = s.pass(ctx, folder, library, state, &report)
+		if report.HeldBy == "" {
+			s.locked = &folder
+		}
 	} else if running, err := s.isRunning(folder.Emulator); err == nil {
 		report.Running = running
 	}
@@ -536,7 +579,7 @@ func (s *Service) pass(ctx context.Context, folder edensync.Folder, library eden
 		}
 		defer done()
 	}
-	syncer := &edensync.Syncer{Folder: folder, Library: library, State: state, StatePath: s.statePath(),
+	syncer := &edensync.Syncer{Folder: folder, Library: library, State: state, StatePath: s.statePath(), Owner: edensync.OwnerNXPress,
 		IsRunning: func() (bool, error) { return s.isRunning(folder.Emulator) }, Now: s.Now}
 	got, err := syncer.Pass(ctx)
 	*report = got
@@ -719,6 +762,8 @@ func (s *Service) Forget() error {
 	}
 	s.mutex.Unlock()
 	s.changed()
+	// the lock of the folder is given up at once
+	s.Wake(false)
 	return err
 }
 
@@ -738,8 +783,10 @@ func (s *Service) SetOn(on bool) error {
 	}
 	s.mutex.Unlock()
 	s.changed()
-	if err == nil && on {
-		s.Wake(true)
+	if err == nil {
+		// on, a pass at once; off, the lock of the folder is given up at once, so Switch Library
+		// Manager Web may take the saves
+		s.Wake(on)
 	}
 	return err
 }

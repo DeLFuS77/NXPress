@@ -133,6 +133,7 @@ texts.ja = {
   edenHint: "NXPress が開いている間、このパソコンの Eden のセーブデータを Switch Library Manager Web にある本体のセーブデータとそろえます。Eden の新しいセーブデータはライブラリに送られ、本体のより新しいセーブデータは Eden に入ります。どちらも Eden が閉じているときだけで、置き換えたセーブデータのコピーは必ずライブラリに残ります。両方が変わったときはあなたが選びます。NXPress が閉じている間は何もしません。",
   edenPairFirst: "先にライブラリとペアリングしてください。", edenOff: "オフ。", edenWorking: "セーブデータを確認中…", edenNever: "まだ実行していません。",
   edenRunning: emu => `${emu} が開いています。閉じるまでセーブデータは待機します。`,
+  edenHeld: "このパソコンでは Switch Library Manager Web がこれらのセーブデータをそろえています。ここで使うには、そちらでオフにしてください。",
   edenLast: (ago, up, brought) => `前回: ${ago} · ${up} 件アップロード · ${brought} 件取得`,
   edenLibrary: "ライブラリ", edenLibraryHint: "Switch Library Manager Web を NXDock と同じ方法でネットワークから見つけるか、アドレスで指定します。NXPress がコードを表示し、ライブラリはどのページでも、ダウンロードできるユーザーにこのパソコンの承認を求めます。ライブラリでネットワークインストールがオンになっている必要があります。",
   edenFind: "ネットワークで探す", edenSearching: "ネットワークを検索中…", edenNoneFound: "見つかりません。アドレスを入力してください。", edenAddress: "アドレス（例: 192.168.1.2:3000）", edenPair: "ペアリング",

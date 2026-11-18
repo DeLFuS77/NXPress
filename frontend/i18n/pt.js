@@ -133,6 +133,7 @@ texts.pt = {
   edenHint: "Enquanto o NXPress está aberto, os salvamentos do Eden deste computador ficam em dia com os do seu console no Switch Library Manager Web: um salvamento novo do Eden vai para a biblioteca, e um mais recente do console vai para o Eden, só com o Eden fechado e deixando sempre na biblioteca uma cópia do salvamento substituído. Se os dois mudaram, você escolhe. Com o NXPress fechado, nada acontece.",
   edenPairFirst: "Pareie uma biblioteca primeiro.", edenOff: "Desligado.", edenWorking: "Verificando os salvamentos…", edenNever: "Ainda não rodou.",
   edenRunning: emu => `O ${emu} está aberto: os salvamentos esperam até ele fechar.`,
+  edenHeld: "O Switch Library Manager Web mantém estes salvamentos em dia neste computador: desligue-o lá para usá-lo aqui.",
   edenLast: (ago, up, brought) => `Última vez: ${ago} · ${up === 1 ? "1 salvamento enviado" : up + " salvamentos enviados"} · ${brought === 1 ? "1 trazido" : brought + " trazidos"}`,
   edenLibrary: "Biblioteca", edenLibraryHint: "O Switch Library Manager Web, encontrado na rede como o NXDock o encontra, ou pelo endereço. O NXPress mostra um código, e a biblioteca pede a um usuário que pode baixar que aceite este computador, em qualquer uma das páginas dela. A instalação pela rede precisa estar ligada na biblioteca.",
   edenFind: "Procurar na rede", edenSearching: "Procurando na rede…", edenNoneFound: "Nenhuma encontrada: digite o endereço.", edenAddress: "Endereço, por exemplo 192.168.1.2:3000", edenPair: "Parear",
