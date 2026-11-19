@@ -134,6 +134,7 @@ texts.ja = {
   filesAuto: "自動", biggestFirst: "大きい順", biggestFirstHint: "大きいファイルから始めるので、最後に大きなファイルが 1 つだけ残ることがありません。",
   threadsInUse: (used, total) => `${total} 中 ${used} 使用中`, fileThreads: n => `${n} スレッド`,
   removalTitle: "元のファイルの行き先", removalHint: "新しいファイルの検証後、元のファイルはごみ箱に移り、ごみ箱を空にするまで元に戻せます。または完全に削除され、すぐに空き容量になります。ごみ箱のないドライブ (ネットワークフォルダー、一部の USB ドライブ) では、作業を始める前に確認します。", removalTrash: "ごみ箱へ", removalDelete: "完全に削除",
+  coverChoice: "アップデート込みのゲームのカバー", coverChoiceHint: "SuperNSP や SuperXCI のように、ゲームとそのアップデートが入ったファイルに使います。アップデートをインストールすると、本体にはアップデートのカバーが表示されます。", coverGame: "ゲーム", coverUpdate: "最新のアップデート",
   removeTrash: "検証後に元のファイルをごみ箱へ", removeTrashWarning: "新しいファイルの検証後、元のファイルはごみ箱に移ります。", removeDumpsTrashHint: "NUP を最後まで読み直し、各ファイルを SHA-256 で検証したあと、ダンプフォルダーを丸ごとごみ箱に移します。NUP に入っていないファイルや、パッケージ後に変わったファイルがあれば、フォルダーはそのまま残ります。", removeDumpsTrashGo: "NUP の検証後、ダンプフォルダーはごみ箱に移ります。「展開」で NUP を元のフォルダーに戻せます。",
   noBinTitle: "ごみ箱に移せない元のファイルがあります", noBinIntro: "ドライブにごみ箱がない (ネットワークフォルダー、一部の USB ドライブ) か、ごみ箱に収まりません。新しいファイルの検証後:", noBinLine: (n, bytes) => `元のファイル ${n} 個 · ${size(bytes)}`, noBinTooBig: "ごみ箱には大きすぎます", noBinDelete: "完全に削除する", noBinKeep: "残す",
   doneInBin: bytes => `ごみ箱を空にすると、さらに ${size(bytes)} 空きます。それまで元のファイルはごみ箱に残ります。`,

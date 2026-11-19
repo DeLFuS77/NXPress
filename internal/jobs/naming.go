@@ -115,8 +115,25 @@ func ReadTitles(path string) ([]*switchfs.ContentMetaAttributes, error) {
 	return all, nil
 }
 
-// ReadTitle reads the main title of a game file; withIcon adds its icon.
-func ReadTitle(path string, withIcon bool) (GameTitle, error) {
+// Cover is the icon ReadTitle adds to the title of a game file.
+type Cover int
+
+const (
+	// NoCover adds none
+	NoCover Cover = iota
+	// GameCover adds the icon of the game, else the one of its update
+	GameCover
+	// UpdateCover adds the icon of the newest update of a file that holds a game and its update,
+	// as a pack of both, which the console shows once the update is installed (#158); the one of
+	// the game when the file holds no update or its update has none. A NUP gives the icon it
+	// carries and a dump folder the one of its control data, as with GameCover: the updates a NUP
+	// is made of by NXPress carry no icon.
+	UpdateCover
+)
+
+// ReadTitle reads the main title of a game file, with the icon cover asks for.
+func ReadTitle(path string, cover Cover) (GameTitle, error) {
+	withIcon := cover != NoCover
 	if isNup(path) {
 		if isEmpty(path) {
 			return GameTitle{}, ErrEmpty
@@ -136,7 +153,11 @@ func ReadTitle(path string, withIcon bool) (GameTitle, error) {
 	}
 	result.Format = ExperimentalFormat(path)
 	if withIcon {
-		if icon, err := switchfs.ExtractIcon(path); err == nil && len(icon) > 0 {
+		extract := switchfs.ExtractIcon
+		if cover == UpdateCover {
+			extract = switchfs.ExtractUpdateIcon
+		}
+		if icon, err := extract(path); err == nil && len(icon) > 0 {
 			result.Icon = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(icon)
 		}
 	}
@@ -438,7 +459,7 @@ func KeepsName(path string, id string) bool {
 
 // rename gives a file the name of its template, in its folder.
 func rename(ctx context.Context, path string, o Options, out Output) (string, string, error) {
-	title, err := ReadTitle(path, false)
+	title, err := ReadTitle(path, NoCover)
 	if err != nil {
 		return "", "", err
 	}

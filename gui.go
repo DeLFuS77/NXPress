@@ -468,12 +468,18 @@ func (a *App) ChooseOutput() (string, error) {
 	return wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{CanCreateDirectories: true})
 }
 
-// Describe gives the main title of a file, with its icon, to show it in the list.
-func (a *App) Describe(path string) (jobs.GameTitle, error) {
+// Describe gives the main title of a file, with its icon, to show it in the list: with
+// updateCover, the one of the newest update of a file that holds a game and its update, as
+// chosen in Settings > Appearance (#158).
+func (a *App) Describe(path string, updateCover bool) (jobs.GameTitle, error) {
 	if _, ok := jobs.SplitContainer(path); ok {
 		return jobs.GameTitle{}, errors.New("a file in parts")
 	}
-	return jobs.ReadTitle(path, true)
+	cover := jobs.GameCover
+	if updateCover {
+		cover = jobs.UpdateCover
+	}
+	return jobs.ReadTitle(path, cover)
 }
 
 // FileCard is what Info shows of a file beside its row: its kind, its size and the one as NSP
@@ -701,7 +707,7 @@ var fixNupIcon = jobs.FixNupIcon
 func (a *App) NewNames(paths []string, template string, keepNamed bool) []string {
 	names := make([]string, len(paths))
 	for i, path := range paths {
-		if title, err := jobs.ReadTitle(path, false); err == nil {
+		if title, err := jobs.ReadTitle(path, jobs.NoCover); err == nil {
 			names[i] = jobs.NewName(path, title, template)
 			if keepNamed && jobs.KeepsName(path, title.TitleID) {
 				names[i] = filepath.Base(path)
@@ -746,7 +752,7 @@ func (a *App) PackPlan(files []string, origins []string, output string, template
 	plan := []PackGame{}
 	for _, id := range order {
 		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
-		if title, err := jobs.ReadTitle(groups[id][0], false); err == nil {
+		if title, err := jobs.ReadTitle(groups[id][0], jobs.NoCover); err == nil {
 			game.Name = title.Name
 		}
 		if game.Name == "" {

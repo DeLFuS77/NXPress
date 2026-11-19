@@ -9,6 +9,7 @@
 - Total threads: one number that NXPress shares among the files at work by itself, with the biggest files first (--total-threads, --biggest-first). Thanks to ItsmeAJ (GBAtemp) for the idea
 - Originals can go to the recycle bin instead of being deleted, chosen once in Settings › General (--trash on the command line)
 - Settings › Eden saves: while NXPress is open, the saves of Eden stay in step with the ones of the console in Switch Library Manager Web, both ways, only while Eden is closed and always keeping a copy in the library
+- Settings › Appearance chooses the cover of a SuperNSP or SuperXCI: the one of the game, as before, or the one of its newest update, which the console shows once it is installed. Thanks to @idkicarus (#158)
 
 ### Fixes
 

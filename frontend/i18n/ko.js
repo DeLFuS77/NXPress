@@ -134,6 +134,7 @@ texts.ko = {
   filesAuto: "자동", biggestFirst: "큰 파일 먼저", biggestFirstHint: "가장 큰 파일부터 시작해서, 큰 파일 하나만 남은 채로 작업이 끝나지 않게 해요.",
   threadsInUse: (used, total) => `${total}개 중 ${used}개 사용 중`, fileThreads: n => `스레드 ${n}개`,
   removalTitle: "원본을 보낼 곳", removalHint: "새 파일이 검증되면 원본은 휴지통으로 가서 비우기 전까지 되돌릴 수 있거나, 영구히 삭제되어 공간이 바로 비워집니다. 휴지통이 없는 드라이브(네트워크 폴더, 일부 USB 드라이브)는 작업을 시작하기 전에 묻습니다.", removalTrash: "휴지통으로", removalDelete: "영구 삭제",
+  coverChoice: "업데이트가 포함된 게임의 커버", coverChoiceHint: "SuperNSP나 SuperXCI처럼 게임과 그 업데이트가 함께 든 파일에 적용됩니다. 업데이트를 설치하면 본체에는 업데이트의 커버가 표시됩니다.", coverGame: "게임", coverUpdate: "최신 업데이트",
   removeTrash: "검증 후 원본을 휴지통으로", removeTrashWarning: "새 파일이 검증되면 원본은 휴지통으로 갑니다.", removeDumpsTrashHint: "NUP를 끝까지 다시 읽고 각 파일을 SHA-256으로 검증하면 덤프 폴더를 통째로 휴지통으로 보냅니다. NUP에 없는 파일이나 패키징 이후 바뀐 파일이 있으면 폴더는 그대로 남습니다.", removeDumpsTrashGo: "NUP가 검증되면 덤프 폴더는 휴지통으로 갑니다. '압축 해제'로 NUP를 다시 폴더로 되돌릴 수 있습니다.",
   noBinTitle: "휴지통으로 보낼 수 없는 원본이 있습니다", noBinIntro: "드라이브에 휴지통이 없거나(네트워크 폴더, 일부 USB 드라이브) 휴지통에 들어가지 않습니다. 새 파일이 검증되면:", noBinLine: (n, bytes) => `원본 ${n}개 · ${size(bytes)}`, noBinTooBig: "휴지통에 비해 너무 큼", noBinDelete: "영구 삭제", noBinKeep: "남겨 두기",
   doneInBin: bytes => `휴지통을 비우면 추가로 ${size(bytes)} 확보: 그때까지 원본은 휴지통에 남아 있습니다.`,

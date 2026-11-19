@@ -102,6 +102,9 @@ const state = {
   // where the originals go once their new files are checked (Settings › General): "trash", the
   // recycle bin, or "delete", for good
   removal: "trash",
+  // the cover of a file that holds a game and its update (Settings › Appearance): "game", or
+  // "update", the one of its newest update, which the console shows once it is installed (#158)
+  cover: "game",
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -446,7 +449,7 @@ function nupNameLine(row, label = "editName") {
       row.nameDraft = undefined;
       row.nameNote = t("nameChanged");
       row.card = await app().Card(row.item.path);
-      row.game = await app().Describe(row.item.path);
+      row.game = await describeFile(row.item.path);
       paint(row);
       // in Rename, the new name of the file comes from the new title
       if (state.mode === "rename") previewNames();
@@ -1038,7 +1041,7 @@ async function giveNupIcon(row, give) {
     row.card = await app().Card(row.item.path);
     refreshNup(row);
     // the cover of its row, in the list and in the grid, is the new icon at once (#107)
-    row.game = await app().Describe(row.item.path);
+    row.game = await describeFile(row.item.path);
     paint(row);
   } catch (error) {
     row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
@@ -1053,7 +1056,7 @@ async function fixNupMeta(row, button) {
     showToast(noteText(note));
     row.card = await app().Card(row.item.path);
     renderCard(row);
-    row.game = await app().Describe(row.item.path);
+    row.game = await describeFile(row.item.path);
     paint(row);
   } catch (error) {
     button.disabled = false;
@@ -2384,6 +2387,11 @@ function render() {
     button.classList.toggle("on", on);
     button.setAttribute("aria-checked", on);
   }
+  for (const button of document.querySelectorAll("button[data-cover]")) {
+    const on = button.dataset.cover === state.cover;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
   paintPalettes();
   paintToolChoices();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
@@ -2741,11 +2749,17 @@ function sortSoon() {
   sortTimer = setTimeout(sortRows, 400);
 }
 
+// the name and the icon of the game of a file, with the cover chosen in Settings › Appearance
+function describeFile(path) {
+  return app().Describe(path, state.cover === "update");
+}
+
 // the name and the icon of the game of each row, read a few at a time
 const describeQueue = [];
 let describing = 0;
 function describe(row) {
   if (!state.keys && !isNup(row.item.path) && !row.item.dump) return;
+  if (describeQueue.includes(row)) return;
   describeQueue.push(row);
   pumpDescribe();
 }
@@ -2754,7 +2768,7 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => {
+    describeFile(row.item.path).then(game => {
       row.game = game;
       // a dump folder has its size once its files are added up
       if (row.item.dump && game && game.size) { row.item.size = game.size; summary(); }
@@ -4165,6 +4179,16 @@ async function main() {
   // have none, and the originals go to the recycle bin
   state.removal = load("removal", "trash") === "delete" ? "delete" : "trash";
   for (const button of document.querySelectorAll("button[data-removal]")) button.onclick = () => { state.removal = button.dataset.removal; save("removal", state.removal); render(); };
+  // the cover of a file with a game and its update: the one of the game unless the one of its
+  // newest update was chosen (#158); the files of the list that hold both are read again with it
+  state.cover = load("cover", "game") === "update" ? "update" : "game";
+  for (const button of document.querySelectorAll("button[data-cover]")) button.onclick = () => {
+    if (state.cover === button.dataset.cover) return;
+    state.cover = button.dataset.cover;
+    save("cover", state.cover);
+    render();
+    for (const row of state.rows.values()) if (row.game && row.game.bases && row.game.updates && !row.game.container) describe(row);
+  };
   // the language: the one chosen, else the one chosen in the installer of Windows, else the one
   // of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);

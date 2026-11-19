@@ -134,6 +134,7 @@ texts.zh = {
   filesAuto: "自动", biggestFirst: "大文件优先", biggestFirstHint: "先处理最大的文件，这样工作不会以一个大文件单独收尾。",
   threadsInUse: (used, total) => `已用 ${used} / ${total}`, fileThreads: n => `${n} 个线程`,
   removalTitle: "原文件去向", removalHint: "新文件校验通过后，原文件会移到回收站，清空之前都可以还原；或者永久删除，空间立即释放。对于没有回收站的驱动器（网络文件夹、部分 USB 驱动器），NXPress 会在开始前询问。", removalTrash: "移到回收站", removalDelete: "永久删除",
+  coverChoice: "含更新的游戏封面", coverChoiceHint: "适用于同时包含游戏及其更新的文件，例如 SuperNSP 或 SuperXCI。安装更新后，主机显示的是更新的封面。", coverGame: "游戏", coverUpdate: "最新更新",
   removeTrash: "校验后将原文件移到回收站", removeTrashWarning: "新文件校验通过后，原文件会移到回收站。", removeDumpsTrashHint: "NUP 完整读回、其每个文件按 SHA-256 校验后，转储文件夹会整个移到回收站。如果 NUP 缺少其中某个文件，或某个文件在打包后改动过，文件夹会留在原处。", removeDumpsTrashGo: "NUP 校验通过后，转储文件夹会移到回收站：可用“解压”把 NUP 还原成文件夹。",
   noBinTitle: "部分原文件无法移到回收站", noBinIntro: "它们所在的驱动器没有回收站（网络文件夹、部分 USB 驱动器），或者回收站放不下。新文件校验通过后：", noBinLine: (n, bytes) => `${n} 个原文件 · ${size(bytes)}`, noBinTooBig: "对其回收站来说太大", noBinDelete: "永久删除", noBinKeep: "保留",
   doneInBin: bytes => `清空回收站后还能再腾出 ${size(bytes)}：在此之前原文件仍在回收站中。`,
