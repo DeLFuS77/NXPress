@@ -15,6 +15,7 @@ import (
 	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/system"
 	"github.com/DeLFuS77/NXPress/internal/titledb"
+	"github.com/DeLFuS77/NXPress/internal/trash"
 
 	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
@@ -327,7 +328,7 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 	}
 	switch {
 	case o.RmSource && o.RmDumps:
-		notes = append(notes, removeDump(dir, name, result.Packages, started))
+		notes = append(notes, removeDump(o, dir, name, result.Packages, started))
 	case o.RmSource:
 		notes = append(notes, keptOriginal)
 	}
@@ -338,8 +339,10 @@ func packNup(ctx context.Context, dir string, o Options, threads int, out Output
 // whole and checked already: each file of a package whose copy in the folder is a plain file of
 // the same size, not changed since the packing began; then the folders left empty, the dump
 // folder too. A file the NUP does not hold stays, and so does one changed since: the note tells
-// how many stay.
-func removeDump(dir string, nupPath string, sources []nup.Source, since time.Time) string {
+// how many stay. With --trash the dump folder goes to the recycle bin whole, when the NUP holds
+// every file of it, or stays as it is: thousands of files one by one in the recycle bin could not
+// be put back as a folder.
+func removeDump(o Options, dir string, nupPath string, sources []nup.Source, since time.Time) string {
 	container, err := nup.Open(nupPath)
 	if err != nil {
 		return "the dump folder is kept: the NUP cannot be read again: " + err.Error()
@@ -371,6 +374,50 @@ func removeDump(dir string, nupPath string, sources []nup.Source, since time.Tim
 	if len(held) == 0 {
 		return "the dump folder is kept: none of its files is in the NUP as it is now"
 	}
+	if !o.Trash {
+		return deleteHeld(dir, held)
+	}
+	if !holdsOnly(dir, held) {
+		return dumpKeptInPart
+	}
+	err = moveToTrash(dir)
+	if err == nil {
+		return dumpTrashed
+	}
+	unavailable, ok := trash.Why(err)
+	switch {
+	case !ok:
+		return dumpKeptNoBin + trashFailed + err.Error()
+	case !o.TrashDelete:
+		return dumpKeptNoBin + unavailable.Reason
+	}
+	if note := deleteHeld(dir, held); note != dumpDeleted {
+		return note
+	}
+	return dumpDeletedNoBin + unavailable.Reason
+}
+
+// holdsOnly tells whether the files of dir are held and nothing else: no other file, link or
+// anything that is not a folder.
+func holdsOnly(dir string, held []string) bool {
+	all := map[string]bool{}
+	for _, path := range held {
+		all[path] = true
+	}
+	only := true
+	filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || !entry.IsDir() && !all[path] {
+			only = false
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return only
+}
+
+// deleteHeld deletes the files of a dump folder its NUP holds, then the folders left empty, and
+// tells what stays.
+func deleteHeld(dir string, held []string) string {
 	for _, path := range held {
 		os.Remove(path)
 	}

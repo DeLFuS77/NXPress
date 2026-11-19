@@ -203,6 +203,16 @@ const samples = [
   ["a DLC: DLC are left as they are; it stays where it is: it was copied, but the original could not be deleted: access denied", "was copied"],
   ["a DLC: DLC are left as they are; it stays where it is: its copy did not read back the same", "read back"],
   ["files left as they are moved to D:\Switch\Left: 3", "files left"],
+  // where the originals went with the recycle bin, and why one stayed
+  ["8.0 GB -> 5.1 GB, 36.2% smaller; the original is in the recycle bin", "recycle bin"],
+  ["the originals are in the recycle bin", "recycle bin"],
+  ["Game.nsp: the original is kept: its drive has no recycle bin; 2 originals are in the recycle bin", "recycle bin"],
+  ["combined into Game.nsp; the original is deleted for good: it is too big for the recycle bin of its drive", "for good"],
+  ["the original is kept: its path is too long for the recycle bin", "too long"],
+  ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the dump folder is in the recycle bin: the NUP holds all its files, checked", "recycle bin"],
+  ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the dump folder is kept: some of its files are not in the NUP as they are, and it goes to the recycle bin only whole", "only whole"],
+  ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the dump folder is kept: it could not go to the recycle bin: access is denied", "could not go"],
+  ["2 files in 1 package, 4.0 KB → 1.0 KB: 2 with zstd; the dump folder is deleted for good: its drive has no recycle bin", "for good"],
 ];
 // in English too: what the window says in its own words
 const ownEnglish = ["-w", " -> ", "-V", "--rm-source", "--nup"];

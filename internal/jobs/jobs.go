@@ -109,6 +109,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 		}
 	}
 	if action == "optimize" {
+		// one game at a time: with a total of threads, it takes all of them the memory takes
+		if o.TotalThreads > 0 {
+			o.Threads = switchfs.LimitThreads(strconv.Itoa(o.Level), o.TotalThreads, 1)
+		}
 		return OptimizeGames(ctx, o, out)
 	}
 	if action == "pack" && o.PackGames {
@@ -169,9 +173,14 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	)
 	// a file is started only while the work is not paused: renaming, -i and the files checked
 	// before have no progress of their own to pause in. Each file takes the threads and the
-	// files at once set as it starts, which the window may change while the work goes on.
+	// files at once set as it starts, which the window may change while the work goes on, or
+	// with a total of threads its share of them.
 	eachFile(ctx, o, files, out, func(path string, o Options) {
-		threads := switchfs.LimitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		// its share of the total is within what the memory takes already
+		threads := o.Threads
+		if o.TotalThreads == 0 {
+			threads = limitThreads(strconv.Itoa(o.Level), o.Threads, o.Multi)
+		}
 		// its LZ4 blocks keep to its share of the processors among the files at once now
 		ctx := switchfs.WithThreads(ctx, lz4Threads(o))
 		output, note, err := runSkippable(ctx, path, func(ctx context.Context) (string, string, error) {
@@ -219,6 +228,10 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	}
 	return failed
 }
+
+// limitThreads lowers the threads of each file when the memory is short (switchfs.LimitThreads);
+// a measure stands in for it, to compare settings on the same threads.
+var limitThreads = switchfs.LimitThreads
 
 // waitWhilePaused waits while the work is paused, in the window; the console has no pause.
 func waitWhilePaused(out Output) {
@@ -588,11 +601,11 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	return verify(ctx, path, o, out)
 }
 
-// removeSource deletes the original with --rm-source once its new file is checked whole, and
-// gives back name and note. A file checked only in part (an NCA rewritten by a tool with a
-// section that cannot be checked on its own) does not replace it: the original is kept, and the
-// note says why. An original that is the new file itself, however its name is written, is
-// never deleted.
+// removeSource takes the original away with --rm-source once its new file is checked whole (to
+// the recycle bin with --trash, see discard), and gives back name and note, which tells where it
+// went. A file checked only in part (an NCA rewritten by a tool with a section that cannot be
+// checked on its own) does not replace it: the original is kept, and the note says why. An
+// original that is the new file itself, however its name is written, is never taken away.
 func removeSource(o Options, path string, check switchfs.FileCheck, name string, note string) (string, string, error) {
 	if !o.RmSource {
 		return name, note, nil
@@ -603,12 +616,21 @@ func removeSource(o Options, path string, check switchfs.FileCheck, name string,
 	if name != "" && SameFile(path, name) {
 		return name, note, nil
 	}
-	if err := os.Remove(path); err != nil {
-		return name, note, fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
+	gone, err := discard(o, []string{path}, os.Remove)
+	if err != nil {
+		return name, note, removeFailed(o, err)
 	}
 	// its recovery data goes with it, or it would be left for a file no longer there
-	removeRecovery(path)
-	return name, note, nil
+	removeRecovery(path, gone)
+	return name, joinNotes(note, gone.note()), nil
+}
+
+// removeFailed is the error of an original that could not be taken away, its new file checked.
+func removeFailed(o Options, err error) error {
+	if o.Trash {
+		return fmt.Errorf("the new file is checked, but the original could not go to the recycle bin: %w", err)
+	}
+	return fmt.Errorf("the new file is checked, but the original could not be deleted: %w", err)
 }
 
 // keptNote is note, with why the original stays when --rm-source cannot delete it.

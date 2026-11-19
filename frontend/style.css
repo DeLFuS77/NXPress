@@ -59,6 +59,9 @@ button.primary:disabled { background: var(--hover); border-color: var(--line); c
 button.primary.small { padding: 6px 14px; white-space: nowrap; }
 button.primary.stop { background: var(--raised); border-color: var(--line); color: var(--text); }
 button.icon { padding: 4px 8px; }
+/* the one button that deletes for good, in red: red is for errors and what cannot be undone */
+button.danger { background: transparent; border-color: var(--bad); color: var(--bad); font-weight: 600; }
+button.danger:hover:not(:disabled) { background: var(--bad-soft); }
 input[type=number] { width: 72px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
 input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
@@ -300,7 +303,7 @@ input[type=search] { flex: 0 1 280px; min-width: 140px; font: inherit; color: va
 /* the speed of a setting in the letter of its row, not in the one of the line of speed under the list */
 .measure-table .speed { font-size: inherit; color: inherit; margin-top: 0; }
 @keyframes changed { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
-input.changed { animation: changed 2.5s ease-out; }
+input.changed, select.changed, .stepper.changed { animation: changed 2.5s ease-out; }
 .badge.skipped, .badge.modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
 .badge.waiting { color: var(--muted); background: var(--hover); }
 /* the log of a work: 160 px on a big window, less on a low one, where the list keeps its rows */
@@ -494,6 +497,7 @@ label .has-help, button.has-help { cursor: pointer; }
 .space-list b { overflow-wrap: anywhere; font-weight: 600; }
 .space-list span { color: var(--muted); font-size: 13px; }
 .done-saved { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.done-bin { margin: 4px 0 2px; font-size: 13px; color: var(--muted); }
 #done-dialog h3 { font-size: 13px; margin: 14px 0 6px; }
 .done-star { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-small); background: var(--accent-soft); }
 .done-star p { margin: 0 0 8px; font-size: 13px; }
@@ -757,19 +761,61 @@ button { transition: background .12s, border-color .12s, transform .08s; }
 .pref-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pref-text b { font-weight: 600; font-size: 14px; }
 .pref-text small { font-size: 12px; color: var(--muted); }
+/* the notice of who makes NXPress and its license: always in sight, not a help on hover */
+.pref-text .pref-legal { display: block; margin-top: 4px; line-height: 1.45; }
+/* a notice with two buttons: the buttons go under the text when the column is narrow */
+.pref-item:has(> .pref-buttons) { flex-wrap: wrap; }
+.pref-item:has(> .pref-buttons) > .pref-text { flex: 1 1 320px; }
+.pref-buttons { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
 /* what a setting found: the day of the list of versions published */
 .pref-text .pref-status { font-style: italic; opacity: .85; }
 .pref-text .pref-status:empty { display: none; }
 /* a place in the Explorer: green when it is there, orange when it needs a look (#87, #88) */
 .pref-text .pref-status.ok { color: var(--ok); font-style: normal; opacity: 1; }
 .pref-text .pref-status.warn { color: var(--warn); font-style: normal; opacity: 1; }
+/* red only for what went wrong, blue for what is going on */
+.pref-text .pref-status.bad { color: var(--bad); font-style: normal; opacity: 1; }
+.pref-text .pref-status.work { color: var(--accent); font-style: normal; opacity: 1; }
 .pref-text label.check.small-check { margin-top: 6px; white-space: normal; }
+/* the saves of Eden: the libraries found, the code to check in the library, the profiles, the
+   conflicts in orange and the games with what each waits for */
+.eden-box { display: flex; flex-direction: column; gap: 8px; }
+.eden-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.eden-row input[type=text] { flex: 1 1 220px; }
+.eden-found { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.eden-found li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--raised); }
+.eden-found li span { flex: 1; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.eden-found li small { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.eden-pairing-text { font-size: 13px; }
+.eden-code { font: 600 22px/1.2 "Cascadia Mono", Consolas, ui-monospace, monospace; letter-spacing: .12em; color: var(--accent); user-select: text; -webkit-user-select: text; }
+.eden-profiles { display: flex; flex-direction: column; gap: 6px; }
+.eden-profile { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.eden-profile > span:first-child { flex: 0 1 140px; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eden-profile > span[aria-hidden] { color: var(--muted); }
+.eden-profile select { flex: 0 1 220px; }
+.eden-conflicts { display: flex; flex-direction: column; gap: 8px; }
+.eden-conflicts:empty { display: none; }
+.eden-conflict { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius-small); background: color-mix(in srgb, var(--warn) 9%, transparent); }
+.eden-conflict > b { font-size: 13px; color: var(--warn); }
+.eden-conflict > b::before { content: "⚠ "; }
+.eden-conflict-save { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.eden-conflict-save > span { flex: 1; min-width: 0; }
+.eden-conflict > small { font-size: 12px; color: var(--muted); }
+.eden-games { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; }
+.eden-games:empty { display: none; }
+.eden-games li { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-top: 1px solid var(--line); }
+.eden-games li:first-child { border-top: 0; }
+.eden-games li b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.eden-games li small { font-size: 12px; color: var(--muted); }
+.eden-games .in-step { color: var(--ok); }
+.eden-games .moves { color: var(--accent); }
+.eden-games .conflict { color: var(--warn); }
 .pref-item > select { min-width: 180px; }
 /* a button that opens a place known by its logo: the Discord server (#86), in its own blurple */
 .brand-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .brand-button .discord-logo { width: 16px; height: 16px; flex: none; fill: #5865f2; }
 .pref-item .segmented { margin: 0; }
-.pref-item .segmented button { padding: 3px 10px; }
+.pref-item .segmented button { padding: 3px 10px; white-space: nowrap; }
 #preferences .pref-keys { word-break: break-all; }
 #preferences .pref-sound { padding-left: 0; margin-top: 4px; }
 .pref-more { display: block; }
@@ -1094,18 +1140,37 @@ nav button small { line-height: 1.3; }
 .pref-credits .credit-badge { width: 20px; height: 20px; font-size: 11px; }
 .pref-credits .credit-thanks { flex-basis: 100%; }
 
-/* while a work goes on, under its buttons: the threads of each file and the files at once, from
-   the next file on, and the low priority at once (asked by ItsmeAJ on GBAtemp) */
+/* while a work goes on, under its buttons: the total of threads, the files at once and the
+   biggest first, from the next file on, the threads in use, and the low priority at once (asked
+   by ItsmeAJ on GBAtemp) */
 .live-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
 .live-row .live-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); }
 .live-row .live-name .icon { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .live-field, .live-low { display: inline-flex; align-items: center; gap: 8px; }
+.live-row .label { margin: 0; font-weight: inherit; }
+.live-row label.check { margin: 0; gap: 6px; }
+.live-row select { flex: none; font-size: 12px; padding: 2px 6px; background: var(--raised); }
 .live-low { cursor: pointer; }
 .live-low .switch { transform: scale(.85); }
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-small); overflow: hidden; background: var(--bg); }
 .stepper button { border: 0; border-radius: 0; background: transparent; padding: 2px 10px; font-size: 14px; line-height: 1.25; }
 .stepper button:focus-visible { outline-offset: -3px; border-radius: 4px; }
 .stepper b { min-width: 26px; text-align: center; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+/* in Advanced the number of a stepper can be typed too, between its − and + */
+.stepper input[type=number] { width: 44px; padding: 3px 2px; border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: 0; background: transparent; text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.stepper input[type=number]::-webkit-inner-spin-button, .stepper input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:focus-visible { outline-offset: -3px; }
+#multi { flex: none; min-width: 96px; }
+/* the threads in use, as files start and end: one square for each thread of the total, blue
+   while a file holds it, under how many */
+.live-use { display: inline-flex; flex-direction: column; gap: 3px; font-variant-numeric: tabular-nums; }
+.use-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 9px); gap: 2px; max-width: 264px; }
+.use-strip.dense { gap: 1px; }
+.use-strip i { height: 9px; border-radius: 2px; background: var(--bar); transition: background .25s; }
+.use-strip i.on { background: var(--accent); }
+/* the threads a file at work took of the total: at the end of its row, and on its cover in the grid */
+.threads-chip { flex: none; margin-left: auto; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 18px; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.grid .game .threads-chip { position: absolute; top: 6px; left: 6px; z-index: 1; margin: 0; background: color-mix(in srgb, var(--panel) 88%, transparent); }
 .live-pending { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
 .live-pending::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: live-wait 1.4s ease-in-out infinite; }
 @keyframes live-wait { 50% { opacity: .3; } }

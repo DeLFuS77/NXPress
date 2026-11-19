@@ -77,7 +77,8 @@ func romfsHash(ctx context.Context, r *native.Romfs, step string, progress func(
 // Run optimizes the game and its newest update among the files given (NSP, NSZ, XCI or XCZ, a
 // SuperNSP too) into one NSP at target, checked whole before it is told done: on an error, target
 // is removed. A game alone, with no update newer than it (one merged already, by this or by
-// hacBrewPackLZ, or one never updated), is made again the same way from its own program.
+// hacBrewPackLZ, or one never updated), is made again the same way from its own program. The DLC of
+// the game in the files given (a file that holds the game with its DLC) are kept in it as they are.
 func Run(ctx context.Context, files []string, target string, o Options) (res Result, err error) {
 	o, err = o.checked()
 	if err != nil {
@@ -265,6 +266,45 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 		}
 	}
 
+	// the DLC of the game in the files given (a file that holds the game with its DLC): kept in it as
+	// they are, their NCAs and meta NCA, and the tickets they have
+	dlcs, err := g.dlcs(base)
+	if err != nil {
+		return res, err
+	}
+	res.Dlcs = len(dlcs)
+	copied := []*nca{}
+	named := map[string]bool{}
+	for _, name := range names {
+		named[name] = true
+	}
+	for _, d := range dlcs {
+		for _, n := range append(dlcContents(g, d), d.nca) {
+			if name := strings.ToLower(n.name); !named[name] {
+				named[name] = true
+				copied = append(copied, n)
+				names = append(names, name)
+				res.InputSize += n.size
+			}
+		}
+	}
+	dlcRights := []string{}
+	for _, n := range copied {
+		if !n.hasRights() {
+			continue
+		}
+		r := hex.EncodeToString(n.rightsID())
+		if seen[r] || g.tickets[r] == nil {
+			continue // one the input did not hold either
+		}
+		seen[r] = true
+		dlcRights = append(dlcRights, r)
+		names = append(names, r+".tik")
+		if g.tickets[r].cert != nil {
+			names = append(names, r+".cert")
+		}
+	}
+
 	f, err := switchfs.CreateNew(target)
 	if err != nil {
 		return res, err
@@ -335,17 +375,38 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	if _, err := pw.Write(metaNca); err != nil {
 		return res, err
 	}
-	for _, r := range rights {
-		pw.next()
-		if _, err := pw.Write(g.tickets[r].tik); err != nil {
-			return res, err
-		}
-		if g.tickets[r].cert != nil {
+	writeTickets := func(rights []string) error {
+		for _, r := range rights {
 			pw.next()
-			if _, err := pw.Write(g.tickets[r].cert); err != nil {
-				return res, err
+			if _, err := pw.Write(g.tickets[r].tik); err != nil {
+				return err
+			}
+			if g.tickets[r].cert != nil {
+				pw.next()
+				if _, err := pw.Write(g.tickets[r].cert); err != nil {
+					return err
+				}
 			}
 		}
+		return nil
+	}
+	if err := writeTickets(rights); err != nil {
+		return res, err
+	}
+	// the DLC, copied as they are, in the order of names: what each must hash to in the new NSP
+	kept := map[string][32]byte{}
+	for _, n := range copied {
+		pw.next()
+		h := sha256.New()
+		if err := copyN(io.MultiWriter(pw, h), n.file, n.offset, n.size); err != nil {
+			return res, err
+		}
+		var sum [32]byte
+		copy(sum[:], h.Sum(nil))
+		kept[strings.ToLower(n.name)] = sum
+	}
+	if err := writeTickets(dlcRights); err != nil {
+		return res, err
 	}
 	if err := pw.finish(); err != nil {
 		return res, err
@@ -358,7 +419,7 @@ func Run(ctx context.Context, files []string, target string, o Options) (res Res
 	res.OutputSize = pw.head + pw.at
 
 	// 3. checked whole, opened again from the disk
-	if err := CheckMerged(ctx, target, want, o.Progress); err != nil {
+	if err := checkMerged(ctx, target, want, kept, o.Progress); err != nil {
 		return res, fmt.Errorf("the new NSP does not check: %w", err)
 	}
 	done = true
@@ -567,9 +628,17 @@ func plain(n *nca, i int, off uint64, size int) ([]byte, error) {
 // CheckMerged opens an optimized NSP again from the disk and checks it whole: the CNMT of its
 // meta NCA lists its files with their sizes and the hash of the program; the program NCA: the
 // hashes of its FS headers, every block of its PFS0 sections, and its RomFS read as the game
-// reads it (every block by its IVFC, the LZ4 blocks decompressed) giving the SHA-256 want; then
-// every NCA by its content ID (switchfs.VerifyFile).
+// reads it (every block by its IVFC, the LZ4 blocks decompressed) giving the SHA-256 want; the DLC
+// of the game it holds, each with every NCA its CNMT lists; then every NCA by its content ID
+// (switchfs.VerifyFile).
 func CheckMerged(ctx context.Context, path string, want [32]byte, progress func(string, int64, int64)) error {
+	return checkMerged(ctx, path, want, nil, progress)
+}
+
+// checkMerged is CheckMerged knowing what each DLC copied in must hash to (kept, by its name in lower
+// case): one a tool rewrote in the files given (it does not match its content ID, its data matches
+// its hashes) still checks when it is the same, byte for byte, as it was.
+func checkMerged(ctx context.Context, path string, want [32]byte, kept map[string][32]byte, progress func(string, int64, int64)) error {
 	if progress == nil {
 		progress = func(string, int64, int64) {}
 	}
@@ -586,16 +655,34 @@ func CheckMerged(ctx context.Context, path string, want [32]byte, progress func(
 	if err != nil {
 		return err
 	}
-	if len(g.metas) != 1 || g.metas[0].typ != metaApplication {
+	// one Application, and the DLC of that game kept in it, each whole
+	var m *meta
+	for _, x := range g.metas {
+		if x.typ == metaApplication {
+			if m != nil {
+				return errors.New("it holds more than one Application")
+			}
+			m = x
+		}
+	}
+	if m == nil {
 		return errors.New("it does not hold one Application")
 	}
-	m := g.metas[0]
-	listed := map[string]bool{}
-	for _, c := range m.contents {
-		listed[c.id] = true
+	listed, metas := map[string]bool{}, map[string]bool{}
+	for _, x := range g.metas {
+		if x != m && (x.typ != metaAddOn || x.titleID&^0xFFF != m.titleID&^0xFFF+0x1000) {
+			return fmt.Errorf("it holds %016X, no DLC of the game", x.titleID)
+		}
+		metas[strings.TrimSuffix(strings.ToLower(x.nca.name), ".cnmt.nca")] = true
+		for _, c := range x.contents {
+			if x != m && g.ncas[c.id] == nil {
+				return fmt.Errorf("%s.nca of the DLC %016X is not in it", c.id, x.titleID)
+			}
+			listed[c.id] = true
+		}
 	}
 	for id := range g.ncas {
-		if id != strings.TrimSuffix(strings.ToLower(m.nca.name), ".cnmt.nca") && !listed[id] {
+		if !metas[id] && !listed[id] {
 			return fmt.Errorf("%s.nca is not listed in its CNMT", id)
 		}
 	}
@@ -681,8 +768,37 @@ func CheckMerged(ctx context.Context, path string, want [32]byte, progress func(
 	if err != nil {
 		return err
 	}
-	if len(check.Modified) > 0 || check.Partial {
-		return fmt.Errorf("%s do not match their content IDs", strings.Join(check.Modified, ", "))
+	// a DLC rewritten by a tool before is copied as it was: the same bytes
+	rest := []string{}
+	for _, name := range check.Modified {
+		same, err := keptSame(p, name, kept)
+		if err != nil {
+			return err
+		}
+		if !same {
+			rest = append(rest, name)
+		}
+	}
+	if len(rest) > 0 || check.Partial && len(rest) == len(check.Modified) {
+		if len(rest) == 0 {
+			return errors.New("some NCAs in it cannot be checked by their content IDs")
+		}
+		return fmt.Errorf("%s do not match their content IDs", strings.Join(rest, ", "))
 	}
 	return nil
+}
+
+// keptSame tells the file name of the NSP is a DLC copied in (kept) and the same, byte for byte, as
+// it was in the files given.
+func keptSame(p *pkgFile, name string, kept map[string][32]byte) (bool, error) {
+	sum, ok := kept[strings.ToLower(name)]
+	e, there := p.entries[name]
+	if !ok || !there {
+		return false, nil
+	}
+	h := sha256.New()
+	if err := copyN(h, p.f, e.offset, e.size); err != nil {
+		return false, err
+	}
+	return bytes.Equal(h.Sum(nil), sum[:]), nil
 }

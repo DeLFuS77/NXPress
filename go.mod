@@ -4,7 +4,7 @@ go 1.27.0
 
 toolchain go1.27.3
 
-replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261117191210-56fe17e737f4
+replace github.com/dtrunk90/switch-library-manager-web => github.com/DeLFuS77/switch-library-manager-web v0.0.0-20261119055526-6f742676a80f
 
 require (
 	github.com/DataDog/zstd v1.5.7

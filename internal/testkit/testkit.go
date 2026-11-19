@@ -181,6 +181,11 @@ func RewrittenNca() ([]byte, string) {
 }
 
 func metaNca(section []byte) []byte {
+	return sectionNca(section, 1)
+}
+
+// sectionNca is an NCA of one section, a RomFS (fsType 0) or a PFS0 (1), sector aligned.
+func sectionNca(section []byte, fsType byte) []byte {
 	contentKey, _ := hex.DecodeString(ncaKey)
 	areaKey, _ := hex.DecodeString(AreaKey)
 	areaCipher, _ := aes.NewCipher(areaKey)
@@ -188,7 +193,7 @@ func metaNca(section []byte) []byte {
 	copy(header[0x200:], []byte("NCA3"))
 	binary.LittleEndian.PutUint32(header[0x240:], 6)
 	binary.LittleEndian.PutUint32(header[0x244:], uint32(6+len(section)/0x200))
-	header[0x402] = 1
+	header[0x402] = fsType
 	header[0x403] = 2
 	header[0x404] = 3
 	binary.LittleEndian.PutUint32(header[0x540:], 1)
@@ -282,6 +287,84 @@ func NspListing(t *testing.T, path string, titleID uint64, version uint32, metaT
 	for _, name := range extras {
 		names = append(names, name)
 		payloads = append(payloads, extra[name])
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, pfs0(names, payloads), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// romfs is a RomFS of the files given, by name, sector aligned: the control data of a game.
+func romfs(names []string, contents [][]byte) []byte {
+	const fileTable = 0x50
+	table, data := []byte{}, []byte{}
+	for i, name := range names {
+		entry := make([]byte, 0x20)
+		binary.LittleEndian.PutUint64(entry[0x8:], uint64(len(data)))
+		binary.LittleEndian.PutUint64(entry[0x10:], uint64(len(contents[i])))
+		binary.LittleEndian.PutUint32(entry[0x1C:], uint32(len(name)*2))
+		for _, r := range name {
+			entry = binary.LittleEndian.AppendUint16(entry, uint16(r))
+		}
+		for len(entry)%4 != 0 {
+			entry = append(entry, 0)
+		}
+		table = append(table, entry...)
+		data = append(data, contents[i]...)
+		for len(data)%0x10 != 0 {
+			data = append(data, 0)
+		}
+	}
+	dataOffset := (fileTable + len(table) + 0xF) &^ 0xF
+	section := make([]byte, (dataOffset+len(data)+0x1FF)&^0x1FF)
+	// the header: its size, the four tables (only the one of the files is used) and the data
+	for i, value := range []uint64{0x50, 0, 0, 0, 0, 0, 0, fileTable, uint64(len(table)), uint64(dataOffset)} {
+		binary.LittleEndian.PutUint64(section[i*8:], value)
+	}
+	copy(section[fileTable:], table)
+	copy(section[dataOffset:], data)
+	return section
+}
+
+// PackTitle is a title of the NSP PackNsp writes: its ID, its version, its kind (a
+// switchfs.ContentMetaType) and the icon of its control data, none when nil.
+type PackTitle struct {
+	ID      uint64
+	Version uint32
+	Kind    byte
+	Icon    []byte
+}
+
+// PackNsp writes an NSP that holds the titles given, as a pack of a game and its update: each
+// with its Meta NCA and its control NCA, a NACP with the name of the game and the icon given
+// (in American English).
+func PackNsp(t *testing.T, path string, titles []PackTitle) string {
+	t.Helper()
+	names, payloads := []string{}, [][]byte{}
+	for _, title := range titles {
+		nacp := make([]byte, 0x4000)
+		copy(nacp, "Pack Game")
+		files, contents := []string{"control.nacp"}, [][]byte{nacp}
+		if title.Icon != nil {
+			files, contents = append(files, "icon_AmericanEnglish.dat"), append(contents, title.Icon)
+		}
+		control := sectionNca(romfs(files, contents), 0)
+		controlName := ContentName(control, ".nca")
+		var id [16]byte
+		hex.Decode(id[:], []byte(strings.TrimSuffix(controlName, ".nca")))
+		cnmt := make([]byte, 0x20+0x38+0x20)
+		binary.LittleEndian.PutUint64(cnmt[0:8], title.ID)
+		binary.LittleEndian.PutUint32(cnmt[8:12], title.Version)
+		cnmt[0xC] = title.Kind
+		binary.LittleEndian.PutUint16(cnmt[0x10:0x12], 1)
+		copy(cnmt[0x20+0x20:], id[:])
+		cnmt[0x20+0x36] = 3 // control
+		meta := metaNca(pad(pfs0([]string{"Title.cnmt"}, [][]byte{cnmt})))
+		names = append(names, ContentName(meta, ".cnmt.nca"), controlName)
+		payloads = append(payloads, meta, control)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)

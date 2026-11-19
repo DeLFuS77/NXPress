@@ -24,7 +24,7 @@ func TestNupTitleAndCard(t *testing.T) {
 	}
 	path := filepath.Join(t.TempDir(), "book.nup")
 	os.WriteFile(path, testnup.Build(packages), 0o644)
-	title, err := ReadTitle(path, true)
+	title, err := ReadTitle(path, GameCover)
 	if err != nil {
 		t.Fatal(err)
 	}

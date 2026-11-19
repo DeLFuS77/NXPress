@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.7.26
+
+### Improvements
+
+- Settings › Help › Code and license tells who makes NXPress, its license and that it has no warranty, with buttons to the license and the code
+- A program built from the code outside the workflow of this repository is called "NXPress (unofficial build)", has a plain icon and says so in the side menu; TRADEMARKS.md asks a modified version to keep the notice of who makes NXPress
+- Total threads: one number that NXPress shares among the files at work by itself, with the biggest files first (--total-threads, --biggest-first). Thanks to ItsmeAJ (GBAtemp) for the idea
+- Originals can go to the recycle bin instead of being deleted, chosen once in Settings › General (--trash on the command line)
+- Settings › Eden saves: while NXPress is open, the saves of Eden stay in step with the ones of the console in Switch Library Manager Web, both ways, only while Eden is closed and always keeping a copy in the library
+- Settings › Appearance chooses the cover of a SuperNSP or SuperXCI: the one of the game, as before, or the one of its newest update, which the console shows once it is installed. Thanks to @idkicarus (#158)
+
+### Fixes
+
+- Optimize for install: the DLC inside the file of a game are kept in the optimized file, as they were, instead of being left out. Thanks to easyonme (GBAtemp) for reporting it
+
 ## 1.7.25
 
 ### Improvements

@@ -87,7 +87,9 @@ jobs:
           # the oldest macOS Go supports
           MACOSX_DEPLOYMENT_TARGET: "13.0"
         run: |
-          tags="desktop,production"
+          # "official": the name and the logo of NXPress, for the versions of this repository only
+          # (TRADEMARKS.md); a build without it is called an unofficial build
+          tags="desktop,production,official"
           if [ "${RUNNER_OS}" = "macOS" ]; then
             # the file dialogs of Wails use UTType, a framework Wails does not link itself
             export CGO_LDFLAGS="-framework UniformTypeIdentifiers"

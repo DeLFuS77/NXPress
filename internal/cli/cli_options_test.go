@@ -80,6 +80,9 @@ func TestOptionsAsArgparse(t *testing.T) {
 		{[]string{"--no-long", "--long"}, func(o jobs.Options) bool { return !o.ShortWindow }},
 		{[]string{"-h"}, func(o jobs.Options) bool { return o.Help }},
 		{[]string{"--he"}, func(o jobs.Options) bool { return o.Help }},
+		{[]string{"--tot", "8"}, func(o jobs.Options) bool { return o.TotalThreads == 8 }},
+		{[]string{"--total-threads=0"}, func(o jobs.Options) bool { return o.TotalThreads == 0 }},
+		{[]string{"--big"}, func(o jobs.Options) bool { return o.BiggestFirst }},
 	} {
 		o, err := jobs.ParseOptions(append(c.args, "a.nsp"))
 		if err != nil || !c.want(o) || !reflect.DeepEqual(o.Files, []string{"a.nsp"}) {
@@ -105,6 +108,8 @@ func TestOptionsAsArgparse(t *testing.T) {
 		{[]string{"-Cl"}, "-l needs a value"},
 		{[]string{"-lx"}, `-l needs a number, not "x"`},
 		{[]string{"--lev"}, "--level needs a value"},
+		{[]string{"--total-threads", "-1"}, `--total-threads needs a number, not "-1"`},
+		{[]string{"--total-threads"}, "--total-threads needs a value"},
 	} {
 		if _, err := jobs.ParseOptions(c.args); err == nil || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("%v: %v, want %q", c.args, err, c.want)
@@ -141,6 +146,11 @@ func TestCheckTellsWhatHasNoEffect(t *testing.T) {
 		"-o out --measure":                nil,
 		"-o -i":                           nil,
 		"-C -l 25":                        {"-l 25: levels above 19 make a zstd window larger than the 8 MiB installers decompress with, so 19 is used"},
+		"--total-threads 8 -C":            nil,
+		"--total-threads 8 -m 2 -C":       nil,
+		"--total-threads 8 -t 3 -C":       {"-t has no effect with --total-threads: each file takes its share of the total"},
+		"--total-threads 8 --measure":     {"--total-threads has no effect with --measure"},
+		"--biggest-first -m 3 -C":         nil,
 	} {
 		o, err := jobs.ParseOptions(append(strings.Fields(args), "x"))
 		if err == nil {

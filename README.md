@@ -98,6 +98,7 @@ nxpress -C --extra game.nsp         compress with the experimental extra compres
 nxpress -C --skip-sparse-updates games  leave the update of a game in sparse storage as NSP, like its game
 nxpress -C --skip-dlc --move-skipped left games  leave the DLC as NSP, and move what is left as it is into left
 nxpress -C --par2 3 games           write recovery data (.par2) for 3 % of each new file
+nxpress -C --rm-source --trash games  send each original to the recycle bin once its new file is checked
 nxpress -D game.nsz                 decompress to game.nsp (an XCZ to an XCI)
 nxpress -V game.nsz                 check a file
 nxpress -V --verify-level signature games  check only the signature of every NCA, in seconds
@@ -148,9 +149,11 @@ The other works leave NUP files as they are, and say where they are made, unpack
 NXPress needs Go and a C compiler (for zstd). The window uses [Wails](https://wails.io): WebView2 on Windows, WebKitGTK on Linux.
 
 ```
-go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres/winres.json --arch amd64   # Windows: icon and manifest
-go build -tags desktop,production -ldflags "-s -w" .                                # add webkit2_41 to the tags on Linux
+go run github.com/tc-hib/go-winres@v0.3.3 make --in build/winres-unofficial/winres.json --arch amd64   # Windows: icon and manifest
+go build -tags desktop,production -ldflags "-s -w" .                                          # add webkit2_41 to the tags on Linux
 ```
+
+A program built this way is an unofficial build: it has a plain icon and says so in its window. The name and the logo of NXPress (the tag `official` and `build/winres`) are for the versions published here, built by the workflow of this repository ([TRADEMARKS.md](TRADEMARKS.md)).
 
 The screenshots show made-up games.
 

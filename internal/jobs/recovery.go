@@ -57,11 +57,6 @@ func moveRecovery(from string, to string) {
 	}
 }
 
-// removeRecovery deletes the recovery data of a file deleted.
-func removeRecovery(path string) {
-	os.Remove(par2.Path(path))
-}
-
 // repairWithRecovery rebuilds, with --repair, a file Verify found damaged with its recovery
 // data, and tells what it did; repaired is true when the file was rebuilt whole, so it is
 // checked again.

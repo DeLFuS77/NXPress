@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/DeLFuS77/NXPress/internal/edensaves"
 	"github.com/DeLFuS77/NXPress/internal/jobs"
 	"github.com/DeLFuS77/NXPress/internal/nup"
 	"github.com/DeLFuS77/NXPress/internal/portable"
@@ -34,12 +35,6 @@ import (
 
 //go:embed all:frontend
 var frontend embed.FS
-
-// the icon of the window on Linux; Windows takes it from the resources of the program, macOS
-// from its app
-//
-//go:embed build/appicon.png
-var appIcon []byte
 
 // singleWindow is the lock that keeps NXPress to one window on Windows: the files the Explorer
 // gives to another NXPress go to the one open (#87, #88).
@@ -71,7 +66,7 @@ func runWindow(start launch) int {
 		backdrop = windows.Mica
 	}
 	err := wails.Run(&wailsoptions.App{
-		Title:              "NXPress " + version,
+		Title:              brandName + " " + version,
 		Width:              place.Width,
 		Height:             place.Height,
 		MinWidth:           windowplace.WindowMinWidth,
@@ -164,6 +159,11 @@ type App struct {
 	// again (see covers.go)
 	coversMutex sync.Mutex
 	covers      map[string][]byte
+	// the saves of Eden kept in step with the library while the window is open (see eden.go),
+	// and what stops their passes
+	edenOnce sync.Once
+	eden     *edensaves.Service
+	edenStop context.CancelFunc
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -178,6 +178,7 @@ func (a *App) startup(ctx context.Context) {
 	if path, err := jobs.LoadKeys(""); err == nil {
 		a.keys = path
 	}
+	a.startEden(ctx)
 }
 
 // Setup is what the page shows before anything is chosen.
@@ -204,6 +205,9 @@ type Setup struct {
 	Hibernate bool `json:"hibernate"`
 	// the language chosen in the installer of Windows, for the page until one is chosen in it
 	Language string `json:"language"`
+	// built by the workflow of the repository, with the name and the logo of NXPress: a program
+	// built from the code without it tells it is not an official version (TRADEMARKS.md)
+	OfficialBuild bool `json:"officialBuild"`
 }
 
 func (a *App) Setup() Setup {
@@ -212,7 +216,7 @@ func (a *App) Setup() Setup {
 	setup := Setup{
 		Version: version, Keys: a.keys, Threads: jobs.DefaultThreads(1), Cpus: runtime.NumCPU(),
 		Level: jobs.DefaultLevel, MaxLevel: jobs.MaxLevel, Files: a.files, Platform: runtime.GOOS + "/" + runtime.GOARCH, SendTo: system.SendToFolder() != "",
-		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), Language: system.InstallerLanguage(),
+		Mica: system.MicaWindow(), Hibernate: system.CanHibernate(), Language: system.InstallerLanguage(), OfficialBuild: officialBuild,
 	}
 	setup.SendToEnabled = setup.SendTo && system.SendToEnabled()
 	if len(a.files) > 0 {
@@ -464,12 +468,18 @@ func (a *App) ChooseOutput() (string, error) {
 	return wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{CanCreateDirectories: true})
 }
 
-// Describe gives the main title of a file, with its icon, to show it in the list.
-func (a *App) Describe(path string) (jobs.GameTitle, error) {
+// Describe gives the main title of a file, with its icon, to show it in the list: with
+// updateCover, the one of the newest update of a file that holds a game and its update, as
+// chosen in Settings > Appearance (#158).
+func (a *App) Describe(path string, updateCover bool) (jobs.GameTitle, error) {
 	if _, ok := jobs.SplitContainer(path); ok {
 		return jobs.GameTitle{}, errors.New("a file in parts")
 	}
-	return jobs.ReadTitle(path, true)
+	cover := jobs.GameCover
+	if updateCover {
+		cover = jobs.UpdateCover
+	}
+	return jobs.ReadTitle(path, cover)
 }
 
 // FileCard is what Info shows of a file beside its row: its kind, its size and the one as NSP
@@ -697,7 +707,7 @@ var fixNupIcon = jobs.FixNupIcon
 func (a *App) NewNames(paths []string, template string, keepNamed bool) []string {
 	names := make([]string, len(paths))
 	for i, path := range paths {
-		if title, err := jobs.ReadTitle(path, false); err == nil {
+		if title, err := jobs.ReadTitle(path, jobs.NoCover); err == nil {
 			names[i] = jobs.NewName(path, title, template)
 			if keepNamed && jobs.KeepsName(path, title.TitleID) {
 				names[i] = filepath.Base(path)
@@ -742,7 +752,7 @@ func (a *App) PackPlan(files []string, origins []string, output string, template
 	plan := []PackGame{}
 	for _, id := range order {
 		game := PackGame{ID: fmt.Sprintf("%016X", id), Files: groups[id]}
-		if title, err := jobs.ReadTitle(groups[id][0], false); err == nil {
+		if title, err := jobs.ReadTitle(groups[id][0], jobs.NoCover); err == nil {
 			game.Name = title.Name
 		}
 		if game.Name == "" {
@@ -825,6 +835,10 @@ type Request struct {
 	RemoveSource bool     `json:"removeSource"`
 	// the dump folders too, once their NUP is checked: in Combine, with Delete originals (#79)
 	RemoveDumps bool `json:"removeDumps"`
+	// the originals go to the recycle bin instead of being deleted for good (Settings › General),
+	// and where there is none, what was answered before the work: "delete" for good, else kept
+	Trash   bool   `json:"trash"`
+	NoTrash string `json:"noTrash"`
 	// the files of a NUP over 256 MiB stored as they are, for Eglantine and Lichii
 	NupRawBig    bool     `json:"nupRawBig"`
 	Pack         string   `json:"pack"`
@@ -864,6 +878,12 @@ type Request struct {
 	NupIconCrops map[string]nup.Crop `json:"nupIconCrops"`
 	// Split: what to take out of each NUP, by its path (#138); a NUP not named, all of it
 	SplitParts map[string]jobs.SplitParts `json:"splitParts"`
+	// the threads of the whole work, which NXPress shares among the files at work by itself (0:
+	// each file takes Threads); with it, Multi is the most files at once, 0 to leave them to the
+	// total (one for every 3 threads)
+	TotalThreads int `json:"totalThreads"`
+	// the files waiting start biggest first
+	BiggestFirst bool `json:"biggestFirst"`
 }
 
 // requestOptions are the options of the work the page asks for, before they are checked.
@@ -871,6 +891,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 	o := jobs.Options{
 		Level: request.Level, Block: request.Block, Threads: request.Threads, Multi: max(1, request.Multi),
 		Output: request.Output, Overwrite: request.Overwrite, RmSource: request.RemoveSource, Files: request.Files,
+		TotalThreads: max(0, request.TotalThreads), BiggestFirst: request.BiggestFirst, MultiGiven: request.Multi > 0,
 	}
 	if request.Mode == "verify" {
 		o.VerifyLevel = request.VerifyLevel
@@ -887,6 +908,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 		o.SkipDlc, o.MoveSkipped = request.SkipDlc, request.MoveSkipped
 	}
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
+	o.Trash, o.TrashDelete = request.Trash, request.Trash && request.NoTrash == "delete"
 	o.NupZstdBig = !request.NupRawBig
 	o.Archive = request.Archive
 	if request.Par2 > 0 && request.Par2 <= 100 {
@@ -983,7 +1005,7 @@ func (a *App) Start(request Request) error {
 	ctx, cancel := context.WithCancel(a.ctx)
 	skips := jobs.NewSkips()
 	ctx = jobs.WithSkips(ctx, skips)
-	live := jobs.NewLive(o.Threads, o.Multi)
+	live := jobs.NewLiveFor(o)
 	ctx = jobs.WithLive(ctx, live)
 	finished := make(chan struct{})
 	a.cancel, a.finished, a.skips, a.live = cancel, finished, skips, live
@@ -1037,6 +1059,18 @@ func (a *App) SetLive(threads int, multi int) {
 	defer a.mutex.Unlock()
 	if a.live != nil {
 		a.live.Set(threads, multi)
+	}
+}
+
+// SetLiveTotal changes the total of threads of the work going on, which NXPress shares among its
+// files (0: each file takes the threads of SetLive), and whether the files waiting start biggest
+// first: a file at work keeps the threads it took, and the change applies from the next file.
+// Without a work it does nothing.
+func (a *App) SetLiveTotal(total int, biggestFirst bool) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.live != nil {
+		a.live.SetTotal(total, biggestFirst)
 	}
 }
 
@@ -1182,6 +1216,8 @@ func (a *App) closeQuestion() (question string, yes string, no string) {
 // closed stops the files at work as NXPress closes, and waits for them to remove what they had
 // half written: NXPress ends right after, and its work with it.
 func (a *App) closed(context.Context) {
+	// the saves of Eden stop with the window; a pass going on is a chore waited for below
+	a.stopEden()
 	a.mutex.Lock()
 	finished := a.finished
 	a.mutex.Unlock()
@@ -1545,6 +1581,12 @@ func (w *window) Done(path string, output string, note string, err error) {
 
 func (w *window) Say(format string, args ...any) {
 	w.send("say", fmt.Sprintf(format, args...))
+}
+
+// FileThreads tells the page the threads a file took of the total of the work as it starts, and 0
+// as it ends: the page shows them on the file, and the threads in use under the buttons.
+func (w *window) FileThreads(path string, threads int) {
+	w.send("threads", map[string]any{"file": path, "threads": threads})
 }
 
 // Measured gives the page what a measure found: the setting chosen, to put in its fields, and

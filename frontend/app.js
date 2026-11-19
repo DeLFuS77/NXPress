@@ -95,9 +95,16 @@ const state = {
   installing: null, installError: "", installed: "", restartAfterWork: false,
   // the tools left out of the side menu in Settings (#140)
   hiddenTools: new Set(),
-  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), and the
-  // threads and files at once changed while a work goes on, until a file starts with them
-  moveSkipped: "", livePending: null,
+  // Compress: the folder what is left as it is goes to as its turn comes ("" : it stays), the
+  // total of threads and the files at once changed while a work goes on, until a file starts
+  // with them, and the threads each file at work holds of the total, by its path
+  moveSkipped: "", livePending: null, threadsAtWork: new Map(),
+  // where the originals go once their new files are checked (Settings › General): "trash", the
+  // recycle bin, or "delete", for good
+  removal: "trash",
+  // the cover of a file that holds a game and its update (Settings › Appearance): "game", or
+  // "update", the one of its newest update, which the console shows once it is installed (#158)
+  cover: "game",
 };
 
 // load gives a value kept by the page, or fallback when there is none or it is not what valid
@@ -179,6 +186,10 @@ function stateWord(status, mode, isDamaged) {
   if (mode === "verify" && isDamaged) return t("corrupted");
   return t(status);
 }
+
+// a file whose original went to the recycle bin, by the note of NXPress: the space it saved is
+// free only once the recycle bin is emptied
+const inBin = row => /\bin the recycle bin\b/.test(row.note || "");
 
 // the space saved since always, kept in the window: what every work that wrote files saved
 // in the units the window shows sizes in (1 GB = 1024 MB), so they read round
@@ -438,7 +449,7 @@ function nupNameLine(row, label = "editName") {
       row.nameDraft = undefined;
       row.nameNote = t("nameChanged");
       row.card = await app().Card(row.item.path);
-      row.game = await app().Describe(row.item.path);
+      row.game = await describeFile(row.item.path);
       paint(row);
       // in Rename, the new name of the file comes from the new title
       if (state.mode === "rename") previewNames();
@@ -1030,7 +1041,7 @@ async function giveNupIcon(row, give) {
     row.card = await app().Card(row.item.path);
     refreshNup(row);
     // the cover of its row, in the list and in the grid, is the new icon at once (#107)
-    row.game = await app().Describe(row.item.path);
+    row.game = await describeFile(row.item.path);
     paint(row);
   } catch (error) {
     row.iconFailed = capitalize(noteText(String(error && error.message || error).replace(/^Error: /, "")));
@@ -1045,7 +1056,7 @@ async function fixNupMeta(row, button) {
     showToast(noteText(note));
     row.card = await app().Card(row.item.path);
     renderCard(row);
-    row.game = await app().Describe(row.item.path);
+    row.game = await describeFile(row.item.path);
     paint(row);
   } catch (error) {
     button.disabled = false;
@@ -1291,19 +1302,21 @@ function popText() {
 // by render as before, and describe their option to screen readers.
 const helpOwners = new WeakMap();
 let helpTimer = 0, helpHideTimer = 0, helpOpen = null, helpControl = null, helpWarm = 0;
-// the name a text of help goes with: the box or the button before it, else the title of its field
+// the name a text of help goes with: the box or the button before it, else the title or the
+// label of its field
 function helpName(hint) {
   if (hint.id === "about") return $("title");
   const item = hint.closest("label.choice, .pref-text");
   if (item) return item.querySelector("b");
   for (let element = hint.previousElementSibling; element; element = element.previousElementSibling) {
     if (element.matches("label.check, .level-head")) return element.querySelector("span");
-    if (element.matches("button:not(.small-link), h2, .label")) return element;
+    if (element.matches("button:not(.small-link), h2, .label, label[for]")) return element;
   }
   return null;
 }
 function setupHelp() {
-  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role)");
+  // the options of the row under the buttons while a work goes on too
+  const hints = document.querySelectorAll("#about, #settings .hint:not(.always), #settings label.choice small, #live .hint, #preferences .pref-text > small:not(.pref-keys):not(.pref-status):not(.credit-role):not(.pref-legal)");
   hints.forEach((hint, i) => {
     const name = helpName(hint);
     if (!name) return;
@@ -1341,7 +1354,8 @@ function setupHelp() {
     helpHideTimer = setTimeout(hideHelp, 180);
   });
   document.addEventListener("focusin", event => {
-    const name = helpOwners.get(event.target);
+    // a button of a group of buttons (− and +) shows the help of the group
+    const name = helpOwners.get(event.target) || helpOwners.get(event.target.closest?.("[role=group]"));
     if (name && event.target.matches(":focus-visible")) showHelp(name, event.target);
   });
   document.addEventListener("focusout", event => { if (helpOpen && event.target === helpControl) hideHelp(); });
@@ -1578,11 +1592,17 @@ function showDone(event, status) {
   if (event.cancelled || !state.lastRun || !writes.includes(state.lastRun.mode)) return;
   const rows = [...state.rows.values()].filter(row => row.run === state.lastRun.started);
   if (!rows.length) return;
-  const savings = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after)
+  const smaller = rows.filter(row => row.status === "ok" && row.after > 0 && row.item.size > row.after);
+  // the originals in the recycle bin still take their room: what they save is told apart, as
+  // saved once the recycle bin is emptied
+  const savings = smaller.filter(row => !inBin(row))
     .map(row => ({ row, saved: row.item.size - row.after })).sort((a, b) => b.saved - a.saved);
   const saved = savings.reduce((sum, entry) => sum + entry.saved, 0);
+  const held = smaller.filter(inBin).reduce((sum, row) => sum + row.item.size - row.after, 0);
   $("done-saved").hidden = saved === 0;
   if (saved > 0) countUp($("done-saved"), saved, bytes => t("saved")(bytes));
+  $("done-bin").hidden = held === 0;
+  $("done-bin").textContent = held > 0 ? t("doneInBin")(held) : "";
   $("done-stats").textContent = status;
   $("done-top-block").hidden = savings.length < 2;
   $("done-top").innerHTML = "";
@@ -1601,9 +1621,9 @@ function showDone(event, status) {
   const best = savings.length ? savings[0].row : null;
   const tone = best && best.game && coverTone(best.game);
   const allFailed = rows.every(row => row.status === "failed");
-  $("done-dialog").style.setProperty("--done-tone", saved > 0 ? tone || "var(--ok)" : allFailed ? "var(--bad)" : "var(--tone-neutral)");
+  $("done-dialog").style.setProperty("--done-tone", saved + held > 0 ? tone || "var(--ok)" : allFailed ? "var(--bad)" : "var(--tone-neutral)");
   // after the third work that saved space, once and never again: a star on GitHub
-  const works = load("worksSaved", 0) + (saved > 0 ? 1 : 0);
+  const works = load("worksSaved", 0) + (saved + held > 0 ? 1 : 0);
   save("worksSaved", works);
   $("done-star").hidden = works < 3 || load("starAsked", false);
   openDialog($("done-dialog"));
@@ -1759,6 +1779,259 @@ function paintPublished() {
   const date = $("published").checked ? state.versionsDate : null;
   $("published-status").textContent = date === null ? "" : date ? t("publishedOf")(day(date)) : t("publishedNone");
 }
+
+// The saves of Eden kept in step with Switch Library Manager Web while NXPress is open (Settings,
+// see eden.go): NXPress tells their status as it changes; the page finds and pairs the library,
+// chooses the folder and the profiles, and the save of a conflict. found: the libraries found on
+// the network (null before a search); said: what the last action of each part answered.
+const eden = { status: null, found: null, searching: false, said: {}, looked: false, profiles: "", conflicts: "" };
+// a time as long ago, as the language says it (5 min ago)
+function edenAgo(seconds) {
+  const gone = Math.max(0, Date.now() / 1000 - seconds);
+  try {
+    const format = new Intl.RelativeTimeFormat(state.language, { numeric: "auto", style: "short" });
+    if (gone < 60) return format.format(-Math.round(gone), "second");
+    if (gone < 3600) return format.format(-Math.round(gone / 60), "minute");
+    if (gone < 86400) return format.format(-Math.round(gone / 3600), "hour");
+    return format.format(-Math.round(gone / 86400), "day");
+  } catch { return time(Math.round(gone)); }
+}
+// a day and its hour, as the language writes them
+function edenWhen(seconds) {
+  try { return new Intl.DateTimeFormat(state.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(seconds * 1000)); } catch { return new Date(seconds * 1000).toLocaleString(); }
+}
+// what an action answered, in words: "" for done; [text, tone]
+function edenSaid(answer) {
+  if (!answer || answer === "gone") return ["", ""];
+  const known = { notLibrary: "edenNotLibrary", notEden: "edenNotEden", keepOld: "edenKeepOld", key: "edenKeyRefused", netOff: "edenNetOff" }[answer];
+  if (known) return [t(known), answer === "notEden" || answer === "keepOld" ? "warn" : "bad"];
+  return [t("failed") + ": " + answer.replace(/^other: /, ""), "bad"];
+}
+// the last error of the passes, in words; [text, tone]; red for errors, orange for what waits
+function edenErrorText(status, emulator) {
+  switch (status.errorKind) {
+    case "": case undefined: case "folder": return ["", ""];
+    case "offline": return [t("edenOffline"), "warn"];
+    case "profiles": return [t("edenNoProfiles")(emulator), "warn"];
+    case "key": return [t("edenKeyRefused"), "bad"];
+    case "netOff": return [t("edenNetOff"), "bad"];
+    case "games": return [t("edenGamesFailed") + " " + status.error, "bad"];
+  }
+  return [t("failed") + ": " + status.error, "bad"];
+}
+// a line of status: its text and its tone (ok, warn, bad, work)
+function edenLine(id, text, tone) {
+  const line = $(id);
+  line.textContent = text || "";
+  line.className = "pref-status" + (tone ? " " + tone : "");
+}
+// an action of a part of the section: what it answered stays under it until the next one
+async function edenAct(part, call) {
+  eden.said[part] = null;
+  paintEden();
+  const answer = await call().catch(error => "other: " + String(error));
+  const [text, tone] = edenSaid(answer);
+  eden.said[part] = text ? { text, tone } : null;
+  paintEden();
+  return answer;
+}
+function paintEden() {
+  const status = eden.status;
+  if (!status) return;
+  const emulator = status.emulator || "Eden";
+  const said = part => eden.said[part];
+  // the switch, and how the passes go
+  $("eden-on").checked = status.on;
+  $("eden-on").disabled = !status.paired;
+  if (!status.paired) edenLine("eden-status", t("edenPairFirst"));
+  // Switch Library Manager Web keeps them in step on this computer: the passes wait
+  else if (status.heldBy) edenLine("eden-status", t("edenHeld"), "warn");
+  else if (!status.on) edenLine("eden-status", t("edenOff"));
+  else if (status.working) edenLine("eden-status", t("edenWorking"), "work");
+  else if (status.running) edenLine("eden-status", t("edenRunning")(emulator), "work");
+  else edenLine("eden-status", status.lastPass ? t("edenLast")(edenAgo(status.lastPass), status.uploaded, status.brought) : t("edenNever"));
+  const [error, errorTone] = said("on") ? [said("on").text, said("on").tone] : status.paired ? edenErrorText(status, emulator) : ["", ""];
+  edenLine("eden-error", error, errorTone);
+
+  // the library: found or typed and paired with a code, or the one paired
+  const pairing = status.pairing;
+  $("eden-unpaired").hidden = status.paired || !!pairing;
+  $("eden-pairing").hidden = !pairing;
+  $("eden-forget").hidden = !status.paired;
+  $("eden-library-row").classList.toggle("pref-stack", !status.paired);
+  $("eden-find").disabled = eden.searching;
+  $("eden-pair").disabled = eden.searching;
+  const pairError = { rejected: "edenRejected", expired: "edenExpired", notLibrary: "edenNotLibrary" }[status.pairError];
+  if (status.paired) edenLine("eden-library-status", t("edenPaired")(status.library, status.user), "ok");
+  else if (eden.searching) edenLine("eden-library-status", t("edenSearching"), "work");
+  else if (said("library")) edenLine("eden-library-status", said("library").text, said("library").tone);
+  else if (status.pairError && !pairing) edenLine("eden-library-status", pairError ? t(pairError) : t("failed") + ": " + status.pairError, "warn");
+  else if (eden.found && !eden.found.length) edenLine("eden-library-status", t("edenNoneFound"), "warn");
+  else edenLine("eden-library-status", "");
+  if (pairing) {
+    $("eden-pairing-text").textContent = t("edenPairWait")(pairing.name);
+    $("eden-code").textContent = pairing.code;
+  }
+  const list = $("eden-found");
+  list.hidden = status.paired || !!pairing || !eden.found || !eden.found.length;
+  list.innerHTML = "";
+  for (const found of eden.found || []) {
+    const row = document.createElement("li");
+    const name = document.createElement("span");
+    const host = document.createElement("small");
+    name.textContent = found.name || "Switch Library Manager";
+    host.textContent = found.url.replace(/^https?:\/\//, "") + (found.version ? " · " + found.version : "");
+    name.append(host);
+    const pair = document.createElement("button");
+    pair.textContent = t("edenPair");
+    pair.disabled = eden.searching;
+    pair.onclick = () => edenAct("library", () => app().EdenPair(found.url));
+    row.append(name, pair);
+    list.append(row);
+  }
+
+  // the folder of the emulator: found by itself, or chosen
+  if (said("folder")) edenLine("eden-folder-status", said("folder").text, said("folder").tone);
+  else if (status.folder) edenLine("eden-folder-status", t(status.chosen ? "edenFolderChosen" : "edenFolderFound")(emulator, status.portable), "ok");
+  else edenLine("eden-folder-status", t("edenFolderMissing"), "warn");
+  $("eden-folder-path").textContent = status.folder ? ltr(status.folder) : "";
+  $("eden-folder-auto").hidden = !status.chosen;
+
+  // each profile of the emulator with a user of the console; drawn again only when they change,
+  // so a list open stays open
+  $("eden-profiles-row").hidden = !status.paired || !status.folder;
+  const profiles = JSON.stringify([status.profiles, status.accounts, state.language]);
+  if (profiles !== eden.profiles && !$("eden-profiles").contains(document.activeElement)) {
+    eden.profiles = profiles;
+    $("eden-profiles").innerHTML = "";
+    for (const profile of status.profiles) {
+      const row = document.createElement("label");
+      row.className = "eden-profile";
+      const name = document.createElement("span");
+      name.textContent = profile.name;
+      const arrow = document.createElement("span");
+      arrow.textContent = "⇄";
+      arrow.setAttribute("aria-hidden", "true");
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", t("edenProfileLabel")(profile.name));
+      select.append(new Option(t("edenNoAccount"), ""));
+      for (const account of [...new Set([...status.accounts, profile.account].filter(Boolean))]) select.append(new Option(account, account));
+      select.value = profile.account || "";
+      select.onchange = () => edenAct("profiles", () => app().EdenSetProfile(profile.id, select.value));
+      row.append(name, arrow, select);
+      $("eden-profiles").append(row);
+    }
+  }
+  if (said("profiles")) edenLine("eden-profiles-status", said("profiles").text, said("profiles").tone);
+  else if (!status.profiles.length) edenLine("eden-profiles-status", status.lastPass || status.errorKind === "profiles" ? t("edenNoProfiles")(emulator) : "", "warn");
+  else if (!status.accounts.length) edenLine("eden-profiles-status", t("edenNoAccounts"), "warn");
+  else edenLine("eden-profiles-status", "");
+
+  // the conflicts, in orange, each save with where it comes from, its day and its size; then the
+  // games with what each waits for
+  $("eden-games-row").hidden = !status.paired || !status.folder;
+  const conflicts = JSON.stringify([status.conflicts, state.language]);
+  if (conflicts !== eden.conflicts && !$("eden-conflicts").contains(document.activeElement)) {
+    eden.conflicts = conflicts;
+    $("eden-conflicts").innerHTML = "";
+    for (const conflict of status.conflicts) {
+      const card = document.createElement("div");
+      card.className = "eden-conflict";
+      card.setAttribute("role", "group");
+      const title = document.createElement("b");
+      title.textContent = t("edenConflictTitle")(conflict.name || conflict.titleId) + (status.profiles.length > 1 ? " · " + conflict.profile : "");
+      card.append(title);
+      for (const save of conflict.saves) {
+        const line = document.createElement("div");
+        line.className = "eden-conflict-save";
+        const what = document.createElement("span");
+        what.textContent = save.found ? [save.source, edenWhen(save.when), size(save.size)].join(" · ") : save.source || "—";
+        const keep = document.createElement("button");
+        keep.textContent = t("edenKeep");
+        keep.setAttribute("aria-label", t("edenKeep") + ": " + what.textContent);
+        keep.disabled = !save.found;
+        keep.onclick = () => edenAct("conflicts", () => app().EdenKeep(conflict.id, save.keep));
+        line.append(what, keep);
+        card.append(line);
+      }
+      const both = document.createElement("small");
+      both.textContent = t("edenBothStay");
+      card.append(both);
+      $("eden-conflicts").append(card);
+    }
+  }
+  if (said("conflicts")) edenLine("eden-games-status", said("conflicts").text, said("conflicts").tone);
+  else edenLine("eden-games-status", status.games.length || status.conflicts.length ? "" : t("edenNoGames"));
+  const states = {
+    inStep: ["gameInStep", "in-step"], consoleNewer: ["gameConsoleNewer", "moves"], otherNewer: ["gameOtherNewer", "moves"],
+    edenNewer: ["gameEdenNewer", "moves"], openOnce: ["gameOpenOnce", ""], conflict: ["gameConflict", "conflict"],
+  };
+  $("eden-games").innerHTML = "";
+  for (const game of status.games) {
+    const row = document.createElement("li");
+    const name = document.createElement("b");
+    name.textContent = (game.name || game.titleId) + (status.profiles.length > 1 ? " · " + game.profile : "");
+    const line = document.createElement("small");
+    const times = [game.eden && `${emulator}: ${edenAgo(game.eden)}`, game.console && t("edenWhenConsole")(edenAgo(game.console)), game.other && t("edenWhenOther")(edenAgo(game.other))].filter(Boolean);
+    const [key, tone] = states[game.state] || ["gameInStep", ""];
+    const word = document.createElement("span");
+    const text = t(key);
+    word.textContent = typeof text === "function" ? text(emulator) : text;
+    if (tone) word.className = tone;
+    line.append(times.length ? times.join(" · ") + " · " : "", word);
+    row.append(name, line);
+    $("eden-games").append(row);
+  }
+  paintEdenBanner();
+}
+// both saves of games changed: said in orange over the section shown, with the way to Settings
+function paintEdenBanner() {
+  const conflicts = eden.status && eden.status.paired ? eden.status.conflicts.length : 0;
+  $("eden-banner").hidden = !conflicts || state.view === "preferences";
+  if (conflicts) $("eden-banner-text").textContent = t("edenBanner")(conflicts);
+  $("eden-banner-go").disabled = state.busy || state.starting;
+}
+// what a pass did, by a notice of the system: once a pass, the conflicts first
+function edenNotice(notice) {
+  const emulator = (eden.status && eden.status.emulator) || "Eden";
+  const lines = [];
+  if (notice.conflicts && notice.conflicts.length) lines.push(t("edenNoticeConflict")(notice.conflicts.length, notice.conflicts.join(", ")));
+  if (notice.brought && notice.brought.length) lines.push(t("edenNoticeBrought")(notice.brought.length, notice.brought.join(", "), emulator));
+  if (lines.length) app().Notify("NXPress", lines.join("\n"));
+}
+function setupEden() {
+  $("eden-on").onchange = () => edenAct("on", () => app().EdenSetOn($("eden-on").checked));
+  $("eden-find").onclick = async () => {
+    eden.searching = true;
+    eden.found = null;
+    eden.said.library = null;
+    paintEden();
+    eden.found = await app().EdenFind().catch(() => []) || [];
+    eden.searching = false;
+    paintEden();
+    // the first one found is the one to pair, from the keyboard too
+    $("eden-found").querySelector("button")?.focus();
+  };
+  const pairTyped = () => {
+    const address = $("eden-address").value.trim();
+    if (!address) { $("eden-address").focus(); return; }
+    edenAct("library", () => app().EdenPair(address));
+  };
+  $("eden-pair").onclick = pairTyped;
+  $("eden-address").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); pairTyped(); } });
+  $("eden-pair-cancel").onclick = () => app().EdenCancelPairing();
+  $("eden-forget").onclick = () => { eden.found = null; edenAct("library", () => app().EdenForget()); };
+  $("eden-folder-choose").onclick = () => edenAct("folder", () => app().EdenChooseFolder(t("edenFolderTitle")));
+  $("eden-folder-auto").onclick = () => edenAct("folder", () => app().EdenFindFolder());
+  $("eden-banner-go").onclick = () => {
+    if (state.busy || state.starting) return;
+    if (state.view !== "preferences") { state.view = "preferences"; render(); }
+    $("pref-eden").scrollIntoView({ block: "start", behavior: calm() ? "auto" : "smooth" });
+    $("eden-conflicts").querySelector("button:not(:disabled)")?.focus({ preventScroll: true });
+  };
+  // the times said as long ago follow the clock while Settings is shown
+  setInterval(() => { if (state.view === "preferences") paintEden(); }, 30000);
+}
 // the most text the log of a work keeps, its last part (#135)
 const logKept = 4 << 20;
 // what the work told and the log has not shown yet, added ten times a second at most (#135)
@@ -1786,48 +2059,94 @@ function addLog(line) {
   }, 100);
 }
 
-// the works whose files at once change while they go on, and the ones whose threads do too
+// the works whose files at once change while they go on, and the ones that share a total of
+// threads among their files, the biggest first, which changes too
 const liveFiles = ["compress", "decompress", "recompress", "trim", "verify", "convert", "split", "fat32"];
 const liveThreads = ["compress", "recompress"];
-// paintLive shows, while a work goes on, its threads of each file and files at once (the fields
-// of Advanced), which NXPress takes from the next file on, and Low priority, which it takes at
-// once; a change waits in a mark until a file starts with it (asked by ItsmeAJ on GBAtemp)
+// the works that share a total of threads: Compress and Recompress, and the estimate of Compress;
+// the others take the files at once alone, Auto being one at a time
+const sharesThreads = mode => liveThreads.includes(mode) || mode === "estimate";
+// the most files at once offered besides Auto
+const mostFilesAtOnce = 16;
+// the files at once as the window says them: a number, or Auto
+const filesText = multi => +multi > 0 ? String(multi) : t("filesAuto");
+// paintLive shows, while a work goes on, its total of threads, files at once and order (the
+// fields of Advanced), which NXPress takes from the next file on, the threads in use, and Low
+// priority, which it takes at once; a change waits in a mark until a file starts with it (asked
+// by ItsmeAJ on GBAtemp)
 function paintLive() {
   const run = state.lastRun;
   const mode = run ? run.mode : "";
   const files = state.busy && liveFiles.includes(mode) && !(run.request && run.request.optimize);
-  const threads = files && liveThreads.includes(mode);
+  const shared = files && liveThreads.includes(mode);
   $("live").hidden = !state.busy || mode === "measure" || mode === "estimate";
   $("live-multi-field").hidden = !files;
-  $("live-threads-field").hidden = !threads;
-  for (const id of ["threads", "multi"]) {
-    const field = $(id);
-    $("live-" + id).textContent = field.value;
-    $("live-" + id + "-down").disabled = +field.value <= 1;
-    $("live-" + id + "-up").disabled = +field.value >= +field.max;
-  }
+  $("live-total-field").hidden = $("live-biggest-field").hidden = !shared;
+  // a work resumed from a window before the total has none, until one is set
+  $("live-use").hidden = !shared || !(run.request.totalThreads > 0 || state.threadsAtWork.size);
+  const total = $("total-threads");
+  $("live-total").textContent = total.value;
+  $("live-total-down").disabled = +total.value <= 1;
+  $("live-total-up").disabled = +total.value >= +total.max;
+  $("live-multi").value = $("multi").value;
+  $("live-biggest-first").checked = $("biggest-first").checked;
   $("live-low-priority").checked = $("low-priority").checked;
+  paintThreadsInUse();
   const pending = state.livePending;
   $("live-pending").hidden = !pending || !files;
-  if (pending) $("live-pending").textContent = t("livePending")(pending.threads, pending.multi, pending.withThreads);
+  if (pending) $("live-pending").textContent = t("livePending")(pending.total, filesText(pending.multi), pending.shared);
 }
-// changeLive moves the threads of each file or the files at once of the work going on by step:
-// the field of Advanced too, so the next work takes them as they were left; the log tells the
-// change once the clicks stop
+// paintThreadsInUse tells the threads of the total held by the files at work, as they start and
+// end: one square for each thread, in blue while a file holds it. A total lowered while the work
+// goes on can have more in use for a while, until files end.
+function paintThreadsInUse() {
+  const total = Math.max(1, +$("total-threads").value || 1);
+  let used = 0;
+  for (const threads of state.threadsAtWork.values()) used += threads;
+  $("live-use-text").textContent = t("threadsInUse")(used, total);
+  const strip = $("live-use-strip");
+  const squares = Math.max(total, used);
+  if (strip.childElementCount !== squares) strip.replaceChildren(...Array.from({ length: squares }, () => document.createElement("i")));
+  strip.classList.toggle("dense", squares > 32);
+  [...strip.children].forEach((square, i) => square.classList.toggle("on", i < used));
+}
+// paintThreads shows the threads a file at work took of the total: beside its name, and on its
+// cover in the grid
+function paintThreads(row) {
+  const game = row.tr.querySelector(".game");
+  let chip = game.querySelector(".threads-chip");
+  if (!(row.threads > 0)) { chip?.remove(); return; }
+  if (!chip) {
+    chip = document.createElement("span");
+    chip.className = "threads-chip";
+    game.append(chip);
+  }
+  chip.textContent = t("fileThreads")(row.threads);
+}
+// liveChanged gives the work going on the total of threads, the files at once and the order set
+// in the fields of Advanced, from the next file on: they are kept with the settings, so the next
+// work takes them as they were left; the log tells the change once the clicks stop
 let liveTimer = 0;
-function changeLive(id, step) {
-  const field = $(id);
-  const value = Math.max(1, Math.min(+field.max || 64, (+field.value || 1) + step));
-  if (value === +field.value) return;
-  field.value = value;
+function liveChanged() {
   save("settings", settings());
-  const threads = +$("threads").value, multi = +$("multi").value;
-  const withThreads = !!state.lastRun && liveThreads.includes(state.lastRun.mode);
-  app().SetLive(threads, multi);
-  state.livePending = { threads, multi, withThreads };
+  const total = +$("total-threads").value, multi = +$("multi").value;
+  const shared = !!state.lastRun && liveThreads.includes(state.lastRun.mode);
+  if (shared) app().SetLiveTotal(total, $("biggest-first").checked);
+  // the threads of each file are left to the files at once, or with a total to its share
+  app().SetLive(0, multi);
+  state.livePending = { total, multi, shared };
   clearTimeout(liveTimer);
-  liveTimer = setTimeout(() => addLog(t("liveChanged")(threads, multi, withThreads)), 1200);
+  liveTimer = setTimeout(() => addLog(t("liveChanged")(total, filesText(multi), shared)), 1200);
   paintLive();
+}
+// stepTotal moves the total of threads by step, a whole number between 1 and the processors of
+// the computer (0 puts one typed within them), and tells whether it changed
+function stepTotal(step) {
+  const field = $("total-threads");
+  const value = Math.max(1, Math.min(+field.max || 64, (Math.round(+field.value) || 1) + step));
+  if (String(value) === field.value) return false;
+  field.value = value;
+  return true;
 }
 // setLowPriority puts NXPress below the other programs, or back, at once: also while it works
 function setLowPriority(low) {
@@ -1957,6 +2276,10 @@ function render() {
     app().RelabelExplorerMenu(menuTexts()).catch(() => { });
   }
   paintStatus();
+  // the box that takes the originals away says where they go: the recycle bin, or for good
+  const toBin = state.removal !== "delete";
+  $("remove-text").dataset.t = toBin ? "removeTrash" : "remove";
+  $("remove-dumps-hint").dataset.t = toBin ? "removeDumpsTrashHint" : "removeDumpsHint";
   // a text with one of its own for Recompress says that one there (#132)
   document.querySelectorAll("[data-t]").forEach(element => { element.textContent = t((state.mode === "recompress" && element.dataset.tRecompress) || element.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach(element => { element.title = t(element.dataset.tTitle); });
@@ -2035,6 +2358,10 @@ function render() {
   $("pref-no-keys").hidden = !!state.keys;
   $("keys-path").classList.toggle("bad", !state.keys);
   paintPublished();
+  // the saves of Eden are looked at again each time Settings opens
+  if (preferences && !eden.looked) app().EdenRefresh();
+  eden.looked = preferences;
+  paintEden();
   const page = worklog ? "worklog" : state.mode;
   $("title").textContent = t(page);
   // the section in the color of its group, its tile beside its title
@@ -2055,6 +2382,16 @@ function render() {
   if (state.pendingCount) $("resume-text").textContent = t("resumeFound")(state.pendingCount);
   paintUpdate();
   for (const button of document.querySelectorAll("button[data-theme]")) button.classList.toggle("on", button.dataset.theme === state.theme);
+  for (const button of document.querySelectorAll("button[data-removal]")) {
+    const on = button.dataset.removal === state.removal;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
+  for (const button of document.querySelectorAll("button[data-cover]")) {
+    const on = button.dataset.cover === state.cover;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
   paintPalettes();
   paintToolChoices();
   // the list as rows, or as a grid of covers, as the section shown was left (#84)
@@ -2088,8 +2425,8 @@ function render() {
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
   // how their NUP is packed, only for dump folders
   $("nup-block").hidden = !dumps;
-  const keptText = dumps ? ($("remove-dumps").checked ? "removeDumpsGo" : "removeKeepsDumps") : "removeKeepsNup";
-  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t("removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
+  const keptText = dumps ? ($("remove-dumps").checked ? (toBin ? "removeDumpsTrashGo" : "removeDumpsGo") : "removeKeepsDumps") : "removeKeepsNup";
+  $("remove-warning").textContent = [(kept < state.items.length || !kept) && t(toBin ? "removeTrashWarning" : "removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
   $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
@@ -2206,7 +2543,8 @@ function summary() {
   }
   const picked = pickedItems();
   text.textContent = t("selected")(picked.length, picked.reduce((sum, item) => sum + (item.size || 0), 0));
-  const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after ? row.item.size - row.after : 0), 0);
+  // what went to the recycle bin is saved once it is emptied
+  const saved = rows.reduce((sum, row) => sum + (row.status === "ok" && row.after > 0 && row.item.size > row.after && !inBin(row) ? row.item.size - row.after : 0), 0);
   if (saved > 0) {
     const tag = document.createElement("span");
     tag.className = "saved";
@@ -2411,11 +2749,17 @@ function sortSoon() {
   sortTimer = setTimeout(sortRows, 400);
 }
 
+// the name and the icon of the game of a file, with the cover chosen in Settings › Appearance
+function describeFile(path) {
+  return app().Describe(path, state.cover === "update");
+}
+
 // the name and the icon of the game of each row, read a few at a time
 const describeQueue = [];
 let describing = 0;
 function describe(row) {
   if (!state.keys && !isNup(row.item.path) && !row.item.dump) return;
+  if (describeQueue.includes(row)) return;
   describeQueue.push(row);
   pumpDescribe();
 }
@@ -2424,7 +2768,7 @@ function pumpDescribe() {
     const row = describeQueue.shift();
     if (!state.rows.has(row.item.path)) continue;
     describing++;
-    app().Describe(row.item.path).then(game => {
+    describeFile(row.item.path).then(game => {
       row.game = game;
       // a dump folder has its size once its files are added up
       if (row.item.dump && game && game.size) { row.item.size = game.size; summary(); }
@@ -2528,6 +2872,7 @@ function paint(row) {
   const game = row.tr.querySelector(".game");
   game.classList.toggle("working", row.status === "work");
   row.tr.classList.toggle("waiting", row.status === "waiting");
+  paintThreads(row);
   if (row.status === "work") {
     const share = row.total ? row.done / row.total : 0;
     // a file in steps (the work, then the check) has its bar split in them, each in its colour:
@@ -2751,7 +3096,10 @@ function previewNames() {
 
 function settings() {
   return {
-    level: +$("level").value, block: $("target-block").checked, threads: +$("threads").value, multi: +$("multi").value,
+    level: +$("level").value, block: $("target-block").checked,
+    // the threads of the whole work, shared among its files, the most files at once (0: Auto) and
+    // the biggest files first; the threads of each file are left to them
+    totalThreads: Math.max(1, Math.round(+$("total-threads").value) || 1), multi: +$("multi").value, biggestFirst: $("biggest-first").checked,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
     nupRawBig: $("nup-raw-big").checked,
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
@@ -2784,6 +3132,9 @@ const toCard = () => state.mode === "convert" && $("convert-to-card").checked;
 const expandMode = () => (optimizing() ? "optimize" : toCard() ? "tocard" : state.mode);
 
 // presets: the settings of a compression kept with a name
+// the presets of NXPress take the threads a new window starts with: the usable processors in
+// total, the files at once left to them, and the biggest first
+const defaultThreads = () => ({ totalThreads: state.setup.threads, multi: 0, biggestFirst: true });
 const builtinPresets = () => [
   { name: t("presetInstallers"), level: 18, block: false, builtin: true },
   { name: t("presetEmulators"), level: 18, block: true, builtin: true },
@@ -2793,6 +3144,25 @@ const builtinPresets = () => [
   { name: t("presetMax"), level: 19, block: false, builtin: true, extra: false },
   { name: t("presetMaxExtra"), level: 19, block: false, builtin: true, extra: true },
 ];
+// threadsOf gives the threads kept in saved settings or a preset: the total, the most files at
+// once (0: Auto) and the order, within what this computer offers. Kept before there was a total,
+// they held the threads of each file and the files at once: their product is the total, more than
+// one file at once stays the most at work, one file at once (the default then) becomes Auto, so
+// the threads are shared among the files, and the biggest go first. Null when they hold no threads.
+function threadsOf(kept) {
+  const cpus = +$("total-threads").max || 64;
+  const whole = value => Number.isInteger(value) && value > 0 ? value : 0;
+  const multi = Math.min(mostFilesAtOnce, whole(kept.multi));
+  if (whole(kept.totalThreads)) return { totalThreads: Math.min(cpus, kept.totalThreads), multi, biggestFirst: kept.biggestFirst !== false };
+  if (whole(kept.threads)) return { totalThreads: Math.min(cpus, kept.threads * Math.max(1, multi)), multi: multi > 1 ? multi : 0, biggestFirst: true };
+  return null;
+}
+// setThreads puts threads (see threadsOf) in the fields of Advanced
+function setThreads(threads) {
+  $("total-threads").value = threads.totalThreads;
+  $("multi").value = String(threads.multi);
+  $("biggest-first").checked = threads.biggestFirst;
+}
 // the preset chosen is kept by what it is, not by its place in the list, which changes when one
 // is deleted: "builtin:<n>" for the ones of NXPress (their names follow the language), its name
 // for the others
@@ -2850,8 +3220,9 @@ function applyPreset() {
   if (!preset) return;
   $("level").value = preset.level;
   $(preset.block ? "target-block" : "target-solid").checked = true;
-  if (preset.threads) $("threads").value = preset.threads;
-  if (preset.multi) $("multi").value = preset.multi;
+  // the threads of a preset saved before there was a total become one (see threadsOf)
+  const threads = threadsOf(preset);
+  if (threads) setThreads(threads);
   // the presets of NXPress say whether the extra compression goes with them: turned on, it asks
   // first, and stays off if that is not accepted
   if (preset.extra === false && $("extra").checked) $("extra").checked = false;
@@ -2903,7 +3274,10 @@ async function start(mode, extra) {
   // what to take out of each NUP in Split (#138)
   const splitParts = {};
   if (mode === "split") for (const item of state.items) if (item.splitParts && /\.nup$/i.test(item.path)) splitParts[item.path] = item.splitParts;
-  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, ...(extra || {}) };
+  const request = { mode, files, ...chosen, watch: watches, levels: false, skipGames: [...state.skipGames], origins: state.sources, published: $("published").checked, nupIcons, nupIconCrops, splitParts, trash: state.removal !== "delete", noTrash: "", ...(extra || {}) };
+  // only the works that compress share a total of threads, the biggest first; the others take
+  // the files at once alone, Auto being one at a time
+  if (!sharesThreads(mode)) Object.assign(request, { totalThreads: 0, biggestFirst: false });
   // dump folders only: each NUP is named by the template, whichever way of Combine was left chosen
   if (mode === "pack" && onlyDumps()) request.packGames = true;
   files = request.files;
@@ -2917,7 +3291,7 @@ async function start(mode, extra) {
   state.starting = true;
   render();
   let allowed = false;
-  try { allowed = await spaceAllows(request, opener); } finally { state.starting = false; }
+  try { allowed = await spaceAllows(request, opener) && await binAllows(request, opener); } finally { state.starting = false; }
   // the button pressed lost the focus while it waited: it gets it back
   if (!allowed) { render(); refocus(opener); return; }
   // the work is marked as running before NXPress is asked to start it, as its first events (and
@@ -2936,6 +3310,7 @@ async function start(mode, extra) {
   resetSpeed();
   state.busy = true;
   state.paused = false;
+  state.threadsAtWork.clear();
   // bytes: the size of the files given, which the new file of a pack weighs in the progress
   const bytes = state.items.filter(item => files.includes(item.path)).reduce((sum, item) => sum + (item.size || 0), 0);
   state.lastRun = { mode, request, started, watch, skipped: 0, bytes };
@@ -2982,6 +3357,45 @@ function spaceAllows(request, opener) {
   }).catch(() => true);
 }
 
+// binAllows tells, before anything is written, the originals the work would send to the recycle
+// bin that cannot go there (their drive has none, or they do not fit in it), by drive, and asks
+// whether to keep them or delete them for good; Escape starts nothing. The command line never
+// asks: it keeps them.
+const takesOriginals = ["compress", "decompress", "recompress", "trim", "convert", "split", "pack", "fat32"];
+function binAllows(request, opener) {
+  if (!request.removeSource || !request.trash || !takesOriginals.includes(request.mode)) return Promise.resolve(true);
+  return app().TrashCheck(request).then(drives => {
+    if (!drives || !drives.length) return true;
+    const list = $("no-bin-list");
+    list.innerHTML = "";
+    for (const drive of drives) {
+      const item = document.createElement("li");
+      item.innerHTML = `<b></b><span></span>`;
+      item.querySelector("b").textContent = drive.drive;
+      item.querySelector("span").textContent = t("noBinLine")(drive.files, drive.size) + (drive.tooBig ? " · " + t("noBinTooBig") : "");
+      list.append(item);
+    }
+    return new Promise(resolve => {
+      let answer = false;
+      const choose = what => () => { request.noTrash = what; answer = true; $("no-bin-dialog").close(); };
+      $("no-bin-keep").onclick = choose("keep");
+      $("no-bin-delete").onclick = choose("delete");
+      $("no-bin-dialog").onclose = () => resolve(answer);
+      openDialog($("no-bin-dialog"), opener);
+      // what cannot be undone is never the answer of Enter
+      $("no-bin-keep").focus();
+    });
+  }).catch(() => true);
+}
+
+// measuredThreads are the threads a measure found, as the window takes them: the threads of each
+// file of the fastest setting times its files at once make the total, and its files at once stay
+// the most at work, one file at once too: a measure that found one file the fastest (a hard disk)
+// keeps it, unlike the settings kept before there was a total (threadsOf)
+const measuredThreads = report => {
+  const threads = threadsOf({ threads: report.threads, multi: report.multi });
+  return threads ? { ...threads, multi: Math.max(1, Math.min(mostFilesAtOnce, report.multi || 1)) } : defaultThreads();
+};
 // showMeasure tells what a measure found in a dialog: every setting tried, as fast as it went,
 // and the one applied
 function showMeasure(report) {
@@ -2999,7 +3413,7 @@ function showMeasure(report) {
     tr.querySelector(".bar div").style.width = (trial.speed / fastest * 100).toFixed(1) + "%";
     rows.append(tr);
   }
-  $("measure-result").textContent = t("measureResult")(report.threads, report.multi, report.speed, time(report.seconds10GB));
+  $("measure-result").textContent = t("measureResult")(measuredThreads(report).totalThreads, report.multi, report.speed, time(report.seconds10GB));
   // a heavier setting a little faster was not taken: the window tells why
   $("measure-kept").hidden = !report.faster;
   if (report.faster) $("measure-kept").textContent = t("measureKept")(report.faster.threads, report.faster.multi, report.faster.speed);
@@ -3011,8 +3425,8 @@ function report() {
   const run = state.lastRun || {};
   const r = run.request || {};
   const lines = [
-    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
-    `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · threads ${r.threads} · files at once ${r.multi}` + (r.watch ? " · watch" : ""),
+    `NXPress ${state.setup.version} · ${state.setup.platform}` + (state.official === "unofficial" || (!state.setup.officialBuild && state.official !== "dev") ? " · unofficial build" : state.official === "dev" ? " · development build" : ""),
+    `${run.mode} · level ${r.level} · ${r.block ? "blocks" : "solid"} · ` + (r.totalThreads > 0 ? `total threads ${r.totalThreads} · files at once ${r.multi || "auto"}` + (r.biggestFirst ? " · biggest first" : "") : `threads ${r.threads || "auto"} · files at once ${r.multi || 1}`) + (r.watch ? " · watch" : ""),
     run.status || "",
     "",
   ];
@@ -3035,14 +3449,35 @@ function listen() {
   events.EventsOn("update-progress", progress => { state.installing = progress; paintUpdate(); });
   // files the Explorer gave to another NXPress, which sent them here
   events.EventsOn("opened", takeOpened);
+  // the saves of Eden: their status as it changes, and what a pass brought or found
+  events.EventsOn("edenSaves", status => { eden.status = status; paintEden(); });
+  events.EventsOn("edenNotice", edenNotice);
   on("progress", event => {
     const row = rowOf(event.file);
-    // a file that starts takes the threads and the files at once changed while it waited
+    // a file that starts takes the total and the files at once changed while it waited
     if (row.status !== "work" && state.livePending) { state.livePending = null; paintLive(); }
     Object.assign(row, { status: "work", step: event.step, done: event.done, total: event.total, run: state.lastRun && state.lastRun.started });
     paint(row);
     trackSpeed();
     summary();
+  });
+  // the threads a file takes of the total as it starts, and gives back (0) as it ends: on the
+  // file, and in the threads in use under the buttons
+  on("threads", event => {
+    if (event.threads > 0) {
+      state.threadsAtWork.set(event.file, event.threads);
+      const row = rowOf(event.file);
+      row.threads = event.threads;
+      paintThreads(row);
+      // a file that starts takes the total and the files at once changed while it waited
+      state.livePending = null;
+    } else {
+      // a file renamed or moved as it ended has its row under its new path already
+      state.threadsAtWork.delete(event.file);
+      const row = state.rows.get(event.file);
+      if (row) { row.threads = 0; paintThreads(row); }
+    }
+    paintLive();
   });
   on("done", event => {
     // the mode of the work, which is not the section shown when only one file is verified
@@ -3055,6 +3490,8 @@ function listen() {
     }
     const row = rowOf(event.file);
     if (event.skipped && state.lastRun) state.lastRun.skipped++;
+    // its threads go with it, and are told given back next
+    row.threads = 0;
     // the files this work went through, for its report
     row.run = state.lastRun && state.lastRun.started;
     Object.assign(row, { status: event.error ? "failed" : event.modified ? "modified" : event.skipped ? "skipped" : "ok", note: event.note || "", output: event.output || "", error: event.error || "", after: event.size || 0, mode: state.lastRun ? state.lastRun.mode : state.mode });
@@ -3086,14 +3523,15 @@ function listen() {
   on("say", text => addLog(noteText(text)));
   // a measure puts the setting it chose in the fields, kept with the settings
   events.EventsOn("measured", event => {
-    $("threads").value = event.threads;
-    $("multi").value = event.multi;
+    // one total: the threads of each file times the files at once of the fastest setting, which
+    // stay the most at work (see measuredThreads)
+    setThreads(measuredThreads(event));
     $("preset").value = "";
     save("settings", settings());
     // the fields changed are shown: Advanced opens, and they light up for a moment
     $("advanced").open = true;
-    $("threads").scrollIntoView({ block: "center", behavior: "smooth" });
-    for (const field of [$("threads"), $("multi")]) {
+    $("total-threads").scrollIntoView({ block: "center", behavior: "smooth" });
+    for (const field of [$("total-threads").closest(".stepper"), $("multi")]) {
       field.classList.remove("changed");
       void field.offsetWidth;
       field.classList.add("changed");
@@ -3104,6 +3542,8 @@ function listen() {
     state.busy = false;
     state.paused = false;
     state.livePending = null;
+    state.threadsAtWork.clear();
+    for (const row of state.rows.values()) row.threads = 0;
     clearTimeout(liveTimer);
     for (const row of state.rows.values()) if (row.status === "waiting" || row.status === "work") { row.status = "failed"; row.error = "cancelled"; row.run = state.lastRun && state.lastRun.started; }
     const single = onePack(state.lastRun);
@@ -3525,9 +3965,10 @@ function applyListFind() {
 }
 
 // a program that is not an official version tells it in the side menu (see TRADEMARKS.md), as
-// GitHub answers when the window asks for updates
+// GitHub answers when the window asks for updates; one built from the code without the workflow
+// of the repository tells it at once
 function paintOfficial() {
-  const unofficial = state.official === "unofficial";
+  const unofficial = state.official === "unofficial" || !state.setup.officialBuild;
   $("unofficial").hidden = !unofficial;
   $("unofficial").textContent = t("unofficialBuild");
   $("unofficial").title = t("unofficialBuildHint");
@@ -3734,6 +4175,20 @@ async function main() {
   state.palette = load("palette", "nxpress", value => palettes.some(palette => palette[0] === value));
   applyPalette();
   for (const button of document.querySelectorAll("button[data-theme]")) button.onclick = () => { state.theme = button.dataset.theme; save("theme", state.theme); theme(); render(); };
+  // the recycle bin unless deleting for good was chosen: the settings of a version before it
+  // have none, and the originals go to the recycle bin
+  state.removal = load("removal", "trash") === "delete" ? "delete" : "trash";
+  for (const button of document.querySelectorAll("button[data-removal]")) button.onclick = () => { state.removal = button.dataset.removal; save("removal", state.removal); render(); };
+  // the cover of a file with a game and its update: the one of the game unless the one of its
+  // newest update was chosen (#158); the files of the list that hold both are read again with it
+  state.cover = load("cover", "game") === "update" ? "update" : "game";
+  for (const button of document.querySelectorAll("button[data-cover]")) button.onclick = () => {
+    if (state.cover === button.dataset.cover) return;
+    state.cover = button.dataset.cover;
+    save("cover", state.cover);
+    render();
+    for (const row of state.rows.values()) if (row.game && row.game.bases && row.game.updates && !row.game.container) describe(row);
+  };
   // the language: the one chosen, else the one chosen in the installer of Windows, else the one
   // of the system when NXPress has it
   const system = navigator.language.toLowerCase().slice(0, 2);
@@ -3755,7 +4210,11 @@ async function main() {
   $("level").max = state.setup.maxLevel;
   $("level").value = number(chosen.level) || state.setup.level;
   $(chosen.block ? "target-block" : "target-solid").checked = true;
-  $("threads").value = number(chosen.threads) || state.setup.threads;
+  // the threads: a total, the most files at once (Auto, or 1 to 16) and the order; the threads of
+  // each file and the files at once kept before there was a total become one (see threadsOf)
+  $("total-threads").max = state.setup.cpus;
+  for (const select of [$("multi"), $("live-multi")]) for (let n = 1; n <= mostFilesAtOnce; n++) select.append(new Option(String(n), String(n)));
+  setThreads(threadsOf(chosen) || defaultThreads());
   state.restorePreset = load("preset", "");
   // the log is read, and shown when the computer was turned off at the end of the last work
   const showLog = load("showReport", false);
@@ -3764,8 +4223,6 @@ async function main() {
   // Advanced is open unless it was closed, and stays as it was left
   $("advanced").open = load("advancedOpen", true);
   $("advanced").ontoggle = () => save("advancedOpen", $("advanced").open);
-  $("threads").max = state.setup.cpus;
-  $("multi").value = number(chosen.multi) || 1;
   $("overwrite").checked = !!chosen.overwrite;
   $("remove").checked = !!chosen.removeSource;
   $("remove-dumps").checked = !!chosen.removeDumps;
@@ -3849,11 +4306,14 @@ async function main() {
   // the folder what Compress leaves as it is goes to as its turn comes; none: it stays
   $("choose-move-skipped").onclick = async () => { const path = await app().ChooseOutput(); if (path) state.moveSkipped = path; save("settings", settings()); render(); };
   $("reset-move-skipped").onclick = () => { state.moveSkipped = ""; save("settings", settings()); render(); };
-  // while a work goes on (see paintLive)
-  $("live-threads-down").onclick = () => changeLive("threads", -1);
-  $("live-threads-up").onclick = () => changeLive("threads", 1);
-  $("live-multi-down").onclick = () => changeLive("multi", -1);
-  $("live-multi-up").onclick = () => changeLive("multi", 1);
+  // the total of threads of Advanced, by steps or typed, between 1 and the processors
+  for (const [id, step] of [["total-threads-down", -1], ["total-threads-up", 1]]) $(id).onclick = () => { if (stepTotal(step)) save("settings", settings()); };
+  $("total-threads").onchange = () => { stepTotal(0); save("settings", settings()); };
+  // while a work goes on (see paintLive): the fields of Advanced change with them
+  $("live-total-down").onclick = () => { if (stepTotal(-1)) liveChanged(); };
+  $("live-total-up").onclick = () => { if (stepTotal(1)) liveChanged(); };
+  $("live-multi").onchange = () => { $("multi").value = $("live-multi").value; liveChanged(); };
+  $("live-biggest-first").onchange = () => { $("biggest-first").checked = $("live-biggest-first").checked; liveChanged(); };
   $("live-low-priority").onchange = () => setLowPriority($("live-low-priority").checked);
   // the experimental option tells first, in detail, what it changes: it is on only once that
   // is accepted, and stays off when the window is closed or Esc is pressed
@@ -3920,6 +4380,8 @@ async function main() {
   $("worklog-export").onclick = event => exportMenu(event.currentTarget, exportLog);
   // the server NXPress shares with Switch Library Manager Web (#86): its invite does not expire
   $("discord-link").onclick = () => app().OpenURL("https://discord.gg/acQVZSEBR");
+  $("license-link").onclick = () => app().OpenURL(repository + "/blob/main/LICENSE");
+  $("code-link").onclick = () => app().OpenURL(repository);
   $("space-cancel").onclick = () => $("space-dialog").close();
   // the window to search an image of a NUP in the eShop (#102), and an image pasted (Ctrl+V)
   $("cover-search").onclick = searchCovers;
@@ -4111,7 +4573,7 @@ async function main() {
     const before = savedPresets();
     const presets = before.slice();
     const now = settings();
-    const preset = { name, level: now.level, block: now.block, threads: now.threads, multi: now.multi };
+    const preset = { name, level: now.level, block: now.block, totalThreads: now.totalThreads, multi: now.multi, biggestFirst: now.biggestFirst };
     if (found.kind === "replace") presets[found.index] = preset;
     else presets.push(preset);
     save("presets", presets);
@@ -4133,6 +4595,9 @@ async function main() {
   $("template-reset").onclick = async () => { state.template = await app().DefaultTemplate(); $("template").value = state.template; save("settings", settings()); previewNames(); };
   listen();
   setupHelp();
+  // the saves of Eden with the library, as NXPress has them now; the passes run in NXPress
+  setupEden();
+  eden.status = await app().EdenSaves().catch(() => null);
 
   // the files left unfinished last time
   const pending = load("pending", null, isPending);
