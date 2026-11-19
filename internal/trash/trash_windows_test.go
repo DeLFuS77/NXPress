@@ -26,6 +26,7 @@ func binItems(t *testing.T, path string) [][2]string {
 		t.Fatal(err)
 	}
 	folder := filepath.Join(driveOf(path), "$Recycle.Bin", user.User.Sid.String())
+	long := longName(path)
 	names, _ := filepath.Glob(filepath.Join(folder, "$I*"))
 	var found [][2]string
 	for _, name := range names {
@@ -44,11 +45,26 @@ func binItems(t *testing.T, path string) [][2]string {
 		case 1:
 			original = decode(data[24:])
 		}
-		if strings.EqualFold(original, path) {
+		if strings.EqualFold(original, path) || strings.EqualFold(original, long) {
 			found = append(found, [2]string{name, filepath.Join(folder, "$R"+strings.TrimPrefix(filepath.Base(name), "$I"))})
 		}
 	}
 	return found
+}
+
+// longName is path with the long names of its folders: the Recycle Bin keeps the long one, and the
+// temporary folder of some computers is given by its short name (C:\Users\RUNNER~1 on GitHub).
+func longName(path string) string {
+	short, err := windows.UTF16PtrFromString(filepath.Dir(path))
+	if err != nil {
+		return path
+	}
+	buffer := make([]uint16, windows.MAX_LONG_PATH)
+	n, err := windows.GetLongPathName(short, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || int(n) > len(buffer) {
+		return path
+	}
+	return filepath.Join(windows.UTF16ToString(buffer[:n]), filepath.Base(path))
 }
 
 func decode(data []byte) string {
