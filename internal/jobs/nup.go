@@ -409,6 +409,7 @@ func nupTitle(path string, withIcon bool) (GameTitle, error) {
 			}
 		case nup.KindAddon:
 			result.Dlcs++
+			result.DlcIDs = append(result.DlcIDs, pkg.TitleIDText())
 		}
 	}
 	result.VersionTxt = shown.DisplayVersion()

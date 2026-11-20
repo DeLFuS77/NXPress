@@ -3,6 +3,7 @@ package jobs
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -76,3 +77,22 @@ func (r *recording) Done(path string, output string, note string, err error) {
 	}
 }
 func (r *recording) Say(format string, args ...any) { r.said = append(r.said, format) }
+
+// A NUP tells the title IDs of the DLC it holds: the window counts them as in the list (#160).
+func TestNupDlcIDs(t *testing.T) {
+	packages := []testnup.Package{
+		{TitleId: 0x0400245021D2C000, Kind: testnup.Base, Meta: []testnup.Record{{Type: testnup.TitleName, Payload: []byte("Made-up Book")}},
+			Files: []testnup.File{{Path: "exefs/main", Data: []byte("main")}}},
+		{TitleId: 0x0400245021D2D002, Kind: testnup.Addon, Files: []testnup.File{{Path: "romfs/b.bin", Data: []byte("second")}}},
+		{TitleId: 0x0400245021D2D001, Kind: testnup.Addon, Files: []testnup.File{{Path: "romfs/a.bin", Data: []byte("first")}}},
+	}
+	path := filepath.Join(t.TempDir(), "book.nup")
+	os.WriteFile(path, testnup.Build(packages), 0o644)
+	title, err := ReadTitle(path, GameCover)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if title.Type != "BASE" || title.Dlcs != 2 || len(title.DlcIDs) != 2 || !slices.Contains(title.DlcIDs, "0400245021D2D001") || !slices.Contains(title.DlcIDs, "0400245021D2D002") {
+		t.Errorf("%+v", title)
+	}
+}

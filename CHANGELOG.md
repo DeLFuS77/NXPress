@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.27
+
+### Improvements
+
+- The DLC that are out and not in the list are told as the updates: the file of a game says "5 of its 8 DLC are not in the list", and its card names them. Thanks to @JoeysRetroHandhelds for the idea (#160)
+
 ## 1.7.26
 
 ### Improvements

@@ -17,7 +17,8 @@ const versionsWait = 2 * time.Minute
 // LoadVersions reads the versions published of each game and DLC, downloading them again when the
 // copy kept is a day old (see titledb.Refresh): only from the window, when its settings allow it.
 // The names of the games of the Switch 2 come with them, for the dump folders without control
-// data Combine packs (see titledb.RefreshNames).
+// data Combine packs (see titledb.RefreshNames), and the DLC of each game, to tell the ones
+// missing from the list (see titledb.RefreshDLCs).
 // It gives the day of the list (2026-11-02), "" when there is none; with no connection it is
 // the copy kept, and nothing is said.
 func (a *App) LoadVersions() string {
@@ -39,6 +40,8 @@ func (a *App) LoadVersions() string {
 	a.versions.Store(versions)
 	names, _ := titledb.RefreshNames(ctx, folder, http.DefaultClient, time.Now())
 	jobs.UseNames(names)
+	dlcs, _ := titledb.RefreshDLCs(ctx, folder, http.DefaultClient, time.Now())
+	a.dlcs.Store(dlcs)
 	// the NUP without an icon take the one of titledb, whose list is downloaded only when one
 	// needs it (see titledb.RefreshIcons)
 	jobs.UseIconLookup(jobs.OnlineIcons(folder, http.DefaultClient))
@@ -56,11 +59,13 @@ func (a *App) ForgetVersions() {
 	a.versionsMutex.Lock()
 	defer a.versionsMutex.Unlock()
 	a.versions.Store(nil)
+	a.dlcs.Store(nil)
 	jobs.UseNames(nil)
 	jobs.UseIconLookup(nil)
 	if folder, err := portable.DataFolder(); err == nil {
 		_ = titledb.Forget(folder)
 		_ = titledb.ForgetNames(folder)
+		_ = titledb.ForgetDLCs(folder)
 		_ = titledb.ForgetIcons(folder)
 	}
 }
@@ -77,6 +82,26 @@ func (a *App) Published(ids []string) map[string]titledb.Published {
 		}
 		if published, ok := versions.Newest(number); ok {
 			found[id] = published
+		}
+	}
+	return found
+}
+
+// PublishedDLC gives the DLC of each game asked (by the title ID of the game, 16 hexadecimal
+// digits) the list of DLC knows: the ones out today, and the ones that come out later (#160).
+func (a *App) PublishedDLC(games []string) map[string]titledb.GameDLC {
+	return publishedDLC(a.dlcs.Load(), games, time.Now().Format(time.DateOnly))
+}
+
+func publishedDLC(dlcs *titledb.DLCs, games []string, today string) map[string]titledb.GameDLC {
+	found := map[string]titledb.GameDLC{}
+	for _, id := range games {
+		number, err := strconv.ParseUint(id, 16, 64)
+		if err != nil || len(id) != 16 {
+			continue
+		}
+		if game, ok := dlcs.Of(number, today); ok {
+			found[id] = game
 		}
 	}
 	return found
