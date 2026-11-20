@@ -81,6 +81,9 @@ const state = {
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
+  // the DLC of each game asked, by its title ID (null when the list of DLC does not know it), once
+  // the lists are read (#160)
+  dlc: new Map(), dlcReady: false,
   // the log of the works, the oldest first, its text file, the works open in it, and whether it
   // shows only the ones with problems (#69)
   worklog: [], worklogFile: "", worklogOpen: new Set(), worklogProblems: false,
@@ -1218,6 +1221,9 @@ function showPop(row, anchor) {
     const newer = online.version > online.reach;
     facts.push([t("popNewest"), `v${online.version}` + (newer ? (online.date ? " · " + day(online.date) : "") : " · " + t("popNewestHave")), newer ? "pop-newer" : ""]);
   }
+  // the DLC of the game the list holds, in blue when some are not in it (#160)
+  const dlc = row.dlc;
+  if (dlc && dlc.total) facts.push([t("popDlc"), t("popDlcCount")(dlc.have, dlc.total), dlc.missing.length ? "pop-newer" : ""]);
   const list = pop.querySelector("dl");
   list.innerHTML = "";
   for (const [name, value, tone] of facts) {
@@ -1228,6 +1234,7 @@ function showPop(row, anchor) {
     if (tone) detail.className = tone;
     list.append(term, detail);
   }
+  paintPopDlc(pop.querySelector(".pop-dlc"), row);
   // the languages by their first tag: EN for en-US and en-GB
   const languages = pop.querySelector(".pop-languages");
   languages.innerHTML = "";
@@ -1266,6 +1273,44 @@ function showPop(row, anchor) {
     ], { duration: 260, easing: "cubic-bezier(.2, .8, .2, 1)" });
   } else replay("enter", pop);
 }
+// under the facts of the card, the DLC of the game not in the list, the oldest first (six, and
+// how many more: Copy gives them all), with a bar of the ones it holds; and the ones that come out
+// later (#160)
+function paintPopDlc(box, row) {
+  const dlc = row.dlc;
+  box.innerHTML = "";
+  box.hidden = !dlc || !dlc.missing.length && !dlc.soon.length;
+  if (box.hidden) return;
+  if (dlc.missing.length) {
+    const head = document.createElement("div");
+    head.className = "pop-dlc-head";
+    head.innerHTML = `<b></b><span class="pop-dlc-bar"><i></i></span>`;
+    head.querySelector("b").textContent = t("popDlcMissing");
+    head.querySelector("i").style.width = (dlc.have / dlc.total * 100).toFixed(1) + "%";
+    const list = document.createElement("ul");
+    for (const item of dlc.missing.slice(0, 6)) {
+      const line = document.createElement("li");
+      line.innerHTML = "<span></span><small></small>";
+      line.querySelector("span").textContent = dlcName(item, row.game);
+      line.querySelector("span").classList.toggle("noname", !item.name);
+      line.querySelector("small").textContent = day(item.date);
+      list.append(line);
+    }
+    box.append(head, list);
+    if (dlc.missing.length > 6) {
+      const more = document.createElement("p");
+      more.className = "pop-dlc-more";
+      more.textContent = t("popDlcMore")(dlc.missing.length - 6);
+      box.append(more);
+    }
+  }
+  for (const item of dlc.soon) {
+    const soon = document.createElement("p");
+    soon.className = "pop-dlc-soon";
+    soon.textContent = t("popDlcSoon")(day(item.date), dlcName(item, row.game));
+    box.append(soon);
+  }
+}
 // a color found while the card is open
 let popGame = null;
 document.addEventListener("nx-tone", event => {
@@ -1293,6 +1338,12 @@ function popText() {
   for (const term of terms) lines.push(term.textContent + ": " + term.nextElementSibling.textContent);
   const languages = [...pop.querySelectorAll(".pop-languages i")].map(chip => chip.textContent).join(" ");
   if (languages) lines.push(languages);
+  // and every DLC of its game not in the list, with its title ID and day (#160)
+  const dlc = popRow && popRow.dlc;
+  if (dlc && dlc.missing.length) {
+    lines.push(t("popDlcMissing") + ":");
+    for (const item of dlc.missing) lines.push("  " + dlcName(item, popRow.game) + (item.name ? ` [${item.id}]` : "") + (item.date ? ` (${day(item.date)})` : ""));
+  }
   return lines.join("\n");
 }
 
@@ -1728,6 +1779,7 @@ function listWarnings() {
     else if (state.mode === "pack" && row.game.type === "DLC" && row.game.needsGame > 0 && game && game.base && game.reach < row.game.needsGame) warnings.set(row, t("warnNeedsGame")(row.game.needsGame, game.reach));
   }
   publishedWarnings(read, warnings);
+  dlcWarnings(read, warnings);
   return warnings;
 }
 // the title ID the versions of a file are published under: the one of its game for an update,
@@ -1763,14 +1815,70 @@ function askPublished(ids) {
     warnSoon();
   }).catch(() => { for (const id of ids) state.published.delete(id); });
 }
+// The DLC of the games of the list that are not in it (#160), from the list of the DLC of each
+// game: told on the file with the game (the first of the list), after its other warning, and
+// kept with it for its card. The list holds the DLC of its files of a DLC and the ones inside a
+// SuperNSP, a SuperXCI, a NUP or a dump folder. A DLC without its game, a demo, and a game the
+// list of DLC does not know (most games of the Switch 2 alone) tell nothing: not knowing them is
+// not having them all.
+function dlcWarnings(read, warnings) {
+  for (const row of state.rows.values()) row.dlc = null;
+  if (!$("published").checked || !state.dlcReady) return;
+  const games = new Map(), have = new Set();
+  for (const row of read) {
+    const game = row.game;
+    if (game.type === "BASE" && !game.demo && !games.has(game.titleId)) games.set(game.titleId, row);
+    for (const id of game.type === "DLC" ? [game.titleId, ...(game.dlcIds || [])] : game.dlcIds || []) have.add(id.toUpperCase());
+  }
+  const unknown = [...games.keys()].filter(id => !state.dlc.has(id));
+  if (unknown.length) askDLC(unknown);
+  for (const [id, row] of games) {
+    const known = state.dlc.get(id);
+    if (!known) continue;
+    row.dlc = missingDLC(known, have);
+    if (!row.dlc.missing.length) continue;
+    const text = t("warnDlc")(row.dlc.missing.length, row.dlc.total);
+    warnings.set(row, warnings.has(row) ? warnings.get(row) + " · " + text : text);
+  }
+}
+// of the DLC of a game out today, how many the list holds and the ones not in it; and the ones
+// that come out later, which do not count yet
+function missingDLC(known, have) {
+  const missing = known.out.filter(dlc => !have.has(dlc.id));
+  return { total: known.out.length, have: known.out.length - missing.length, missing, soon: known.soon || [] };
+}
+// asks once for the DLC of games, and tells the warnings again once known
+function askDLC(ids) {
+  for (const id of ids) state.dlc.set(id, undefined);
+  app().PublishedDLC(ids).then(found => {
+    for (const id of ids) state.dlc.set(id, found[id] || null);
+    warnSoon();
+  }).catch(() => { for (const id of ids) state.dlc.delete(id); });
+}
+// the name of a DLC without the name of its game before it, as titledb writes many of them
+// ("Star Courier – Comet Pack" is "Comet Pack"), or that it has none
+function dlcName(item, game) {
+  if (!item.name) return t("popDlcNoName")(item.id);
+  const name = (game && game.name || "").trim();
+  // the name of the game, then a mark between the two: "Star Couriers" is not Star Courier
+  const after = item.name.slice(name.length);
+  if (name && item.name.toLowerCase().startsWith(name.toLowerCase()) && /^[\s:\-–—|~]/.test(after)) {
+    const rest = after.replace(/^[\s:\-–—|~]+/, "");
+    if (rest) return rest;
+  }
+  return item.name;
+}
 // the versions published of each game, when the setting allows it: downloaded once a day at most,
-// else the copy kept, with nothing said when there is no connection (see published.go)
+// else the copy kept, with nothing said when there is no connection (see published.go); the DLC
+// of each game come with them
 async function loadVersions() {
   if (!$("published").checked) return;
   const date = await app().LoadVersions().catch(() => "");
   if (!$("published").checked) return;
   state.versionsDate = date;
   state.published.clear();
+  state.dlc.clear();
+  state.dlcReady = true;
   paintPublished();
   warnSoon();
 }
@@ -4501,6 +4609,8 @@ async function main() {
       app().ForgetVersions();
       state.versionsDate = null;
       state.published.clear();
+      state.dlc.clear();
+      state.dlcReady = false;
       paintPublished();
       warnSoon();
     }

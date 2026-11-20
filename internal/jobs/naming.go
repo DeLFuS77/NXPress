@@ -35,7 +35,10 @@ type GameTitle struct {
 	Bases      int    `json:"bases"`
 	Updates    int    `json:"updates"`
 	Dlcs       int    `json:"dlcs"`
-	Size       int64  `json:"size"`
+	// the title IDs of the DLC it holds (upper case): the window tells the DLC of a game that are
+	// not in its list (#160)
+	DlcIDs []string `json:"dlcIds,omitempty"`
+	Size   int64    `json:"size"`
 	// what the window shows of the game over its cover: who publishes it, the languages it
 	// comes in (as tags like en-US), the firmware the game or its update needs, if it is a demo,
 	// the game of an update or a DLC, and the version of its game a DLC needs
@@ -191,6 +194,7 @@ func describeTitles(all []*switchfs.ContentMetaAttributes) GameTitle {
 			}
 		case "DLC":
 			result.Dlcs++
+			result.DlcIDs = append(result.DlcIDs, strings.ToUpper(title.TitleId))
 		}
 	}
 	if shown.Ncap != nil {

@@ -95,12 +95,14 @@ func TestDescribeTitles(t *testing.T) {
 		{TitleId: "0100000000010000", Type: "BASE", Ncap: control("1.0.0", map[string]string{"Japanese": "ゲーム", "AmericanEnglish": " Game "})},
 		{TitleId: "0100000000010800", Type: "UPD", Version: 65536, Ncap: control("1.1.0", nil)},
 	})
-	want := GameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 4, Latest: 131072, VersionTxt: "1.2.0", Bases: 1, Updates: 2, Dlcs: 1}
+	want := GameTitle{Name: "Game", TitleID: "0100000000010000", Type: "BASE", Titles: 4, Latest: 131072, VersionTxt: "1.2.0", Bases: 1, Updates: 2, Dlcs: 1,
+		DlcIDs: []string{"0100000000011001"}}
 	if !reflect.DeepEqual(pack, want) {
 		t.Fatalf("pack: %+v", pack)
 	}
 	dlc := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100000000011001", Type: "DLC"}})
-	if dlc.VersionTxt != "1.0.0" || dlc.Name != "" || dlc.Dlcs != 1 || switchfs.PackageContents(dlc.Bases, dlc.Updates, dlc.Dlcs) != "1D" {
+	if dlc.VersionTxt != "1.0.0" || dlc.Name != "" || dlc.Dlcs != 1 || switchfs.PackageContents(dlc.Bases, dlc.Updates, dlc.Dlcs) != "1D" ||
+		!reflect.DeepEqual(dlc.DlcIDs, []string{"0100000000011001"}) {
 		t.Fatalf("a DLC: %+v", dlc)
 	}
 	other := describeTitles([]*switchfs.ContentMetaAttributes{{TitleId: "0100000000010000", Type: "BASE", Ncap: control("", map[string]string{"Korean": "게임"})}})
