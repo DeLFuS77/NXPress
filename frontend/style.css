@@ -460,6 +460,18 @@ table.grid .game.refill { transition: none; }
 .game-pop dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 /* the newest version published, when the list does not have it */
 .game-pop dd.pop-newer { color: var(--accent); font-weight: 600; }
+/* the DLC of the game not in the list (#160): their names and days, with a bar of the ones held */
+.game-pop .pop-dlc { margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--pop-tone) 25%, var(--line)); font-size: 12px; }
+.game-pop .pop-dlc-head { display: flex; align-items: center; gap: 8px; }
+.game-pop .pop-dlc-head b { font-weight: 600; flex: none; }
+.game-pop .pop-dlc-bar { flex: 1; height: 4px; border-radius: 999px; background: var(--bar); overflow: hidden; }
+.game-pop .pop-dlc-bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.game-pop .pop-dlc ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+.game-pop .pop-dlc li { display: flex; gap: 8px; align-items: baseline; }
+.game-pop .pop-dlc li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-pop .pop-dlc li span.noname { color: var(--muted); font-style: italic; }
+.game-pop .pop-dlc li small { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.game-pop .pop-dlc-more, .game-pop .pop-dlc-soon { margin: 6px 0 0; color: var(--muted); }
 .game-pop .pop-languages { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
 .game-pop .pop-languages i { font-style: normal; font-size: 11px; font-weight: 600; padding: 1px 5px; border-radius: 4px; color: var(--accent); background: var(--accent-soft); }
 

@@ -151,7 +151,9 @@ type App struct {
 	// the page asked it in its own dialog and the answer was yes: the window closes (#115)
 	closeConfirmed atomic.Bool
 	// the versions published of each game, once the page asked for them (see published.go)
-	versions      atomic.Pointer[titledb.Versions]
+	versions atomic.Pointer[titledb.Versions]
+	// and the DLC of each game, to tell the ones missing from the list (#160)
+	dlcs          atomic.Pointer[titledb.DLCs]
 	versionsMutex sync.Mutex
 	// the log of the works, written one change at a time (see worklog.go)
 	logMutex sync.Mutex

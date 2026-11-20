@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/DeLFuS77/NXPress/internal/titledb"
@@ -35,5 +36,38 @@ func TestPublished(t *testing.T) {
 		if got[id] != published {
 			t.Errorf("%s = %v, want %v", id, got[id], published)
 		}
+	}
+}
+
+// The page asks for the title IDs of the games of its list and gets the DLC of the ones the list
+// of DLC knows, the ones that come out later apart; with no list, or for what is not a title ID,
+// nothing (#160).
+func TestPublishedDLC(t *testing.T) {
+	a := &App{}
+	games := []string{"0100A1B002C4E000", "0100C3D00A7F6000", "not an id", "0100A1B002C4"}
+	if got := a.PublishedDLC(games); len(got) != 0 {
+		t.Fatalf("with no list: %v", got)
+	}
+	folder := t.TempDir()
+	list := `{"0100A1B002C4E000":{"0100A1B002C4F001":{"name":"Comet Pack","releaseDate":20250204},"0100A1B002C4F002":{"name":"Moon Base","releaseDate":20261203}}}`
+	if err := os.WriteFile(filepath.Join(folder, titledb.DLCFile), []byte(list), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dlcs, err := titledb.LoadDLCs(folder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := publishedDLC(dlcs, games, "2026-11-20")
+	want := map[string]titledb.GameDLC{"0100A1B002C4E000": {
+		Out:  []titledb.DLC{{ID: "0100A1B002C4F001", Name: "Comet Pack", Date: "2025-02-04"}},
+		Soon: []titledb.DLC{{ID: "0100A1B002C4F002", Name: "Moon Base", Date: "2026-12-03"}},
+	}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("publishedDLC = %+v, want %+v", got, want)
+	}
+	// the window keeps the list once read, and forgets it with the versions
+	a.dlcs.Store(dlcs)
+	if got := a.PublishedDLC(games); len(got) != 1 {
+		t.Errorf("PublishedDLC = %v", got)
 	}
 }

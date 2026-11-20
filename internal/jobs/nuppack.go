@@ -198,6 +198,7 @@ func dumpTitleWith(dir string, withIcon bool) (GameTitle, error) {
 			result.Updates++
 		case nup.KindAddon:
 			result.Dlcs++
+			result.DlcIDs = append(result.DlcIDs, nup.Package{TitleID: source.TitleID, Kind: source.Kind}.TitleIDText())
 		}
 	}
 	if main.Kind != nup.KindBase {
