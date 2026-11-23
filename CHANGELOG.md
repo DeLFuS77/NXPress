@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Games that keep their names compressed in the control data get the name in each language and their publisher in the NUP, Polish and Thai too
+
 ## 1.7.27
 
 ### Improvements
