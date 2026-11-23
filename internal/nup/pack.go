@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/dtrunk90/switch-library-manager-web/switchfs"
 )
 
 // The packing of a dump folder into a NUP, as the packer of the format does it
@@ -761,6 +763,10 @@ var nacpLanguageNames = [nacpLanguages]string{"AmericanEnglish", "BritishEnglish
 	"LatinAmericanSpanish", "Spanish", "Italian", "Dutch", "CanadianFrench", "Portuguese", "Russian", "Korean",
 	"TraditionalChinese", "SimplifiedChinese", "BrazilianPortuguese"}
 
+// titleLanguages are the BCP-47 tags of the NUP format for the names of a NACP: its 16
+// languages, then Polish and Thai, which only names kept compressed give.
+var titleLanguages = append(languages[:], "pl", "th")
+
 // controlRecords are the metadata a control folder gives: the NACP as it is, the name and the
 // publisher of the game in each language, its version, and its icons.
 func controlRecords(dir string) map[uint16][]byte {
@@ -772,15 +778,20 @@ func controlRecords(dir string) map[uint16][]byte {
 	if err == nil && len(nacp) >= nacpVersionAt+nacpVersionSize {
 		result[tlvNacp] = nacp
 		var titles bytes.Buffer
-		for i, tag := range languages {
-			name := text(cString(nacp[i*nacpEntry:][:0x200]), 0x200)
+		// the names may be kept compressed, 32 entries then (Polish and Thai after the 16)
+		entries, count, err := switchfs.NacpTitleEntries(nacp)
+		if err != nil {
+			count = 0
+		}
+		for i := 0; i < count && i < len(titleLanguages); i++ {
+			name := text(cString(entries[i*nacpEntry:][:0x200]), 0x200)
 			if name == "" {
 				continue
 			}
-			titles.Write(localized(tag, []byte(name)))
+			titles.Write(localized(titleLanguages[i], []byte(name)))
 			if _, ok := result[tlvTitleName]; !ok || i == 0 {
 				result[tlvTitleName] = []byte(name)
-				if publisher := text(cString(nacp[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
+				if publisher := text(cString(entries[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
 					result[tlvPublisher] = []byte(publisher)
 				}
 			}

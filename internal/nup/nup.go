@@ -617,7 +617,9 @@ func (pkg Package) KindName() string {
 }
 
 // the NACP: 16 languages of 0x300 bytes (a name of 0x200, a publisher of 0x100), the version
-// shown at 0x3060
+// shown at 0x3060. When its byte 0x3215 is 1 the names are kept compressed (deflate) in those
+// 0x3000 bytes instead, 32 entries of 0x300 with Polish and Thai after the 16: read them with
+// switchfs.NacpTitleEntries
 const (
 	nacpSize        = 0x4000
 	nacpEntry       = 0x300
