@@ -205,6 +205,7 @@ const noteRules = [
   [/no game or update in it has an ExeFS/g, "emuNoExefs"],
   [/the ExeFS of the game v(\d+) lacks: /g, "emuExefsGame"],
   [/the ExeFS of the update v(\d+) lacks: /g, "emuExefsUpdate"],
+  [/its update is for the program ([0-9A-F]{16}), not for its game ([0-9A-F]{16})/g, "emuForeignUpdate"],
   [/Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them/g, "emuZeroBased"],
   // --fix-nup-meta, and the button of the card of a NUP counted from 0
   [/its metadata is counted from 1 now, as Eglantine and Lichii read it: 1 package written again, the files of the game as they were/g, "fixMetaOne"],

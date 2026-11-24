@@ -161,6 +161,7 @@ const samples = [
   ["3 files checked by their SHA-256; Eglantine and Lichii cannot start it: the ExeFS of the update v131072 lacks: main.npdm", "cannot start"],
   ["Eglantine and Lichii cannot start it: the ExeFS of the game v0 lacks: main, main.npdm", "lacks"],
   ["Eglantine and Lichii cannot start it: no game or update in it has an ExeFS", "no game or update"],
+  ["Eglantine and Lichii cannot start it: its update is for the program 0400486024DEC001, not for its game 0400486024DEC000", "not for its game"],
   ["Eglantine and Lichii cannot start it: it holds no game or update, and they do not load DLC from NUP files yet", "DLC from NUP"],
   ["cannot be read: NUP flags 0x1 are not supported; Eglantine and Lichii do not open it either", "do not open it either"],
   ["3 files checked by their SHA-256; Eglantine and Lichii show its name, version and icon wrong: the types of its metadata are counted from 0, as a build of the packer of the format wrote them", "counted from 0"],

@@ -739,6 +739,12 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 		if version := controlVersion(source.Control); version != "" {
 			records[tlvDisplayVersion] = []byte(version)
 		}
+		// its own NACP as it is: an emulator that starts the update reads its control from it
+		// (Lichii), not the one of the game. A name given (a game without control data) is not
+		// written in it: its own names are the real ones
+		if nacp := controlNacp(source.Control); nacp != nil {
+			records[tlvNacp] = nacp
+		}
 	}
 	kinds := []int{}
 	for kind := range records {
@@ -818,6 +824,18 @@ func controlRecords(dir string) map[uint16][]byte {
 		result[tlvLocalizedIcons] = icons.Bytes()
 	}
 	return result
+}
+
+// controlNacp is the control.nacp of a control folder, nil without one big enough to be one.
+func controlNacp(dir string) []byte {
+	if dir == "" {
+		return nil
+	}
+	nacp, err := os.ReadFile(filepath.Join(dir, "control.nacp"))
+	if err != nil || len(nacp) < nacpVersionAt+nacpVersionSize {
+		return nil
+	}
+	return nacp
 }
 
 // controlVersion is the version shown (1.0.2) the control.nacp of a control folder gives, "" without

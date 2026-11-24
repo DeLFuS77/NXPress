@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Each update in a NUP carries its own control data, which Lichii reads when it starts the update; renaming a NUP renames it there too
+- Verify says when the update in a NUP is for another program than its game, which Eglantine and Lichii cannot start
+
 ## 1.7.28
 
 ### Fixes
