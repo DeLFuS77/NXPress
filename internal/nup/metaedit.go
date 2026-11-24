@@ -91,16 +91,108 @@ func EditMeta(path string, name string, icon []byte) error {
 		return err
 	}
 
-	// the metadata of the package of the game as it is, record by record
+	// the metadata of the package of the game, and the NACP of each update that carries one: an
+	// emulator shows the name of the control of the update it starts (Lichii), so a new name goes
+	// in those too
 	index := before.IconPackage()
-	pkg := before.Packages[index]
-	old := make([]byte, pkg.metaSize)
-	if _, err := file.ReadAt(old, int64(pkg.metaOffset)); err != nil {
-		return err
+	type edit struct {
+		index   int
+		block   []byte
+		changed map[uint16]bool
 	}
+	var edits []edit
+	for i, pkg := range before.Packages {
+		if i != index && (name == "" || len(pkg.Meta[tlvNacp]) == 0) {
+			continue
+		}
+		old := make([]byte, pkg.metaSize)
+		if _, err := file.ReadAt(old, int64(pkg.metaOffset)); err != nil {
+			return err
+		}
+		packageIcon := icon
+		if i != index {
+			packageIcon = nil
+		}
+		block, changed, err := editedMeta(old, pkg.ZeroBased, name, packageIcon, i != index)
+		if err != nil {
+			return err
+		}
+		edits = append(edits, edit{i, block, changed})
+	}
+
+	oldSize := before.FileSize
+	newToc := bytes.Clone(toc)
+	changed := map[int]map[uint16]bool{}
+	// each block starts on 16 bytes, after the end of the NUP
+	var tail bytes.Buffer
+	for _, e := range edits {
+		if pad := (16 - (oldSize+int64(tail.Len()))%16) % 16; pad != 0 {
+			tail.Write(make([]byte, pad))
+		}
+		entry := newToc[tocHeadSize+e.index*packageSize:]
+		le.PutUint64(entry[0x20:], uint64(oldSize+int64(tail.Len())))
+		le.PutUint32(entry[0x28:], uint32(len(e.block)))
+		tail.Write(e.block)
+		changed[e.index] = e.changed
+	}
+	end := oldSize + int64(tail.Len())
+	newHeader := bytes.Clone(header)
+	sum := sha256.Sum256(newToc)
+	copy(newHeader[0x18:0x38], sum[:])
+	le.PutUint64(newHeader[0x40:], uint64(end))
+
+	// the header and the table of contents as they were, beside the NUP
+	var backup bytes.Buffer
+	backup.WriteString(iconBackupMagic)
+	binary.Write(&backup, le, uint64(oldSize))
+	binary.Write(&backup, le, uint64(end))
+	backup.Write(newHeader[0x18:0x38])
+	backup.Write(header)
+	binary.Write(&backup, le, tocOffset)
+	backup.Write(toc)
+	if err := writeSynced(IconBackup(path), backup.Bytes()); err != nil {
+		return fmt.Errorf("the copy of its table of contents cannot be written beside it: %w", err)
+	}
+	undo := func(err error) error {
+		file.Close()
+		return errors.Join(err, restoreIcon(path))
+	}
+	if _, err := file.WriteAt(tail.Bytes(), oldSize); err != nil {
+		return undo(err)
+	}
+	if err := file.Sync(); err != nil {
+		return undo(err)
+	}
+	if _, err := file.WriteAt(newToc, int64(tocOffset)); err != nil {
+		return undo(err)
+	}
+	if _, err := file.WriteAt(newHeader, 0); err != nil {
+		return undo(err)
+	}
+	if err := file.Sync(); err != nil {
+		return undo(err)
+	}
+	file.Close()
+
+	// the NUP read again has the same packages, files and metadata, but for what was changed
+	after, err := Open(path)
+	if err == nil {
+		err = sameWithEdit(before, after, index, changed, name, icon)
+	}
+	if err != nil {
+		return errors.Join(fmt.Errorf("the NUP does not read the same with the change, so it is put back as it was: %w", err), restoreIcon(path))
+	}
+	return os.Remove(IconBackup(path))
+}
+
+// editedMeta is the metadata block of a package with a new name and/or icon, and the types it
+// changed, as the NUP is read by: the records as they were, but for the ones written again. With
+// nacpOnly only the names of its NACP change, as for an update.
+func editedMeta(old []byte, zeroBased bool, name string, icon []byte, nacpOnly bool) ([]byte, map[uint16]bool, error) {
+	le := binary.LittleEndian
 	// the type of a record as the block counts it
 	stored := func(kind uint16) uint16 {
-		if pkg.ZeroBased {
+		if zeroBased {
 			return kind - 1
 		}
 		return kind
@@ -114,7 +206,7 @@ func EditMeta(path string, name string, icon []byte) error {
 	for pos := 0; pos+tlvHeadSize <= len(old); {
 		size := int(le.Uint32(old[pos+4:]))
 		if size < 0 || size > len(old)-pos-tlvHeadSize {
-			return errors.New("a record of its metadata runs past the end of its block")
+			return nil, nil, errors.New("a record of its metadata runs past the end of its block")
 		}
 		records = append(records, record{le.Uint16(old[pos:]), old[pos : pos+tlvHeadSize+size], old[pos+tlvHeadSize : pos+tlvHeadSize+size]})
 		pos += tlvHeadSize + size
@@ -133,28 +225,21 @@ func EditMeta(path string, name string, icon []byte) error {
 	written := map[uint16][]byte{}
 	gone := map[uint16]bool{}
 	changed := map[uint16]bool{}
-	if name != "" {
+	if name != "" && !nacpOnly {
 		written[stored(tlvTitleName)] = []byte(name)
 		changed[tlvTitleName] = true
-		if titles := find(tlvLocalizedTitles); titles != nil {
+	}
+	if name != "" {
+		if titles := find(tlvLocalizedTitles); titles != nil && !nacpOnly {
 			renamed, err := retitle(titles, name)
 			if err != nil {
-				return err
+				return nil, nil, err
 			}
 			written[stored(tlvLocalizedTitles)] = renamed
 			changed[tlvLocalizedTitles] = true
 		}
 		if nacp := find(tlvNacp); len(nacp) >= nacpLanguages*nacpEntry {
-			patched := bytes.Clone(nacp)
-			for i := 0; i < nacpLanguages; i++ {
-				field := patched[i*nacpEntry : i*nacpEntry+0x200]
-				// only the languages that have a name get the new one
-				if len(cString(field)) > 0 {
-					clear(field)
-					copy(field, name)
-				}
-			}
-			written[stored(tlvNacp)] = patched
+			written[stored(tlvNacp)] = renamedNacp(nacp, name)
 			changed[tlvNacp] = true
 		}
 	}
@@ -185,66 +270,27 @@ func EditMeta(path string, name string, icon []byte) error {
 		block.Write(data)
 	}
 	if block.Len() > maxMetaSize {
-		return errors.New("its metadata would be too big")
+		return nil, nil, errors.New("its metadata would be too big")
 	}
+	return block.Bytes(), changed, nil
 
-	oldSize := before.FileSize
-	at := (oldSize + 15) / 16 * 16
-	end := at + int64(block.Len())
-	newToc := bytes.Clone(toc)
-	entry := newToc[tocHeadSize+index*packageSize:]
-	le.PutUint64(entry[0x20:], uint64(at))
-	le.PutUint32(entry[0x28:], uint32(block.Len()))
-	newHeader := bytes.Clone(header)
-	sum := sha256.Sum256(newToc)
-	copy(newHeader[0x18:0x38], sum[:])
-	le.PutUint64(newHeader[0x40:], uint64(end))
+}
 
-	// the header and the table of contents as they were, beside the NUP
-	var backup bytes.Buffer
-	backup.WriteString(iconBackupMagic)
-	binary.Write(&backup, le, uint64(oldSize))
-	binary.Write(&backup, le, uint64(end))
-	backup.Write(newHeader[0x18:0x38])
-	backup.Write(header)
-	binary.Write(&backup, le, tocOffset)
-	backup.Write(toc)
-	if err := writeSynced(IconBackup(path), backup.Bytes()); err != nil {
-		return fmt.Errorf("the copy of its table of contents cannot be written beside it: %w", err)
+// renamedNacp is a NACP with a new name in each language that has one.
+func renamedNacp(nacp []byte, name string) []byte {
+	patched := bytes.Clone(nacp)
+	if len(patched) < nacpLanguages*nacpEntry {
+		return patched
 	}
-	undo := func(err error) error {
-		file.Close()
-		return errors.Join(err, restoreIcon(path))
+	for i := 0; i < nacpLanguages; i++ {
+		field := patched[i*nacpEntry : i*nacpEntry+0x200]
+		// only the languages that have a name get the new one
+		if len(cString(field)) > 0 {
+			clear(field)
+			copy(field, name)
+		}
 	}
-	if _, err := file.WriteAt(make([]byte, at-oldSize), oldSize); err != nil {
-		return undo(err)
-	}
-	if _, err := file.WriteAt(block.Bytes(), at); err != nil {
-		return undo(err)
-	}
-	if err := file.Sync(); err != nil {
-		return undo(err)
-	}
-	if _, err := file.WriteAt(newToc, int64(tocOffset)); err != nil {
-		return undo(err)
-	}
-	if _, err := file.WriteAt(newHeader, 0); err != nil {
-		return undo(err)
-	}
-	if err := file.Sync(); err != nil {
-		return undo(err)
-	}
-	file.Close()
-
-	// the NUP read again has the same packages, files and metadata, but for what was changed
-	after, err := Open(path)
-	if err == nil {
-		err = sameWithEdit(before, after, index, changed, name, icon)
-	}
-	if err != nil {
-		return errors.Join(fmt.Errorf("the NUP does not read the same with the change, so it is put back as it was: %w", err), restoreIcon(path))
-	}
-	return os.Remove(IconBackup(path))
+	return patched
 }
 
 // retitle writes the names by language of a package again, each language it has with the new name,
@@ -276,7 +322,7 @@ func retitle(payload []byte, name string) ([]byte, error) {
 // sameWithEdit tells whether a NUP read again after EditMeta is the one it was, with what was
 // changed: the same packages, folders, files and metadata, the new name read back as the name of the
 // package, and the new icon as its only icon.
-func sameWithEdit(before *Container, after *Container, index int, changed map[uint16]bool, name string, icon []byte) error {
+func sameWithEdit(before *Container, after *Container, index int, changed map[int]map[uint16]bool, name string, icon []byte) error {
 	if len(before.Packages) != len(after.Packages) || len(before.Files) != len(after.Files) || len(before.Dirs) != len(after.Dirs) {
 		return errors.New("its packages, folders or files changed")
 	}
@@ -291,7 +337,7 @@ func sameWithEdit(before *Container, after *Container, index int, changed map[ui
 			return fmt.Errorf("package %d changed", i)
 		}
 		for kind, value := range b.Meta {
-			if i == index && changed[kind] {
+			if changed[i][kind] {
 				continue
 			}
 			if !bytes.Equal(a.Meta[kind], value) {

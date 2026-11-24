@@ -143,6 +143,9 @@ func (c *Container) startFault() string {
 	default:
 		return "no game or update in it has an ExeFS"
 	}
+	if reason := c.foreignUpdate(base, exefs); reason != "" {
+		return reason
+	}
 	names := map[string]bool{}
 	dir := c.Dirs[c.Packages[exefs].ExefsDir]
 	for _, node := range c.Children[dir.FirstChild : dir.FirstChild+dir.ChildCount] {
@@ -160,6 +163,27 @@ func (c *Container) startFault() string {
 		return ""
 	}
 	return fmt.Sprintf("the ExeFS of the %s lacks: %s", Label(c.Packages[exefs]), strings.Join(missing, ", "))
+}
+
+// foreignUpdate tells why the emulators refuse the update they would start, "" when they do not:
+// its program is not the one of the game beside it (another game, or another program of a game
+// of several), which they refuse rather than start the update over the wrong game (0007-0045).
+// The ID of the game is the one of its NPDM, else the one of its package; a game without either
+// claims none. Only IDs of the same console are compared: a Switch 2 Edition update of a Switch 1
+// game has its own rules.
+func (c *Container) foreignUpdate(base int, exefs int) string {
+	if base < 0 || exefs == base {
+		return ""
+	}
+	game := npdmProgramID(c.Packages[base].Meta[tlvNpdm])
+	if game == 0 {
+		game = c.Packages[base].TitleID
+	}
+	update := npdmProgramID(c.Packages[exefs].Meta[tlvNpdm])
+	if game == 0 || update == 0 || game == update || game>>56 != update>>56 {
+		return ""
+	}
+	return fmt.Sprintf("its update is for the program %016X, not for its game %016X", update, game)
 }
 
 // strictLocalized tells whether the records of names and icons by language of a block of

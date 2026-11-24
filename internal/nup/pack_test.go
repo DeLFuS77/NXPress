@@ -238,11 +238,41 @@ func TestPackNewLayout(t *testing.T) {
 	if update := container.Packages[1]; update.Kind != KindUpdate || update.Version != 131072 || update.ExefsDir == NoDir {
 		t.Errorf("update %+v", update)
 	}
-	// the update carries its own version shown, which emulators show, and nothing else of its
-	// control data: the name and the icons stay in the game
+	// the update carries its own version shown and its own NACP, which an emulator that starts it
+	// reads its control from (Lichii); the name and the icons stay in the game
 	update := container.Packages[1]
-	if string(update.Meta[tlvDisplayVersion]) != "2.0.1" || update.Meta[tlvTitleName] != nil || update.Meta[tlvIcon] != nil || update.Meta[tlvNacp] != nil {
+	if string(update.Meta[tlvDisplayVersion]) != "2.0.1" || update.Meta[tlvTitleName] != nil || update.Meta[tlvIcon] != nil || !bytes.Equal(update.Meta[tlvNacp], updated) {
 		t.Errorf("update records %v", update.Meta)
+	}
+	// renaming it afterwards writes the new name in the NACP of the game and of the update
+	named, _ := pack(t, root, PackOptions{Level: 3, Workers: 2})
+	for _, rename := range []string{"Renamed Later", "Again"} {
+		want := rename
+		if err := EditMeta(named, rename, nil); err != nil {
+			t.Fatal(err)
+		}
+		renamed, err := Open(named)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range 2 {
+			nacp := renamed.Packages[i].Meta[tlvNacp]
+			if string(cString(nacp[:0x200])) != want || string(cString(nacp[2*0x300:][:0x200])) != want || string(cString(nacp[0x300:][:0x200])) != "" {
+				t.Errorf("%q: NACP of package %d: %q %q %q", rename, i, cString(nacp[:0x200]), cString(nacp[0x300:][:0x200]), cString(nacp[2*0x300:][:0x200]))
+			}
+			if string(cString(nacp[0x3060:][:0x10])) != []string{"1.2.0", "2.0.1"}[i] {
+				t.Errorf("%q: version of package %d changed", rename, i)
+			}
+		}
+		if got := renamed.Packages[0].Name(); got != want {
+			t.Errorf("%q: name %q", rename, got)
+		}
+		if renamed.Packages[1].Meta[tlvTitleName] != nil {
+			t.Errorf("%q: the update was given a name record", rename)
+		}
+	}
+	if _, check, err := Verify(context.Background(), named, 1, 1, nil); err != nil || len(check.Damaged) != 0 {
+		t.Errorf("renamed: %v %+v", err, check)
 	}
 	if dlc := container.Packages[2]; dlc.Kind != KindAddon || dlc.TitleID != 0x040074A01BF13001 || dlc.RomfsDir == NoDir {
 		t.Errorf("DLC %+v", dlc)
