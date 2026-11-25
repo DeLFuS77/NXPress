@@ -11,11 +11,11 @@ const groups = [
 const takesOptimize = "NSP NSZ XCI XCZ";
 const takesShown = {
   compress: "NSP XCI", decompress: "NSZ XCZ NUP", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP :takesCode", convert: "XCI XCZ",
-  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP NX", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
 };
 
 // a NUP holds its game decrypted: it is read and verified without keys
-const isNup = path => /\.nup$/i.test(path);
+const isNup = path => /\.(nup|nx)$/i.test(path);
 // the cover of a dump folder, until its game is read: a folder
 const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-7.2L10.6 5.5H4.5A1.5 1.5 0 0 0 3 7.5z"/></svg>`;
 // whether a work needs the keys: not to recompress or for FAT32, nor for a list of NUP files and
@@ -509,14 +509,16 @@ function nupEditLine(row) {
 
 function renderNupCard(element, card, row) {
   element.innerHTML = `<div class="card-sizes"><span class="kind"></span><div class="card-bar"><div></div></div><small></small></div><ul class="nup-packages"></ul><div class="tags"></div>`;
-  element.querySelector(".nup-packages").before(nupNameLine(row));
-  for (const name of ["Eglantine", "Lichii"]) {
+  // a .nx is only read: its name is not changed, and what reads it is not told yet
+  const nx = card.kind === "NX";
+  if (!nx) element.querySelector(".nup-packages").before(nupNameLine(row));
+  for (const name of nx ? [] : ["Eglantine", "Lichii"]) {
     const tag = document.createElement("i");
     tag.className = card.emulatorsOk ? "yes" : "warn";
     tag.textContent = name;
     element.querySelector(".tags").append(tag);
   }
-  if (!card.emulatorsOk && card.emulators) {
+  if (!nx && !card.emulatorsOk && card.emulators) {
     const fix = document.createElement("div");
     fix.className = "card-fix";
     fix.innerHTML = `<p class="warning"></p>`;
