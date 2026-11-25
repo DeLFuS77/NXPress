@@ -19,7 +19,7 @@ import (
 // catalog, without keys; the other works leave them as they are, and say so.
 
 // NxNotDone is why a .nx given to any other work than Details is left as it is.
-const NxNotDone = "this work leaves .nx files as they are: Details (-i) shows what they hold"
+const NxNotDone = "this work leaves .nx files as they are: Details (-i) shows what they hold, Verify (-V) checks them, Decompress (-D) turns them into folders and Combine (--nup) into NUP files"
 
 // isNx tells a .nx file by the extension of its name.
 func isNx(path string) bool {

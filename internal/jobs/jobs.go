@@ -26,9 +26,9 @@ import (
 // the files each action takes, by extension
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
-	"decompress": {".nsz", ".xcz", ".nup"},
+	"decompress": {".nsz", ".xcz", ".nup", ".nx"},
 	// the dump folders, by the code of their games
-	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
+	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", dumpFolders},
 	"convert": {".xci", ".xcz"},
 	// Convert the other way round, NSP and NSZ into game cards (#127)
 	"tocard":     {".nsp", ".nsz"},
@@ -46,7 +46,9 @@ var Takes = map[string][]string{
 	// the NUP files without an icon
 	"fixicon": {".nup"},
 	// the dump folders packed into NUP files
-	"nup": {dumpFolders},
+	"nup": {dumpFolders, ".nx"},
+	// the dump folders and the NUP files packed into .nx files
+	"tonx": {dumpFolders, ".nup"},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
 	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
 	// Optimize for install: a game with its update, by game
@@ -75,6 +77,7 @@ var checksOutput = map[string]bool{
 	"info":       false,
 	"verify":     false,
 	"nup":        true,
+	"tonx":       true,
 	"optimize":   true,
 	"rebuild":    true,
 }
@@ -546,9 +549,16 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		return "", "", ErrEmpty
 	}
 	if isNx(path) {
-		if action == "info" {
+		switch action {
+		case "info":
 			note, err := infoNx(path, out)
 			return "", note, err
+		case "verify":
+			return verifyNx(ctx, path, out)
+		case "decompress":
+			return unpackNx(ctx, path, o, out)
+		case "nup":
+			return nupFromNx(ctx, path, o, threads, out)
 		}
 		return "", "", Skipped(NxNotDone)
 	}
@@ -571,11 +581,16 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		case "fixicon":
 			note, err := FixNupIcon(ctx, path, o)
 			return "", note, err
+		case "tonx":
+			return packNx(ctx, path, o, threads, out)
 		}
 		return "", "", Skipped(NupNotDone)
 	}
 	if action == "nup" {
 		return packNup(ctx, path, o, threads, out)
+	}
+	if action == "tonx" {
+		return packNx(ctx, path, o, threads, out)
 	}
 	if action == "verify" && IsDumpFolder(path) {
 		return verifyDump(ctx, path, o, out)

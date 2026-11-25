@@ -59,8 +59,8 @@ func TestDetailsOfNx(t *testing.T) {
 // Any other work leaves a .nx as it is, and says why.
 func TestOtherWorksLeaveNx(t *testing.T) {
 	path := writeNx(t)
-	for _, action := range []string{"verify", "decompress", "rename"} {
-		_, _, err := doJob(t.Context(), action, path, Options{}, 1, nil)
+	for _, action := range []string{"rename", "split", "compress", "tonx"} {
+		_, _, err := doJob(t.Context(), action, path, Options{}, 1, &recording{})
 		if err == nil || !strings.Contains(err.Error(), "leaves .nx files") {
 			t.Errorf("%s: %v", action, err)
 		}

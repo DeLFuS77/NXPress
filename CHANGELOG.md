@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Details reads .nx files without keys: their game, updates and DLC, with name, version, console and icon, and the full report
+- .nx files (NXFormat): Details shows what they hold, Verify checks them whole, Decompress turns them into a dump folder, and Combine packs a .nx into a NUP; --to-nx packs a dump folder or a NUP into a .nx, without keys
 
 ## 1.7.29
 
