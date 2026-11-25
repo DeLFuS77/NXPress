@@ -90,3 +90,42 @@ func TestToNxOption(t *testing.T) {
 		t.Error("--to-nx and --nup together")
 	}
 }
+
+// Combine with the format for emulators chosen in the window: with .nx the dump folder and the NUP
+// become .nx files and a .nx is left; with NUP the .nx becomes a NUP and a NUP is left.
+func TestCombineFormatForEmulators(t *testing.T) {
+	dir := writeDump(t, "Quiet Meadow")
+	nx, _, err := packNx(t.Context(), writeDump(t, "Amber Coast"), Options{}, 2, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nupFile, _, err := packNup(t.Context(), writeDump(t, "Silver Pines"), Options{}, 2, &recording{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &recording{}
+	if failed := RunJobs(t.Context(), Options{PackGames: true, PackNx: true, Files: []string{dir, nupFile, nx}, Multi: 1, Threads: 2}, out); failed != 0 {
+		t.Fatalf("%d failed", failed)
+	}
+	if found, _ := filepath.Glob(filepath.Join(filepath.Dir(dir), "*.nx")); len(found) == 0 {
+		t.Error("the dump folder did not become a .nx")
+	}
+	// its name has brackets, which Glob would read as a pattern
+	if _, err := os.Stat(strings.TrimSuffix(nupFile, ".nup") + ".nx"); err != nil {
+		t.Errorf("the NUP did not become a .nx: %v", err)
+	}
+	if len(out.skipped) != 1 || !strings.Contains(out.skipped[0], "a .nx already") {
+		t.Errorf("skipped: %v", out.skipped)
+	}
+
+	out = &recording{}
+	if failed := RunJobs(t.Context(), Options{PackGames: true, Files: []string{nx, nupFile}, Multi: 1, Threads: 2}, out); failed != 0 {
+		t.Fatalf("%d failed", failed)
+	}
+	if found, _ := filepath.Glob(filepath.Join(filepath.Dir(nx), "*.nup")); len(found) == 0 {
+		t.Error("the .nx did not become a NUP")
+	}
+	if len(out.skipped) != 1 || !strings.Contains(out.skipped[0], "a NUP already") {
+		t.Errorf("skipped: %v", out.skipped)
+	}
+}

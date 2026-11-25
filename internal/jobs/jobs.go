@@ -50,7 +50,7 @@ var Takes = map[string][]string{
 	// the dump folders and the NUP files packed into .nx files
 	"tonx": {dumpFolders, ".nup"},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
-	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
+	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders, ".nup", ".nx"},
 	// Optimize for install: a game with its update, by game
 	"optimize": {".nsp", ".nsz", ".xci", ".xcz"},
 	// Rebuild: any package, on its own
@@ -92,15 +92,21 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	ctx = switchfs.WithThreads(ctx, lz4Threads(o))
 	// a NUP given to a work that does not take it is told, not left out without a word
 	nupsLeft := tellNupsLeft(o, out)
-	// the dump folders given to Combine are packed into NUP files, each on its own; the files
-	// given with them are combined as they would be without them
+	// the dump folders given to Combine are packed into NUP files, each on its own, or into .nx
+	// files with PackNx; the NUP and .nx files given become the format chosen, and the ones in it
+	// already are left as they are. The files given with them are combined as they would be
+	// without them
 	failedDumps := 0
 	if action == "pack" {
 		var dumps []string
 		dumps, o.Files = splitDumps(o.Files)
+		var emulatorFiles []string
+		emulatorFiles, o.Files = splitEmulatorFiles(o, o.Files, out)
+		dumps = append(dumps, emulatorFiles...)
 		if len(dumps) > 0 {
 			nupWork := o
-			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, true
+			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, !o.PackNx
+			nupWork.ToNx = o.PackNx
 			// a NUP per game is named by the template of the packs of each game, as they are
 			if o.PackGames {
 				nupWork.NupTemplate = o.PackName
@@ -513,6 +519,24 @@ var ErrEmpty = errors.New("the file is empty")
 func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+// splitEmulatorFiles parts the NUP and .nx files given to Combine from the rest: the ones of the
+// other format than the one chosen are converted, the ones in it already are told and left.
+func splitEmulatorFiles(o Options, paths []string, out Output) (convert []string, rest []string) {
+	for _, path := range paths {
+		switch {
+		case isNup(path) && o.PackNx, isNx(path) && !o.PackNx:
+			convert = append(convert, path)
+		case isNup(path):
+			out.Done(path, "", "", Skipped("it is a NUP already: Combine makes NUP files of dump folders and .nx files"))
+		case isNx(path):
+			out.Done(path, "", "", Skipped("it is a .nx already: Combine makes .nx files of dump folders and NUP files"))
+		default:
+			rest = append(rest, path)
+		}
+	}
+	return convert, rest
 }
 
 // splitDumps parts the paths given into the dump folders among them and the rest.

@@ -24,7 +24,12 @@ const folderIcon = `<svg class="cover-folder" viewBox="0 0 24 24" aria-hidden="t
 // through an NSP (#92, #132)
 // Combine with dump folders only: each becomes a NUP of its own, so the choice between a SuperNSP
 // per game and one file with everything does not apply, and the template names each NUP
-const onlyDumps = () => state.mode === "pack" && state.items.length > 0 && state.items.every(item => item.dump);
+const onlyDumps = () => state.mode === "pack" && state.items.length > 0 && state.items.every(item => item.dump || isNup(item.path));
+// Combine makes the dump folders, NUP and .nx files of the list into this format for emulators
+const packNx = () => state.packFormat === "nx";
+// what a NUP or .nx of the list becomes in Combine: the other format, or nothing when it is in the
+// one chosen already
+const emuTarget = path => /\.nx$/i.test(path) ? (packNx() ? "" : ".nup") : /\.nup$/i.test(path) ? (packNx() ? ".nx" : "") : "";
 // the template names a file per game: a SuperNSP per game, or the NUP of each dump folder
 const packEach = () => $("pack-games").checked || onlyDumps();
 const needsKeys = mode => (mode === "recompress" ? $("extra").checked || $("optimize").checked : mode !== "fat32") && !(state.items.length > 0 && state.items.every(item => isNup(item.path) || item.dump));
@@ -77,7 +82,7 @@ function countUp(element, bytes, format, html) {
 const app = () => window.go.main.App;
 const state = {
   theme: "auto", mode: "compress", language: "en", items: [], rows: new Map(), busy: false, keys: "", output: "", dat: "",
-  setup: null, sources: [], removed: new Set(), off: {}, paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full",
+  setup: null, sources: [], removed: new Set(), off: {}, paused: false, starting: false, lastRun: null, shutdownAt: 0, template: "", sort: { key: "", dir: 1 }, skipGames: new Set(), verifyLevel: "full", packFormat: "nup",
   // the newest version published of each title ID asked (null when the list does not know it),
   // and the day of the list of versions: null until it is read, "" when there is none
   published: new Map(), versionsDate: null,
@@ -1724,8 +1729,10 @@ function stepsOf(row) {
   if (row.step && !row.step.startsWith("Verifying")) row.work = row.step.split(" ")[0];
   const work = { compress: "Compressing", recompress: "Recompressing", fat32: row.work || "Splitting" }[mode];
   if (work) return [work, "Verifying"];
-  // a dump folder is packed into a NUP, then the NUP is read back whole
+  // a dump folder is packed into a NUP or a .nx, then read back whole; a NUP or a .nx becomes the
+  // other through a folder of its own
   if (mode === "pack" && row.item.dump) return ["Packaging", "Verifying"];
+  if (mode === "pack" && isNup(row.item.path)) return emuTarget(row.item.path) ? ["Unpacking", "Packaging", "Verifying"] : [];
   if (mode === "trim" && /\.xc[iz]$/i.test(row.item.path)) return ["Trimming", "Verifying"];
   return [];
 }
@@ -2533,15 +2540,22 @@ function render() {
   const kept = state.items.filter(item => state.mode === "pack" ? item.dump : state.mode === "decompress" && isNup(item.path)).length;
   const dumps = state.mode === "pack" && kept > 0;
   $("remove-dumps-option").hidden = !dumps || !$("remove").checked;
-  // how their NUP is packed, only for dump folders
-  $("nup-block").hidden = !dumps;
+  // the format for emulators, when the list holds a dump folder, a NUP or a .nx
+  $("nup-block").hidden = !(state.mode === "pack" && state.items.some(item => item.dump || isNup(item.path)));
+  for (const button of document.querySelectorAll("[data-pack-format]")) {
+    const on = button.dataset.packFormat === state.packFormat;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-checked", on);
+  }
+  $("pack-format-hint").textContent = t(packNx() ? "emuNxHint" : "emuNupHint");
+  $("nup-raw-big-field").hidden = packNx();
   const keptText = dumps ? ($("remove-dumps").checked ? (toBin ? "removeDumpsTrashGo" : "removeDumpsGo") : "removeKeepsDumps") : "removeKeepsNup";
   $("remove-warning").textContent = [(kept < state.items.length || !kept) && t(toBin ? "removeTrashWarning" : "removeWarning"), kept && t(keptText)].filter(Boolean).join(" ");
   $("remove-warning").hidden = !$("remove").checked;
   $("par2-amount").hidden = !$("par2").checked;
   // the folders a watch looks at (#77): the ones added with Add folder or dropped, not the files
   // added on their own
-  const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup)$/i.test(path));
+  const watched = state.sources.filter(path => !/\.(nsp|nsz|xci|xcz|nup|nx)$/i.test(path));
   $("watch-folders").textContent = watched.length ? t("watchFolders")(watched.length, watched.map(path => path.split(/[\\/]/).filter(Boolean).pop() || path).join(", ")) : t("watchNoFolders");
   $("watch-folders").title = watched.join("\n");
   $("watch-folders").hidden = !$("watch").checked;
@@ -2578,7 +2592,7 @@ function render() {
   $("reset-output").setAttribute("aria-label", nextTo);
   // a SuperNSP per game, or one file with everything: both named by a template
   $("pack-kind").hidden = onlyDumps();
-  $("pack-template-title").textContent = t(onlyDumps() ? "nupTemplate" : $("pack-games").checked ? "packTemplate" : "packOneName");
+  $("pack-template-title").textContent = t(onlyDumps() ? (packNx() ? "nxTemplate" : "nupTemplate") : $("pack-games").checked ? "packTemplate" : "packOneName");
   $("pack-games-fields").hidden = !$("pack-games").checked || onlyDumps();
   for (const field of [$("template"), $("pack-template")]) if (field.offsetParent) fitTemplate(field);
   $("dat").textContent = state.dat ? ltr(state.dat) : t("noDat");
@@ -2937,10 +2951,24 @@ function paint(row) {
       chip.textContent = t("gameKind")(piece.type) + (piece.type === "UPD" ? ` v${piece.version}` : piece.type === "DLC" ? ` ${piece.titleId}` : "");
       plan.querySelector(".dump-pieces").append(chip);
     }
-    plan.querySelector("b").textContent = row.game.nupName || "";
+    plan.querySelector("b").textContent = (row.game.nupName || "").replace(/\.nup$/i, packNx() ? ".nx" : ".nup");
     plan.querySelector(".dump-arrow").hidden = !row.game.nupName;
     // an image can be chosen for its NUP: instead of titledb's, or of the icon of its game data
     if (!row.game.icon) plan.append(coverLine(row));
+    file.after(plan);
+  }
+  // a NUP or a .nx in Combine: the file it becomes in the format chosen, or that it stays
+  row.tr.querySelector(".emu-plan")?.remove();
+  if (state.mode === "pack" && !row.status && isNup(row.item.path)) {
+    const plan = document.createElement("div");
+    plan.className = "dump-plan emu-plan";
+    const target = emuTarget(row.item.path);
+    const name = row.item.path.split(/[\\/]/).pop();
+    plan.innerHTML = `<div class="dump-arrow"></div>`;
+    if (target) {
+      plan.querySelector(".dump-arrow").innerHTML = "→ <b></b>";
+      plan.querySelector("b").textContent = name.replace(/\.(nup|nx)$/i, target);
+    } else plan.querySelector(".dump-arrow").textContent = t("emuStays");
     file.after(plan);
   }
   // a NUP in Split: what to take out of it, its game, its updates, its DLC and its icon (#138)
@@ -3211,7 +3239,7 @@ function settings() {
     // the biggest files first; the threads of each file are left to them
     totalThreads: Math.max(1, Math.round(+$("total-threads").value) || 1), multi: +$("multi").value, biggestFirst: $("biggest-first").checked,
     overwrite: $("overwrite").checked, removeSource: $("remove").checked, removeDumps: $("remove-dumps").checked, output: state.output, dat: state.dat, verifyLevel: state.verifyLevel,
-    nupRawBig: $("nup-raw-big").checked,
+    nupRawBig: $("nup-raw-big").checked, packNx: state.packFormat === "nx",
     watch: $("watch").checked, noCache: $("no-cache").checked, template: state.template, keepNamed: $("keep-named").checked,
     packGames: $("pack-games").checked, packTemplate: state.packTemplate,
     // Convert: NSP and NSZ into game cards instead of game cards into NSP and NSZ (#127)
@@ -4338,6 +4366,8 @@ async function main() {
   $("remove-dumps").checked = !!chosen.removeDumps;
   // on unless it was turned off: Eglantine and Lichii read the big files of a NUP at once so
   $("nup-raw-big").checked = chosen.nupRawBig !== false;
+  // NUP unless .nx was chosen: the format Eglantine and Lichii both open
+  state.packFormat = chosen.packNx ? "nx" : "nup";
   $("watch").checked = !!chosen.watch;
   $("no-cache").checked = !!chosen.noCache;
   $("par2").checked = chosen.par2 > 0;
@@ -4409,6 +4439,7 @@ async function main() {
   $("keys-choose").onclick = $("keys-change").onclick = $("pref-no-keys-choose").onclick = () => $("keys").click();
   for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => { save("views", { ...load("views", {}), [state.mode]: button.dataset.view }); render(); };
   for (const button of document.querySelectorAll("[data-verify-level]")) button.onclick = () => { state.verifyLevel = button.dataset.verifyLevel; save("settings", settings()); render(); };
+  for (const button of document.querySelectorAll("[data-pack-format]")) button.onclick = () => { state.packFormat = button.dataset.packFormat; save("settings", settings()); render(); };
   // the settings wait for the end of a work: they would hide its progress, Cancel and Pause
   $("open-preferences").onclick = () => { if (state.busy || state.starting) return; if (state.view !== "preferences") { state.view = "preferences"; render(); replay("enter", $("preferences")); } };
   $("remove").onchange = $("remove-dumps").onchange = $("watch").onchange = $("par2").onchange = render;

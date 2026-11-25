@@ -62,6 +62,9 @@ type Options struct {
 	Nup bool
 	// --to-nx: each dump folder or NUP given packed into a .nx, next to it or in -o
 	ToNx bool
+	// Combine in the window: the dump folders and NUP files given packed into .nx files, and the
+	// .nx files left as they are; without it, into NUP files, and the .nx files into NUP files too
+	PackNx bool
 	// --fix-nup-meta: the metadata of each NUP given whose types are counted from 0 written again
 	// with them where the format puts them, for Eglantine and Lichii
 	FixNupMeta bool

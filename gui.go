@@ -885,6 +885,9 @@ type Request struct {
 	Repair bool `json:"repair"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
+	// Combine: the format for emulators the dump folders, NUP and .nx files given are made into,
+	// .nx when true, NUP when false
+	PackNx bool `json:"packNx"`
 	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
 	// one of titledb
 	NupIcons map[string]string `json:"nupIcons"`
@@ -924,6 +927,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
 	o.Trash, o.TrashDelete = request.Trash, request.Trash && request.NoTrash == "delete"
 	o.NupZstdBig = !request.NupRawBig
+	o.PackNx = request.PackNx && request.Mode == "pack"
 	o.Archive = request.Archive
 	if request.Par2 > 0 && request.Par2 <= 100 {
 		o.Par2 = request.Par2

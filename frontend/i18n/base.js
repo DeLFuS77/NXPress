@@ -116,6 +116,18 @@ const noteRules = [
   [/^(.+) is not a prod\.keys: it has no header_key$/, "notKeys"],
   [/^the priority could not go back to normal: /, "priorityNotNormal"],
   [/^(.+) cannot be read: its files are left out$/, "folderUnreadable"],
+  // .nx files: what the works that do not take them say, and the notes of their works
+  [/this work leaves \.nx files as they are: Details \(-i\) shows what they hold, Verify \(-V\) checks them, Decompress \(-D\) turns them into folders and Combine \(--nup\) into NUP files/g, "nxNotDone"],
+  [/it is a NUP already: Combine makes NUP files of dump folders and \.nx files/g, "nxAlreadyNup"],
+  [/it is a \.nx already: Combine makes \.nx files of dump folders and NUP files/g, "nxAlreadyNx"],
+  [/^1 version checked, every file by its SHA-256/, "nxCheckedOne"],
+  [/^(\d+) versions checked, every file by its SHA-256/, "nxChecked"],
+  [/^(\d+) files? in 1 version, /, "nxPackedOne"],
+  [/^(\d+) files? in (\d+) versions, /, "nxPacked"],
+  [/, checked whole/g, "nxWhole"],
+  [/every file checked by its SHA-256 as it was written/g, "nxUnpacked"],
+  [/^(.+) is already there: move or rename it to unpack the \.nx again$/, "nxThere"],
+  [/^the new \.nx cannot be read back: /, "nxReadBack"],
   // NUP files, which the works that do not take them leave as they are
   [/this work leaves NUP files as they are: Combine \(--nup\) makes them of dump folders, compressed with zstd, Decompress \(-D\) turns them back into folders, Details \(-i\) shows what they hold, Verify \(-V\) checks them and Rename \(--rename\) renames them/g, "nupNotDone"],
   [/^(\d+) files in 1 package, /, "nupPackedOne"],
