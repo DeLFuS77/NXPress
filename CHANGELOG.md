@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Details reads .nx files without keys: their game, updates and DLC, with name, version, console and icon, and the full report
+
 ## 1.7.29
 
 ### Improvements

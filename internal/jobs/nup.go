@@ -46,8 +46,8 @@ func NupFiles(paths []string) []string {
 }
 
 // NeedsKeys tells whether a work needs the keys of the console: not to recompress, to split for
-// FAT32 or to join, nor for NUP files and dump folders, which hold their games decrypted. A work
-// given NUP files or dump folders only needs none: it packs them, unpacks, verifies or shows
+// FAT32 or to join, nor for NUP and .nx files and dump folders, which hold their games decrypted.
+// A work given NUP or .nx files or dump folders only needs none: it packs them, unpacks, verifies or shows
 // them, or tells it leaves them as they are.
 func NeedsKeys(o Options) bool {
 	// with the extra compression, a file is recompressed through a decompressed copy (#92)
@@ -64,12 +64,12 @@ func NeedsKeys(o Options) bool {
 	if o.Action() == "pack" {
 		taken = []string{".nsp", ".nsz", ".xci", ".xcz"}
 	}
-	files, _ := Inputs(o.Files, append(append([]string{}, taken...), ".nup", dumpFolders))
+	files, _ := Inputs(o.Files, append(append([]string{}, taken...), ".nup", ".nx", dumpFolders))
 	if len(files) == 0 {
 		return true
 	}
 	for _, path := range files {
-		if !isNup(path) && !IsDumpFolder(path) {
+		if !isNup(path) && !isNx(path) && !IsDumpFolder(path) {
 			return true
 		}
 	}

@@ -40,7 +40,7 @@ var Takes = map[string][]string{
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
 	"split": {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
-	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx"},
 	// the NUP files whose metadata is counted from 0
 	"fixmeta": {".nup"},
 	// the NUP files without an icon
@@ -544,6 +544,13 @@ func safeJob(ctx context.Context, action string, path string, o Options, threads
 func doJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (string, string, error) {
 	if isEmpty(path) {
 		return "", "", ErrEmpty
+	}
+	if isNx(path) {
+		if action == "info" {
+			note, err := infoNx(path, out)
+			return "", note, err
+		}
+		return "", "", Skipped(NxNotDone)
 	}
 	if isNup(path) {
 		switch action {

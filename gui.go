@@ -516,6 +516,18 @@ type FileCard struct {
 
 // Card tells how a file is stored, for its card in Info.
 func (a *App) Card(path string) (FileCard, error) {
+	if jobs.IsNx(path) {
+		details, err := jobs.NxCard(path)
+		if err != nil {
+			return FileCard{}, err
+		}
+		card := FileCard{Kind: "NX", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
+			NoIcon: details.Icon == nil, GameIcons: true}
+		if details.Icon != nil {
+			card.Icon = "data:" + http.DetectContentType(details.Icon) + ";base64," + base64.StdEncoding.EncodeToString(details.Icon)
+		}
+		return card, nil
+	}
 	if strings.EqualFold(filepath.Ext(path), ".nup") {
 		details, err := jobs.NupCard(path)
 		if err != nil {
