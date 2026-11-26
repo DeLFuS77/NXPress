@@ -20,7 +20,7 @@ import (
 
 // A file bigger than FAT32 holds (4 GiB) goes to a microSD card in parts: a folder with the
 // name of the file and the archive bit, holding 00, 01... The console reads such a folder as
-// one file. Parts of 4 GiB less 64 KiB, as the tools that dump games write them.
+// one file. A NUP or a .nx is split and joined the same way. Parts of 4 GiB less 64 KiB, as the tools that dump games write them.
 const fat32Limit = 1<<32 - 1
 
 // fat32Part is the size of each part (a variable, so the tests split small files)
@@ -65,13 +65,41 @@ func splitPart(path string) bool {
 	return false
 }
 
+// gameExtension is the extension of a file that may be split in parts: an NSP or an XCI, and
+// a NUP or a .nx for emulators, which keep the same folder of parts.
 func gameExtension(path string) (string, bool) {
 	extension := strings.ToLower(filepath.Ext(path))
 	switch extension {
-	case ".nsp", ".nsz", ".xci", ".xcz":
+	case ".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx":
 		return extension, true
 	}
 	return "", false
+}
+
+// emulatorParts tells a NUP or a .nx split in parts: its folder of parts. The works that read
+// them take it as the file whole.
+func emulatorParts(path string) bool {
+	whole, ok := SplitContainer(path)
+	if !ok {
+		return false
+	}
+	extension := strings.ToLower(filepath.Ext(whole))
+	return extension == ".nup" || extension == ".nx"
+}
+
+// EmulatorParts is emulatorParts, for the window.
+func EmulatorParts(path string) bool {
+	return emulatorParts(path)
+}
+
+// wholeSize is the size of a file, or of all the parts of one in a folder of parts.
+func wholeSize(path string, info os.FileInfo) int64 {
+	if info.IsDir() {
+		if size, _, err := PartsSize(path); err == nil {
+			return size
+		}
+	}
+	return info.Size()
 }
 
 // fat32 splits a file bigger than FAT32 holds into a folder of parts, or makes a file in parts

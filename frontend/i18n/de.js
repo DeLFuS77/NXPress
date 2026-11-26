@@ -71,7 +71,7 @@ texts.de = {
   worklog: "Protokoll", hintWorklog: "Liste der Aktivitäten", aboutWorklog: "Jede Arbeit von NXPress, die neueste zuerst: jede Datei, wie sie endete und was sie gespart hat. Es wird auch in einer Textdatei gespeichert.",
   worklogFind: "Nach einem Spiel oder einer Datei suchen", worklogAll: "Alle", worklogProblems: "Mit Problemen", worklogExpandAll: "Alle aufklappen", worklogCollapseAll: "Alle zuklappen", worklogCount: (w, f) => `${w} ${w === 1 ? "Arbeit" : "Arbeiten"} · ${f} ${f === 1 ? "Datei" : "Dateien"}`,
   listFind: "Nach einem Spiel oder einer Datei suchen", listFound: (s, n) => s + " von " + n + " angezeigt", checkNow: "Jetzt prüfen", checkNowChecking: "Wird geprüft…", checkNowLatest: (v) => v + " ist die neueste Version.", checkNowFailed: "GitHub ist nicht erreichbar.",
-  editTitle: "Titel ändern…", nupGameIcons: "Es enthält die Symbole des Spiels selbst in jeder Sprache; sie bleiben erhalten.",
+  editTitle: "Titel ändern…", nupNamesUnreadable: which => `Die NACP von ${which} speichert ihre Namen komprimiert, und sie lassen sich nicht lesen: der Name kann fehlerhaft angezeigt werden.`, nupGameIcons: "Es enthält die Symbole des Spiels selbst in jeder Sprache; sie bleiben erhalten.",
   nupTemplate: "Name jeder NUP", nxTemplate: "Name jeder .nx",
   extraOptions: "Experimentelle Optionen", convertTo: "Umwandeln in",
   adviceDamagedShort: "Die Datei ist beschädigt: Ihre Daten stimmen nicht.", adviceUnsignedShort: "Ein Werkzeug hat einen Teil dieser Datei umgeschrieben.", adviceKeysShort: "Ein Schlüssel fehlt.", adviceSpaceShort: "Der Datenträger ist voll.", adviceAccessShort: "Die Datei ist in Benutzung oder nicht beschreibbar.", popHint: "Klicken für mehr", fieldsShow: "Verfügbare Felder",

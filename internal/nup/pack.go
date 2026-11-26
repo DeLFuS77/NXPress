@@ -703,9 +703,9 @@ func appPackage(sources []Source) int {
 
 // metaBlock is the metadata of a package: its NPDM, its build ID and the dump it comes from; for
 // the game also its names, publisher, version and icon, from its control data or as given; for
-// an update also its version, from its own control data. Emulators show the version of the
-// newest update from its record, and without one make up a wrong one from its number (131072 is
-// not 2.0.0 for every game).
+// an update also its NACP, version, name and publisher, from its own control data. Emulators
+// show the version of the newest update from its record, and without one make up a wrong one from
+// its number (131072 is not 2.0.0 for every game).
 func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 	records := map[uint16][]byte{}
 	if len(source.Npdm) > 0 {
@@ -736,14 +736,16 @@ func metaBlock(source Source, label string, app bool, o PackOptions) []byte {
 			delete(records, tlvLocalizedIcons)
 		}
 	case source.Kind == KindUpdate:
-		if version := controlVersion(source.Control); version != "" {
-			records[tlvDisplayVersion] = []byte(version)
-		}
 		// its own NACP as it is: an emulator that starts the update reads its control from it
 		// (Lichii), not the one of the game. A name given (a game without control data) is not
-		// written in it: its own names are the real ones
-		if nacp := controlNacp(source.Control); nacp != nil {
-			records[tlvNacp] = nacp
+		// written in it: its own names are the real ones. Its name and its publisher too, read
+		// from its NACP (decompressed when it keeps them compressed), for a reader that takes
+		// them from the newest update; the names by language and the icons stay in the game
+		control := controlRecords(source.Control)
+		for _, kind := range []uint16{tlvNacp, tlvDisplayVersion, tlvTitleName, tlvPublisher} {
+			if value, ok := control[kind]; ok {
+				records[kind] = value
+			}
 		}
 	}
 	kinds := []int{}
@@ -824,31 +826,6 @@ func controlRecords(dir string) map[uint16][]byte {
 		result[tlvLocalizedIcons] = icons.Bytes()
 	}
 	return result
-}
-
-// controlNacp is the control.nacp of a control folder, nil without one big enough to be one.
-func controlNacp(dir string) []byte {
-	if dir == "" {
-		return nil
-	}
-	nacp, err := os.ReadFile(filepath.Join(dir, "control.nacp"))
-	if err != nil || len(nacp) < nacpVersionAt+nacpVersionSize {
-		return nil
-	}
-	return nacp
-}
-
-// controlVersion is the version shown (1.0.2) the control.nacp of a control folder gives, "" without
-// one.
-func controlVersion(dir string) string {
-	if dir == "" {
-		return ""
-	}
-	nacp, err := os.ReadFile(filepath.Join(dir, "control.nacp"))
-	if err != nil || len(nacp) < nacpVersionAt+nacpVersionSize {
-		return ""
-	}
-	return text(cString(nacp[nacpVersionAt:][:nacpVersionSize]), 0x0F)
 }
 
 // ControlName is the name of the game a control folder gives: American English, else the first

@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"unicode/utf8"
 
@@ -21,7 +20,8 @@ const (
 
 // checkMeta looks at the metadata of each package, which no hash of the format covers. A record
 // that cannot be what it says is damaged: a build ID that is not 32 bytes, text that is not
-// UTF-8, records of languages that run past their block. A record that differs from the files
+// UTF-8, records of languages that run past their block, a NACP that keeps its names compressed
+// and they do not decompress. A record that differs from the files
 // of its package is told in a note instead, as the format lets them differ (the files win for
 // the content, the record for what is shown): an NPDM other than its exefs/main.npdm, a build
 // ID other than the one of its exefs/main, an icon that is neither JPEG nor PNG.
@@ -30,7 +30,7 @@ const (
 // counted them from 0 for a while, which a block without one does not show (a DLC has none),
 // so such a block only has its records of languages looked at, which are alike either way.
 // damagedFiles are the files whose data is damaged, left out of the comparisons.
-func checkMeta(file *os.File, container *Container, damagedFiles []bool) (damaged []Damaged, notes []string) {
+func checkMeta(file io.ReaderAt, container *Container, damagedFiles []bool) (damaged []Damaged, notes []string) {
 	image := func(data []byte) bool {
 		return bytes.HasPrefix(data, []byte{0xFF, 0xD8, 0xFF}) || bytes.HasPrefix(data, []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})
 	}
@@ -86,6 +86,9 @@ func checkMeta(file *os.File, container *Container, damagedFiles []bool) (damage
 				bad("names by language", "the name in "+tag+" is not UTF-8 text")
 			}
 		}
+		if pkg.NamesUnreadable() {
+			bad("NACP", "it keeps its names compressed, and they cannot be read")
+		}
 		if icon, ok := pkg.Meta[tlvIcon]; ok && len(icon) > 0 && !image(icon) {
 			notes = append(notes, label+": its icon is neither JPEG nor PNG")
 		}
@@ -108,7 +111,7 @@ func sortedTags(localized map[string][]byte) []string {
 }
 
 // fileHead reads the first n bytes of a file of a NUP, decompressed when it is stored with zstd.
-func fileHead(file *os.File, f File, n int) ([]byte, error) {
+func fileHead(file io.ReaderAt, f File, n int) ([]byte, error) {
 	data := io.Reader(io.NewSectionReader(file, int64(f.ExtentOffset), int64(f.ExtentSize)))
 	if f.Codec == CodecZstd {
 		decoder, err := zstd.NewReader(data, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxWindow(maxWindow), zstd.WithDecoderMaxMemory(maxWindow))

@@ -422,6 +422,12 @@ func (a *App) Expand(paths []string, mode string) []Item {
 		item := Item{Path: path, Name: filepath.Base(path), Dump: jobs.IsDumpFolder(path)}
 		if info, err := os.Stat(path); err == nil && !item.Dump {
 			item.Size = info.Size()
+			// a file in parts: all of them
+			if _, parts := jobs.SplitContainer(path); parts {
+				if size, _, err := jobs.PartsSize(path); err == nil {
+					item.Size = size
+				}
+			}
 		}
 		items = append(items, item)
 	}
@@ -474,7 +480,8 @@ func (a *App) ChooseOutput() (string, error) {
 // updateCover, the one of the newest update of a file that holds a game and its update, as
 // chosen in Settings > Appearance (#158).
 func (a *App) Describe(path string, updateCover bool) (jobs.GameTitle, error) {
-	if _, ok := jobs.SplitContainer(path); ok {
+	// a NUP or a .nx in parts reads as the file whole
+	if _, ok := jobs.SplitContainer(path); ok && !jobs.EmulatorParts(path) {
 		return jobs.GameTitle{}, errors.New("a file in parts")
 	}
 	cover := jobs.GameCover

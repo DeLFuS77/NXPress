@@ -71,7 +71,7 @@ texts.fr = {
   worklog: "Journal", hintWorklog: "liste des activités", aboutWorklog: "Chaque travail de NXPress, du plus récent au plus ancien : chaque fichier, comment il s'est terminé et ce qu'il a fait gagner. Il est aussi gardé dans un fichier texte.",
   worklogFind: "Chercher un jeu ou un fichier", worklogAll: "Tout", worklogProblems: "Avec problèmes", worklogExpandAll: "Tout déplier", worklogCollapseAll: "Tout replier", worklogCount: (w, f) => `${w} ${w === 1 ? "travail" : "travaux"} · ${f} ${f === 1 ? "fichier" : "fichiers"}`,
   listFind: "Chercher un jeu ou un fichier", listFound: (s, n) => s + " sur " + n + " affichés", checkNow: "Vérifier maintenant", checkNowChecking: "Vérification…", checkNowLatest: (v) => "La " + v + " est la version la plus récente.", checkNowFailed: "GitHub est injoignable.",
-  editTitle: "Modifier le titre…", nupGameIcons: "Il contient les icônes du jeu lui-même, dans chaque langue, qui sont conservées.",
+  editTitle: "Modifier le titre…", nupNamesUnreadable: which => `Le NACP de ${which} garde ses noms compressés, et ils ne peuvent pas être lus : son nom peut s'afficher abîmé.`, nupGameIcons: "Il contient les icônes du jeu lui-même, dans chaque langue, qui sont conservées.",
   nupTemplate: "Nom de chaque NUP", nxTemplate: "Nom de chaque .nx",
   extraOptions: "Options expérimentales", convertTo: "Convertir en",
   adviceDamagedShort: "Le fichier est endommagé : ses données ne correspondent pas.", adviceUnsignedShort: "Un outil a réécrit une partie de ce fichier.", adviceKeysShort: "Il manque une clé.", adviceSpaceShort: "Le disque est plein.", adviceAccessShort: "Le fichier est utilisé, ou il ne peut pas être écrit.", popHint: "Cliquez pour en voir plus", fieldsShow: "Champs disponibles",

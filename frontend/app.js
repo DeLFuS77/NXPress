@@ -11,7 +11,7 @@ const groups = [
 const takesOptimize = "NSP NSZ XCI XCZ";
 const takesShown = {
   compress: "NSP XCI", decompress: "NSZ XCZ NUP NX", recompress: "NSZ XCZ", trim: "XCI NSP/NSZ:takesUpdates", verify: "NSP NSZ XCI XCZ NUP NX :takesCode", convert: "XCI XCZ",
-  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP NX", fat32: "NSP NSZ XCI XCZ", rename: "NSP NSZ XCI XCZ NUP",
+  split: "NSP NSZ XCI XCZ", pack: "NSP NSZ XCI XCZ :takesDumps", info: "NSP NSZ XCI XCZ NUP NX", fat32: "NSP NSZ XCI XCZ NUP NX", rename: "NSP NSZ XCI XCZ NUP",
 };
 
 // a NUP holds its game decrypted: it is read and verified without keys
@@ -559,6 +559,14 @@ function renderNupCard(element, card, row) {
       stat.querySelector("small").textContent = stats[i][1];
     });
     element.querySelector(".nup-packages").append(line);
+  }
+  // a package whose NACP keeps its names compressed and they cannot be read: its name may show broken
+  const unreadable = card.packages.filter(pkg => pkg.namesUnreadable);
+  if (unreadable.length) {
+    const note = document.createElement("p");
+    note.className = "warning";
+    note.textContent = t("nupNamesUnreadable")(unreadable.map(pkg => `${t("gameKind")(pkg.type)} v${pkg.version}`).join(", "));
+    element.querySelector(".nup-packages").after(note);
   }
   renderNupIcon(element, card, row);
 }

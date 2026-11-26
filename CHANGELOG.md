@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.31
+
+### Improvements
+
+- FAT32 splits and joins NUP and .nx files, and Verify and Details read them split (a folder with 00, 01…)
+
+### Fixes
+
+- Renaming a NUP whose control data keeps its names compressed keeps them compressed and readable, instead of breaking them
+- Details shows the name of an update whose control data keeps its names compressed; Verify and Details say when those names cannot be read
+- Each update in a NUP also carries its name and publisher, so programs that read the newest update show the right name
+
 ## 1.7.30
 
 ### Improvements

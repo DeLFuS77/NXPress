@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -144,18 +143,14 @@ func IsNup(path string) bool {
 }
 
 // Open reads the header, the table of contents and the metadata of the packages of a NUP, never
-// the data of its files.
+// the data of its files. A NUP split in parts is given by its folder.
 func Open(path string) (*Container, error) {
-	file, err := os.Open(path)
+	file, size, err := openWhole(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	return Read(file, info.Size())
+	return Read(file, size)
 }
 
 // Read checks a NUP as the format asks of a reader before it trusts anything of it: the sizes
@@ -677,9 +672,10 @@ func (pkg Package) Name() string {
 	if name := cleanName(pkg.Meta[tlvTitleName]); name != "" {
 		return name
 	}
-	if raw := pkg.Meta[tlvNacp]; len(raw) >= nacpLanguages*nacpEntry {
-		for i := 0; i < nacpLanguages; i++ {
-			if name := cleanName(cString(raw[i*nacpEntry:][:0x200])); name != "" {
+	// the names of its NACP, decompressed when it keeps them compressed
+	if entries, count, _ := nacpTitles(pkg.Meta[tlvNacp]); entries != nil {
+		for i := 0; i < count; i++ {
+			if name := cleanName(cString(entries[i*nacpEntry:][:0x200])); name != "" {
 				return name
 			}
 		}
@@ -705,9 +701,9 @@ func (pkg Package) Publisher() string {
 	if publisher := text(pkg.Meta[tlvPublisher], 0x100); publisher != "" {
 		return publisher
 	}
-	if raw := pkg.Meta[tlvNacp]; len(raw) >= nacpLanguages*nacpEntry {
-		for i := 0; i < nacpLanguages; i++ {
-			if publisher := text(cString(raw[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
+	if entries, count, _ := nacpTitles(pkg.Meta[tlvNacp]); entries != nil {
+		for i := 0; i < count; i++ {
+			if publisher := text(cString(entries[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
 				return publisher
 			}
 		}

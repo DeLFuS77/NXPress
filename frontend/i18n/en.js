@@ -72,7 +72,7 @@ texts.en = {
   worklog: "Log", hintWorklog: "list of activity", aboutWorklog: "Every work NXPress did, the newest first: each file, how it ended and what it saved. It is kept in a text file too.",
   worklogFind: "Look for a game or a file", worklogAll: "All", worklogProblems: "With problems", worklogExpandAll: "Expand all", worklogCollapseAll: "Collapse all", worklogCount: (w, f) => `${w} ${w === 1 ? "work" : "works"} · ${f} ${f === 1 ? "file" : "files"}`,
   listFind: "Look for a game or a file", listFound: (s, n) => s + " of " + n + " shown", checkNow: "Check now", checkNowChecking: "Checking…", checkNowLatest: (v) => v + " is the newest version.", checkNowFailed: "GitHub could not be reached.",
-  editTitle: "Edit title…", nupGameIcons: "It carries the icons of the game itself, in each language, which are kept.",
+  editTitle: "Edit title…", nupNamesUnreadable: which => `The NACP of ${which} keeps its names compressed, and they can't be read: its name may show broken.`, nupGameIcons: "It carries the icons of the game itself, in each language, which are kept.",
   nupTemplate: "Name of each NUP", nxTemplate: "Name of each .nx",
   extraOptions: "Experimental options", convertTo: "Convert to",
   adviceDamagedShort: "The file is damaged: its data does not match.", adviceUnsignedShort: "A tool rewrote part of this file.", adviceKeysShort: "A key is missing.", adviceSpaceShort: "The disk is full.", adviceAccessShort: "The file is in use, or it cannot be written.", popHint: "Click for more", fieldsShow: "Available fields",

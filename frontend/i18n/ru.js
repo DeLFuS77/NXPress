@@ -78,7 +78,7 @@ texts.ru = {
   worklog: "Журнал", hintWorklog: "список действий", aboutWorklog: "Каждая работа NXPress, начиная с последней: каждый файл, чем он закончился и сколько места сэкономлено. Журнал хранится и в текстовом файле.",
   worklogFind: "Найти игру или файл", worklogAll: "Все", worklogProblems: "С проблемами", worklogExpandAll: "Развернуть все", worklogCollapseAll: "Свернуть все", worklogCount: (w, f) => `${w} ${ruPlural(w, "работа", "работы", "работ")} · ${ruFiles(f)}`,
   listFind: "Найти игру или файл", listFound: (s, n) => "Показано " + s + " из " + n, checkNow: "Проверить сейчас", checkNowChecking: "Проверка…", checkNowLatest: (v) => v + " — самая новая версия.", checkNowFailed: "Не удалось связаться с GitHub.",
-  editTitle: "Изменить название…", nupGameIcons: "В нём значки самой игры на каждом языке, они сохраняются.",
+  editTitle: "Изменить название…", nupNamesUnreadable: which => `NACP в ${which} хранит названия в сжатом виде, и их не удаётся прочитать: название может отображаться с ошибками.`, nupGameIcons: "В нём значки самой игры на каждом языке, они сохраняются.",
   nupTemplate: "Имя каждого NUP", nxTemplate: "Имя каждого .nx",
   extraOptions: "Экспериментальные параметры", convertTo: "Преобразовать в",
   adviceDamagedShort: "Файл повреждён: данные не совпадают.", adviceUnsignedShort: "Программа переписала часть этого файла.", adviceKeysShort: "Не хватает ключа.", adviceSpaceShort: "Диск заполнен.", adviceAccessShort: "Файл занят или недоступен для записи.", popHint: "Нажмите, чтобы узнать больше", fieldsShow: "Доступные поля",

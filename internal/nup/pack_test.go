@@ -239,9 +239,12 @@ func TestPackNewLayout(t *testing.T) {
 		t.Errorf("update %+v", update)
 	}
 	// the update carries its own version shown and its own NACP, which an emulator that starts it
-	// reads its control from (Lichii); the name and the icons stay in the game
+	// reads its control from (Lichii), and its name and publisher from it, for a reader that
+	// starts from the newest update; the names by language and the icons stay in the game
 	update := container.Packages[1]
-	if string(update.Meta[tlvDisplayVersion]) != "2.0.1" || update.Meta[tlvTitleName] != nil || update.Meta[tlvIcon] != nil || !bytes.Equal(update.Meta[tlvNacp], updated) {
+	if string(update.Meta[tlvDisplayVersion]) != "2.0.1" || string(update.Meta[tlvTitleName]) != "Made-up Quest" ||
+		string(update.Meta[tlvPublisher]) != "Nobody Games" || update.Meta[tlvLocalizedTitles] != nil || update.Meta[tlvIcon] != nil ||
+		update.Meta[tlvLocalizedIcons] != nil || !bytes.Equal(update.Meta[tlvNacp], updated) {
 		t.Errorf("update records %v", update.Meta)
 	}
 	// renaming it afterwards writes the new name in the NACP of the game and of the update
@@ -267,8 +270,12 @@ func TestPackNewLayout(t *testing.T) {
 		if got := renamed.Packages[0].Name(); got != want {
 			t.Errorf("%q: name %q", rename, got)
 		}
-		if renamed.Packages[1].Meta[tlvTitleName] != nil {
-			t.Errorf("%q: the update was given a name record", rename)
+		// the name record of the update is renamed too, its publisher kept
+		if got := string(renamed.Packages[1].Meta[tlvTitleName]); got != want {
+			t.Errorf("%q: the name record of the update is %q", rename, got)
+		}
+		if got := string(renamed.Packages[1].Meta[tlvPublisher]); got != "Nobody Games" {
+			t.Errorf("%q: the publisher of the update is %q", rename, got)
 		}
 	}
 	if _, check, err := Verify(context.Background(), named, 1, 1, nil); err != nil || len(check.Damaged) != 0 {
