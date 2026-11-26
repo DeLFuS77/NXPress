@@ -61,6 +61,7 @@ func TestRepackFixtures(t *testing.T) {
 					t.Errorf("%s version %d: %v", filepath.Base(path), s, err)
 					continue
 				}
+				referenceCheck(t, out)
 				again, err := switchfs.ReadNx(out)
 				if err != nil {
 					t.Fatalf("%s version %d: %v", filepath.Base(path), s, err)

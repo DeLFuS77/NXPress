@@ -86,6 +86,7 @@ func TestDumpToNxAndBack(t *testing.T) {
 	if _, err := Write(t.Context(), first, []Game{game}, Options{}, nil); err != nil {
 		t.Fatal(err)
 	}
+	referenceCheck(t, first)
 	archive, err := switchfs.ReadNx(first)
 	if err != nil {
 		t.Fatal(err)
@@ -121,6 +122,7 @@ func TestDumpToNxAndBack(t *testing.T) {
 	if _, err := Write(t.Context(), second, []Game{again}, Options{}, nil); err != nil {
 		t.Fatal(err)
 	}
+	referenceCheck(t, second)
 	other, err := switchfs.ReadNx(second)
 	if err != nil {
 		t.Fatal(err)

@@ -293,7 +293,8 @@ func buildTail(games []Game, trees [][][]int, w *writer, dataEnd uint64) ([]byte
 	}
 	poolOffset := align(next, 8)
 	manifest := make([]byte, poolOffset)
-	manifest = pad(append(manifest, pool...), 8)
+	// the manifest ends with its pool: readers refuse bytes after it
+	manifest = append(manifest, pool...)
 	copy(manifest, "NXMF")
 	le.PutUint16(manifest[4:], 1)
 	le.PutUint16(manifest[6:], manifestHead)
@@ -537,7 +538,8 @@ func buildTail(games []Game, trees [][][]int, w *writer, dataEnd uint64) ([]byte
 		copy(r[56:], identity[:])
 		copy(r[88:], bid[:])
 	}
-	catalog = pad(append(catalog, strs...), 8)
+	// the catalog ends with its string pool (no extensions follow): readers refuse bytes after it
+	catalog = append(catalog, strs...)
 	copy(catalog, "NXCT")
 	le.PutUint16(catalog[4:], 1)
 	le.PutUint16(catalog[6:], catalogHeader)

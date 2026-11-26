@@ -2,6 +2,7 @@ package nxpack
 
 import (
 	"bytes"
+	"os/exec"
 	"crypto/sha256"
 	"math/rand"
 	"os"
@@ -25,6 +26,19 @@ func files(t *testing.T, contents map[string][]byte) []File {
 		result = append(result, File{Path: path, Source: source, Size: int64(len(data))})
 	}
 	return result
+}
+
+// referenceCheck opens and mounts the .nx at path with the reader of the format that the
+// emulators ship (nx_reader.hpp), built as the program NX_CHECK names; without it, nothing.
+func referenceCheck(t *testing.T, path string) {
+	t.Helper()
+	check := os.Getenv("NX_CHECK")
+	if check == "" {
+		return
+	}
+	if out, err := exec.Command(check, path).CombinedOutput(); err != nil {
+		t.Errorf("the reference reader refuses %s: %s", filepath.Base(path), out)
+	}
 }
 
 func noise(n int, seed int64) []byte {
@@ -54,6 +68,7 @@ func TestWriteReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	referenceCheck(t, out)
 	// big.bin, text.txt and main.npdm are the same in the game and its update: one record each
 	if result.Files != 8 {
 		t.Errorf("%d records of files, want 8", result.Files)
