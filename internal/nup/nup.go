@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -144,18 +143,14 @@ func IsNup(path string) bool {
 }
 
 // Open reads the header, the table of contents and the metadata of the packages of a NUP, never
-// the data of its files.
+// the data of its files. A NUP split in parts is given by its folder.
 func Open(path string) (*Container, error) {
-	file, err := os.Open(path)
+	file, size, err := openWhole(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	return Read(file, info.Size())
+	return Read(file, size)
 }
 
 // Read checks a NUP as the format asks of a reader before it trusts anything of it: the sizes

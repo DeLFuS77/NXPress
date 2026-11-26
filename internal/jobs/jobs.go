@@ -26,9 +26,9 @@ import (
 // the files each action takes, by extension
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
-	"decompress": {".nsz", ".xcz", ".nup", ".nx"},
+	"decompress": {".nsz", ".xcz", ".nup", ".nx", emulatorSplit},
 	// the dump folders, by the code of their games
-	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", dumpFolders},
+	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", dumpFolders, emulatorSplit},
 	"convert": {".xci", ".xcz"},
 	// Convert the other way round, NSP and NSZ into game cards (#127)
 	"tocard":     {".nsp", ".nsz"},
@@ -38,17 +38,17 @@ var Takes = map[string][]string{
 	"measure":    {".nsp", ".xci"},
 	"rename":     {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
 	// with the files in parts, to make them whole
-	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
-	"split": {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
-	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx"},
+	"fat32": {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", splitFiles},
+	"split": {".nsp", ".nsz", ".xci", ".xcz", ".nup", emulatorSplit},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", emulatorSplit},
 	// the NUP files whose metadata is counted from 0
 	"fixmeta": {".nup"},
 	// the NUP files without an icon
 	"fixicon": {".nup"},
 	// the dump folders packed into NUP files
-	"nup": {dumpFolders, ".nx"},
+	"nup": {dumpFolders, ".nx", emulatorSplit},
 	// the dump folders and the NUP files packed into .nx files
-	"tonx": {dumpFolders, ".nup"},
+	"tonx": {dumpFolders, ".nup", emulatorSplit},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
 	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders, ".nup", ".nx"},
 	// Optimize for install: a game with its update, by game
@@ -297,6 +297,11 @@ func isFailure(err error) bool {
 // the first part of name.ns0, name.ns1...
 const splitFiles = "parts"
 
+// emulatorSplit, among the extensions taken, takes the NUP and .nx files in parts too (a folder
+// of parts), read as the file whole by the works that only read them; the other works leave them
+// as they are, and FAT32 makes them whole.
+const emulatorSplit = "emulator parts"
+
 // Inputs are the files given and the ones in the folders given (and in their folders), of the
 // extensions taken, each once and in order of name; missing are the paths not found, and the
 // folders that could not be read. A folder of parts is one file, taken only with splitFiles.
@@ -304,10 +309,11 @@ func Inputs(paths []string, extensions []string) (files []string, missing []stri
 	seen := map[string]bool{}
 	// the files taken by their size, to find one given twice under two names
 	bySize := map[int64][]os.FileInfo{}
-	withParts, withDumps := false, false
+	withParts, withDumps, withEmulatorParts := false, false, false
 	for _, taken := range extensions {
 		withParts = withParts || taken == splitFiles
 		withDumps = withDumps || taken == dumpFolders
+		withEmulatorParts = withEmulatorParts || taken == emulatorSplit
 	}
 	takes := func(path string) bool {
 		if strings.HasPrefix(filepath.Base(path), ".") {
@@ -316,8 +322,15 @@ func Inputs(paths []string, extensions []string) (files []string, missing []stri
 		if IsDumpFolder(path) {
 			return withDumps
 		}
-		if _, ok := SplitContainer(path); ok {
-			return withParts
+		if whole, ok := SplitContainer(path); ok {
+			if withParts {
+				return true
+			}
+			if !withEmulatorParts || !emulatorParts(path) {
+				return false
+			}
+			// as the file whole, of an extension taken
+			path = whole
 		}
 		extension := strings.ToLower(filepath.Ext(path))
 		for _, taken := range extensions {
@@ -571,6 +584,10 @@ func safeJob(ctx context.Context, action string, path string, o Options, threads
 func doJob(ctx context.Context, action string, path string, o Options, threads int, out Output) (string, string, error) {
 	if isEmpty(path) {
 		return "", "", ErrEmpty
+	}
+	// a NUP or a .nx is split in parts and made whole as an NSP is
+	if action == "fat32" {
+		return fat32(ctx, path, o, out)
 	}
 	if isNx(path) {
 		switch action {

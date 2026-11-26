@@ -113,7 +113,7 @@ func infoNx(path string, out Output) (string, error) {
 		lines = append(lines, "  "+size(int64(v.size))+" of files")
 		total += v.size
 	}
-	lines = append(lines, fmt.Sprintf(".nx: %s, %s of files in its versions (the files they share are stored once)", size(info.Size()), size(int64(total))))
+	lines = append(lines, fmt.Sprintf(".nx: %s, %s of files in its versions (the files they share are stored once)", size(wholeSize(path, info)), size(int64(total))))
 	lines = append(lines, "works with: emulators that read .nx files")
 	out.Say("%s:\n  %s", filepath.Base(path), strings.Join(lines, "\n  "))
 	return count(len(nxVersions(archive)), "title", "titles"), nil
@@ -164,7 +164,7 @@ func nxReport(path string, _ *titledb.Versions) (string, error) {
 		fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, "Icon:", "No")
 	}
 	fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, "Files of All Versions:", bytesText(int64(total)))
-	fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, ".nx File Size:", bytesText(info.Size()))
+	fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, ".nx File Size:", bytesText(wholeSize(path, info)))
 	fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, "Format:", fmt.Sprintf("NX %d.%d", 0, archive.MinorVersion))
 	if archive.Generation > 0 {
 		fmt.Fprintf(&out, "   %-*s%s\n", reportLabelWidth, "Edits:", fmt.Sprintf("%d (updates or DLC added or taken out)", archive.Generation))
@@ -193,7 +193,7 @@ func NxCard(path string) (NxDetails, error) {
 	if err != nil {
 		return NxDetails{}, err
 	}
-	result := NxDetails{Size: info.Size()}
+	result := NxDetails{Size: wholeSize(path, info)}
 	if icon, err := archive.Icon(); err == nil {
 		result.Icon = icon
 	}
@@ -221,7 +221,7 @@ func nxTitle(path string, withIcon bool) (GameTitle, error) {
 	result := describeTitles(all)
 	result.Container = "NX"
 	if info, err := os.Stat(path); err == nil {
-		result.Size = info.Size()
+		result.Size = wholeSize(path, info)
 	}
 	if withIcon {
 		if icon, err := switchfs.ExtractIcon(path); err == nil && len(icon) > 0 {

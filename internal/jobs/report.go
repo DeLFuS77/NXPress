@@ -30,7 +30,7 @@ func Report(path string, versions *titledb.Versions) (string, error) {
 	}
 	line := func(format string, args ...any) { fmt.Fprintf(&out, format+"\n", args...) }
 	line("File:    %s", filepath.Base(path))
-	line("Size:    %s", bytesText(info.Size()))
+	line("Size:    %s", bytesText(wholeSize(path, info)))
 	line("Changed: %s", info.ModTime().Format("2006-01-02 15:04"))
 	var body string
 	if strings.EqualFold(filepath.Ext(path), ".nup") {

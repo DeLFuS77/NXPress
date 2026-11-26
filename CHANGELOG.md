@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- FAT32 splits and joins NUP and .nx files, and Verify and Details read them split (a folder with 00, 01…)
+
 ## 1.7.30
 
 ### Improvements
