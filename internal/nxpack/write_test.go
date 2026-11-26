@@ -2,10 +2,10 @@ package nxpack
 
 import (
 	"bytes"
-	"os/exec"
 	"crypto/sha256"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
