@@ -2,6 +2,7 @@ package nxpack
 
 import (
 	"encoding/binary"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -132,5 +133,26 @@ func TestDumpToNxAndBack(t *testing.T) {
 		if a[i].Identity != b[i].Identity {
 			t.Errorf("version %d changed on the way back", i)
 		}
+	}
+}
+
+// a .nx packed from an NSP keeps its NCA files: it is not turned into a dump folder
+func TestToDumpRefusesNative(t *testing.T) {
+	header := make([]byte, 0xC00)
+	copy(header[0x200:], "DNCA")
+	base := files(t, map[string][]byte{"0123456789abcdef0123456789abcdef.nca": header})
+	game := Game{ID: 0x0100000000010000, Platform: 1, Versions: []Snapshot{
+		{Kind: Base, Version: 0, Program: 0x0100000000010000, Files: base},
+	}}
+	nx := filepath.Join(t.TempDir(), "game.nx")
+	if _, err := Write(t.Context(), nx, []Game{game}, Options{Workers: 1}, nil); err != nil {
+		t.Fatal(err)
+	}
+	dest := filepath.Join(t.TempDir(), "dump")
+	if err := ToDump(t.Context(), nx, dest, nil); !errors.Is(err, ErrNative) {
+		t.Fatalf("ToDump = %v, want ErrNative", err)
+	}
+	if _, err := os.Stat(dest); err == nil {
+		t.Fatal("a folder was left")
 	}
 }

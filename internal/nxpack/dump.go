@@ -281,6 +281,10 @@ func overlay(base map[string]File, baseDirs []string, update map[string]File, up
 	return tree, dirs
 }
 
+// ErrNative is why a .nx packed from NSP or XCI files is not unpacked: its versions keep the
+// NCA files of the packages, which make no dump folder.
+var ErrNative = errors.New("this .nx was packed from NSP or XCI files and keeps their NCA files: only a .nx packed from dump folders or NUP files is turned into a folder or a NUP")
+
 // ToDump writes the versions of a .nx into dest, a folder that must not be there yet, as a dump
 // folder NXPress packs into a NUP: the game in base, each update in updates/<version>, each DLC in
 // dlc/<title ID>/<index>, with data/control and the others in control and the others again.
@@ -305,6 +309,9 @@ func ToDump(ctx context.Context, path string, dest string, progress func(done in
 	dlcIndex := map[uint64]int{}
 	bases := 0
 	for s, snapshot := range app.Snapshots {
+		if data.Native(0, s) {
+			return ErrNative
+		}
 		var folder string
 		switch snapshot.Type {
 		case switchfs.NxSnapshotBase:
@@ -314,7 +321,7 @@ func ToDump(ctx context.Context, path string, dest string, progress func(done in
 			folder = filepath.Join("updates", strconv.FormatUint(uint64(snapshot.Version), 10))
 		case switchfs.NxSnapshotDlc:
 			if snapshot.AddonTitleId == 0 {
-				return errors.New("a DLC of the .nx keeps its title ID in its CNMT (it was packed from an NSP): this version does not unpack it")
+				return ErrNative
 			}
 			folder = filepath.Join("dlc", fmt.Sprintf("%016x", snapshot.AddonTitleId), strconv.Itoa(dlcIndex[snapshot.AddonTitleId]))
 			dlcIndex[snapshot.AddonTitleId]++
