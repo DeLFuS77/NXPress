@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.7.30
 
 ### Improvements
 
-- .nx files (NXFormat): Details shows what they hold, Verify checks them whole and Decompress turns them into a dump folder. Combine has a Format for emulators, .nx or NUP: dump folders are packed into it and NUP and .nx files are converted to it (--to-nx and --nup on the command line), without keys. Details shows the DLC from an NSP in a .nx by its ID; a .nx packed from NSP or XCI files is not unpacked, and says so
+- .nx files, the format for emulators: Details shows what they hold, the DLC from an NSP too; Verify checks them and Decompress turns them into a dump folder
+- Combine › Format for emulators packs dump folders into a .nx or a NUP and converts between them, without keys (--to-nx and --nup on the command line). A .nx packed from NSP or XCI files is not unpacked, and says so
 
 ## 1.7.29
 
