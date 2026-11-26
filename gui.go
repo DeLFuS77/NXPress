@@ -516,6 +516,18 @@ type FileCard struct {
 
 // Card tells how a file is stored, for its card in Info.
 func (a *App) Card(path string) (FileCard, error) {
+	if jobs.IsNx(path) {
+		details, err := jobs.NxCard(path)
+		if err != nil {
+			return FileCard{}, err
+		}
+		card := FileCard{Kind: "NX", Size: details.Size, Decompressed: details.Uncompressed, Packages: details.Packages,
+			NoIcon: details.Icon == nil, GameIcons: true}
+		if details.Icon != nil {
+			card.Icon = "data:" + http.DetectContentType(details.Icon) + ";base64," + base64.StdEncoding.EncodeToString(details.Icon)
+		}
+		return card, nil
+	}
 	if strings.EqualFold(filepath.Ext(path), ".nup") {
 		details, err := jobs.NupCard(path)
 		if err != nil {
@@ -873,6 +885,9 @@ type Request struct {
 	Repair bool `json:"repair"`
 	// Details tells the newest versions published too, as the setting allows it
 	Published bool `json:"published"`
+	// Combine: the format for emulators the dump folders, NUP and .nx files given are made into,
+	// .nx when true, NUP when false
+	PackNx bool `json:"packNx"`
 	// Combine: the image chosen for each dump folder, by its path, its NUP takes instead of the
 	// one of titledb
 	NupIcons map[string]string `json:"nupIcons"`
@@ -912,6 +927,7 @@ func (a *App) requestOptions(request Request) jobs.Options {
 	o.RmDumps = request.RemoveDumps && request.RemoveSource && request.Mode == "pack"
 	o.Trash, o.TrashDelete = request.Trash, request.Trash && request.NoTrash == "delete"
 	o.NupZstdBig = !request.NupRawBig
+	o.PackNx = request.PackNx && request.Mode == "pack"
 	o.Archive = request.Archive
 	if request.Par2 > 0 && request.Par2 <= 100 {
 		o.Par2 = request.Par2

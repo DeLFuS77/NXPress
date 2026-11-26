@@ -26,9 +26,9 @@ import (
 // the files each action takes, by extension
 var Takes = map[string][]string{
 	"compress":   {".nsp", ".xci"},
-	"decompress": {".nsz", ".xcz", ".nup"},
+	"decompress": {".nsz", ".xcz", ".nup", ".nx"},
 	// the dump folders, by the code of their games
-	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", dumpFolders},
+	"verify":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx", dumpFolders},
 	"convert": {".xci", ".xcz"},
 	// Convert the other way round, NSP and NSZ into game cards (#127)
 	"tocard":     {".nsp", ".nsz"},
@@ -40,15 +40,17 @@ var Takes = map[string][]string{
 	// with the files in parts, to make them whole
 	"fat32": {".nsp", ".nsz", ".xci", ".xcz", splitFiles},
 	"split": {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
-	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup"},
+	"info":  {".nsp", ".nsz", ".xci", ".xcz", ".nup", ".nx"},
 	// the NUP files whose metadata is counted from 0
 	"fixmeta": {".nup"},
 	// the NUP files without an icon
 	"fixicon": {".nup"},
 	// the dump folders packed into NUP files
-	"nup": {dumpFolders},
+	"nup": {dumpFolders, ".nx"},
+	// the dump folders and the NUP files packed into .nx files
+	"tonx": {dumpFolders, ".nup"},
 	// Combine: the files it combines, and the dump folders it packs into NUP files
-	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders},
+	"pack": {".nsp", ".nsz", ".xci", ".xcz", dumpFolders, ".nup", ".nx"},
 	// Optimize for install: a game with its update, by game
 	"optimize": {".nsp", ".nsz", ".xci", ".xcz"},
 	// Rebuild: any package, on its own
@@ -75,6 +77,7 @@ var checksOutput = map[string]bool{
 	"info":       false,
 	"verify":     false,
 	"nup":        true,
+	"tonx":       true,
 	"optimize":   true,
 	"rebuild":    true,
 }
@@ -89,15 +92,21 @@ func RunJobs(ctx context.Context, o Options, out Output) int {
 	ctx = switchfs.WithThreads(ctx, lz4Threads(o))
 	// a NUP given to a work that does not take it is told, not left out without a word
 	nupsLeft := tellNupsLeft(o, out)
-	// the dump folders given to Combine are packed into NUP files, each on its own; the files
-	// given with them are combined as they would be without them
+	// the dump folders given to Combine are packed into NUP files, each on its own, or into .nx
+	// files with PackNx; the NUP and .nx files given become the format chosen, and the ones in it
+	// already are left as they are. The files given with them are combined as they would be
+	// without them
 	failedDumps := 0
 	if action == "pack" {
 		var dumps []string
 		dumps, o.Files = splitDumps(o.Files)
+		var emulatorFiles []string
+		emulatorFiles, o.Files = splitEmulatorFiles(o, o.Files, out)
+		dumps = append(dumps, emulatorFiles...)
 		if len(dumps) > 0 {
 			nupWork := o
-			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, true
+			nupWork.Files, nupWork.Pack, nupWork.PackGames, nupWork.PackOne, nupWork.Nup = dumps, "", false, false, !o.PackNx
+			nupWork.ToNx = o.PackNx
 			// a NUP per game is named by the template of the packs of each game, as they are
 			if o.PackGames {
 				nupWork.NupTemplate = o.PackName
@@ -512,6 +521,24 @@ func isDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
+// splitEmulatorFiles parts the NUP and .nx files given to Combine from the rest: the ones of the
+// other format than the one chosen are converted, the ones in it already are told and left.
+func splitEmulatorFiles(o Options, paths []string, out Output) (convert []string, rest []string) {
+	for _, path := range paths {
+		switch {
+		case isNup(path) && o.PackNx, isNx(path) && !o.PackNx:
+			convert = append(convert, path)
+		case isNup(path):
+			out.Done(path, "", "", Skipped("it is a NUP already: Combine makes NUP files of dump folders and .nx files"))
+		case isNx(path):
+			out.Done(path, "", "", Skipped("it is a .nx already: Combine makes .nx files of dump folders and NUP files"))
+		default:
+			rest = append(rest, path)
+		}
+	}
+	return convert, rest
+}
+
 // splitDumps parts the paths given into the dump folders among them and the rest.
 func splitDumps(paths []string) (dumps []string, rest []string) {
 	for _, path := range paths {
@@ -545,6 +572,20 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 	if isEmpty(path) {
 		return "", "", ErrEmpty
 	}
+	if isNx(path) {
+		switch action {
+		case "info":
+			note, err := infoNx(path, out)
+			return "", note, err
+		case "verify":
+			return verifyNx(ctx, path, out)
+		case "decompress":
+			return unpackNx(ctx, path, o, out)
+		case "nup":
+			return nupFromNx(ctx, path, o, threads, out)
+		}
+		return "", "", Skipped(NxNotDone)
+	}
 	if isNup(path) {
 		switch action {
 		case "info":
@@ -564,11 +605,16 @@ func doJob(ctx context.Context, action string, path string, o Options, threads i
 		case "fixicon":
 			note, err := FixNupIcon(ctx, path, o)
 			return "", note, err
+		case "tonx":
+			return packNx(ctx, path, o, threads, out)
 		}
 		return "", "", Skipped(NupNotDone)
 	}
 	if action == "nup" {
 		return packNup(ctx, path, o, threads, out)
+	}
+	if action == "tonx" {
+		return packNx(ctx, path, o, threads, out)
 	}
 	if action == "verify" && IsDumpFolder(path) {
 		return verifyDump(ctx, path, o, out)

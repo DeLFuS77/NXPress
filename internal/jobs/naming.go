@@ -143,6 +143,12 @@ func ReadTitle(path string, cover Cover) (GameTitle, error) {
 		}
 		return nupTitle(path, withIcon)
 	}
+	if isNx(path) {
+		if isEmpty(path) {
+			return GameTitle{}, ErrEmpty
+		}
+		return nxTitle(path, withIcon)
+	}
 	if IsDumpFolder(path) {
 		return dumpTitleWith(path, withIcon)
 	}

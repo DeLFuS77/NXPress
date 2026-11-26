@@ -60,6 +60,11 @@ type Options struct {
 	// --nup: each dump folder given (base, updates and dlc, as OunceCake writes them) packed into
 	// a NUP, next to it or in -o
 	Nup bool
+	// --to-nx: each dump folder or NUP given packed into a .nx, next to it or in -o
+	ToNx bool
+	// Combine in the window: the dump folders and NUP files given packed into .nx files, and the
+	// .nx files left as they are; without it, into NUP files, and the .nx files into NUP files too
+	PackNx bool
 	// --fix-nup-meta: the metadata of each NUP given whose types are counted from 0 written again
 	// with them where the format puts them, for Eglantine and Lichii
 	FixNupMeta bool
@@ -188,7 +193,7 @@ var optionNames = []optionName{
 	{"--convert", 0, false, false}, {"--to-xci", 0, false, false}, {"--recompress", 0, false, false}, {"--trim", 0, false, false},
 	{"--fat32", 0, false, false}, {"--rename", 0, true, false}, {"--keep-named", 0, false, false},
 	{"--split", 0, false, false}, {"--pack", 0, true, false}, {"--pack-games", 0, false, false},
-	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--rebuild", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--fix-nup-meta", 0, false, false},
+	{"--pack-one", 0, false, false}, {"--optimize", 0, false, false}, {"--rebuild", 0, false, false}, {"--pack-name", 0, true, false}, {"--nup", 0, false, false}, {"--to-nx", 0, false, false}, {"--fix-nup-meta", 0, false, false},
 	{"--fix-nup-icon", 0, false, false}, {"--nup-icon", 0, true, false}, {"--no-nup-icon", 0, false, false},
 	// the ones of nsz that NXPress accepts and has no use for
 	{"--long", 'L', false, true}, {"--keep", 'K', false, true}, {"--fix-padding", 'F', false, true},
@@ -411,6 +416,8 @@ func (o *Options) flag(option optionName) {
 		o.Rebuild = true
 	case "--nup":
 		o.Nup = true
+	case "--to-nx":
+		o.ToNx = true
 	case "--fix-nup-meta":
 		o.FixNupMeta = true
 	case "--fix-nup-icon":
@@ -536,17 +543,17 @@ func (o *Options) Check() error {
 	}
 	actions := 0
 	// -C with --optimize or --rebuild makes its files NSZ: one action
-	for _, on := range []bool{o.Compress && !o.Optimize && !o.Rebuild, o.Optimize, o.Rebuild, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.FixNupMeta, o.FixNupIcon} {
+	for _, on := range []bool{o.Compress && !o.Optimize && !o.Rebuild, o.Optimize, o.Rebuild, o.Decompress, o.Convert, o.Recompress, o.Trim, o.Estimate, o.Measure, o.Fat32, o.Template != "", o.Split, o.Pack != "", o.PackGames, o.PackOne, o.Info, o.Nup, o.ToNx, o.FixNupMeta, o.FixNupIcon} {
 		if on {
 			actions++
 		}
 	}
 	if actions > 1 {
-		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --optimize, --rebuild, --nup, --fix-nup-meta and --fix-nup-icon")
+		return errors.New("choose one of -C, -D, -i, --convert, --recompress, --trim, --estimate, --measure, --fat32, --rename, --split, --pack, --pack-one, --pack-games, --optimize, --rebuild, --nup, --to-nx, --fix-nup-meta and --fix-nup-icon")
 	}
 	// a watch would look for new files a pack does not take, without end
-	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup || o.Optimize) {
-		return errors.New("--watch does not go with --pack, --pack-one, --pack-games, --optimize or --nup: a pack is made of the files given at once")
+	if o.Watch && (o.Pack != "" || o.PackGames || o.PackOne || o.Nup || o.ToNx || o.Optimize) {
+		return errors.New("--watch does not go with --pack, --pack-one, --pack-games, --optimize, --nup or --to-nx: a pack is made of the files given at once")
 	}
 	// the originals are what a game is optimized again from, with a newer update
 	if o.Optimize && o.RmSource {
@@ -744,7 +751,13 @@ Usage: nxpress [options] file or folder...
                       each file with zstd (level 3, or -l) or as it is when zstd does not
                       make it smaller, files with the same data kept once, the NUP checked
                       whole before it gets its name; no keys needed. -D turns a NUP back
-                      into a folder, each file checked by its SHA-256
+                      into a folder, each file checked by its SHA-256. A .nx given is
+                      packed into a NUP too
+  --to-nx             pack each dump folder or NUP given into a .nx (NXFormat), next to it or
+                      in -o: each update complete, files cut in blocks stored once, zstd
+                      (level 3, or -l) where it saves a quarter, the .nx checked whole before
+                      it gets its name; no keys needed. -D turns a .nx into a folder, -V
+                      checks it, -i shows what it holds
   --fix-nup-icon      give each NUP given that carries no icon the one of its game in
                       titledb, found by its title ID (the one of the game for an update or
                       a DLC), or the image of --nup-icon, made a JPEG of 256×256: the
@@ -890,6 +903,8 @@ func (o Options) Action() string {
 		return "pack"
 	case o.Nup:
 		return "nup"
+	case o.ToNx:
+		return "tonx"
 	case o.FixNupMeta:
 		return "fixmeta"
 	case o.FixNupIcon:

@@ -35,6 +35,8 @@ func Report(path string, versions *titledb.Versions) (string, error) {
 	var body string
 	if strings.EqualFold(filepath.Ext(path), ".nup") {
 		body, err = nupReport(path, versions)
+	} else if isNx(path) {
+		body, err = nxReport(path, versions)
 	} else {
 		body, err = titlesReport(path, versions)
 	}

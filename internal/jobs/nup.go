@@ -27,7 +27,7 @@ import (
 const NupNotDone = "this work leaves NUP files as they are: Combine (--nup) makes them of dump folders, compressed with zstd, Decompress (-D) turns them back into folders, Split (--split) takes out their game, updates or DLC, Details (-i) shows what they hold, Verify (-V) checks them and Rename (--rename) renames them"
 
 // nupActions are the works that take NUP files.
-var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "split": true, "rename": true, "fixmeta": true, "fixicon": true}
+var nupActions = map[string]bool{"verify": true, "info": true, "decompress": true, "split": true, "rename": true, "fixmeta": true, "fixicon": true, "tonx": true, "pack": true}
 
 // TakesNup tells whether a work takes NUP files.
 func TakesNup(action string) bool {
@@ -46,15 +46,15 @@ func NupFiles(paths []string) []string {
 }
 
 // NeedsKeys tells whether a work needs the keys of the console: not to recompress, to split for
-// FAT32 or to join, nor for NUP files and dump folders, which hold their games decrypted. A work
-// given NUP files or dump folders only needs none: it packs them, unpacks, verifies or shows
+// FAT32 or to join, nor for NUP and .nx files and dump folders, which hold their games decrypted.
+// A work given NUP or .nx files or dump folders only needs none: it packs them, unpacks, verifies or shows
 // them, or tells it leaves them as they are.
 func NeedsKeys(o Options) bool {
 	// with the extra compression, a file is recompressed through a decompressed copy (#92)
 	if o.Recompress {
 		return o.Sparse || o.Archive
 	}
-	if o.Fat32 || o.Nup {
+	if o.Fat32 || o.Nup || o.ToNx {
 		return false
 	}
 	if o.Watch {
@@ -64,12 +64,12 @@ func NeedsKeys(o Options) bool {
 	if o.Action() == "pack" {
 		taken = []string{".nsp", ".nsz", ".xci", ".xcz"}
 	}
-	files, _ := Inputs(o.Files, append(append([]string{}, taken...), ".nup", dumpFolders))
+	files, _ := Inputs(o.Files, append(append([]string{}, taken...), ".nup", ".nx", dumpFolders))
 	if len(files) == 0 {
 		return true
 	}
 	for _, path := range files {
-		if !isNup(path) && !IsDumpFolder(path) {
+		if !isNup(path) && !isNx(path) && !IsDumpFolder(path) {
 			return true
 		}
 	}
