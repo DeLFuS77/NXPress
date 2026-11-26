@@ -97,16 +97,12 @@ type feed struct {
 // whose hashes match but whose game does not start.
 // progress is told the bytes read of the ones to read.
 func Verify(ctx context.Context, path string, workers int, readers int, progress func(done int64, total int64)) (*Container, Check, error) {
-	file, err := os.Open(path)
+	file, size, err := openWhole(path)
 	if err != nil {
 		return nil, Check{}, err
 	}
 	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return nil, Check{}, err
-	}
-	container, err := Read(file, info.Size())
+	container, err := Read(file, size)
 	if err != nil {
 		return nil, Check{}, err
 	}
@@ -230,7 +226,7 @@ func Verify(ctx context.Context, path string, workers int, readers int, progress
 // gives the bytes read. Each reader goes through its own stretch of the NUP from start to end:
 // one reader for a hard disk, which reads fastest in order, several for an SSD, which reads
 // faster with several reads at once. progress is told the bytes read, from one reader at a time.
-func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int, readers int, progress func(done int64)) (int64, error) {
+func readAll(ctx context.Context, file io.ReaderAt, jobs []*extentJob, workers int, readers int, progress func(done int64)) (int64, error) {
 	workers = min(workers, max(1, len(jobs)))
 	readers = max(1, min(readers, workers))
 	free := make(chan []byte, workers*(queued+1)+2*readers)
@@ -313,7 +309,7 @@ func readAll(ctx context.Context, file *os.File, jobs []*extentJob, workers int,
 // readStretch reads the pieces of one stretch of the NUP in their order, small pieces in a few
 // big reads, and hands each to the first worker free. A part of the disk that cannot be read
 // makes its piece damaged and the reading goes on; only a cancelled work stops it.
-func readStretch(ctx context.Context, file *os.File, jobs []*extentJob, free chan []byte, idle chan int, feeds []chan *feed,
+func readStretch(ctx context.Context, file io.ReaderAt, jobs []*extentJob, free chan []byte, idle chan int, feeds []chan *feed,
 	tell func(int64)) error {
 	var window []byte
 	windowAt := int64(-1)

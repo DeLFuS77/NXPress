@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"unicode/utf8"
 
@@ -30,7 +29,7 @@ const (
 // counted them from 0 for a while, which a block without one does not show (a DLC has none),
 // so such a block only has its records of languages looked at, which are alike either way.
 // damagedFiles are the files whose data is damaged, left out of the comparisons.
-func checkMeta(file *os.File, container *Container, damagedFiles []bool) (damaged []Damaged, notes []string) {
+func checkMeta(file io.ReaderAt, container *Container, damagedFiles []bool) (damaged []Damaged, notes []string) {
 	image := func(data []byte) bool {
 		return bytes.HasPrefix(data, []byte{0xFF, 0xD8, 0xFF}) || bytes.HasPrefix(data, []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})
 	}
@@ -108,7 +107,7 @@ func sortedTags(localized map[string][]byte) []string {
 }
 
 // fileHead reads the first n bytes of a file of a NUP, decompressed when it is stored with zstd.
-func fileHead(file *os.File, f File, n int) ([]byte, error) {
+func fileHead(file io.ReaderAt, f File, n int) ([]byte, error) {
 	data := io.Reader(io.NewSectionReader(file, int64(f.ExtentOffset), int64(f.ExtentSize)))
 	if f.Codec == CodecZstd {
 		decoder, err := zstd.NewReader(data, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxWindow(maxWindow), zstd.WithDecoderMaxMemory(maxWindow))

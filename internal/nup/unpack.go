@@ -57,16 +57,12 @@ func Unpack(ctx context.Context, path string, dest string, workers int, readers 
 // uses it to unpack only the game, the updates or the DLC chosen (#138, brought from the edition
 // of QuickWick, PR #151).
 func UnpackSelected(ctx context.Context, path string, dest string, workers int, readers int, keep func(pkg int) bool, progress func(done int64, total int64)) (result UnpackResult, err error) {
-	source, err := os.Open(path)
+	source, size, err := openWhole(path)
 	if err != nil {
 		return UnpackResult{}, err
 	}
 	defer source.Close()
-	info, err := source.Stat()
-	if err != nil {
-		return UnpackResult{}, err
-	}
-	container, err := Read(source, info.Size())
+	container, err := Read(source, size)
 	if err != nil {
 		return UnpackResult{}, err
 	}
