@@ -71,7 +71,7 @@ texts.zh = {
   worklog: "记录", hintWorklog: "活动列表", aboutWorklog: "NXPress 的每次工作，从最新的开始：每个文件的结果和节省的空间。也会保存到一个文本文件中。",
   worklogFind: "搜索游戏或文件", worklogAll: "全部", worklogProblems: "有问题的", worklogExpandAll: "全部展开", worklogCollapseAll: "全部收起", worklogCount: (w, f) => `${w} 次工作 · ${f} 个文件`,
   listFind: "查找游戏或文件", listFound: (s, n) => "显示 " + s + " / " + n, checkNow: "立即检查", checkNowChecking: "正在检查…", checkNowLatest: (v) => v + " 是最新版本。", checkNowFailed: "无法连接 GitHub。",
-  editTitle: "修改标题…", nupGameIcons: "其中带有游戏自身各语言的图标，会保留不变。",
+  editTitle: "修改标题…", nupNamesUnreadable: which => `${which} 的 NACP 以压缩方式保存名称，但无法读取：名称可能显示错误。`, nupGameIcons: "其中带有游戏自身各语言的图标，会保留不变。",
   nupTemplate: "每个 NUP 的名称", nxTemplate: "每个 .nx 的名称",
   extraOptions: "实验性选项", convertTo: "转换为",
   adviceDamagedShort: "文件已损坏：数据不一致。", adviceUnsignedShort: "有工具改写了此文件的一部分。", adviceKeysShort: "缺少密钥。", adviceSpaceShort: "磁盘已满。", adviceAccessShort: "文件正在使用或无法写入。", popHint: "点击查看更多", fieldsShow: "可用字段",

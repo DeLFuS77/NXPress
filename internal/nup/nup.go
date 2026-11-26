@@ -677,9 +677,10 @@ func (pkg Package) Name() string {
 	if name := cleanName(pkg.Meta[tlvTitleName]); name != "" {
 		return name
 	}
-	if raw := pkg.Meta[tlvNacp]; len(raw) >= nacpLanguages*nacpEntry {
-		for i := 0; i < nacpLanguages; i++ {
-			if name := cleanName(cString(raw[i*nacpEntry:][:0x200])); name != "" {
+	// the names of its NACP, decompressed when it keeps them compressed
+	if entries, count, _ := nacpTitles(pkg.Meta[tlvNacp]); entries != nil {
+		for i := 0; i < count; i++ {
+			if name := cleanName(cString(entries[i*nacpEntry:][:0x200])); name != "" {
 				return name
 			}
 		}
@@ -705,9 +706,9 @@ func (pkg Package) Publisher() string {
 	if publisher := text(pkg.Meta[tlvPublisher], 0x100); publisher != "" {
 		return publisher
 	}
-	if raw := pkg.Meta[tlvNacp]; len(raw) >= nacpLanguages*nacpEntry {
-		for i := 0; i < nacpLanguages; i++ {
-			if publisher := text(cString(raw[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
+	if entries, count, _ := nacpTitles(pkg.Meta[tlvNacp]); entries != nil {
+		for i := 0; i < count; i++ {
+			if publisher := text(cString(entries[i*nacpEntry+0x200:][:0x100]), 0x100); publisher != "" {
 				return publisher
 			}
 		}

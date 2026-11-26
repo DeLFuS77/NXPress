@@ -71,7 +71,7 @@ texts.es = {
   worklog: "Registro", hintWorklog: "lista de actividad", aboutWorklog: "Cada trabajo de NXPress, del más nuevo al más antiguo: cada archivo, cómo acabó y cuánto ahorró. Se guarda también en un archivo de texto.",
   worklogFind: "Buscar un juego o un archivo", worklogAll: "Todo", worklogProblems: "Con problemas", worklogExpandAll: "Abrir todo", worklogCollapseAll: "Cerrar todo", worklogCount: (w, f) => `${w} ${w === 1 ? "trabajo" : "trabajos"} · ${f} ${f === 1 ? "archivo" : "archivos"}`,
   listFind: "Buscar un juego o un archivo", listFound: (s, n) => s + " de " + n + " a la vista", checkNow: "Buscar ahora", checkNowChecking: "Buscando…", checkNowLatest: (v) => "La " + v + " es la versión más nueva.", checkNowFailed: "No se ha podido llegar a GitHub.",
-  editTitle: "Cambiar título…", nupGameIcons: "Lleva los iconos del propio juego, en cada idioma, que se conservan.",
+  editTitle: "Cambiar título…", nupNamesUnreadable: which => `El NACP de ${which} guarda sus nombres comprimidos y no se pueden leer: su nombre puede salir roto.`, nupGameIcons: "Lleva los iconos del propio juego, en cada idioma, que se conservan.",
   nupTemplate: "Nombre de cada NUP", nxTemplate: "Nombre de cada .nx",
   extraOptions: "Opciones experimentales", convertTo: "Convertir a",
   adviceDamagedShort: "El archivo está dañado: sus datos no coinciden.", adviceUnsignedShort: "Una herramienta reescribió parte de este archivo.", adviceKeysShort: "Falta una clave.", adviceSpaceShort: "El disco está lleno.", adviceAccessShort: "El archivo está en uso, o no se puede escribir.", popHint: "Haz clic para ver más", fieldsShow: "Campos disponibles",

@@ -71,7 +71,7 @@ texts.ko = {
   worklog: "기록", hintWorklog: "작업 목록", aboutWorklog: "NXPress가 한 작업을 최신순으로 보여줘요. 파일마다 어떻게 끝났는지, 얼마나 절약했는지도 나와요. 텍스트 파일로도 저장돼요.",
   worklogFind: "게임이나 파일 찾기", worklogAll: "전체", worklogProblems: "문제 있는 것", worklogExpandAll: "모두 펼치기", worklogCollapseAll: "모두 접기", worklogCount: (w, f) => `작업 ${w}개 · 파일 ${f}개`,
   listFind: "게임이나 파일 찾기", listFound: (s, n) => n + "개 중 " + s + "개 표시", checkNow: "지금 확인", checkNowChecking: "확인 중…", checkNowLatest: (v) => v + "이(가) 최신 버전입니다.", checkNowFailed: "GitHub에 연결할 수 없습니다.",
-  editTitle: "제목 변경…", nupGameIcons: "게임 자체의 언어별 아이콘이 들어 있어 그대로 유지됩니다.",
+  editTitle: "제목 변경…", nupNamesUnreadable: which => `${which}의 NACP는 이름을 압축해 저장하지만 읽을 수 없습니다. 이름이 깨져 보일 수 있습니다.`, nupGameIcons: "게임 자체의 언어별 아이콘이 들어 있어 그대로 유지됩니다.",
   nupTemplate: "각 NUP의 이름", nxTemplate: "각 .nx의 이름",
   extraOptions: "실험적 옵션", convertTo: "변환 형식",
   adviceDamagedShort: "파일이 손상되었습니다: 데이터가 맞지 않습니다.", adviceUnsignedShort: "도구가 이 파일의 일부를 다시 썼습니다.", adviceKeysShort: "키가 없습니다.", adviceSpaceShort: "디스크가 가득 찼습니다.", adviceAccessShort: "파일이 사용 중이거나 쓸 수 없습니다.", popHint: "클릭해서 더 보기", fieldsShow: "사용할 수 있는 필드",

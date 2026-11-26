@@ -326,6 +326,9 @@ func infoNup(path string, versions *titledb.Versions, out Output) (string, error
 		if publisher := pkg.Publisher(); publisher != "" {
 			lines = append(lines, "  publisher: "+publisher)
 		}
+		if pkg.NamesUnreadable() {
+			lines = append(lines, "  its NACP keeps its names compressed, and they cannot be read: its name may show broken")
+		}
 		if published := nupPublished(pkg, versions); published != "" {
 			lines = append(lines, published)
 		}
@@ -469,6 +472,8 @@ type NupPackage struct {
 	Files     int    `json:"files"`
 	Size      int64  `json:"size"`
 	Stored    int64  `json:"stored"`
+	// its NACP keeps its names compressed, and they cannot be read: its name may show broken
+	NamesUnreadable bool `json:"namesUnreadable,omitempty"`
 }
 
 // NupDetails is what the card of a NUP in Details tells: the size of the file, the size of its
@@ -505,7 +510,7 @@ func NupCard(path string) (NupDetails, error) {
 		}
 		result.Packages = append(result.Packages, NupPackage{TitleID: pkg.TitleIDText(), Type: pkg.KindName(), Version: int(pkg.Version),
 			Shown: pkg.DisplayVersion(), Name: pkg.Name(), Publisher: pkg.Publisher(), Files: summary.Files,
-			Size: int64(summary.Size), Stored: int64(summary.Stored)})
+			Size: int64(summary.Size), Stored: int64(summary.Stored), NamesUnreadable: pkg.NamesUnreadable()})
 	}
 	return result, nil
 }
