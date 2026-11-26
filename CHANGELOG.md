@@ -5,6 +5,7 @@
 ### Improvements
 
 - FAT32 splits and joins NUP and .nx files, and Verify and Details read them split (a folder with 00, 01…)
+
 ### Fixes
 
 - Renaming a NUP whose control data keeps its names compressed keeps them compressed and readable, instead of breaking them
