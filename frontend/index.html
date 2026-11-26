@@ -283,12 +283,20 @@
       </div>
     </section>
 
-    <!-- how the NUP of a dump folder is packed, only when the list holds dump folders: the files
-         over 256 MiB as they are, for Eglantine and Lichii, unless the box is cleared -->
+    <!-- the format for emulators the dump folders, NUP and .nx files of the list are made into,
+         only when the list holds one of them; with NUP, the files over 256 MiB as they are, for
+         Eglantine and Lichii, unless the box is cleared -->
     <section class="block" data-for="pack" id="nup-block">
-      <h2 data-t="nupBlock"></h2>
-      <label class="check"><input id="nup-raw-big" type="checkbox" checked><span data-t="nupRawBig"></span></label>
-      <p class="hint" data-t="nupRawBigHint"></p>
+      <h2 data-t="emuFormat"></h2>
+      <div class="segmented" role="radiogroup" id="pack-format" data-t-label="emuFormat">
+        <button role="radio" data-pack-format="nx">.nx</button>
+        <button role="radio" data-pack-format="nup">NUP</button>
+      </div>
+      <p class="hint always" id="pack-format-hint"></p>
+      <div id="nup-raw-big-field">
+        <label class="check"><input id="nup-raw-big" type="checkbox" checked><span data-t="nupRawBig"></span></label>
+        <p class="hint" data-t="nupRawBigHint"></p>
+      </div>
     </section>
 
     <section class="block" data-for="compress decompress recompress trim convert split pack fat32">

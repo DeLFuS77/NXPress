@@ -121,6 +121,9 @@ nxpress -V game.nup                 check every file of a NUP by its SHA-256, wi
 nxpress -i game.nup                 show the packages of a NUP, with their files and sizes
 nxpress --nup "Game dump"           pack a dump folder (base, updates, dlc) into a NUP next to it
 nxpress -D game.nup                 turn a NUP back into a folder, each file checked by its SHA-256
+nxpress --to-nx game.nup            pack a NUP or a dump folder into a .nx (NXFormat) next to it
+nxpress --nup game.nx               pack a .nx into a NUP next to it
+nxpress -V game.nx                  check every file and block of a .nx, without keys
 nxpress --fat32 game.nsp            a file over 4 GB to a folder of parts for a FAT32 microSD (and back)
 nxpress --rename "{name} [{id}][v{version}]" games   rename files by what they hold
 nxpress -C --watch -o out inbox     compress every new file copied into inbox, until Ctrl+C
