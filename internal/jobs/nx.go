@@ -84,7 +84,7 @@ func nxVersions(archive *switchfs.NxArchive) []nxVersion {
 
 // infoNx says what a .nx holds: each version with its title ID, kind, version, name and size.
 func infoNx(path string, out Output) (string, error) {
-	archive, err := switchfs.ReadNx(path)
+	archive, err := switchfs.ReadNxWithDlcIds(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot be read: %w", err)
 	}
@@ -121,7 +121,7 @@ func infoNx(path string, out Output) (string, error) {
 
 // nxReport is the full report of a .nx (see Report).
 func nxReport(path string, _ *titledb.Versions) (string, error) {
-	archive, err := switchfs.ReadNx(path)
+	archive, err := switchfs.ReadNxWithDlcIds(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot be read: %w", err)
 	}
@@ -185,7 +185,7 @@ type NxDetails struct {
 // NxCard tells what a .nx holds, for its card in Details. Its versions come as the packages of a
 // NUP do, with the bytes of their files; what they take in the file is not told: they share it.
 func NxCard(path string) (NxDetails, error) {
-	archive, err := switchfs.ReadNx(path)
+	archive, err := switchfs.ReadNxWithDlcIds(path)
 	if err != nil {
 		return NxDetails{}, err
 	}
