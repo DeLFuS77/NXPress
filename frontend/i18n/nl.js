@@ -71,7 +71,7 @@ texts.nl = {
   worklog: "Logboek", hintWorklog: "lijst van activiteiten", aboutWorklog: "Elke taak van NXPress, de nieuwste eerst: elk bestand, hoe het afliep en wat het bespaarde. Het wordt ook in een tekstbestand bewaard.",
   worklogFind: "Zoek een game of een bestand", worklogAll: "Alles", worklogProblems: "Met problemen", worklogExpandAll: "Alles uitklappen", worklogCollapseAll: "Alles inklappen", worklogCount: (w, f) => `${w} ${w === 1 ? "taak" : "taken"} · ${f} ${f === 1 ? "bestand" : "bestanden"}`,
   listFind: "Zoek een game of een bestand", listFound: (s, n) => s + " van " + n + " getoond", checkNow: "Nu controleren", checkNowChecking: "Controleren…", checkNowLatest: (v) => v + " is de nieuwste versie.", checkNowFailed: "GitHub is niet bereikbaar.",
-  editTitle: "Titel wijzigen…", nupGameIcons: "Het bevat de pictogrammen van het spel zelf, in elke taal; die blijven behouden.",
+  editTitle: "Titel wijzigen…", nupNamesUnreadable: which => `De NACP van ${which} bewaart de namen gecomprimeerd en ze kunnen niet worden gelezen: de naam kan beschadigd worden weergegeven.`, nupGameIcons: "Het bevat de pictogrammen van het spel zelf, in elke taal; die blijven behouden.",
   nupTemplate: "Naam van elke NUP", nxTemplate: "Naam van elke .nx",
   extraOptions: "Experimentele opties", convertTo: "Omzetten naar",
   adviceDamagedShort: "Het bestand is beschadigd: de gegevens kloppen niet.", adviceUnsignedShort: "Een hulpmiddel heeft een deel van dit bestand herschreven.", adviceKeysShort: "Er ontbreekt een sleutel.", adviceSpaceShort: "De schijf is vol.", adviceAccessShort: "Het bestand is in gebruik, of kan niet worden geschreven.", popHint: "Klik voor meer", fieldsShow: "Beschikbare velden",

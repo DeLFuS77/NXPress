@@ -560,6 +560,14 @@ function renderNupCard(element, card, row) {
     });
     element.querySelector(".nup-packages").append(line);
   }
+  // a package whose NACP keeps its names compressed and they cannot be read: its name may show broken
+  const unreadable = card.packages.filter(pkg => pkg.namesUnreadable);
+  if (unreadable.length) {
+    const note = document.createElement("p");
+    note.className = "warning";
+    note.textContent = t("nupNamesUnreadable")(unreadable.map(pkg => `${t("gameKind")(pkg.type)} v${pkg.version}`).join(", "));
+    element.querySelector(".nup-packages").after(note);
+  }
   renderNupIcon(element, card, row);
 }
 

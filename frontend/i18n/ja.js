@@ -71,7 +71,7 @@ texts.ja = {
   worklog: "履歴", hintWorklog: "作業の一覧", aboutWorklog: "NXPress の作業を新しい順に表示します。ファイルごとの結果と節約できた容量もわかります。テキストファイルにも保存されます。",
   worklogFind: "ゲームやファイルを検索", worklogAll: "すべて", worklogProblems: "問題あり", worklogExpandAll: "すべて開く", worklogCollapseAll: "すべて閉じる", worklogCount: (w, f) => `${w} 件の作業 · ${f} ファイル`,
   listFind: "ゲームやファイルを検索", listFound: (s, n) => n + " 件中 " + s + " 件を表示", checkNow: "今すぐ確認", checkNowChecking: "確認中…", checkNowLatest: (v) => v + " が最新バージョンです。", checkNowFailed: "GitHub に接続できません。",
-  editTitle: "タイトルを変更…", nupGameIcons: "ゲーム自体の各言語のアイコンが入っているため、そのまま残します。",
+  editTitle: "タイトルを変更…", nupNamesUnreadable: which => `${which} の NACP は名前を圧縮して保存していますが、読み取れません。名前が正しく表示されない場合があります。`, nupGameIcons: "ゲーム自体の各言語のアイコンが入っているため、そのまま残します。",
   nupTemplate: "各 NUP の名前", nxTemplate: "各 .nx の名前",
   extraOptions: "実験的なオプション", convertTo: "変換先",
   adviceDamagedShort: "ファイルが破損しています：データが一致しません。", adviceUnsignedShort: "ツールがこのファイルの一部を書き換えました。", adviceKeysShort: "キーが不足しています。", adviceSpaceShort: "ディスクがいっぱいです。", adviceAccessShort: "ファイルが使用中か、書き込めません。", popHint: "クリックして詳しく見る", fieldsShow: "使えるフィールド",

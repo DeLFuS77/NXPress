@@ -20,7 +20,8 @@ const (
 
 // checkMeta looks at the metadata of each package, which no hash of the format covers. A record
 // that cannot be what it says is damaged: a build ID that is not 32 bytes, text that is not
-// UTF-8, records of languages that run past their block. A record that differs from the files
+// UTF-8, records of languages that run past their block, a NACP that keeps its names compressed
+// and they do not decompress. A record that differs from the files
 // of its package is told in a note instead, as the format lets them differ (the files win for
 // the content, the record for what is shown): an NPDM other than its exefs/main.npdm, a build
 // ID other than the one of its exefs/main, an icon that is neither JPEG nor PNG.
@@ -84,6 +85,9 @@ func checkMeta(file io.ReaderAt, container *Container, damagedFiles []bool) (dam
 			if !utf8.Valid(localized[tlvLocalizedTitles][tag]) {
 				bad("names by language", "the name in "+tag+" is not UTF-8 text")
 			}
+		}
+		if pkg.NamesUnreadable() {
+			bad("NACP", "it keeps its names compressed, and they cannot be read")
 		}
 		if icon, ok := pkg.Meta[tlvIcon]; ok && len(icon) > 0 && !image(icon) {
 			notes = append(notes, label+": its icon is neither JPEG nor PNG")

@@ -91,9 +91,9 @@ func EditMeta(path string, name string, icon []byte) error {
 		return err
 	}
 
-	// the metadata of the package of the game, and the NACP of each update that carries one: an
-	// emulator shows the name of the control of the update it starts (Lichii), so a new name goes
-	// in those too
+	// the metadata of the package of the game, and the NACP and the name of each update that
+	// carries them: an emulator shows the name of the control of the update it starts (Lichii), and
+	// a reader that starts from the newest update its name, so a new name goes in those too
 	index := before.IconPackage()
 	type edit struct {
 		index   int
@@ -102,7 +102,7 @@ func EditMeta(path string, name string, icon []byte) error {
 	}
 	var edits []edit
 	for i, pkg := range before.Packages {
-		if i != index && (name == "" || len(pkg.Meta[tlvNacp]) == 0) {
+		if i != index && (name == "" || (len(pkg.Meta[tlvNacp]) == 0 && pkg.Meta[tlvTitleName] == nil)) {
 			continue
 		}
 		old := make([]byte, pkg.metaSize)
@@ -187,7 +187,8 @@ func EditMeta(path string, name string, icon []byte) error {
 
 // editedMeta is the metadata block of a package with a new name and/or icon, and the types it
 // changed, as the NUP is read by: the records as they were, but for the ones written again. With
-// nacpOnly only the names of its NACP change, as for an update.
+// nacpOnly only the names it carries change, as for an update: those of its NACP, and its name
+// and names by language when it has them; no name is added.
 func editedMeta(old []byte, zeroBased bool, name string, icon []byte, nacpOnly bool) ([]byte, map[uint16]bool, error) {
 	le := binary.LittleEndian
 	// the type of a record as the block counts it
@@ -225,12 +226,12 @@ func editedMeta(old []byte, zeroBased bool, name string, icon []byte, nacpOnly b
 	written := map[uint16][]byte{}
 	gone := map[uint16]bool{}
 	changed := map[uint16]bool{}
-	if name != "" && !nacpOnly {
+	if name != "" && (!nacpOnly || find(tlvTitleName) != nil) {
 		written[stored(tlvTitleName)] = []byte(name)
 		changed[tlvTitleName] = true
 	}
 	if name != "" {
-		if titles := find(tlvLocalizedTitles); titles != nil && !nacpOnly {
+		if titles := find(tlvLocalizedTitles); titles != nil {
 			renamed, err := retitle(titles, name)
 			if err != nil {
 				return nil, nil, err
@@ -239,8 +240,17 @@ func editedMeta(old []byte, zeroBased bool, name string, icon []byte, nacpOnly b
 			changed[tlvLocalizedTitles] = true
 		}
 		if nacp := find(tlvNacp); len(nacp) >= nacpLanguages*nacpEntry {
-			written[stored(tlvNacp)] = renamedNacp(nacp, name)
-			changed[tlvNacp] = true
+			renamed, err := renamedNacp(nacp, name)
+			switch {
+			case errors.Is(err, errNamesUnreadable):
+				// compressed names that cannot be read are left as they are, not broken
+				// further: Verify and Details tell them
+			case err != nil:
+				return nil, nil, err
+			default:
+				written[stored(tlvNacp)] = renamed
+				changed[tlvNacp] = true
+			}
 		}
 	}
 	if len(icon) > 0 {
@@ -276,21 +286,31 @@ func editedMeta(old []byte, zeroBased bool, name string, icon []byte, nacpOnly b
 
 }
 
-// renamedNacp is a NACP with a new name in each language that has one.
-func renamedNacp(nacp []byte, name string) []byte {
+// renamedNacp is a NACP with a new name in each language that has one. A NACP that keeps its
+// names compressed has them decompressed, renamed and compressed again the same way; one whose
+// compressed names cannot be read gives errNamesUnreadable.
+func renamedNacp(nacp []byte, name string) ([]byte, error) {
 	patched := bytes.Clone(nacp)
-	if len(patched) < nacpLanguages*nacpEntry {
-		return patched
+	entries, count, err := nacpTitles(patched)
+	if err != nil || entries == nil {
+		return patched, err
 	}
-	for i := 0; i < nacpLanguages; i++ {
-		field := patched[i*nacpEntry : i*nacpEntry+0x200]
+	for i := 0; i < count; i++ {
+		field := entries[i*nacpEntry : i*nacpEntry+0x200]
 		// only the languages that have a name get the new one
 		if len(cString(field)) > 0 {
 			clear(field)
 			copy(field, name)
 		}
 	}
-	return patched
+	if nacpCompressed(patched) {
+		if err := packNacpTitles(patched, entries); err != nil {
+			return nil, err
+		}
+		return patched, nil
+	}
+	copy(patched, entries)
+	return patched, nil
 }
 
 // retitle writes the names by language of a package again, each language it has with the new name,
