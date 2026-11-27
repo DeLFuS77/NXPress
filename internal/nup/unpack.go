@@ -14,8 +14,9 @@ import (
 )
 
 // The unpacking of a NUP into a folder, in the layout the packer of the format reads back: the
-// game in base, each update in updates/<version>, each DLC in dlc/<title ID>/<index>. Every
-// file is checked by its SHA-256 as it is written.
+// game in base, each update in updates/<version>, each DLC in dlc/<title ID>/<version>/base, so
+// packing the folder again keeps the version of each DLC. Every file is checked by its SHA-256
+// as it is written.
 
 // PackageFolder is the folder of a package in an unpacked NUP, relative to it.
 func (c *Container) PackageFolder(pkg int) string {
@@ -26,13 +27,9 @@ func (c *Container) PackageFolder(pkg int) string {
 	case KindUpdate:
 		return filepath.Join("updates", strconv.FormatUint(uint64(p.Version), 10))
 	case KindAddon:
-		index := 0
-		for i := 0; i < pkg; i++ {
-			if c.Packages[i].Kind == KindAddon && c.Packages[i].TitleID == p.TitleID {
-				index++
-			}
-		}
-		return filepath.Join("dlc", fmt.Sprintf("%016x", p.TitleID), strconv.Itoa(index))
+		// by its version, not by its place: a folder dlc/<ID>/<n> holding the DLC itself is read
+		// back as version 0
+		return filepath.Join("dlc", fmt.Sprintf("%016x", p.TitleID), strconv.FormatUint(uint64(p.Version), 10), "base")
 	}
 	return filepath.Join(fmt.Sprintf("kind%d", p.Kind), fmt.Sprintf("%016x", p.TitleID))
 }

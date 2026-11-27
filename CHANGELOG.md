@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Each DLC keeps its version when a NUP or a .nx is unpacked into a folder and packed again, or converted between NUP and .nx: its folder is named by its version
+
 ## 1.7.32
 
 ### Fixes
