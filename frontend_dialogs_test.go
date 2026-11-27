@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"golang.org/x/net/html"
@@ -50,5 +51,17 @@ func TestDialogsHangFromTheBody(t *testing.T) {
 	walk(page)
 	if found == 0 {
 		t.Fatal("no dialog found in the page")
+	}
+}
+
+// Add files asks for the files of what the section does now: NSP and NSZ when Convert makes game
+// cards, the files of Optimize for install when it is on, as a folder or files dropped do (#166).
+func TestAddFilesAsksForTheFilesOfTheWork(t *testing.T) {
+	script, err := os.ReadFile("frontend/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), "app().ChooseFiles(expandMode())") {
+		t.Fatal("Add files does not ask for the files of expandMode()")
 	}
 }

@@ -4421,7 +4421,7 @@ async function main() {
   // section; the folder also to watch it
   const addFiles = async () => {
     if (state.busy) return;
-    const items = await app().ChooseFiles(state.mode) || [];
+    const items = await app().ChooseFiles(expandMode()) || [];
     addOrigins(items.map(item => item.path));
     for (const item of items) add(item);
     if (state.mode === "rename") previewNames();
