@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -156,6 +157,17 @@ func TestPackOldLayout(t *testing.T) {
 		}
 		if unpacked.Files != 13 || unpacked.Size != result.Size {
 			t.Errorf("unpacked %+v", unpacked)
+		}
+		// the DLC comes in dlc/<ID>/<version>/base: put back where the old layout had it
+		dlc := filepath.Join(dest, "dlc", "0400486024ded001", "0")
+		if err := os.Rename(filepath.Join(dlc, "base"), dlc+".base"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(dlc); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(dlc+".base", dlc); err != nil {
+			t.Fatal(err)
 		}
 		compareTrees(t, src, dest)
 	}
@@ -515,5 +527,47 @@ func TestPackRawOver(t *testing.T) {
 		if _, check, err := Verify(context.Background(), out, 2, 2, nil); err != nil || len(check.Damaged) != 0 {
 			t.Errorf("over %d: %v %+v", c.over, err, check)
 		}
+	}
+}
+
+// A DLC keeps its version through unpacking a NUP and packing the folder again: its folder is
+// named by it (dlc/<ID>/<version>/base), not by its place, which read back as version 0.
+func TestUnpackKeepsTheVersionOfEachDlc(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "Made-up Dump")
+	writeTree(t, root, map[string][]byte{
+		"base/exefs/main":                              nso(1),
+		"base/exefs/main.npdm":                         npdm(0x0400486024DEC000),
+		"base/romfs/a.bin":                             []byte("game"),
+		"dlc/0400486024ded001/65536/base/romfs/d.bin":  []byte("first DLC"),
+		"dlc/0400486024ded002/131072/base/romfs/e.bin": []byte("second DLC"),
+	})
+	versions := func(path string) string {
+		container, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := []string{}
+		for _, pkg := range container.Packages {
+			if pkg.Kind == KindAddon {
+				found = append(found, fmt.Sprintf("%016x v%d", pkg.TitleID, pkg.Version))
+			}
+		}
+		return strings.Join(found, ", ")
+	}
+	first, _ := pack(t, root, PackOptions{Level: 3, Workers: 2})
+	want := "0400486024ded001 v65536, 0400486024ded002 v131072"
+	if got := versions(first); got != want {
+		t.Fatalf("packed: %s", got)
+	}
+	dest := filepath.Join(t.TempDir(), "unpacked")
+	if _, err := Unpack(context.Background(), first, dest, 2, 2, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "dlc", "0400486024ded001", "65536", "base", "romfs", "d.bin")); err != nil {
+		t.Fatal("the DLC is not in a folder named by its version")
+	}
+	again, _ := pack(t, dest, PackOptions{Level: 3, Workers: 2})
+	if got := versions(again); got != want {
+		t.Errorf("packed again: %s", got)
 	}
 }

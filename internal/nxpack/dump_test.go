@@ -106,7 +106,7 @@ func TestDumpToNxAndBack(t *testing.T) {
 	if err := ToDump(t.Context(), first, back, nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"base/control/control.nacp", "updates/65536/romfs/data/same.bin", "dlc/0100000000011001/0/romfs/dlc.bin"} {
+	for _, path := range []string{"base/control/control.nacp", "updates/65536/romfs/data/same.bin", "dlc/0100000000011001/0/base/romfs/dlc.bin"} {
 		if _, err := os.Stat(filepath.Join(back, filepath.FromSlash(path))); err != nil {
 			t.Errorf("the folder lacks %s", path)
 		}
