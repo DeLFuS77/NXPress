@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Convert › NSP to XCI: Add files asks for NSP and NSZ files, instead of XCI and XCZ. Thanks to @jashoewa for reporting it (#166)
+
 ## 1.7.31
 
 ### Improvements
