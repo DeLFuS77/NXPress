@@ -1632,6 +1632,23 @@ function showToast(text, undo) {
   replay("enter", $("toast"));
   toastTimer = setTimeout(() => { $("toast").hidden = true; undoLast = null; }, undo ? 6000 : 2500);
 }
+// the files of a Rename get their names back, and their rows with them
+async function undoRenames(pairs) {
+  const back = await app().UndoRenames(pairs) || [];
+  for (const pair of back) {
+    const row = state.rows.get(pair.to);
+    if (!row) continue;
+    row.item.path = pair.from;
+    row.item.name = pair.from.split(/[\\/]/).pop();
+    row.output = "";
+    row.status = "";
+    state.rows.delete(pair.to);
+    state.rows.set(pair.from, row);
+    state.sources = state.sources.map(path => path === pair.to ? pair.from : path);
+  }
+  render();
+  showToast(t("renamesUndone")(back.length, pairs.length - back.length));
+}
 function undo() {
   if (!undoLast || state.busy) return;
   const action = undoLast;
@@ -3645,6 +3662,8 @@ function listen() {
     // moved to the folder of what is skipped, at its new place
     if ((mode === "rename" || event.skipped) && row.output && !event.error) {
       const old = row.item.path;
+      // kept for Undo at the end of the work
+      if (mode === "rename" && state.lastRun) (state.lastRun.renamed = state.lastRun.renamed || []).push({ from: old, to: row.output });
       row.item.name = row.output.split(/[\\/]/).pop();
       row.item.path = row.output;
       state.rows.delete(old);
@@ -3717,6 +3736,9 @@ function listen() {
     render();
     if (!event.cancelled && !event.failed) replay("glow", document.querySelector(".actions"));
     if (!($("when-done").value && !(state.lastRun && state.lastRun.watch))) showDone(event, status);
+    // a Rename can be undone from the notice at the bottom, once the card of its end is closed
+    const renamed = state.lastRun && state.lastRun.mode === "rename" ? state.lastRun.renamed || [] : [];
+    if (renamed.length) showToast(t("renamedFiles")(renamed.length), () => undoRenames(renamed));
     // the files the Explorer gave meanwhile come in now; the new version installed opens once
     // they did, the work they start is over too and its log is written (#91)
     const waiting = state.openedWaiting.splice(0);

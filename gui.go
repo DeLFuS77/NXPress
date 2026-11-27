@@ -1463,6 +1463,28 @@ func (a *App) CancelShutDown() {
 	a.stopShutdown()
 }
 
+// RenamePair is a file a Rename gave a new name: from the name it had, to the one it has.
+type RenamePair struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// UndoRenames gives the files of a Rename their names back, with Undo; it gives the ones that got
+// it back. A file that cannot is told on the page with why, and keeps its new name.
+func (a *App) UndoRenames(pairs []RenamePair) []RenamePair {
+	back := []RenamePair{}
+	for _, pair := range pairs {
+		if err := jobs.UndoRename(pair.From, pair.To); err != nil {
+			if a.ctx != nil {
+				emit(a.ctx, "say", filepath.Base(pair.To)+": "+err.Error())
+			}
+			continue
+		}
+		back = append(back, pair)
+	}
+	return back
+}
+
 // ShowFile opens the folder of a file in the file manager.
 func (a *App) ShowFile(path string) {
 	system.ShowFile(path)
