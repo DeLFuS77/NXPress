@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.33
+
+### Improvements
+
+- Rename can be undone: the notice at the end of the work gives the files their names back, never over another file that took one
+
+### Fixes
+
+- Each DLC keeps its version when a NUP or a .nx is unpacked into a folder and packed again, or converted between NUP and .nx: its folder is named by its version
+
 ## 1.7.32
 
 ### Fixes

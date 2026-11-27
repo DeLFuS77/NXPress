@@ -306,7 +306,6 @@ func ToDump(ctx context.Context, path string, dest string, progress func(done in
 	jobs := []job{}
 	folders := []string{}
 	total := int64(0)
-	dlcIndex := map[uint64]int{}
 	bases := 0
 	for s, snapshot := range app.Snapshots {
 		if data.Native(0, s) {
@@ -323,8 +322,8 @@ func ToDump(ctx context.Context, path string, dest string, progress func(done in
 			if snapshot.AddonTitleId == 0 {
 				return ErrNative
 			}
-			folder = filepath.Join("dlc", fmt.Sprintf("%016x", snapshot.AddonTitleId), strconv.Itoa(dlcIndex[snapshot.AddonTitleId]))
-			dlcIndex[snapshot.AddonTitleId]++
+			// by its version, as a NUP unpacked is: packed again, the DLC keeps it
+			folder = filepath.Join("dlc", fmt.Sprintf("%016x", snapshot.AddonTitleId), strconv.FormatUint(uint64(snapshot.Version), 10), "base")
 		default:
 			return errors.New("the .nx holds a version of an unknown kind")
 		}

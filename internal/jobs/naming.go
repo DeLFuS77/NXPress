@@ -505,3 +505,27 @@ func rename(ctx context.Context, path string, o Options, out Output) (string, st
 	moveRecovery(path, name)
 	return name, "renamed to " + filepath.Base(name), nil
 }
+
+// UndoRename gives a file renamed back its name from before: the file must still be at to, and
+// no other file may have taken from meanwhile, which is never replaced. A change of case alone
+// goes back the same way.
+func UndoRename(from string, to string) error {
+	if !exists(to) {
+		return fmt.Errorf("%s is no longer there", filepath.Base(to))
+	}
+	same := SameFile(from, to)
+	var err error
+	if same {
+		err = os.Rename(to, from)
+	} else {
+		err = system.RenameNew(to, from)
+	}
+	if errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("another file is named %s now", filepath.Base(from))
+	}
+	if err != nil {
+		return err
+	}
+	moveRecovery(to, from)
+	return nil
+}
